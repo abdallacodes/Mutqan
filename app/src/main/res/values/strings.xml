@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App -->
+    <string name="app_name">QMemo</string>
+
+    <!-- Bottom navigation labels -->
+    <string name="nav_journal">Journal</string>
+    <string name="nav_vault">Vault</string>
+    <string name="nav_surahs">Surahs</string>
+    <string name="nav_brain">Brain</string>
+
+    <!-- Settings sheet -->
+    <string name="settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">LANGUAGE</string>
+    <string name="settings_theme">THEME</string>
+
+    <!-- Theme names -->
+    <string name="theme_auto">Auto</string>
+    <string name="theme_modern_dark">Modern\nDark</string>
+    <string name="theme_oled_black">Pure\nOLED</string>
+    <string name="theme_mushaf_cream">Mushaf\nCream</string>
+    <string name="theme_midnight_blue">Midnight\nBlue</string>
+    <string name="lang_english">English</string>
+    <string name="lang_arabic">العربية</string>
+
+    <!-- Common actions -->
+    <string name="back">Back</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_cancel">CANCEL</string>
+    <string name="btn_save">SAVE</string>
+    <string name="btn_delete">DELETE</string>
+    <string name="btn_add">ADD</string>
+
+    <!-- ── Revision Log Screen ──────────────────────────────────────────────── -->
+    <string name="journal_title">THE JOURNAL</string>
+    <string name="journal_subtitle">Revision Tracker</string>
+    <string name="btn_log_revision">LOG REVISION</string>
+    <string name="recent_revisions">RECENT REVISIONS</string>
+    <string name="view_all">VIEW ALL</string>
+    <string name="label_start_page">Start Page</string>
+    <string name="label_end_page">End Page</string>
+    <string name="placeholder_start_page">1</string>
+    <string name="placeholder_end_page">604</string>
+    <string name="error_page_range">Enter 1\u2013604</string>
+    <string name="error_end_before_start">Must be \u2265 start</string>
+    <string name="no_revisions_hint">No revisions logged yet.\nLog your first session above.</string>
+    <string name="select_date">Select Date</string>
+    <string name="pages_range">Pages %1$d\u2013%2$d</string>
+    <string name="just_now">Just now</string>
+    <string name="x_min_ago">%d min ago</string>
+    <string name="x_hr_ago">%d hr ago</string>
+    <string name="x_day_ago">%d day ago</string>
+
+    <!-- ── Revision History Screen ─────────────────────────────────────────── -->
+    <string name="history_title">REVISION HISTORY</string>
+    <string name="history_subtitle">Tap to edit  \u00b7  Swipe left to delete</string>
+    <string name="no_revisions_history">No revisions logged yet.\nStart from the Journal tab.</string>
+    <string name="delete_entry_title">Delete Entry?</string>
+    <string name="delete_entry_body">Remove Pages %1$d\u2013%2$d from your history?\nThis cannot be undone.</string>
+    <string name="edit_revision_title">EDIT REVISION</string>
+    <string name="label_start">Start</string>
+    <string name="label_end">End</string>
+    <string name="select_date_inline">Select date</string>
+    <string name="cd_delete">Delete</string>
+
+    <!-- ── Vault (Mutashabihat) ────────────────────────────────────────────── -->
+    <string name="vault_title">THE VAULT</string>
+    <string name="vault_subtitle">Mutashabihat Groups</string>
+    <string name="cd_add_group">Add group</string>
+    <string name="cd_delete_group">Delete group</string>
+    <string name="verses_singular">%d verse</string>
+    <string name="verses_plural">%d verses</string>
+    <string name="vault_empty_title">THE VAULT IS EMPTY</string>
+    <string name="vault_empty_body">Tap + to create your first\nMutashabihat group.</string>
+
+    <!-- ── Edit Group Screen ───────────────────────────────────────────────── -->
+    <string name="new_group_title">NEW GROUP</string>
+    <string name="edit_group_title">EDIT GROUP</string>
+    <string name="section_group_desc">GROUP DESCRIPTION</string>
+    <string name="section_mastery">MASTERY STRENGTH</string>
+    <string name="section_link_verse">LINK A VERSE</string>
+    <string name="linked_verses_header">LINKED VERSES  (%d)</string>
+    <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
+    <string name="btn_saved">SAVED</string>
+    <string name="btn_save_group">SAVE GROUP</string>
+    <string name="label_surah">Surah</string>
+    <string name="label_ayah">Ayah</string>
+    <string name="placeholder_surah_range">1\u2013114</string>
+    <string name="placeholder_ayah_range">1\u2013\u2026</string>
+    <string name="error_invalid_ref">Invalid Surah/Ayah</string>
+    <string name="snackbar_no_verse">No verse found for that Surah/Ayah.</string>
+    <string name="snackbar_already_member">That verse is already in this group.</string>
+    <string name="snackbar_save_first">Save the group first before adding verses.</string>
+    <string name="label_page">Page %d</string>
+    <string name="cd_remove_verse">Remove verse</string>
+
+    <!-- ── Strength labels ─────────────────────────────────────────────────── -->
+    <string name="strength_weak">Weak</string>
+    <string name="strength_stable">Stable</string>
+    <string name="strength_solid">Solid</string>
+
+    <!-- ── Difficulty labels ───────────────────────────────────────────────── -->
+    <string name="difficulty_smooth">Smooth</string>
+    <string name="difficulty_struggled">Struggled</string>
+    <string name="difficulty_critical">Critical</string>
+
+    <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
+    <string name="brain_title">THE BRAIN</string>
+    <string name="brain_subtitle">30 Juz  \u00b7  Memory Decay Dashboard</string>
+    <string name="stat_revision_debt">REVISION DEBT</string>
+    <string name="stat_debt_sublabel">pages below 50%%</string>
+    <string name="stat_stability_index">STABILITY INDEX</string>
+    <string name="stat_pages_tracked">%d pages tracked</string>
+    <string name="stat_critical_label">CRITICAL</string>
+    <string name="stat_critical_sublabel">score &lt; 25%%</string>
+    <string name="legend_fresh">Fresh (\u2265 70%%)</string>
+    <string name="legend_fading">Fading (40\u201370%%)</string>
+    <string name="legend_critical">Critical (&lt; 40%%)</string>
+    <string name="legend_untracked">Untracked</string>
+    <string name="juz_label">JUZ</string>
+    <string name="pages_short_suffix">p</string>
+    <string name="untracked_dash">\u2014</string>
+
+    <!-- ── Juz Detail Screen ───────────────────────────────────────────────── -->
+    <string name="loading_subtitle">Loading\u2026</string>
+    <string name="loading_pages">Loading pages\u2026</string>
+    <string name="juz_title">JUZ %d</string>
+    <string name="juz_health">JUZ HEALTH</string>
+    <string name="no_revisions_juz">No revisions yet</string>
+    <string name="pages_tracked_summary">%1$d%%  \u00b7  %2$d/%3$d pages tracked</string>
+    <string name="count_critical">%d critical</string>
+    <string name="count_fading">%d fading</string>
+    <string name="dialog_page_title">PAGE %d</string>
+    <string name="quick_status_smooth">SMOOTH</string>
+    <string name="quick_status_smooth_desc">Confident recall \u00b7 resets decay</string>
+    <string name="quick_status_struggled">STRUGGLED</string>
+    <string name="quick_status_struggled_desc">Needed effort \u00b7 faster decay</string>
+    <string name="quick_status_critical">CRITICAL</string>
+    <string name="quick_status_critical_desc">Major errors \u00b7 urgent follow-up</string>
+
+    <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
+    <string name="surahs_title">SURAHS</string>
+    <string name="surahs_subtitle">114 Surahs  \u00b7  30 Juz  \u00b7  604 Pages</string>
+    <string name="juz_badge">Juz %d</string>
+    <string name="group_count_max">9+</string>
+
+    <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
+    <string name="linked_groups_header">LINKED GROUPS</string>
+    <string name="linked_groups_hint">Tap group to open \u00b7 tap verse to peek</string>
+    <string name="section_in_this_surah">IN THIS SURAH</string>
+    <string name="section_other_surahs">OTHER SURAHS</string>
+    <string name="no_groups_for_surah">No similarity groups for this Surah yet.\nUse the Vault to create and link verse groups.</string>
+    <string name="ayah_n">Ayah %d</string>
+    <string name="page_n">p. %d</string>
+    <string name="surah_fallback_title">Surah %d</string>
+
+    <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
+    <string name="group_detail_fallback_title">Group Detail</string>
+    <string name="mutashabihat_breadcrumb">Mutashabihat \u00b7 %s</string>
+    <string name="section_context">CONTEXT</string>
+    <string name="section_context_subtitle">In %s \u00b7 tap a verse to peek</string>
+    <string name="no_context_verses">No verses from this Surah in this group.</string>
+    <string name="section_clashes">CLASHES</string>
+    <string name="section_clashes_subtitle">Verses from other Surahs \u00b7 tap to peek</string>
+    <string name="no_clash_verses">No cross-Surah verses in this group.</string>
+
+    <!-- ── Quick Peek Bottom Sheet ─────────────────────────────────────────── -->
+    <string name="quick_peek_subtitle">Quick Peek \u00b7 Arabic Text</string>
+    <string name="arabic_text_unavailable">Arabic text not available.</string>
+    <string name="btn_copy">Copy</string>
+    <string name="btn_share">Share</string>
+    <string name="share_verse_title">Share Verse</string>
+    <string name="verse_label_format">%1$s \u00b7 Ayah %2$d</string>
+    <string name="share_verse_body">%1$s\n\n\u2014 %2$s, Ayah %3$d</string>
+
+</resources>
