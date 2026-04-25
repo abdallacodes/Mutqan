@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
+import com.example.qmemo.data.local.entity.VaultFolderEntity
 import com.example.qmemo.data.local.entity.VerseEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,10 +24,6 @@ abstract class QuranDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insertVerses(verses: List<VerseEntity>)
 
-    /**
-     * Lazily fetches the Arabic text for a single verse.
-     * Called only when the Quick Peek sheet opens — keeps list queries lightweight.
-     */
     @Query("SELECT text_arabic FROM verses WHERE id = :verseId LIMIT 1")
     abstract suspend fun getArabicText(verseId: Int): String?
 
@@ -47,7 +44,6 @@ abstract class QuranDao {
     // Similarity Groups + Members
     // ─────────────────────────────────────────────────────────
 
-    /** Returns the new row id so the caller can immediately insert members. */
     @Insert
     abstract suspend fun insertSimilarityGroup(group: SimilarityGroupEntity): Long
 
@@ -63,16 +59,11 @@ abstract class QuranDao {
     @Delete
     abstract suspend fun deleteSimilarityMember(member: SimilarityMemberEntity)
 
-    /**
-     * All groups with their member counts and a comma-separated list of distinct
-     * Surah IDs for the vault list screen.  The [GroupWithCount.surahIds] helper
-     * parses the raw string into a sorted [List<Int>].
-     */
     @Query(
         """
         SELECT sg.*,
-               COUNT(DISTINCT sm.verse_id)    AS member_count,
-               GROUP_CONCAT(DISTINCT v.surah_id) AS surah_ids_raw
+               COUNT(DISTINCT sm.verse_id)                      AS member_count,
+               COALESCE(GROUP_CONCAT(DISTINCT v.surah_id), '')  AS surah_ids_raw
         FROM   similarity_groups sg
                LEFT JOIN similarity_members sm ON sm.group_id = sg.id
                LEFT JOIN verses             v  ON v.id        = sm.verse_id
@@ -82,7 +73,6 @@ abstract class QuranDao {
     )
     abstract fun getAllGroupsWithMemberCount(): Flow<List<GroupWithCount>>
 
-    /** Verse members of a single group, joined with verse metadata. */
     @Query(
         """
         SELECT v.id AS verse_id, v.surah_id, v.ayah_number, v.page_number
@@ -94,30 +84,93 @@ abstract class QuranDao {
     )
     abstract fun getMembersForGroup(groupId: Int): Flow<List<MemberVerseRef>>
 
-    /** Look up a verse by its human-readable reference. Returns null if not found. */
     @Query("SELECT * FROM verses WHERE surah_id = :surahId AND ayah_number = :ayahNumber LIMIT 1")
     abstract suspend fun findVerse(surahId: Int, ayahNumber: Int): VerseEntity?
 
-    /** Fetch a single group by id (used when reopening the edit screen). */
+    /**
+     * Relaxed full-text search with optional filters.
+     * 18 levels of REPLACE used to normalize:
+     * - All Alef/Hamza variants (آ أ إ ٱ ء ئ ؤ ٰ) -> ا
+     * - Yaa/Maksura (ي ى) -> ي
+     * - Teh Marbuta/Heh (ة ه) -> ه
+     * - All common diacritics stripped.
+     */
+    @Query("""
+        SELECT * FROM verses
+        WHERE (
+            :surahId IS NULL OR surah_id = :surahId
+        ) AND (
+            :juzStart IS NULL OR juz_id >= :juzStart
+        ) AND (
+            :juzEnd IS NULL OR juz_id <= :juzEnd
+        ) AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(text_arabic,
+              char(1611),''),char(1612),''),char(1613),''),char(1614),''),char(1615),''),char(1616),''),char(1617),''),char(1618),''),
+              char(1648),char(1575)),
+              char(1570),char(1575)),char(1571),char(1575)),char(1573),char(1575)),char(1649),char(1575)),
+              char(1569),char(1575)),char(1572),char(1575)),char(1574),char(1575)),
+              char(1609),char(1610)),
+              char(1577),char(1607))
+        LIKE '%' || :query || '%'
+        LIMIT 40
+    """)
+    abstract suspend fun searchVerses(
+        query: String,
+        surahId: Int? = null,
+        juzStart: Int? = null,
+        juzEnd: Int? = null
+    ): List<VerseEntity>
+
     @Query("SELECT * FROM similarity_groups WHERE id = :groupId LIMIT 1")
     abstract suspend fun getGroupById(groupId: Int): SimilarityGroupEntity?
+
+    // ─────────────────────────────────────────────────────────
+    // Folders
+    // ─────────────────────────────────────────────────────────
+
+    @Insert
+    abstract suspend fun insertFolder(folder: VaultFolderEntity): Long
+
+    @Update
+    abstract suspend fun updateFolder(folder: VaultFolderEntity)
+
+    @Delete
+    abstract suspend fun deleteFolder(folder: VaultFolderEntity)
+
+    @Query("SELECT * FROM vault_folders WHERE parent_id IS :parentId ORDER BY name ASC")
+    abstract fun getFoldersByParent(parentId: Int?): Flow<List<VaultFolderEntity>>
+
+    @Query("SELECT * FROM vault_folders WHERE name = :name AND parent_id IS :parentId LIMIT 1")
+    abstract suspend fun getFolderByName(name: String, parentId: Int?): VaultFolderEntity?
+
+    @Query("SELECT * FROM vault_folders WHERE id = :id LIMIT 1")
+    abstract suspend fun getFolderById(id: Int): VaultFolderEntity?
+
+    @Query(
+        """
+        SELECT sg.*,
+               COUNT(DISTINCT sm.verse_id)                      AS member_count,
+               COALESCE(GROUP_CONCAT(DISTINCT v.surah_id), '')  AS surah_ids_raw
+        FROM   similarity_groups sg
+               LEFT JOIN similarity_members sm ON sm.group_id = sg.id
+               LEFT JOIN verses             v  ON v.id        = sm.verse_id
+        WHERE  sg.folder_id IS :folderId
+        GROUP  BY sg.id
+        ORDER  BY sg.id DESC
+        """
+    )
+    abstract fun getGroupsByFolder(folderId: Int?): Flow<List<GroupWithCount>>
 
     // ─────────────────────────────────────────────────────────
     // Surah Explorer
     // ─────────────────────────────────────────────────────────
 
-    /**
-     * One row per Surah: verse count, the Juz the Surah starts in, and how many
-     * distinct SimilarityGroups touch it.  Uses DISTINCT v.id to avoid
-     * inflating verse counts when a verse belongs to multiple groups.
-     * Reactive — re-emits whenever the similarity_members table changes.
-     */
     @Query(
         """
         SELECT
             v.surah_id,
             COUNT(DISTINCT v.id)         AS verse_count,
             MIN(v.juz_id)                AS start_juz,
+            MIN(v.page_number)           AS start_page,
             COUNT(DISTINCT sm.group_id)  AS group_count
         FROM   verses v
                LEFT JOIN similarity_members sm ON sm.verse_id = v.id
@@ -127,11 +180,15 @@ abstract class QuranDao {
     )
     abstract fun getSurahMetaList(): Flow<List<SurahMeta>>
 
-    /**
-     * For an External group: returns the IDs of every Surah that contributes
-     * a member verse to [groupId] EXCEPT [currentSurahId] itself.
-     * Sorted ascending so chip order is stable.
-     */
+    @Query(
+        """
+        SELECT MIN(page_number)
+        FROM   verses
+        WHERE  surah_id = :surahId
+        """
+    )
+    abstract fun observeStartPageForSurah(surahId: Int): Flow<Int?>
+
     @Query(
         """
         SELECT DISTINCT v.surah_id
@@ -148,10 +205,6 @@ abstract class QuranDao {
     // Master Query — Internal vs. External split
     // ─────────────────────────────────────────────────────────
 
-    /**
-     * Internal groups: the group touches [surahId], and NOT A SINGLE member
-     * belongs to a different Surah — the group is fully contained within this Surah.
-     */
     @Query(
         """
         SELECT DISTINCT sg.*
@@ -171,10 +224,6 @@ abstract class QuranDao {
     )
     abstract fun getInternalGroupsForSurah(surahId: Int): Flow<List<SimilarityGroupEntity>>
 
-    /**
-     * External groups: the group touches [surahId], but at least one other member
-     * belongs to a different Surah — this is a cross-Surah confusion point.
-     */
     @Query(
         """
         SELECT DISTINCT sg.*
@@ -194,10 +243,6 @@ abstract class QuranDao {
     )
     abstract fun getExternalGroupsForSurah(surahId: Int): Flow<List<SimilarityGroupEntity>>
 
-    /**
-     * Combines the two reactive streams into a single [SurahGroupsResult].
-     * The Flow re-emits automatically whenever either list changes in the DB.
-     */
     fun getGroupsBySurah(surahId: Int): Flow<SurahGroupsResult> =
         combine(
             getInternalGroupsForSurah(surahId),
@@ -209,21 +254,13 @@ abstract class QuranDao {
             )
         }
 
-    // ─────────────────────────────────────────────────────────
-    // Surah Detail — unified group+verse query
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Returns every (group, verse) pair for all groups that touch [surahId].
-     * One row per member verse; callers group by [GroupMemberRef.groupId] in Kotlin.
-     * Ordered by group id then by Surah/Ayah so the in-memory groupBy produces
-     * a stable, sorted result.
-     */
     @Query(
         """
         SELECT sg.id            AS group_id,
                sg.description,
                sg.master_strength,
+               sg.memorization_notes,
+               sg.folder_id,
                v.id             AS verse_id,
                v.surah_id,
                v.ayah_number,
@@ -242,27 +279,75 @@ abstract class QuranDao {
     )
     abstract fun getMemberRefsBySurahGroups(surahId: Int): Flow<List<GroupMemberRef>>
 
-    // ─────────────────────────────────────────────────────────
-    // Revision Log — edit & hard-delete
-    // ─────────────────────────────────────────────────────────
-
-    /** Hard-deletes a single revision log by primary key. */
     @Query("DELETE FROM revision_logs WHERE id = :id")
     abstract suspend fun deleteRevisionLogById(id: Int)
 
-    /** Overwrites all mutable fields of an existing revision log. */
     @Update
     abstract suspend fun updateRevisionLog(log: RevisionLogEntity)
+
+    // ─────────────────────────────────────────────────────────
+    // Backup & Restore
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM revision_logs")
+    abstract suspend fun getAllRevisionLogsSync(): List<RevisionLogEntity>
+
+    @Query("SELECT * FROM similarity_groups")
+    abstract suspend fun getAllSimilarityGroupsSync(): List<SimilarityGroupEntity>
+
+    @Query("SELECT * FROM similarity_members")
+    abstract suspend fun getAllSimilarityMembersSync(): List<SimilarityMemberEntity>
+
+    @Query("SELECT * FROM vault_folders")
+    abstract suspend fun getAllFoldersSync(): List<VaultFolderEntity>
+
+    @Query("DELETE FROM revision_logs")
+    abstract suspend fun deleteAllRevisionLogs()
+
+    @Query("DELETE FROM similarity_groups")
+    abstract suspend fun deleteAllSimilarityGroups()
+
+    @Query("DELETE FROM similarity_members")
+    abstract suspend fun deleteAllSimilarityMembers()
+
+    @Query("DELETE FROM vault_folders")
+    abstract suspend fun deleteAllFolders()
+
+    @androidx.room.Transaction
+    open suspend fun clearUserData() {
+        deleteAllRevisionLogs()
+        deleteAllSimilarityGroups()
+        deleteAllSimilarityMembers()
+        deleteAllFolders()
+    }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertSimilarityGroups(groups: List<SimilarityGroupEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertSimilarityMembers(members: List<SimilarityMemberEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertRevisionLogs(logs: List<RevisionLogEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertFolders(folders: List<VaultFolderEntity>)
 
     // ─────────────────────────────────────────────────────────
     // Juz Explorer — static page/surah mappings
     // ─────────────────────────────────────────────────────────
 
-    /**
-     * Returns all (page_number, juz_id) pairs from the static verses table,
-     * ordered by juz then page. Used once on startup to build a juz → pages
-     * lookup map for the 30-Juz Dashboard.
-     */
+    @Query(
+        """
+        SELECT   page_number,
+                 GROUP_CONCAT(DISTINCT surah_id) AS surah_ids_raw
+        FROM     verses
+        GROUP BY page_number
+        ORDER BY page_number ASC
+        """
+    )
+    abstract suspend fun getAllPageSurahMappings(): List<PageSurahsRef>
+
     @Query(
         """
         SELECT DISTINCT page_number, juz_id
@@ -272,10 +357,6 @@ abstract class QuranDao {
     )
     abstract suspend fun getAllPageJuzMappings(): List<PageJuzRef>
 
-    /**
-     * Returns distinct page numbers belonging to [juzId], ordered ascending.
-     * One-shot suspend call; result never changes after pre-population.
-     */
     @Query(
         """
         SELECT DISTINCT page_number
@@ -286,14 +367,6 @@ abstract class QuranDao {
     )
     abstract suspend fun getPagesByJuz(juzId: Int): List<Int>
 
-    /**
-     * For every page in [juzId], returns the comma-separated Surah IDs that have
-     * at least one verse on that page.  Results are ordered by page number.
-     *
-     * Transition pages (where one Surah ends and the next begins) will have two
-     * Surah IDs in [PageSurahsRef.surahIdsRaw], e.g. "8,9" for the Al-Anfal /
-     * At-Tawbah boundary.  Cached once in [JuzDetailViewModel] — never re-queried.
-     */
     @Query(
         """
         SELECT   page_number,
@@ -306,10 +379,6 @@ abstract class QuranDao {
     )
     abstract suspend fun getPageSurahsForJuz(juzId: Int): List<PageSurahsRef>
 
-    /**
-     * Returns the first and last Surah IDs that appear in [juzId].
-     * Used to populate the subtitle in JuzDetailScreen.
-     */
     @Query(
         """
         SELECT MIN(surah_id) AS first_surah,

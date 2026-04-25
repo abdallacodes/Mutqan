@@ -72,7 +72,8 @@ fun GroupDetailScreen(
     val contextVerses by viewModel.contextVerses.collectAsState()
     val clashVerses   by viewModel.clashVerses.collectAsState()
 
-    val currentSurahName = SurahData.nameOf(currentSurahId)
+    val isUnifiedVaultView = currentSurahId <= 0
+    val currentSurahName = if (isUnifiedVaultView) "" else SurahData.nameOf(currentSurahId)
 
     var quickPeekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
 
@@ -99,7 +100,11 @@ fun GroupDetailScreen(
                             overflow      = TextOverflow.Ellipsis
                         )
                         Text(
-                            text          = stringResource(R.string.mutashabihat_breadcrumb, currentSurahName),
+                            text          = if (isUnifiedVaultView) {
+                                stringResource(R.string.mutashabihat_breadcrumb_all)
+                            } else {
+                                stringResource(R.string.mutashabihat_breadcrumb, currentSurahName)
+                            },
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
                             letterSpacing = 0.5.sp
@@ -121,73 +126,142 @@ fun GroupDetailScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            stickyHeader {
-                DetailSectionHeader(
-                    label    = stringResource(R.string.section_context),
-                    subtitle = stringResource(R.string.section_context_subtitle, currentSurahName),
-                    accent   = MaterialTheme.colorScheme.primary,
-                    count    = contextVerses.size
-                )
-            }
-
-            if (contextVerses.isEmpty()) {
+            val memorizationNotes = group?.memorizationNotes.orEmpty()
+            if (memorizationNotes.isNotBlank()) {
                 item {
-                    DetailEmptyHint(
-                        message  = stringResource(R.string.no_context_verses),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            } else {
-                items(contextVerses, key = { "ctx_${it.verseId}" }) { ref ->
-                    VerseRefCard(
-                        ref           = ref,
-                        accentColor   = MaterialTheme.colorScheme.primary,
-                        showSurahName = false,
-                        modifier      = Modifier.padding(horizontal = 16.dp),
-                        onClick       = {
-                            quickPeekTarget = QuickPeekTarget(
-                                verseId    = ref.verseId,
-                                surahId    = ref.surahId,
-                                ayahNumber = ref.ayahNumber
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape    = RoundedCornerShape(8.dp),
+                        color    = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                text       = stringResource(R.string.group_notes_detail_label),
+                                style      = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color      = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text  = memorizationNotes,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    )
+                    }
                 }
             }
 
-            item { Spacer(Modifier.height(4.dp)) }
-
-            stickyHeader {
-                DetailSectionHeader(
-                    label    = stringResource(R.string.section_clashes),
-                    subtitle = stringResource(R.string.section_clashes_subtitle),
-                    accent   = MaterialTheme.colorScheme.tertiary,
-                    count    = clashVerses.size
+            if (isUnifiedVaultView) {
+                val allVerses = (contextVerses + clashVerses).sortedWith(
+                    compareBy<MemberVerseRef> { it.surahId }.thenBy { it.ayahNumber }
                 )
-            }
 
-            if (clashVerses.isEmpty()) {
-                item {
-                    DetailEmptyHint(
-                        message  = stringResource(R.string.no_clash_verses),
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                stickyHeader {
+                    DetailSectionHeader(
+                        label = stringResource(R.string.section_all_linked_verses),
+                        subtitle = stringResource(R.string.section_all_linked_verses_subtitle),
+                        accent = MaterialTheme.colorScheme.primary,
+                        count = allVerses.size
                     )
+                }
+
+                if (allVerses.isEmpty()) {
+                    item {
+                        DetailEmptyHint(
+                            message = stringResource(R.string.no_linked_verses),
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                } else {
+                    items(allVerses, key = { "all_${it.verseId}" }) { ref ->
+                        VerseRefCard(
+                            ref = ref,
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            showSurahName = true,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            onClick = {
+                                quickPeekTarget = QuickPeekTarget(
+                                    verseId = ref.verseId,
+                                    surahId = ref.surahId,
+                                    ayahNumber = ref.ayahNumber
+                                )
+                            }
+                        )
+                    }
                 }
             } else {
-                items(clashVerses, key = { "cls_${it.verseId}" }) { ref ->
-                    VerseRefCard(
-                        ref           = ref,
-                        accentColor   = MaterialTheme.colorScheme.tertiary,
-                        showSurahName = true,
-                        modifier      = Modifier.padding(horizontal = 16.dp),
-                        onClick       = {
-                            quickPeekTarget = QuickPeekTarget(
-                                verseId    = ref.verseId,
-                                surahId    = ref.surahId,
-                                ayahNumber = ref.ayahNumber
-                            )
-                        }
+                stickyHeader {
+                    DetailSectionHeader(
+                        label    = stringResource(R.string.section_context),
+                        subtitle = stringResource(R.string.section_context_subtitle, currentSurahName),
+                        accent   = MaterialTheme.colorScheme.primary,
+                        count    = contextVerses.size
                     )
+                }
+
+                if (contextVerses.isEmpty()) {
+                    item {
+                        DetailEmptyHint(
+                            message  = stringResource(R.string.no_context_verses),
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                } else {
+                    items(contextVerses, key = { "ctx_${it.verseId}" }) { ref ->
+                        VerseRefCard(
+                            ref           = ref,
+                            accentColor   = MaterialTheme.colorScheme.primary,
+                            showSurahName = false,
+                            modifier      = Modifier.padding(horizontal = 16.dp),
+                            onClick       = {
+                                quickPeekTarget = QuickPeekTarget(
+                                    verseId    = ref.verseId,
+                                    surahId    = ref.surahId,
+                                    ayahNumber = ref.ayahNumber
+                                )
+                            }
+                        )
+                    }
+                }
+
+                item { Spacer(Modifier.height(4.dp)) }
+
+                stickyHeader {
+                    DetailSectionHeader(
+                        label    = stringResource(R.string.section_clashes),
+                        subtitle = stringResource(R.string.section_clashes_subtitle),
+                        accent   = MaterialTheme.colorScheme.tertiary,
+                        count    = clashVerses.size
+                    )
+                }
+
+                if (clashVerses.isEmpty()) {
+                    item {
+                        DetailEmptyHint(
+                            message  = stringResource(R.string.no_clash_verses),
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                } else {
+                    items(clashVerses, key = { "cls_${it.verseId}" }) { ref ->
+                        VerseRefCard(
+                            ref           = ref,
+                            accentColor   = MaterialTheme.colorScheme.tertiary,
+                            showSurahName = true,
+                            modifier      = Modifier.padding(horizontal = 16.dp),
+                            onClick       = {
+                                quickPeekTarget = QuickPeekTarget(
+                                    verseId    = ref.verseId,
+                                    surahId    = ref.surahId,
+                                    ayahNumber = ref.ayahNumber
+                                )
+                            }
+                        )
+                    }
                 }
             }
 

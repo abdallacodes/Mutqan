@@ -1,5 +1,8 @@
 package com.example.qmemo.ui.components
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +20,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -27,19 +32,21 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.ThemeKey
-import com.example.qmemo.ui.theme.DifficultyCritical
-import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.MidnightBg
 import com.example.qmemo.ui.theme.MidnightPrimary
 import com.example.qmemo.ui.theme.ModernDarkBg
@@ -77,6 +84,30 @@ fun SettingsBottomSheet(
     onDismiss: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
+    val context = LocalContext.current
+    val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.exportData(it) }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importData(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is BackupUiEvent.Success -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                is BackupUiEvent.Error -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest  = onDismiss,
         sheetState        = sheetState,
@@ -164,6 +195,33 @@ fun SettingsBottomSheet(
                 isSelected  = currentLang == "ar",
                 onDismiss   = onDismiss
             )
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider(
+                color     = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 0.5.dp
+            )
+            Spacer(Modifier.height(20.dp))
+
+            // ── Backup section ─────────────────────────────────────────────
+            SectionLabel(stringResource(R.string.settings_data_management))
+            Spacer(Modifier.height(8.dp))
+
+            DataActionRow(
+                label = stringResource(R.string.btn_backup),
+                icon = Icons.Default.Backup,
+                onClick = {
+                    exportLauncher.launch("qmemo_backup_${System.currentTimeMillis()}.json")
+                }
+            )
+
+            DataActionRow(
+                label = stringResource(R.string.btn_restore),
+                icon = Icons.Default.Restore,
+                onClick = {
+                    importLauncher.launch(arrayOf("application/json"))
+                }
+            )
         }
     }
 }
@@ -179,6 +237,37 @@ private fun SectionLabel(text: String) {
         color         = MaterialTheme.colorScheme.onSurfaceVariant,
         letterSpacing = 1.5.sp
     )
+}
+
+// ── Data Action Row ──────────────────────────────────────────────────────────
+
+@Composable
+private fun DataActionRow(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
 
 // ── Theme preview card ────────────────────────────────────────────────────────

@@ -2,20 +2,22 @@ package com.example.qmemo.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Modern Dark palette ────────────────────────────────────────────────────────
-// Deep charcoal with mint-teal accent — clean, everyday feel.
-val ModernDarkBg              = Color(0xFF0E1117)
-val ModernDarkSurface         = Color(0xFF161B22)
-val ModernDarkSurfaceVariant  = Color(0xFF1C2430)
-val ModernDarkOutline         = Color(0xFF30363D)
-val ModernDarkOutlineVariant  = Color(0xFF21262D)
-val ModernDarkPrimary         = Color(0xFF3DA882)  // mint teal
-val ModernDarkPrimaryContainer = Color(0xFF003828)
-val ModernDarkOnPrimary       = Color(0xFF001E14)
-val ModernDarkOnPrimaryContainer = Color(0xFF9FF5C9)
-val ModernDarkOnBg            = Color(0xFFE6EDF3)
-val ModernDarkOnSurfaceVariant = Color(0xFF8B949E)
-val ModernDarkTertiary        = Color(0xFF4FC3F7)  // cyan — external links
+// ── Modern Emerald Dark palette ────────────────────────────────────────────────
+val ModernDarkBg               = Color(0xFF171B19)
+val ModernDarkSurface          = Color(0xFF1A1C1B)
+val ModernDarkSurfaceVariant   = Color(0xFF222826)
+val ModernDarkOutline          = Color(0xFF39413D)
+val ModernDarkOutlineVariant   = Color(0xFF2E3432)
+val ModernDarkPrimary          = Color(0xFF2ECC71)
+val ModernDarkPrimaryContainer = Color(0xFF0F3A2A)
+val ModernDarkSecondary        = Color(0xFFA8ADAB)
+val ModernDarkSecondaryContainer = Color(0xFF2B312E)
+val ModernDarkOnPrimary        = Color(0xFF082014)
+val ModernDarkOnPrimaryContainer = Color(0xFFB8F3CF)
+val ModernDarkOnBg             = Color(0xFFE6ECE8)
+val ModernDarkOnSurfaceVariant = Color(0xFFA5AFAB)
+val ModernDarkTertiary         = Color(0xFFF1C40F)
+val ModernDarkError            = Color(0xFFE74C3C)
 
 // ── Pure OLED palette ──────────────────────────────────────────────────────────
 // True black with emerald-green accent — maximum battery saving, night revision.
@@ -32,21 +34,22 @@ val OLEDOnBg                  = Color(0xFFF2F2F2)
 val OLEDOnSurfaceVariant      = Color(0xFF8A8A8A)
 val OLEDTertiary              = Color(0xFF4FC3F7)  // cyan — external links
 
-// ── Mushaf Cream palette (light theme) ────────────────────────────────────────
-// Warm parchment with deep-maroon accent — traditionalist, easy on the eyes.
-val MushafBg                  = Color(0xFFFAF6EF)
-val MushafSurface             = Color(0xFFF3EDE3)
-val MushafSurfaceVariant      = Color(0xFFEBE2D4)
-val MushafOutline             = Color(0xFFBDB0A0)
-val MushafOutlineVariant      = Color(0xFFD0C5B5)
-val MushafPrimary             = Color(0xFF6B1818)  // deep maroon
-val MushafPrimaryContainer    = Color(0xFFF7D5D0)
-val MushafOnPrimary           = Color(0xFFFFFFFF)
-val MushafOnPrimaryContainer  = Color(0xFF4A0808)
-val MushafOnBg                = Color(0xFF1A0F08)  // deep warm brown
-val MushafOnSurfaceVariant    = Color(0xFF5C4A3A)
-val MushafTertiary            = Color(0xFF0A6B82)  // deep teal — visible on cream
-val MushafError               = Color(0xFFC62828)  // darker red for light background
+// ── Modern Emerald Light palette ───────────────────────────────────────────────
+val MushafBg                   = Color(0xFFF3F9F4)
+val MushafSurface              = Color(0xFFF6FBF7)
+val MushafSurfaceVariant       = Color(0xFFE9F2EC)
+val MushafOutline              = Color(0xFFB8C8BE)
+val MushafOutlineVariant       = Color(0xFFD3E0D8)
+val MushafPrimary              = Color(0xFF006C4C)
+val MushafPrimaryContainer     = Color(0xFFCDEFE0)
+val MushafSecondary            = Color(0xFF4D6357)
+val MushafSecondaryContainer   = Color(0xFFD7E7DE)
+val MushafOnPrimary            = Color(0xFFFFFFFF)
+val MushafOnPrimaryContainer   = Color(0xFF002116)
+val MushafOnBg                 = Color(0xFF122018)
+val MushafOnSurfaceVariant     = Color(0xFF4E6358)
+val MushafTertiary             = Color(0xFF715D00)
+val MushafError                = Color(0xFFBA1A1A)
 
 // ── Midnight Blue palette ─────────────────────────────────────────────────────
 // Deep navy with warm-gold accent — professional, calm aesthetic.
@@ -64,7 +67,7 @@ val MidnightOnSurfaceVariant  = Color(0xFF7A8FA8)
 val MidnightTertiary          = Color(0xFF4FC3F7)  // cyan — external links
 
 // ── Shared semantic colours ───────────────────────────────────────────────────
-// Difficulty / health indicators — used on all themes as self-lit colour blocks.
-val DifficultySmooth    = Color(0xFF66BB6A)    // green  — strong memory
-val DifficultyStruggled = Color(0xFFFFA726)    // amber  — needs attention
-val DifficultyCritical  = Color(0xFFEF5350)    // red    — urgent review
+// Difficulty / health indicators — muted pastels for less visual strain.
+val DifficultySmooth    = Color(0xFF6FBF92)    // emerald mint
+val DifficultyStruggled = Color(0xFFE1B85A)    // warm honey
+val DifficultyCritical  = Color(0xFFE9897F)    // soft coral

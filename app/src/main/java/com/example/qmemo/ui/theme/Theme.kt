@@ -2,14 +2,17 @@ package com.example.qmemo.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography as M3Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qmemo.data.ThemeKey
 
@@ -20,6 +23,8 @@ private val modernDarkScheme = darkColorScheme(
     onPrimary            = ModernDarkOnPrimary,
     primaryContainer     = ModernDarkPrimaryContainer,
     onPrimaryContainer   = ModernDarkOnPrimaryContainer,
+    secondary            = ModernDarkSecondary,
+    secondaryContainer   = ModernDarkSecondaryContainer,
     tertiary             = ModernDarkTertiary,
     background           = ModernDarkBg,
     onBackground         = ModernDarkOnBg,
@@ -29,7 +34,7 @@ private val modernDarkScheme = darkColorScheme(
     onSurfaceVariant     = ModernDarkOnSurfaceVariant,
     outline              = ModernDarkOutline,
     outlineVariant       = ModernDarkOutlineVariant,
-    error                = DifficultyCritical,
+    error                = ModernDarkError,
 )
 
 private val oledBlackScheme = darkColorScheme(
@@ -54,6 +59,8 @@ private val mushafCreamScheme = lightColorScheme(
     onPrimary            = MushafOnPrimary,
     primaryContainer     = MushafPrimaryContainer,
     onPrimaryContainer   = MushafOnPrimaryContainer,
+    secondary            = MushafSecondary,
+    secondaryContainer   = MushafSecondaryContainer,
     tertiary             = MushafTertiary,
     background           = MushafBg,
     onBackground         = MushafOnBg,
@@ -149,9 +156,18 @@ fun QMemoTheme(
         else     -> Typography
     }
 
+    val shapes = Shapes(
+        extraSmall = RoundedCornerShape(12.dp),
+        small = RoundedCornerShape(16.dp),
+        medium = RoundedCornerShape(20.dp),
+        large = RoundedCornerShape(24.dp),
+        extraLarge = RoundedCornerShape(24.dp)
+    )
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography  = typography,
+        shapes      = shapes,
         content     = content
     )
 }

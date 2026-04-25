@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,8 +67,9 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JuzDetailScreen(
-    juzId:  Int,
-    onBack: () -> Unit
+    juzId:       Int,
+    onBack:      () -> Unit,
+    onPageOpen:  (Int) -> Unit = {}
 ) {
     val context   = LocalContext.current
     val viewModel = viewModel<JuzDetailViewModel>(
@@ -170,9 +172,10 @@ fun JuzDetailScreen(
 
     if (selectedPage != null) {
         QuickStatusDialog(
-            selection = selectedPage!!,
-            onDismiss = viewModel::dismissDialog,
-            onSelect  = { diff -> viewModel.logPage(selectedPage!!.page, diff) }
+            selection    = selectedPage!!,
+            onDismiss    = viewModel::dismissDialog,
+            onSelect     = { diff -> viewModel.logPage(selectedPage!!.page, diff) },
+            onViewInMushaf = { page -> viewModel.dismissDialog(); onPageOpen(page) }
         )
     }
 }
@@ -330,9 +333,10 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
 
 @Composable
 private fun QuickStatusDialog(
-    selection: PageSelection,
-    onDismiss: () -> Unit,
-    onSelect:  (Int) -> Unit
+    selection:      PageSelection,
+    onDismiss:      () -> Unit,
+    onSelect:       (Int) -> Unit,
+    onViewInMushaf: (Int) -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -376,6 +380,30 @@ private fun QuickStatusDialog(
                     color       = DifficultyCritical,
                     onClick     = { onSelect(3) }
                 )
+
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(top = 4.dp),
+                    color    = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                )
+
+                TextButton(
+                    onClick  = { onViewInMushaf(selection.page) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        modifier           = Modifier.size(16.dp),
+                        tint               = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text   = stringResource(R.string.open_in_mushaf),
+                        style  = MaterialTheme.typography.labelMedium,
+                        color  = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         },
         confirmButton = {},

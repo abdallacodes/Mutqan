@@ -2,7 +2,7 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">QMemo</string>
+    <string name="app_name">متقن</string>
 
     <!-- Bottom navigation labels -->
     <string name="nav_journal">السجل</string>
@@ -15,6 +15,13 @@
     <string name="settings_title">الإعدادات</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_theme">المظهر</string>
+    <string name="settings_data_management">إدارة البيانات</string>
+    <string name="btn_backup">نسخة احتياطية</string>
+    <string name="btn_restore">استعادة البيانات</string>
+    <string name="backup_success">تم تصدير النسخة الاحتياطية بنجاح</string>
+    <string name="restore_success">تم استعادة البيانات بنجاح</string>
+    <string name="backup_error">فشل تصدير النسخة الاحتياطية</string>
+    <string name="restore_error">فشل استعادة البيانات</string>
 
     <!-- Theme names -->
     <string name="theme_auto">تلقائي</string>
@@ -69,22 +76,55 @@
     <string name="vault_title">مخزن المتشابهات</string>
     <string name="vault_subtitle">مجموعات المتشابهات</string>
     <string name="cd_add_group">إضافة مجموعة</string>
+    <string name="cd_view_group">عرض المجموعة</string>
+    <string name="cd_edit_group">تعديل المجموعة</string>
     <string name="cd_delete_group">حذف المجموعة</string>
     <string name="verses_singular">آية واحدة</string>
     <string name="verses_plural">%d آيات</string>
     <string name="vault_empty_title">المخزن فارغ</string>
-    <string name="vault_empty_body">اضغط + لإنشاء أولى مجموعات\nالمتشابهات.</string>
+    <string name="vault_empty_body">اضغط + لإنشاء أولى مجموعات المتشابهات\nأو المجلدات.</string>
+    <string name="label_folders">المجلدات</string>
+    <string name="label_uncategorized">غير مصنف</string>
+    <string name="cd_add_folder">إضافة مجلد</string>
+    <string name="cd_import_vault">استيراد مخزن</string>
+    <string name="btn_rename">إعادة تسمية</string>
+    <string name="dialog_new_folder_title">مجلد جديد</string>
+    <string name="dialog_rename_folder_title">إعادة تسمية المجلد</string>
+    <string name="dialog_import_vault_title">استيراد مخزن</string>
+    <string name="placeholder_folder_name">اسم المجلد</string>
+    <string name="error_folder_exists">المجلد موجود بالفعل</string>
+    <string name="btn_export">تصدير</string>
+    <string name="btn_move">نقل</string>
+    <string name="dialog_move_title">نقل إلى مجلد</string>
+    <string name="label_root_folder">المخزن (الرئيسية)</string>
+    <string name="msg_move_success">تم النقل بنجاح</string>
+    <string name="msg_export_success">تم تصدير المخزن بنجاح</string>
+    <string name="msg_import_success">تم استيراد المخزن بنجاح</string>
+    <string name="msg_import_error">فشل الاستيراد</string>
 
     <!-- ── Edit Group Screen ───────────────────────────────────────────────── -->
     <string name="new_group_title">مجموعة جديدة</string>
     <string name="edit_group_title">تعديل المجموعة</string>
     <string name="section_group_desc">وصف المجموعة</string>
+    <string name="section_memorization_notes">ملاحظات الحفظ</string>
+    <string name="placeholder_memorization_notes">تلميحات، روابط بين الكلمات، أو أي ما يساعدك على تمييز هذه المجموعة…</string>
     <string name="section_mastery">مستوى الإتقان</string>
     <string name="section_link_verse">ربط آية</string>
     <string name="linked_verses_header">الآيات المرتبطة  (%d)</string>
     <string name="group_desc_placeholder">مثال: وَإِذْ قَالَ رَبُّكَ / وَإِذْ قَالَ اللَّهُ</string>
     <string name="btn_saved">محفوظ</string>
     <string name="btn_save_group">حفظ المجموعة</string>
+    <string name="btn_done">تم</string>
+    <string name="cd_save_group">حفظ المجموعة</string>
+    <string name="cd_delete_verse">حذف الآية</string>
+    <string name="cd_peek_verse">معاينة الآية</string>
+    <string name="section_search_by_text">أو ابحث بالنص</string>
+    <string name="label_filter_surah">تصفية حسب السورة</string>
+    <string name="label_filter_juz_range">نطاق الأجزاء</string>
+    <string name="label_juz_start">من جزء</string>
+    <string name="label_juz_end">إلى جزء</string>
+    <string name="all_surahs">كل السور</string>
+    <string name="placeholder_search_arabic">اكتب كلمات عربية للبحث…</string>
     <string name="label_surah">السورة</string>
     <string name="label_ayah">الآية</string>
     <string name="placeholder_surah_range">1–114</string>
@@ -92,9 +132,10 @@
     <string name="error_invalid_ref">سورة/آية غير صحيحة</string>
     <string name="snackbar_no_verse">لم يُعثر على هذه الآية.</string>
     <string name="snackbar_already_member">هذه الآية موجودة في المجموعة بالفعل.</string>
-    <string name="snackbar_save_first">احفظ المجموعة أولًا قبل إضافة الآيات.</string>
+    <string name="snackbar_desc_required">أدخل وصفًا قبل إضافة الآيات.</string>
     <string name="label_page">صفحة %d</string>
     <string name="cd_remove_verse">حذف الآية</string>
+    <string name="group_notes_detail_label">ملاحظات الحفظ</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
     <string name="strength_weak">ضعيف</string>
@@ -109,6 +150,12 @@
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
     <string name="brain_title">مركز الحفظ</string>
     <string name="brain_subtitle">30 جزءًا  ·  لوحة تتبع التراجع</string>
+    <string name="brain_how_it_works">كيف يعمل مركز الحفظ</string>
+    <string name="brain_how_it_works_intro">يقدّر مركز الحفظ ثبات كل صفحة بناءً على سجل مراجعاتك.</string>
+    <string name="brain_how_it_works_item_1">• تبدأ كل صفحة كغير مرصودة حتى تقوم بمراجعتها.</string>
+    <string name="brain_how_it_works_item_2">• المراجعة المتقنة حديثًا تُبقي الصفحة قوية؛ أما التعثر أو الضعف فيُسرّع التراجع.</string>
+    <string name="brain_how_it_works_item_3">• دين المراجعة يحسب الصفحات التي هبطت تحت ثبات 50٪.</string>
+    <string name="brain_how_it_works_item_4">• اضغط أي جزء لمراجعة الصفحات وتحديث حالة اليوم.</string>
     <string name="stat_revision_debt">دين المراجعة</string>
     <string name="stat_debt_sublabel">صفحات دون 50%%</string>
     <string name="stat_stability_index">مؤشر الثبات</string>
@@ -120,6 +167,15 @@
     <string name="legend_critical">حرج (&lt; 40%%)</string>
     <string name="legend_untracked">غير مرصود</string>
     <string name="juz_label">جزء</string>
+    <string name="juz_meta_overall_health">الجودة: %d٪</string>
+    <string name="juz_meta_overall_health_untracked">الجودة: غير مرصودة</string>
+    <string name="juz_meta_overall_health_short">%d٪</string>
+    <string name="juz_meta_overall_health_untracked_short">—</string>
+    <string name="juz_meta_overall_health_label">جودة الحفظ</string>
+    <string name="juz_meta_tracked_suffix">مرصودة</string>
+    <string name="juz_meta_tracked">مرصود: %d</string>
+    <string name="juz_meta_untracked">%d غير مرصودة</string>
+    <string name="juz_meta_coverage">التغطية: %d٪</string>
     <string name="pages_short_suffix">ص</string>
     <string name="untracked_dash">—</string>
 
@@ -127,7 +183,7 @@
     <string name="loading_subtitle">جار التحميل…</string>
     <string name="loading_pages">جار تحميل الصفحات…</string>
     <string name="juz_title">الجزء %d</string>
-    <string name="juz_health">صحة الجزء</string>
+    <string name="juz_health">جودة الجزء</string>
     <string name="no_revisions_juz">لا توجد مراجعات بعد</string>
     <string name="pages_tracked_summary">%1$d%%  ·  %2$d/%3$d صفحة مرصودة</string>
     <string name="count_critical">%d حرج</string>
@@ -148,9 +204,12 @@
 
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
     <string name="linked_groups_header">المجموعات المرتبطة</string>
-    <string name="linked_groups_hint">اضغط المجموعة · اضغط الآية للمعاينة</string>
+    <string name="linked_groups_hint">اضغط على المجموعة لعرض التفاصيل كاملة</string>
     <string name="section_in_this_surah">في هذه السورة</string>
     <string name="section_other_surahs">سور أخرى</string>
+    <string name="group_meta_total_verses">%d آيات</string>
+    <string name="group_meta_in_surah">في هذه السورة: %d</string>
+    <string name="group_meta_other_surahs">سور أخرى: %d</string>
     <string name="no_groups_for_surah">لا توجد مجموعات متشابهات لهذه السورة بعد.\nاستخدم المخزن لإنشاء المجموعات وربطها.</string>
     <string name="ayah_n">آية %d</string>
     <string name="page_n">ص. %d</string>
@@ -159,6 +218,10 @@
     <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
     <string name="group_detail_fallback_title">تفاصيل المجموعة</string>
     <string name="mutashabihat_breadcrumb">متشابهات · %s</string>
+    <string name="mutashabihat_breadcrumb_all">متشابهات · كل الآيات المرتبطة</string>
+    <string name="section_all_linked_verses">كل الآيات المرتبطة</string>
+    <string name="section_all_linked_verses_subtitle">كل آيات هذه المجموعة · اضغط للمعاينة</string>
+    <string name="no_linked_verses">لا توجد آيات مرتبطة بهذه المجموعة بعد.</string>
     <string name="section_context">السياق</string>
     <string name="section_context_subtitle">في %s · اضغط للمعاينة</string>
     <string name="no_context_verses">لا توجد آيات من هذه السورة في المجموعة.</string>
@@ -174,5 +237,46 @@
     <string name="share_verse_title">مشاركة الآية</string>
     <string name="verse_label_format">%1$s · آية %2$d</string>
     <string name="share_verse_body">%1$s\n\n— %2$s، آية %3$d</string>
+
+    <!-- ── Mushaf Viewer ─────────────────────────────────────────────────── -->
+    <string name="open_in_mushaf">افتح في المصحف</string>
+    <string name="mushaf_pages_range">صفحات %1$d–%2$d</string>
+    <string name="mushaf_cd_switch_two_page">عرض صفحتين</string>
+    <string name="mushaf_cd_switch_one_page">صفحة واحدة</string>
+    <string name="mushaf_cd_spread_fill_width">ملء عرض الصفحة؛ مرّر لأعلى وأسفل</string>
+    <string name="mushaf_cd_spread_fit_page">إظهار الصفحة كاملة</string>
+
+    <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
+    <string name="onboarding_skip">تخطي</string>
+    <string name="onboarding_next">التالي</string>
+    <string name="onboarding_get_started">ابدأ الآن</string>
+    <string name="onboarding_slide1_title">تابع تقدمك</string>
+    <string name="onboarding_slide1_body">سجّل نطاقات مراجعتك اليومية. تتبع الخوارزمية قوة حفظك عبر الزمن.</string>
+    <string name="onboarding_slide2_title">حل الآيات المتشابهة</string>
+    <string name="onboarding_slide2_body">اربط الآيات المتشابهة في مجموعات. سنعرض لك تلقائيًا نقاط التشابه داخل السورة وعبر القرآن.</string>
+    <string name="onboarding_slide3_title">تخلص من تراكم المراجعة</string>
+    <string name="onboarding_slide3_body">تابع خريطة حرارة 604 صفحة. الأخضر راسخ والأحمر يتراجع. لا تدع أساسك يتآكل.</string>
+
+    <!-- ── Empty states ───────────────────────────────────────────────────── -->
+    <string name="empty_vault_title">المخزن فارغ</string>
+    <string name="empty_vault_body">ابدأ بإضافة مجموعة تشابه لتحديد نقاط الخلط لديك.</string>
+    <string name="empty_history_title">لا مراجعات بعد</string>
+    <string name="empty_history_body">سجّل جلستك الأولى لمتابعة ثبات حفظك.</string>
+
+    <!-- ── New group hints ────────────────────────────────────────────────── -->
+    <string name="hint_add_two_verses">أضف آيتين على الأقل لتعريف مجموعة تشابه.</string>
+    <string name="hint_group_ready">المجموعة جاهزة للحفظ!</string>
+
+    <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
+    <string name="coachmark_heatmap_body">اضغط على أي جزء لإدارة صفحاته وتحديث ثباتها.</string>
+    <string name="coachmark_got_it">فهمت</string>
+
+    <!-- Help Dialogs -->
+    <string name="help_journal_title">مساعدة السجل</string>
+    <string name="help_journal_desc">تتبع مراجعاتك اليومية من خلال تسجيل نطاق الصفحات ومستوى الصعوبة. يقوم التطبيق بحساب ثبات حفظك بناءً على هذه السجلات.</string>
+    <string name="help_vault_title">مساعدة المخزن</string>
+    <string name="help_vault_desc">قم بتنظيم الآيات المتشابهة في مجلدات ومجموعات لحل الخلط بينها. يمكنك تصدير المجلدات لمشاركة عملك مع الآخرين.</string>
+    <string name="help_surahs_title">مساعدة السور</string>
+    <string name="help_surahs_desc">تصفح جميع سور القرآن الـ 114. تعرف على السور التي تحتوي على مجموعات متشابهات وافتح أي صفحة مباشرة في المصحف.</string>
 
 </resources>

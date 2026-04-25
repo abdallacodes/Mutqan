@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,9 +34,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,9 +50,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
 import com.example.qmemo.ui.theme.AmiriFontFamily
-import com.example.qmemo.data.local.dao.MemberVerseRef
-import com.example.qmemo.ui.components.QuickPeekBottomSheet
-import com.example.qmemo.ui.components.QuickPeekTarget
 import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.vault.MasterStrength
 
@@ -63,18 +58,18 @@ import com.example.qmemo.ui.vault.MasterStrength
 fun SurahDetailScreen(
     surahId: Int,
     onBack: () -> Unit,
-    onGroupClick: (groupId: Int) -> Unit = {}
+    onGroupClick: (groupId: Int) -> Unit = {},
+    onOpenMushaf: (page: Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: SurahDetailViewModel = viewModel(
         factory = SurahDetailViewModelFactory(context, surahId)
     )
 
-    val surahInfo        = viewModel.surahInfo
+    val surahInfo         = viewModel.surahInfo
     val groupsWithVerses by viewModel.groupsWithVerses.collectAsState()
+    val mushafStartPage by viewModel.mushafStartPage.collectAsState()
     val isArabic         = LocalConfiguration.current.locales[0].language == "ar"
-
-    var quickPeekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
 
     Scaffold(
         topBar = {
@@ -100,6 +95,19 @@ fun SurahDetailScreen(
                             color      = MaterialTheme.colorScheme.onBackground,
                             maxLines   = 1,
                             overflow   = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                actions = {
+                    val page = mushafStartPage
+                    IconButton(
+                        onClick  = { if (page != null && page > 0) onOpenMushaf(page) },
+                        enabled  = page != null && page > 0
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.MenuBook,
+                            contentDescription = stringResource(R.string.open_in_mushaf),
+                            tint               = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
@@ -131,7 +139,6 @@ fun SurahDetailScreen(
                     SurahGroupCard(
                         gwv         = gwv,
                         onClick     = { onGroupClick(gwv.group.id) },
-                        onVersePeek = { quickPeekTarget = it },
                         modifier    = Modifier.padding(horizontal = 16.dp)
                     )
                 }
@@ -139,13 +146,6 @@ fun SurahDetailScreen(
 
             item { Spacer(Modifier.height(32.dp)) }
         }
-    }
-
-    quickPeekTarget?.let { target ->
-        QuickPeekBottomSheet(
-            target    = target,
-            onDismiss = { quickPeekTarget = null }
-        )
     }
 }
 
@@ -205,7 +205,6 @@ private fun GroupsSectionHeader(count: Int) {
 private fun SurahGroupCard(
     gwv: GroupWithVerses,
     onClick: () -> Unit,
-    onVersePeek: (QuickPeekTarget) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strength    = MasterStrength.fromId(gwv.group.masterStrength)
@@ -256,125 +255,54 @@ private fun SurahGroupCard(
                 StrengthBadge(strength = strength)
             }
 
-            if (gwv.internalVerses.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                InlineSubHeader(label = stringResource(R.string.section_in_this_surah), accent = primary)
-                Spacer(Modifier.height(4.dp))
-                gwv.internalVerses.forEach { verse ->
-                    InlineVerseRow(
-                        verse  = verse,
-                        accent = primary,
-                        onPeek = { onVersePeek(QuickPeekTarget(verse.verseId, verse.surahId, verse.ayahNumber)) }
-                    )
-                }
+            if (gwv.group.memorizationNotes.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text     = gwv.group.memorizationNotes,
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            if (gwv.externalVerses.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                InlineSubHeader(label = stringResource(R.string.section_other_surahs), accent = tertiary)
-                Spacer(Modifier.height(4.dp))
-                gwv.externalVerses.forEach { verse ->
-                    InlineExternalVerseRow(
-                        verse  = verse,
-                        onPeek = { onVersePeek(QuickPeekTarget(verse.verseId, verse.surahId, verse.ayahNumber)) }
-                    )
-                }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MetaBadge(
+                    text = stringResource(
+                        R.string.group_meta_total_verses,
+                        gwv.internalVerses.size + gwv.externalVerses.size
+                    ),
+                    borderColor = MaterialTheme.colorScheme.outline
+                )
+                MetaBadge(
+                    text = stringResource(R.string.group_meta_in_surah, gwv.internalVerses.size),
+                    borderColor = primary.copy(alpha = 0.5f)
+                )
+                MetaBadge(
+                    text = stringResource(R.string.group_meta_other_surahs, gwv.externalVerses.size),
+                    borderColor = tertiary.copy(alpha = 0.5f)
+                )
             }
         }
     }
 }
 
-// ── Inline sub-section label ──────────────────────────────────────────────────
-
 @Composable
-private fun InlineSubHeader(label: String, accent: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .width(2.dp)
-                .height(10.dp)
-                .background(accent, RoundedCornerShape(1.dp))
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text          = label,
-            style         = MaterialTheme.typography.labelSmall,
-            fontWeight    = FontWeight.Bold,
-            color         = accent,
-            letterSpacing = 1.sp
-        )
-    }
-}
-
-// ── Internal verse row ────────────────────────────────────────────────────────
-
-@Composable
-private fun InlineVerseRow(
-    verse: MemberVerseRef,
-    accent: Color,
-    onPeek: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onPeek)
-            .padding(vertical = 4.dp, horizontal = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment     = Alignment.CenterVertically
+private fun MetaBadge(text: String, borderColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.background,
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text       = stringResource(R.string.ayah_n, verse.ayahNumber),
-            style      = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            color      = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text  = stringResource(R.string.page_n, verse.pageNumber),
+            text = text,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = accent.copy(alpha = 0.8f)
-        )
-    }
-}
-
-// ── External verse row ────────────────────────────────────────────────────────
-
-@Composable
-private fun InlineExternalVerseRow(
-    verse: MemberVerseRef,
-    onPeek: () -> Unit
-) {
-    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
-    val tertiary  = MaterialTheme.colorScheme.tertiary
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onPeek)
-            .padding(vertical = 4.dp, horizontal = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment     = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text       = "${verse.surahId}. ${SurahData.nameOf(verse.surahId)}",
-                style      = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
-                ),
-                fontWeight    = FontWeight.SemiBold,
-                color         = tertiary,
-                letterSpacing = 0.3.sp
-            )
-            Text(
-                text       = stringResource(R.string.ayah_n, verse.ayahNumber),
-                style      = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color      = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Text(
-            text  = stringResource(R.string.page_n, verse.pageNumber),
-            style = MaterialTheme.typography.labelSmall,
-            color = tertiary.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

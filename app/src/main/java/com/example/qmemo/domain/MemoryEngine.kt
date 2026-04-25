@@ -71,24 +71,28 @@ object MemoryEngine {
             }
         }
 
-        // Pass 2: compute score for all 604 pages
-        return (1..TOTAL_PAGES).map { page ->
-            val log = latestPerPage[page]
-            if (log == null) {
-                PageStability(page = page, score = 0f, lastRevised = null, lastDifficulty = null)
-            } else {
-                val profile     = PROFILES[log.difficulty] ?: PROFILES[1]!!
-                val daysElapsed = (nowMillis - log.timestamp).coerceAtLeast(0L) / 86_400_000.0
-                val score       = (profile.initialScore *
-                                   Math.exp(-LN2 * daysElapsed / profile.halfLifeDays))
-                                      .coerceIn(0.0, 1.0)
-                                      .toFloat()
-                PageStability(
-                    page           = page,
-                    score          = score,
-                    lastRevised    = log.timestamp,
-                    lastDifficulty = log.difficulty
-                )
+        // Pass 2: compute score for all 604 pages (single list allocation)
+        return buildList(TOTAL_PAGES) {
+            for (page in 1..TOTAL_PAGES) {
+                val log = latestPerPage[page]
+                if (log == null) {
+                    add(PageStability(page = page, score = 0f, lastRevised = null, lastDifficulty = null))
+                } else {
+                    val profile     = PROFILES[log.difficulty] ?: PROFILES[1]!!
+                    val daysElapsed = (nowMillis - log.timestamp).coerceAtLeast(0L) / 86_400_000.0
+                    val score       = (profile.initialScore *
+                        Math.exp(-LN2 * daysElapsed / profile.halfLifeDays))
+                        .coerceIn(0.0, 1.0)
+                        .toFloat()
+                    add(
+                        PageStability(
+                            page           = page,
+                            score          = score,
+                            lastRevised    = log.timestamp,
+                            lastDifficulty = log.difficulty
+                        )
+                    )
+                }
             }
         }
     }

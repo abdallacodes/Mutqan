@@ -17,6 +17,8 @@ data class SurahListItem(
     val info: SurahInfo,
     val verseCount: Int,
     val startJuz: Int,
+    /** Mushaf page (1–604) where this Surah begins; 0 if not loaded yet. */
+    val startPage: Int,
     val groupCount: Int
 )
 
@@ -38,17 +40,18 @@ class SurahListViewModel(private val dao: QuranDao) : ViewModel() {
             SurahData.ALL.map { info ->
                 val meta = metaById[info.id]
                 SurahListItem(
-                    info       = info,
-                    verseCount = meta?.verseCount ?: 0,
-                    startJuz   = meta?.startJuz   ?: 0,
-                    groupCount = meta?.groupCount  ?: 0
+                    info        = info,
+                    verseCount  = meta?.verseCount ?: 0,
+                    startJuz    = meta?.startJuz    ?: 0,
+                    startPage   = meta?.startPage   ?: 0,
+                    groupCount  = meta?.groupCount  ?: 0
                 )
             }
         }
         .stateIn(
             scope          = viewModelScope,
             started        = SharingStarted.WhileSubscribed(5_000),
-            initialValue   = SurahData.ALL.map { SurahListItem(it, 0, 0, 0) }
+            initialValue   = SurahData.ALL.map { SurahListItem(it, 0, 0, 0, 0) }
         )
 }
 

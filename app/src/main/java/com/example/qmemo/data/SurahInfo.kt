@@ -30,7 +30,7 @@ data class SurahInfo(
 /**
  * Static catalogue of all 114 Surahs.
  * Names and meanings are hardcoded (well-known, never change).
- * verseCount and startJuz come from the live DB via [QuranDao.getSurahMetaList]
+ * verseCount, startJuz, and startPage come from the live DB via [QuranDao.getSurahMetaList]
  * so they are always in sync with the pre-populated verses table.
  */
 object SurahData {

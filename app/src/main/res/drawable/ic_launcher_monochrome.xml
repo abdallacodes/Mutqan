@@ -5,26 +5,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Decorative Circular Medallion (Islamic Tezhip style) -->
+    <!-- Decorative Circular Medallion base -->
     <path
-        android:fillAlpha="0.15"
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+        android:fillColor="#000000"
+        android:pathData="M54,54m-38,0a38,38 0,1 1,76 0a38,38 0,1 1,-76 0" />
 
-    <!-- Solid Circular Base -->
+    <!-- Stylized "Q" / Focus Mark -->
     <path
-        android:fillColor="#2ECC71"
-        android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0" />
-
-    <!-- Stylized "Q" / Mushaf / Magnifying Glass Mark -->
-    <!-- Representing both 'Quran' and 'Quality' search/focus -->
-    <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#000000"
         android:pathData="M54,40 C46.8,40 41,45.8 41,53 C41,60.2 46.8,66 54,66 C57,66 59.7,65 61.8,63.2 L68,70 L72,66 L65.8,59.2 C66.6,57.3 67,55.2 67,53 C67,45.8 61.2,40 54,40 Z M54,61 C49.6,61 46,57.4 46,53 C46,48.6 49.6,45 54,45 C58.4,45 62,48.6 62,53 C62,57.4 58.4,61 54,61 Z" />
 
-    <!-- Crescent Moon Accent (Islamic Identity) -->
+    <!-- Crescent Accent -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#000000"
         android:pathData="M38,36 C34,40 33,48 38,54 C35,50 35,42 38,36 Z" />
 
 </vector>

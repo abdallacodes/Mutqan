@@ -2,7 +2,7 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">QMemo</string>
+    <string name="app_name">Mutqan</string>
 
     <!-- Bottom navigation labels -->
     <string name="nav_journal">Journal</string>
@@ -15,6 +15,13 @@
     <string name="settings_title">Settings</string>
     <string name="settings_language">LANGUAGE</string>
     <string name="settings_theme">THEME</string>
+    <string name="settings_data_management">DATA MANAGEMENT</string>
+    <string name="btn_backup">BACKUP DATA</string>
+    <string name="btn_restore">RESTORE DATA</string>
+    <string name="backup_success">Backup exported successfully</string>
+    <string name="restore_success">Data restored successfully</string>
+    <string name="backup_error">Failed to export backup</string>
+    <string name="restore_error">Failed to restore data</string>
 
     <!-- Theme names -->
     <string name="theme_auto">Auto</string>
@@ -69,22 +76,55 @@
     <string name="vault_title">THE VAULT</string>
     <string name="vault_subtitle">Mutashabihat Groups</string>
     <string name="cd_add_group">Add group</string>
+    <string name="cd_view_group">View group</string>
+    <string name="cd_edit_group">Edit group</string>
     <string name="cd_delete_group">Delete group</string>
     <string name="verses_singular">%d verse</string>
     <string name="verses_plural">%d verses</string>
     <string name="vault_empty_title">THE VAULT IS EMPTY</string>
-    <string name="vault_empty_body">Tap + to create your first\nMutashabihat group.</string>
+    <string name="vault_empty_body">Tap + to create your first\nMutashabihat group or folder.</string>
+    <string name="label_folders">FOLDERS</string>
+    <string name="label_uncategorized">UNCATEGORIZED</string>
+    <string name="cd_add_folder">Add folder</string>
+    <string name="cd_import_vault">Import vault</string>
+    <string name="btn_rename">RENAME</string>
+    <string name="dialog_new_folder_title">New Folder</string>
+    <string name="dialog_rename_folder_title">Rename Folder</string>
+    <string name="dialog_import_vault_title">Import Vault</string>
+    <string name="placeholder_folder_name">Folder name</string>
+    <string name="error_folder_exists">Folder already exists</string>
+    <string name="btn_export">EXPORT</string>
+    <string name="btn_move">MOVE</string>
+    <string name="dialog_move_title">Move to Folder</string>
+    <string name="label_root_folder">Vault (Home)</string>
+    <string name="msg_move_success">Moved successfully</string>
+    <string name="msg_export_success">Vault exported successfully</string>
+    <string name="msg_import_success">Vault imported successfully</string>
+    <string name="msg_import_error">Import failed</string>
 
     <!-- ── Edit Group Screen ───────────────────────────────────────────────── -->
     <string name="new_group_title">NEW GROUP</string>
     <string name="edit_group_title">EDIT GROUP</string>
     <string name="section_group_desc">GROUP DESCRIPTION</string>
+    <string name="section_memorization_notes">MEMORIZATION NOTES</string>
+    <string name="placeholder_memorization_notes">Mnemonics, patterns, word links, or anything that helps you keep this group distinct…</string>
     <string name="section_mastery">MASTERY STRENGTH</string>
     <string name="section_link_verse">LINK A VERSE</string>
     <string name="linked_verses_header">LINKED VERSES  (%d)</string>
     <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
     <string name="btn_saved">SAVED</string>
     <string name="btn_save_group">SAVE GROUP</string>
+    <string name="btn_done">Done</string>
+    <string name="cd_save_group">Save group</string>
+    <string name="cd_delete_verse">Delete verse</string>
+    <string name="cd_peek_verse">Preview verse</string>
+    <string name="section_search_by_text">OR SEARCH BY TEXT</string>
+    <string name="label_filter_surah">Filter by Surah</string>
+    <string name="label_filter_juz_range">Juz Range</string>
+    <string name="label_juz_start">From Juz</string>
+    <string name="label_juz_end">To Juz</string>
+    <string name="all_surahs">All Surahs</string>
+    <string name="placeholder_search_arabic">Type Arabic words to search…</string>
     <string name="label_surah">Surah</string>
     <string name="label_ayah">Ayah</string>
     <string name="placeholder_surah_range">1\u2013114</string>
@@ -92,9 +132,10 @@
     <string name="error_invalid_ref">Invalid Surah/Ayah</string>
     <string name="snackbar_no_verse">No verse found for that Surah/Ayah.</string>
     <string name="snackbar_already_member">That verse is already in this group.</string>
-    <string name="snackbar_save_first">Save the group first before adding verses.</string>
+    <string name="snackbar_desc_required">Enter a description before adding verses.</string>
     <string name="label_page">Page %d</string>
     <string name="cd_remove_verse">Remove verse</string>
+    <string name="group_notes_detail_label">Memorization notes</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
     <string name="strength_weak">Weak</string>
@@ -109,6 +150,12 @@
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
     <string name="brain_title">THE BRAIN</string>
     <string name="brain_subtitle">30 Juz  \u00b7  Memory Decay Dashboard</string>
+    <string name="brain_how_it_works">How Brain Works</string>
+    <string name="brain_how_it_works_intro">Brain estimates the stability of each page from your revision history.</string>
+    <string name="brain_how_it_works_item_1">• Every page starts untracked until you revise it.</string>
+    <string name="brain_how_it_works_item_2">• Recent smooth revisions keep a page fresh; struggled/critical entries decay faster.</string>
+    <string name="brain_how_it_works_item_3">• Revision Debt counts pages that fell below 50% stability.</string>
+    <string name="brain_how_it_works_item_4">• Tap any Juz to inspect pages and update today’s status.</string>
     <string name="stat_revision_debt">REVISION DEBT</string>
     <string name="stat_debt_sublabel">pages below 50%%</string>
     <string name="stat_stability_index">STABILITY INDEX</string>
@@ -120,6 +167,15 @@
     <string name="legend_critical">Critical (&lt; 40%%)</string>
     <string name="legend_untracked">Untracked</string>
     <string name="juz_label">JUZ</string>
+    <string name="juz_meta_overall_health">Health: %d%%</string>
+    <string name="juz_meta_overall_health_untracked">Health: Untracked</string>
+    <string name="juz_meta_overall_health_short">%d%%</string>
+    <string name="juz_meta_overall_health_untracked_short">—</string>
+    <string name="juz_meta_overall_health_label">Overall health</string>
+    <string name="juz_meta_tracked_suffix">tracked</string>
+    <string name="juz_meta_tracked">Tracked: %d</string>
+    <string name="juz_meta_untracked">%d untracked</string>
+    <string name="juz_meta_coverage">Coverage: %d%%</string>
     <string name="pages_short_suffix">p</string>
     <string name="untracked_dash">\u2014</string>
 
@@ -148,9 +204,12 @@
 
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
     <string name="linked_groups_header">LINKED GROUPS</string>
-    <string name="linked_groups_hint">Tap group to open \u00b7 tap verse to peek</string>
+    <string name="linked_groups_hint">Tap a group to view full details</string>
     <string name="section_in_this_surah">IN THIS SURAH</string>
     <string name="section_other_surahs">OTHER SURAHS</string>
+    <string name="group_meta_total_verses">%d verses</string>
+    <string name="group_meta_in_surah">In this Surah: %d</string>
+    <string name="group_meta_other_surahs">Other Surahs: %d</string>
     <string name="no_groups_for_surah">No similarity groups for this Surah yet.\nUse the Vault to create and link verse groups.</string>
     <string name="ayah_n">Ayah %d</string>
     <string name="page_n">p. %d</string>
@@ -159,6 +218,10 @@
     <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
     <string name="group_detail_fallback_title">Group Detail</string>
     <string name="mutashabihat_breadcrumb">Mutashabihat \u00b7 %s</string>
+    <string name="mutashabihat_breadcrumb_all">Mutashabihat \u00b7 All linked verses</string>
+    <string name="section_all_linked_verses">ALL LINKED VERSES</string>
+    <string name="section_all_linked_verses_subtitle">All verses in this group \u00b7 tap to peek</string>
+    <string name="no_linked_verses">No verses linked to this group yet.</string>
     <string name="section_context">CONTEXT</string>
     <string name="section_context_subtitle">In %s \u00b7 tap a verse to peek</string>
     <string name="no_context_verses">No verses from this Surah in this group.</string>
@@ -174,5 +237,46 @@
     <string name="share_verse_title">Share Verse</string>
     <string name="verse_label_format">%1$s \u00b7 Ayah %2$d</string>
     <string name="share_verse_body">%1$s\n\n\u2014 %2$s, Ayah %3$d</string>
+
+    <!-- ── Mushaf Viewer ─────────────────────────────────────────────────── -->
+    <string name="open_in_mushaf">Open in Mushaf</string>
+    <string name="mushaf_pages_range">Pages %1$d–%2$d</string>
+    <string name="mushaf_cd_switch_two_page">Two-page spread</string>
+    <string name="mushaf_cd_switch_one_page">Single page</string>
+    <string name="mushaf_cd_spread_fill_width">Fill page width; scroll up and down</string>
+    <string name="mushaf_cd_spread_fit_page">Show full page in view</string>
+
+    <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_slide1_title">Master Your Progress</string>
+    <string name="onboarding_slide1_body">Log your daily revision ranges. Our algorithm tracks the strength of your memorization over time.</string>
+    <string name="onboarding_slide2_title">Solve Confusing Verses</string>
+    <string name="onboarding_slide2_body">Link similar verses into groups. We\'ll automatically show you clashes within a Surah and across the whole Quran.</string>
+    <string name="onboarding_slide3_title">Eliminate Revision Debt</string>
+    <string name="onboarding_slide3_body">Watch your 604-page heatmap. Green is solid; Red is rusting. Don\'t let your foundation decay.</string>
+
+    <!-- ── Empty states ───────────────────────────────────────────────────── -->
+    <string name="empty_vault_title">Your Vault is Empty</string>
+    <string name="empty_vault_body">Start by adding a similarity group to map your confusion points.</string>
+    <string name="empty_history_title">No Revisions Yet</string>
+    <string name="empty_history_body">Track your first session to see your memory stability.</string>
+
+    <!-- ── New group hints ────────────────────────────────────────────────── -->
+    <string name="hint_add_two_verses">Add at least two verses to identify a similarity group.</string>
+    <string name="hint_group_ready">Group ready to save!</string>
+
+    <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
+    <string name="coachmark_heatmap_body">Tap any Juz to manage individual pages and update their stability.</string>
+    <string name="coachmark_got_it">Got it</string>
+
+    <!-- Help Dialogs -->
+    <string name="help_journal_title">Journal Help</string>
+    <string name="help_journal_desc">Track your daily revisions by logging the page range and difficulty. The app calculates your memory stability based on these logs.</string>
+    <string name="help_vault_title">Vault Help</string>
+    <string name="help_vault_desc">Organize similar verses into folders and groups to resolve confusion. You can export folders to share your work with others.</string>
+    <string name="help_surahs_title">Surah List Help</string>
+    <string name="help_surahs_desc">Browse all 114 Surahs. See which Surahs have Mutashabihat groups linked to them and open any page directly in the Mushaf.</string>
 
 </resources>

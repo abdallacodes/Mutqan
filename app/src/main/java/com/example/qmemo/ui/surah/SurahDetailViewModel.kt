@@ -38,6 +38,15 @@ class SurahDetailViewModel(
 
     val surahInfo: SurahInfo? = SurahData.getById(surahId)
 
+    /** First Mushaf page for this Surah; null until [verses] is populated. */
+    val mushafStartPage: StateFlow<Int?> = dao
+        .observeStartPageForSurah(surahId)
+        .stateIn(
+            scope        = viewModelScope,
+            started      = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
+
     /**
      * All groups that touch this Surah, each enriched with their member verses
      * split into internal (same Surah) and external (other Surahs).
@@ -48,14 +57,16 @@ class SurahDetailViewModel(
         .map { refs ->
             refs.groupBy { it.groupId }
                 .entries
+                .filter { (_, groupRefs) -> groupRefs.size >= 2 }  // guard: skip malformed groups
                 .sortedBy { it.key }
                 .map { (groupId, groupRefs) ->
                     val first = groupRefs.first()
                     GroupWithVerses(
                         group = SimilarityGroupEntity(
-                            id             = groupId,
-                            description    = first.description,
-                            masterStrength = first.masterStrength
+                            id                 = groupId,
+                            description        = first.description,
+                            masterStrength     = first.masterStrength,
+                            memorizationNotes  = first.memorizationNotes
                         ),
                         internalVerses = groupRefs
                             .filter { it.surahId == surahId }

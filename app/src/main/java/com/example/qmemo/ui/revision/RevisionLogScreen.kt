@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +63,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.local.entity.RevisionLogEntity
+import com.example.qmemo.ui.components.EmptyStateCard
+import com.example.qmemo.ui.components.HelpDialog
 import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
@@ -85,6 +89,7 @@ fun RevisionLogScreen(
     val recentLogs by viewModel.recentLogs.collectAsState()
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
         DatePickerDialogWrapper(
@@ -118,6 +123,13 @@ fun RevisionLogScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showHelpDialog = true }) {
+                        Icon(
+                            imageVector        = Icons.Default.Info,
+                            contentDescription = "Help",
+                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector        = Icons.Default.Settings,
@@ -134,108 +146,125 @@ fun RevisionLogScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            PageRangeInputRow(
-                startPage     = uiState.startPage,
-                endPage       = uiState.endPage,
-                startError    = uiState.startPageError,
-                endError      = uiState.endPageError,
-                onStartChange = viewModel::onStartPageChange,
-                onEndChange   = viewModel::onEndPageChange
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            DifficultySelector(
-                selected = uiState.difficulty,
-                onSelect = viewModel::onDifficultyChange
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            DateSelectorButton(
-                selectedDateMillis = uiState.selectedDateMillis,
-                onClick            = { showDatePicker = true }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = viewModel::logRevision,
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor   = MaterialTheme.colorScheme.onPrimary
-                )
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
             ) {
-                Text(
-                    text          = stringResource(R.string.btn_log_revision),
-                    style         = MaterialTheme.typography.titleSmall,
-                    fontWeight    = FontWeight.Black,
-                    letterSpacing = 2.sp
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                PageRangeInputRow(
+                    startPage     = uiState.startPage,
+                    endPage       = uiState.endPage,
+                    startError    = uiState.startPageError,
+                    endError      = uiState.endPageError,
+                    onStartChange = viewModel::onStartPageChange,
+                    onEndChange   = viewModel::onEndPageChange
                 )
-            }
 
-            Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+                DifficultySelector(
+                    selected = uiState.difficulty,
+                    onSelect = viewModel::onDifficultyChange
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                DateSelectorButton(
+                    selectedDateMillis = uiState.selectedDateMillis,
+                    onClick            = { showDatePicker = true }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = viewModel::logRevision,
                     modifier = Modifier
-                        .width(3.dp)
-                        .height(14.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(2.dp)
-                        )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text          = stringResource(R.string.recent_revisions),
-                    style         = MaterialTheme.typography.labelMedium,
-                    color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight    = FontWeight.Bold,
-                    letterSpacing = 2.sp,
-                    modifier      = Modifier.weight(1f)
-                )
-                TextButton(onClick = onViewHistory) {
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor   = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
                     Text(
-                        text          = stringResource(R.string.view_all),
-                        style         = MaterialTheme.typography.labelSmall,
-                        color         = MaterialTheme.colorScheme.primary,
-                        fontWeight    = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        text          = stringResource(R.string.btn_log_revision),
+                        style         = MaterialTheme.typography.titleSmall,
+                        fontWeight    = FontWeight.Black,
+                        letterSpacing = 2.sp
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            LazyColumn(
-                modifier            = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (recentLogs.isEmpty()) {
-                    item { EmptyHistoryHint() }
-                } else {
-                    items(recentLogs, key = { it.id }) { log ->
-                        RevisionLogItem(log)
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(14.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text          = stringResource(R.string.recent_revisions),
+                        style         = MaterialTheme.typography.labelMedium,
+                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        modifier      = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onViewHistory) {
+                        Text(
+                            text          = stringResource(R.string.view_all),
+                            style         = MaterialTheme.typography.labelSmall,
+                            color         = MaterialTheme.colorScheme.primary,
+                            fontWeight    = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
                     }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                LazyColumn(
+                    modifier            = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (recentLogs.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                icon        = Icons.Default.EventNote,
+                                title       = stringResource(R.string.empty_history_title),
+                                description = stringResource(R.string.empty_history_body),
+                                modifier    = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
+                    } else {
+                        items(recentLogs, key = { it.id }) { log ->
+                            RevisionLogItem(log)
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+            }
+
+            if (showHelpDialog) {
+                HelpDialog(
+                    title = stringResource(R.string.help_journal_title),
+                    description = stringResource(R.string.help_journal_desc),
+                    onDismiss = { showHelpDialog = false }
+                )
             }
         }
     }
@@ -373,13 +402,6 @@ private fun PageRangeInputRow(
 
 // ── Difficulty selector ───────────────────────────────────────────────────────
 
-private val Difficulty.color: Color
-    get() = when (this) {
-        Difficulty.SMOOTH    -> DifficultySmooth
-        Difficulty.STRUGGLED -> DifficultyStruggled
-        Difficulty.CRITICAL  -> DifficultyCritical
-    }
-
 @Composable
 private fun DifficultySelector(
     selected: Difficulty,
@@ -391,7 +413,11 @@ private fun DifficultySelector(
     ) {
         Difficulty.entries.forEach { diff ->
             val isSelected = diff == selected
-            val diffColor  = diff.color
+            val diffColor  = when (diff) {
+                Difficulty.SMOOTH    -> DifficultySmooth
+                Difficulty.STRUGGLED -> DifficultyStruggled
+                Difficulty.CRITICAL  -> DifficultyCritical
+            }
             OutlinedButton(
                 onClick  = { onSelect(diff) },
                 modifier = Modifier.weight(1f),
@@ -422,7 +448,11 @@ private fun DifficultySelector(
 private fun RevisionLogItem(log: RevisionLogEntity) {
     val context    = LocalContext.current
     val difficulty = Difficulty.fromId(log.difficulty)
-    val diffColor  = difficulty.color
+    val diffColor  = when (difficulty) {
+        Difficulty.SMOOTH    -> DifficultySmooth
+        Difficulty.STRUGGLED -> DifficultyStruggled
+        Difficulty.CRITICAL  -> DifficultyCritical
+    }
 
     Row(
         modifier = Modifier
@@ -475,24 +505,6 @@ private fun RevisionLogItem(log: RevisionLogEntity) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyHistoryHint() {
-    Box(
-        modifier         = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text       = stringResource(R.string.no_revisions_hint),
-            style      = MaterialTheme.typography.bodyMedium,
-            color      = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign  = TextAlign.Center,
-            lineHeight = 22.sp
-        )
     }
 }
 

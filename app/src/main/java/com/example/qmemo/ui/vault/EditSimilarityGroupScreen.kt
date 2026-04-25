@@ -2,6 +2,8 @@ package com.example.qmemo.ui.vault
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,21 +24,27 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,21 +52,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
 import com.example.qmemo.data.local.dao.MemberVerseRef
+import com.example.qmemo.data.local.entity.VerseEntity
+import com.example.qmemo.ui.components.QuickPeekBottomSheet
+import com.example.qmemo.ui.components.QuickPeekTarget
 import com.example.qmemo.ui.components.localizedLabel
+import com.example.qmemo.ui.theme.AmiriFontFamily
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.DifficultyStruggled
@@ -67,26 +83,42 @@ import com.example.qmemo.ui.theme.DifficultyStruggled
 @Composable
 fun EditSimilarityGroupScreen(
     groupId: Int?,
+    folderId: Int?,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: EditGroupViewModel = viewModel(factory = EditGroupViewModelFactory(context))
 
-    LaunchedEffect(groupId) {
-        if (groupId != null) viewModel.loadGroup(groupId)
+    LaunchedEffect(groupId, folderId) {
+        if (groupId != null) {
+            viewModel.loadGroup(groupId)
+        } else {
+            viewModel.setInitialFolder(folderId)
+        }
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val members by viewModel.members.collectAsState()
-    val snackbarHost = remember { SnackbarHostState() }
+    val uiState          by viewModel.uiState.collectAsState()
+    val members          by viewModel.members.collectAsState()
+    val searchResults    by viewModel.textSearchResults.collectAsState()
+    val snackbarHost      = remember { SnackbarHostState() }
+
+    // Peek state — non-null means the sheet is open for that verse
+    var peekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
+
+    // TopAppBar save is unlocked when description + 2 linked verses are present
+    val canSave = uiState.description.isNotBlank() && members.size >= 2
+    // Add button is unlocked when a surah is selected and ayah is filled
+    val canAdd  = uiState.selectedSurahId != null && uiState.ayahInput.isNotBlank()
+    // Show search results below the search field when query ≥ 2 chars
+    val showSearchResults = uiState.textSearchQuery.length >= 2
 
     val addResult = uiState.addVerseResult
     LaunchedEffect(addResult) {
         val msg = when (addResult) {
-            is AddVerseResult.InvalidRef    -> context.getString(R.string.snackbar_no_verse)
-            is AddVerseResult.AlreadyMember -> context.getString(R.string.snackbar_already_member)
-            is AddVerseResult.GroupNotSaved -> context.getString(R.string.snackbar_save_first)
-            is AddVerseResult.Added         -> null
+            is AddVerseResult.InvalidRef          -> context.getString(R.string.snackbar_no_verse)
+            is AddVerseResult.AlreadyMember       -> context.getString(R.string.snackbar_already_member)
+            is AddVerseResult.DescriptionRequired -> context.getString(R.string.snackbar_desc_required)
+            is AddVerseResult.Added               -> "Verse added"
             else -> null
         }
         if (msg != null) {
@@ -117,6 +149,19 @@ fun EditSimilarityGroupScreen(
                         color         = MaterialTheme.colorScheme.onBackground
                     )
                 },
+                actions = {
+                    IconButton(
+                        onClick  = { viewModel.saveGroup(); onBack() },
+                        enabled  = canSave
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.Check,
+                            contentDescription = stringResource(R.string.cd_save_group),
+                            tint = if (canSave) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -135,6 +180,7 @@ fun EditSimilarityGroupScreen(
         ) {
             item { Spacer(Modifier.height(4.dp)) }
 
+            // ── Group description ──────────────────────────────────────────────
             item {
                 SectionLabel(stringResource(R.string.section_group_desc))
                 Spacer(Modifier.height(6.dp))
@@ -150,6 +196,29 @@ fun EditSimilarityGroupScreen(
                 )
             }
 
+            // ── Memorization notes ─────────────────────────────────────────────
+            item {
+                SectionLabel(stringResource(R.string.section_memorization_notes))
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value         = uiState.memorizationNotes,
+                    onValueChange = viewModel::onMemorizationNotesChange,
+                    modifier      = Modifier.fillMaxWidth(),
+                    placeholder   = {
+                        Text(
+                            stringResource(R.string.placeholder_memorization_notes),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    singleLine    = false,
+                    minLines      = 3,
+                    maxLines      = 8,
+                    shape         = RoundedCornerShape(8.dp),
+                    colors        = fieldColors()
+                )
+            }
+
+            // ── Mastery strength ───────────────────────────────────────────────
             item {
                 SectionLabel(stringResource(R.string.section_mastery))
                 Spacer(Modifier.height(6.dp))
@@ -159,35 +228,7 @@ fun EditSimilarityGroupScreen(
                 )
             }
 
-            item {
-                Button(
-                    onClick  = viewModel::saveGroup,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape    = RoundedCornerShape(8.dp),
-                    enabled  = uiState.description.isNotBlank(),
-                    colors   = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor   = MaterialTheme.colorScheme.onPrimary,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContentColor   = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    if (uiState.isSaved) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                    }
-                    Text(
-                        text          = if (uiState.isSaved) stringResource(R.string.btn_saved)
-                                        else stringResource(R.string.btn_save_group),
-                        style         = MaterialTheme.typography.labelLarge,
-                        fontWeight    = FontWeight.Black,
-                        letterSpacing = 1.5.sp
-                    )
-                }
-            }
-
+            // ── Divider + Link a Verse section ─────────────────────────────────
             item {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Spacer(Modifier.height(4.dp))
@@ -195,17 +236,82 @@ fun EditSimilarityGroupScreen(
                 Spacer(Modifier.height(6.dp))
             }
 
+            // ── Surah dropdown + Ayah + Add ────────────────────────────────────
             item {
-                VerseAddRow(
-                    surahInput    = uiState.surahInput,
-                    ayahInput     = uiState.ayahInput,
-                    isError       = uiState.addVerseResult is AddVerseResult.InvalidRef,
-                    onSurahChange = viewModel::onSurahInputChange,
-                    onAyahChange  = viewModel::onAyahInputChange,
-                    onAdd         = viewModel::addVerse
+                VersePicker(
+                    selectedSurahId   = uiState.selectedSurahId,
+                    surahFilterQuery  = uiState.surahFilterQuery,
+                    ayahInput         = uiState.ayahInput,
+                    textSearchQuery   = uiState.textSearchQuery,
+                    isAyahError       = uiState.addVerseResult is AddVerseResult.InvalidRef,
+                    canAdd            = canAdd,
+                    onSurahFilterChange = viewModel::onSurahFilterChange,
+                    onSurahSelected   = viewModel::onSurahSelected,
+                    onAyahChange      = viewModel::onAyahInputChange,
+                    onTextSearchChange = viewModel::onTextSearchChange,
+                    onAdd             = viewModel::addVerse
                 )
             }
 
+            // ── Search Filters (Surah & Juz) ───────────────────────────────────
+            item {
+                SearchFiltersSection(
+                    selectedSurahId = uiState.searchFilterSurahId,
+                    juzStart = uiState.searchFilterJuzStart,
+                    juzEnd = uiState.searchFilterJuzEnd,
+                    onSurahSelect = viewModel::onSearchFilterSurahSelected,
+                    onJuzRangeChange = viewModel::onSearchFilterJuzRangeChange
+                )
+            }
+
+            // ── Arabic text search results ─────────────────────────────────────
+            if (showSearchResults) {
+                if (searchResults.isEmpty()) {
+                    item {
+                        Text(
+                            "No results found with current filters",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                } else {
+                    items(searchResults, key = { "search_${it.id}" }) { verse ->
+                        val isAlreadyMember = members.any { it.verseId == verse.id }
+                        SearchResultRow(
+                            verse  = verse,
+                            isAdded = isAlreadyMember,
+                            onAdd = { viewModel.onVerseSearchAdd(verse) },
+                            onPeek = {
+                                peekTarget = QuickPeekTarget(
+                                    verseId = verse.id,
+                                    surahId = verse.surahId,
+                                    ayahNumber = verse.ayahNumber
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            // ── 2-verse validation hint ────────────────────────────────────────
+            item {
+                val hintText  = if (members.size >= 2)
+                    stringResource(R.string.hint_group_ready)
+                else
+                    stringResource(R.string.hint_add_two_verses)
+                val hintColor = if (members.size >= 2) DifficultySmooth
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+
+                Text(
+                    text      = hintText,
+                    style     = MaterialTheme.typography.labelSmall,
+                    color     = hintColor,
+                    modifier  = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                )
+            }
+
+            // ── Linked verses list ─────────────────────────────────────────────
             if (members.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(4.dp))
@@ -213,70 +319,350 @@ fun EditSimilarityGroupScreen(
                     Spacer(Modifier.height(6.dp))
                 }
                 items(members, key = { it.verseId }) { member ->
-                    MemberRow(member = member, onRemove = { viewModel.removeMember(member) })
+                    MemberRow(
+                        member   = member,
+                        onRemove = { viewModel.removeMember(member) },
+                        onPeek   = {
+                            peekTarget = QuickPeekTarget(
+                                verseId     = member.verseId,
+                                surahId     = member.surahId,
+                                ayahNumber  = member.ayahNumber
+                            )
+                        }
+                    )
                 }
             }
 
             item { Spacer(Modifier.height(32.dp)) }
         }
     }
+
+    // ── Quick Peek sheet ───────────────────────────────────────────────────────
+    peekTarget?.let { target ->
+        QuickPeekBottomSheet(
+            target    = target,
+            onDismiss = { peekTarget = null }
+        )
+    }
 }
 
-// ── Verse add row ─────────────────────────────────────────────────────────────
+// ── Search Filters Section ────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VerseAddRow(
-    surahInput: String,
+private fun SearchFiltersSection(
+    selectedSurahId: Int?,
+    juzStart: Int?,
+    juzEnd: Int?,
+    onSurahSelect: (Int?) -> Unit,
+    onJuzRangeChange: (Int?, Int?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .padding(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { expanded = !expanded }.padding(vertical = 4.dp)
+        ) {
+            Icon(Icons.Default.FilterAlt, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Text("SEARCH FILTERS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (expanded) "HIDE" else "SHOW",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (expanded) {
+            Spacer(Modifier.height(8.dp))
+            
+            // Surah Filter
+            var surahExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = surahExpanded,
+                onExpandedChange = { surahExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedSurahId?.let { "${it}. ${SurahData.nameOf(it)}" } ?: stringResource(R.string.all_surahs),
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+                    label = { Text(stringResource(R.string.label_filter_surah)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = fieldColors()
+                )
+                ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.all_surahs)) },
+                        onClick = { onSurahSelect(null); surahExpanded = false }
+                    )
+                    SurahData.ALL.forEach { info ->
+                        DropdownMenuItem(
+                            text = { Text("${info.id}. ${info.getDisplayName()}") },
+                            onClick = { onSurahSelect(info.id); surahExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Juz Range
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = juzStart?.toString() ?: "",
+                    onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(v, juzEnd) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.label_juz_start)) },
+                    placeholder = { Text("1") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = fieldColors()
+                )
+                OutlinedTextField(
+                    value = juzEnd?.toString() ?: "",
+                    onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(juzStart, v) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.label_juz_end)) },
+                    placeholder = { Text("30") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = fieldColors()
+                )
+            }
+        }
+    }
+}
+
+// ── Verse picker (Surah dropdown + Ayah + Add + Text search) ──────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VersePicker(
+    selectedSurahId: Int?,
+    surahFilterQuery: String,
     ayahInput: String,
-    isError: Boolean,
-    onSurahChange: (String) -> Unit,
+    textSearchQuery: String,
+    isAyahError: Boolean,
+    canAdd: Boolean,
+    onSurahFilterChange: (String) -> Unit,
+    onSurahSelected: (Int) -> Unit,
     onAyahChange: (String) -> Unit,
+    onTextSearchChange: (String) -> Unit,
     onAdd: () -> Unit
 ) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment     = Alignment.Top
-    ) {
-        OutlinedTextField(
-            value           = surahInput,
-            onValueChange   = onSurahChange,
-            modifier        = Modifier.weight(1f),
-            label           = { Text(stringResource(R.string.label_surah)) },
-            placeholder     = { Text(stringResource(R.string.placeholder_surah_range), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            isError         = isError,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine      = true,
-            shape           = RoundedCornerShape(8.dp),
-            colors          = fieldColors()
-        )
-        OutlinedTextField(
-            value           = ayahInput,
-            onValueChange   = onAyahChange,
-            modifier        = Modifier.weight(1f),
-            label           = { Text(stringResource(R.string.label_ayah)) },
-            placeholder     = { Text(stringResource(R.string.placeholder_ayah_range), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            isError         = isError,
-            supportingText  = if (isError) {
-                { Text(stringResource(R.string.error_invalid_ref), color = DifficultyCritical, style = MaterialTheme.typography.labelSmall) }
-            } else null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine      = true,
-            shape           = RoundedCornerShape(8.dp),
-            colors          = fieldColors()
-        )
-        Button(
-            onClick  = onAdd,
-            modifier = Modifier
-                .height(56.dp)
-                .width(72.dp),
-            shape    = RoundedCornerShape(8.dp),
-            colors   = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor   = MaterialTheme.colorScheme.onPrimary
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+        // ── Row 1: Surah dropdown (full width) ─────────────────────────────────
+        var surahExpanded by remember { mutableStateOf(false) }
+
+        val surahDisplayText = when {
+            surahFilterQuery.isNotEmpty() -> surahFilterQuery
+            selectedSurahId != null ->
+                SurahData.getById(selectedSurahId)
+                    ?.let { "${it.id}. ${it.getDisplayName()}" } ?: ""
+            else -> ""
+        }
+
+        val filteredSurahs = remember(surahFilterQuery) {
+            if (surahFilterQuery.isBlank()) SurahData.ALL
+            else SurahData.ALL.filter { info ->
+                info.getDisplayName().contains(surahFilterQuery, ignoreCase = true) ||
+                info.nameArabic.contains(surahFilterQuery) ||
+                info.id.toString() == surahFilterQuery.trim()
+            }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded          = surahExpanded,
+            onExpandedChange  = { surahExpanded = it }
         ) {
-            Text(stringResource(R.string.btn_add), fontWeight = FontWeight.Black, letterSpacing = 1.sp, fontSize = 12.sp)
+            OutlinedTextField(
+                value         = surahDisplayText,
+                onValueChange = {
+                    onSurahFilterChange(it)
+                    surahExpanded = true
+                },
+                modifier      = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                label         = { Text(stringResource(R.string.label_surah)) },
+                trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
+                singleLine    = true,
+                shape         = RoundedCornerShape(8.dp),
+                colors        = fieldColors()
+            )
+            ExposedDropdownMenu(
+                expanded          = surahExpanded,
+                onDismissRequest  = { surahExpanded = false }
+            ) {
+                filteredSurahs.forEach { info ->
+                    DropdownMenuItem(
+                        text    = { Text("${info.id}. ${info.getDisplayName()}") },
+                        onClick = {
+                            onSurahSelected(info.id)
+                            surahExpanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
+                }
+            }
+        }
+
+        // ── Row 2: Ayah number field + Add button ──────────────────────────────
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment     = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value           = ayahInput,
+                onValueChange   = onAyahChange,
+                modifier        = Modifier.weight(1f),
+                label           = { Text(stringResource(R.string.label_ayah)) },
+                placeholder     = { Text(stringResource(R.string.placeholder_ayah_range), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                isError         = isAyahError,
+                supportingText  = if (isAyahError) {
+                    { Text(stringResource(R.string.error_invalid_ref), color = DifficultyCritical, style = MaterialTheme.typography.labelSmall) }
+                } else null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine      = true,
+                shape           = RoundedCornerShape(8.dp),
+                colors          = fieldColors()
+            )
+            Button(
+                onClick  = onAdd,
+                modifier = Modifier
+                    .height(56.dp)
+                    .width(80.dp),
+                shape    = RoundedCornerShape(8.dp),
+                enabled  = canAdd,
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor         = MaterialTheme.colorScheme.primary,
+                    contentColor           = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor   = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text(
+                    stringResource(R.string.btn_add),
+                    fontWeight    = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    fontSize      = 12.sp
+                )
+            }
+        }
+
+        // ── Row 3: Arabic text search field ────────────────────────────────────
+        Spacer(Modifier.height(2.dp))
+        SectionLabel(stringResource(R.string.section_search_by_text))
+        Spacer(Modifier.height(4.dp))
+        OutlinedTextField(
+            value         = textSearchQuery,
+            onValueChange = onTextSearchChange,
+            modifier      = Modifier.fillMaxWidth(),
+            placeholder   = {
+                Text(
+                    stringResource(R.string.placeholder_search_arabic),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            leadingIcon   = {
+                Icon(
+                    imageVector        = Icons.Default.Search,
+                    contentDescription = null,
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier           = Modifier.size(18.dp)
+                )
+            },
+            singleLine    = true,
+            shape         = RoundedCornerShape(8.dp),
+            colors        = fieldColors()
+        )
+    }
+}
+
+// ── Search result row ─────────────────────────────────────────────────────────
+
+@Composable
+private fun SearchResultRow(
+    verse: VerseEntity,
+    isAdded: Boolean,
+    onAdd: () -> Unit,
+    onPeek: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onPeek) // Peek on whole row tap
+            .then(
+                Modifier.padding(0.dp) // keep border visible
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(
+                    if (isAdded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                    RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
+                )
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, top = 10.dp, bottom = 10.dp)
+        ) {
+            Text(
+                text       = "${verse.surahId}. ${SurahData.nameOf(verse.surahId)}  ·  ${verse.ayahNumber}",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color      = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text     = verse.textArabic.let { t ->
+                    if (t.length > 80) t.take(80) + "…" else t
+                },
+                style    = MaterialTheme.typography.bodySmall.copy(
+                    textDirection = TextDirection.Rtl,
+                    fontFamily    = AmiriFontFamily,
+                    lineHeight    = 20.sp
+                ),
+                color    = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2
+            )
+        }
+        
+        IconButton(onClick = onPeek) {
+            Icon(
+                imageVector = Icons.Default.Visibility,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        IconButton(onClick = onAdd, enabled = !isAdded) {
+            Icon(
+                imageVector        = Icons.Default.Check,
+                contentDescription = stringResource(R.string.btn_add),
+                tint               = if (isAdded) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
+                modifier           = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -284,7 +670,11 @@ private fun VerseAddRow(
 // ── Member row ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun MemberRow(member: MemberVerseRef, onRemove: () -> Unit) {
+private fun MemberRow(
+    member: MemberVerseRef,
+    onRemove: () -> Unit,
+    onPeek: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -315,12 +705,22 @@ private fun MemberRow(member: MemberVerseRef, onRemove: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        // Peek button — opens Quick Peek sheet for this verse
+        IconButton(onClick = onPeek) {
+            Icon(
+                imageVector        = Icons.Default.Visibility,
+                contentDescription = stringResource(R.string.cd_peek_verse),
+                tint               = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                modifier           = Modifier.size(18.dp)
+            )
+        }
+        // Delete button
         IconButton(onClick = onRemove) {
             Icon(
-                Icons.Default.Close,
-                contentDescription = stringResource(R.string.cd_remove_verse),
-                tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier           = Modifier.size(16.dp)
+                imageVector        = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.cd_delete_verse),
+                tint               = MaterialTheme.colorScheme.error,
+                modifier           = Modifier.size(18.dp)
             )
         }
     }

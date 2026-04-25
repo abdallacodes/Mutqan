@@ -10,6 +10,7 @@ import com.example.qmemo.data.local.dao.QuranDao
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
+import com.example.qmemo.data.local.entity.VaultFolderEntity
 import com.example.qmemo.data.local.entity.VerseEntity
 import org.json.JSONArray
 
@@ -18,9 +19,10 @@ import org.json.JSONArray
         VerseEntity::class,
         RevisionLogEntity::class,
         SimilarityGroupEntity::class,
-        SimilarityMemberEntity::class
+        SimilarityMemberEntity::class,
+        VaultFolderEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,6 +42,33 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds optional memorization notes on mutashabihat groups. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE similarity_groups ADD COLUMN memorization_notes TEXT NOT NULL DEFAULT ''"
+                )
+            }
+        }
+
+        /** Adds vault_folders table and links similarity_groups to it. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `vault_folders` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `parent_id` INTEGER DEFAULT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`parent_id`) REFERENCES `vault_folders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_vault_folders_name_parent_id` ON `vault_folders` (`name`, `parent_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_vault_folders_parent_id` ON `vault_folders` (`parent_id`)"
+                )
+                db.execSQL(
+                    "ALTER TABLE similarity_groups ADD COLUMN folder_id INTEGER DEFAULT NULL"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -48,34 +77,28 @@ abstract class AppDatabase : RoomDatabase() {
                     "qmemo.db"
                 )
                     .addCallback(PrepopulateCallback(context.applicationContext))
-                    .addMigrations(MIGRATION_1_2)
-                    // Early-dev: wipe and reseed when no migration path exists.
-                    // Remove once the schema stabilises and write proper migrations.
+                    .addMigrations(MIGRATION_1_2, MIGRATION_3_4, MIGRATION_4_5)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
             }
     }
 
-    /**
-     * Seeds the [verses] table synchronously on whichever thread Room opens
-     * the database on (always an IO thread via Room's coroutine integration).
-     *
-     * Two overrides are needed:
-     *  - [onCreate]              – first-time DB creation (fresh install)
-     *  - [onDestructiveMigration] – schema bump with [fallbackToDestructiveMigration]
-     *
-     * Using the raw [SupportSQLiteDatabase] directly avoids any INSTANCE-null
-     * race and keeps the data ready before the first user-facing DAO call returns.
-     */
     private class PrepopulateCallback(private val context: Context) : Callback() {
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            db.execSQL("PRAGMA foreign_keys = ON")
+        }
+
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
+            db.execSQL("PRAGMA foreign_keys = ON")
             seedVerses(context, db)
         }
 
         override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
             super.onDestructiveMigration(db)
+            db.execSQL("PRAGMA foreign_keys = ON")
             seedVerses(context, db)
         }
     }
@@ -83,16 +106,6 @@ abstract class AppDatabase : RoomDatabase() {
 
 private const val VERSES_ASSET = "quran_metadata.json"
 
-/**
- * Reads [VERSES_ASSET] and bulk-inserts all 6,236 verse rows directly via
- * the [SupportSQLiteDatabase] handle that Room passes to the Callback.
- *
- * Running synchronously against the raw DB object (rather than through a DAO
- * coroutine) guarantees the data is committed before the first user-facing
- * query returns, eliminating the previous race condition.
- *
- * INSERT OR IGNORE makes repeat calls safe (e.g. if somehow called twice).
- */
 private fun seedVerses(context: Context, db: SupportSQLiteDatabase) {
     val json = context.assets.open(VERSES_ASSET).bufferedReader().use { it.readText() }
     val array = JSONArray(json)
