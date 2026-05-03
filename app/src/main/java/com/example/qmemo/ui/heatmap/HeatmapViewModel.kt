@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.qmemo.data.local.AppDatabase
 import com.example.qmemo.data.local.dao.QuranDao
-import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.domain.MemoryEngine
 import com.example.qmemo.domain.PageStability
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -23,10 +23,6 @@ import kotlin.math.roundToInt
 
 // ── Supporting data classes ───────────────────────────────────────────────────
 
-/**
- * Snapshot of the user's overall memory health, derived from stabilities.
- * All counts are only over **tracked** pages (pages revised at least once).
- */
 @Immutable
 data class DashboardStats(
     val revisionDebt: Int     = 0,
@@ -35,14 +31,11 @@ data class DashboardStats(
     val criticalCount: Int    = 0
 )
 
-/**
- * Everything the Brain (heatmap) screen needs in one snapshot — one [StateFlow] update
- * per revision-log change, so the UI collects once and skips duplicate work.
- */
 @Immutable
 data class HeatmapUiState(
     val stats:        DashboardStats = DashboardStats(),
-    val juzSummaries: List<JuzSummary> = emptyList()
+    val juzSummaries: List<JuzSummary> = emptyList(),
+    val forecastDays: Int = 0
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -50,6 +43,8 @@ data class HeatmapUiState(
 class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
 
     private val _juzToPages = MutableStateFlow<Map<Int, List<Int>>>(emptyMap())
+    private val _forecastDays = MutableStateFlow(0)
+    val forecastDays: StateFlow<Int> = _forecastDays.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -59,28 +54,47 @@ class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
     }
 
     /**
-     * Single pipeline: revision logs + juz map → stabilities once → stats + 30 summaries
-     * (including pre-packed mini-map colors). Runs on the collectors' threads
-     * (avoid [flowOn] here — it can interact badly with [stateIn] + Room).
+     * Optimized State pipeline.
+     * Recomputes full MemoryState only when logs or similarity links change.
+     * Projects retrievability in O(604) when the slider moves.
      */
     val uiState: StateFlow<HeatmapUiState> = combine(
         dao.getAllRevisionLogs(),
-        _juzToPages
-    ) { logs, juzToPages ->
+        _juzToPages,
+        _forecastDays
+    ) { logs, juzToPages, forecastDays ->
         try {
-            val stabilities = MemoryEngine.computeStabilities(logs)
+            // 1. Fetch similarity links for semantic interference
+            val links = dao.getPageSimilarityLinks()
+            val linkMap = links.groupBy({ it.pageA }, { it.pageB })
+
+            // 2. Compute the BASE state (Current Stability S)
+            val currentState = MemoryEngine.computeCurrentState(logs, linkMap)
+
+            // 3. Project Retrievability R for the requested forecast day
+            val rValues = MemoryEngine.projectRetrievability(currentState, forecastDays)
+            
+            // 4. Compute Analytics (unused for now)
+            // val rNow = MemoryEngine.projectRetrievability(currentState, 0)
+            // val r7Days = MemoryEngine.projectRetrievability(currentState, 7)
+            // val analytics = RevisionAnalytics.computeAnalytics(currentState, rNow, r7Days)
 
             var revisionDebt = 0
             var criticalCount = 0
             var trackedSum = 0f
             var trackedPages = 0
-            for (s in stabilities) {
-                if (!s.isTracked) continue
+            
+            for (i in 0 until MemoryEngine.TOTAL_PAGES) {
+                val s = currentState.stability[i]
+                if (s == 0f) continue
+                
+                val r = rValues[i]
                 trackedPages++
-                trackedSum += s.score
-                if (s.score < 0.5f) revisionDebt++
-                if (s.score < 0.25f) criticalCount++
+                trackedSum += r
+                if (r < 0.5f) revisionDebt++
+                if (r < 0.25f) criticalCount++
             }
+
             val stats = DashboardStats(
                 revisionDebt   = revisionDebt,
                 stabilityIndex = if (trackedPages == 0) 0f else trackedSum / trackedPages,
@@ -89,28 +103,33 @@ class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
             )
 
             if (juzToPages.isEmpty()) {
-                return@combine HeatmapUiState(stats = stats, juzSummaries = emptyList())
+                return@combine HeatmapUiState(stats = stats, juzSummaries = emptyList(), forecastDays = forecastDays)
             }
 
-            val colorPacked = ULongArray(stabilities.size) { i -> pageColorValue(stabilities[i]) }
+            // Pack colors using primitive-first approach
+            val colorPacked = ULongArray(MemoryEngine.TOTAL_PAGES) { i ->
+                val r = rValues[i]
+                val isTracked = currentState.stability[i] > 0f
+                pageColorValue(r, isTracked)
+            }
 
             val summaries = (1..30).map { juzId ->
                 val pageNums = juzToPages[juzId].orEmpty()
-                var sumTracked = 0f
+                var sumR = 0f
                 var nTracked = 0
                 val minimapColors = buildList(pageNums.size) {
                     for (page in pageNums) {
                         val idx = page - 1
-                        val s = stabilities.getOrNull(idx)
-                            ?: PageStability(page, 0f, null, null)
-                        add(if (idx in colorPacked.indices) colorPacked[idx] else pageColorValue(s))
-                        if (s.isTracked) {
-                            sumTracked += s.score
+                        add(colorPacked[idx])
+                        if (currentState.stability[idx] > 0f) {
+                            sumR += rValues[idx]
                             nTracked++
                         }
                     }
                 }
-                val avg = sumTracked / pageNums.size
+                
+                // Juz Quality is the average retrievability of its TRACKED pages
+                val avgR = if (nTracked == 0) 0f else sumR / nTracked
 
                 val healthTone: ULong?
                 val borderTone: ULong?
@@ -118,7 +137,7 @@ class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
                     healthTone = null
                     borderTone = null
                 } else {
-                    val h = healthColor(avg)
+                    val h = healthColor(avgR)
                     healthTone = h.value
                     borderTone = h.copy(alpha = 0.45f).value
                 }
@@ -127,19 +146,20 @@ class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
                     juzId         = juzId,
                     totalPages    = pageNums.size,
                     minimapColors = minimapColors,
-                    healthPercent = (avg * 100f).roundToInt(),
+                    healthPercent = (avgR * 100f).roundToInt(),
                     trackedCount  = nTracked,
                     healthTone    = healthTone,
                     borderTone    = borderTone
                 )
             }
 
-            HeatmapUiState(stats = stats, juzSummaries = summaries)
+            HeatmapUiState(stats = stats, juzSummaries = summaries, forecastDays = forecastDays)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             HeatmapUiState()
         }
     }
+        .flowOn(Dispatchers.Default)
         .stateIn(
             scope        = viewModelScope,
             started      = SharingStarted.WhileSubscribed(5_000),
@@ -149,18 +169,25 @@ class HeatmapViewModel(private val dao: QuranDao) : ViewModel() {
     private val _selectedPage = MutableStateFlow<PageStability?>(null)
     val selectedPage: StateFlow<PageStability?> = _selectedPage.asStateFlow()
 
-    fun onPageTap(ps: PageStability) { _selectedPage.value = ps }
-    fun dismissDialog()              { _selectedPage.value = null }
+    fun onForecastChange(days: Int) {
+        _forecastDays.value = days
+    }
+
+    fun onPageTap(pageIndex: Int, score: Float, lastRevised: Long) {
+        _selectedPage.value = PageStability(pageIndex + 1, score, lastRevised)
+    }
+
+    fun dismissDialog() { _selectedPage.value = null }
 
     fun quickLog(page: Int) {
         _selectedPage.value = null
         viewModelScope.launch {
             dao.insertRevisionLog(
-                RevisionLogEntity(
+                com.example.qmemo.data.local.entity.RevisionLogEntity(
                     startPage  = page,
                     endPage    = page,
                     timestamp  = System.currentTimeMillis(),
-                    difficulty = 1
+                    manualStability = 1.0f
                 )
             )
         }

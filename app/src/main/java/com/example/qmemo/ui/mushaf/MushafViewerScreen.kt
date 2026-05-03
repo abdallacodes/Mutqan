@@ -84,7 +84,9 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.size.Size
 import com.example.qmemo.R
 import com.example.qmemo.domain.PageStability
 import com.example.qmemo.ui.theme.DifficultyCritical
@@ -150,7 +152,8 @@ fun getMushafImageLoader(context: Context): ImageLoader =
         .also { sImageLoader = it }
 
 private fun buildMushafImageLoader(appContext: Context): ImageLoader {
-    val cacheDir = appContext.cacheDir.resolve("mushaf_pages").also { it.mkdirs() }
+    // Use filesDir instead of cacheDir to ensure the OS doesn't delete downloaded pages
+    val cacheDir = appContext.filesDir.resolve("mushaf_pages").also { it.mkdirs() }
     return ImageLoader.Builder(appContext)
         .diskCache {
             DiskCache.Builder()
@@ -637,7 +640,11 @@ private fun PageImage(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(url)
+                        .diskCacheKey("mushaf_page_$page") // Forces a stable key for all sizes
+                        .size(Size.ORIGINAL) // Ensures we always request/cache the full image
                         .bitmapConfig(Bitmap.Config.RGB_565)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
                         .build(),
                     imageLoader        = imageLoader,
                     contentDescription = null,
@@ -660,7 +667,11 @@ private fun PageImage(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(url)
+                    .diskCacheKey("mushaf_page_$page")
+                    .size(Size.ORIGINAL)
                     .bitmapConfig(Bitmap.Config.RGB_565)   // 16-bit — ideal for B&W pages
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
                     .build(),
                 imageLoader        = imageLoader,
                 contentDescription = null,

@@ -22,7 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +51,8 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.ThemeKey
+import com.example.qmemo.domain.DownloadState
+import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.MidnightBg
 import com.example.qmemo.ui.theme.MidnightPrimary
 import com.example.qmemo.ui.theme.ModernDarkBg
@@ -207,6 +213,13 @@ fun SettingsBottomSheet(
             SectionLabel(stringResource(R.string.settings_data_management))
             Spacer(Modifier.height(8.dp))
 
+            val downloadState by viewModel.downloadState.collectAsState()
+
+            DownloadActionRow(
+                state = downloadState,
+                onClick = { viewModel.startMushafDownload() }
+            )
+
             DataActionRow(
                 label = stringResource(R.string.btn_backup),
                 icon = Icons.Default.Backup,
@@ -240,6 +253,92 @@ private fun SectionLabel(text: String) {
 }
 
 // ── Data Action Row ──────────────────────────────────────────────────────────
+
+@Composable
+private fun DownloadActionRow(
+    state: DownloadState,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = state is DownloadState.Idle || state is DownloadState.Failed, onClick = onClick)
+            .padding(vertical = 14.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudDownload,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.btn_download_mushaf),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (state is DownloadState.Completed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        else MaterialTheme.colorScheme.onSurface
+            )
+            when (state) {
+                is DownloadState.Idle -> {
+                    if (state.current > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.downloading_mushaf,
+                                state.current,
+                                state.total,
+                                (state.progress * 100).toInt()
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                is DownloadState.Downloading -> {
+                    Text(
+                        text = stringResource(
+                            R.string.downloading_mushaf,
+                            state.current,
+                            state.total,
+                            (state.progress * 100).toInt()
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                is DownloadState.Completed -> {
+                    Text(
+                        text = stringResource(R.string.mushaf_download_complete),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = DifficultySmooth
+                    )
+                }
+                is DownloadState.Failed -> {
+                    Text(
+                        text = stringResource(R.string.mushaf_download_failed, state.error),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+        if (state is DownloadState.Downloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else if (state is DownloadState.Completed) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = null,
+                tint = DifficultySmooth,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
 
 @Composable
 private fun DataActionRow(

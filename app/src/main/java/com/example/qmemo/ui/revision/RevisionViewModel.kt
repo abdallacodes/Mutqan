@@ -18,28 +18,16 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
 
-// ── Difficulty model ──────────────────────────────────────────────────────────
-
-enum class Difficulty(val id: Int, val label: String) {
-    SMOOTH(1, "Smooth"),
-    STRUGGLED(2, "Struggled"),
-    CRITICAL(3, "Critical");
-
-    companion object {
-        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: SMOOTH
-    }
-}
-
 // ── UI state ──────────────────────────────────────────────────────────────────
 
 data class RevisionUiState(
     val startPage: String = "",
     val endPage: String = "",
-    val difficulty: Difficulty = Difficulty.SMOOTH,
     val startPageError: Boolean = false,
     val endPageError: Boolean = false,
     /** UTC-midnight millis for the user-selected revision date. */
-    val selectedDateMillis: Long = 0L
+    val selectedDateMillis: Long = 0L,
+    val manualQuality: Float = 0.9f
 )
 
 /** Returns UTC midnight of the current calendar day. */
@@ -81,12 +69,12 @@ class RevisionViewModel(private val dao: QuranDao) : ViewModel() {
         }
     }
 
-    fun onDifficultyChange(difficulty: Difficulty) {
-        _uiState.update { it.copy(difficulty = difficulty) }
-    }
-
     fun onDateChange(millis: Long) {
         _uiState.update { it.copy(selectedDateMillis = millis) }
+    }
+
+    fun onManualQualityChange(quality: Float) {
+        _uiState.update { it.copy(manualQuality = quality) }
     }
 
     fun logRevision() {
@@ -108,8 +96,8 @@ class RevisionViewModel(private val dao: QuranDao) : ViewModel() {
                     startPage  = start!!,
                     endPage    = end!!,
                     timestamp  = System.currentTimeMillis(),
-                    difficulty = state.difficulty.id,
-                    dateMillis = state.selectedDateMillis
+                    dateMillis = state.selectedDateMillis,
+                    manualStability = state.manualQuality
                 )
             )
             _uiState.update { RevisionUiState(selectedDateMillis = startOfTodayUtcMillis()) }

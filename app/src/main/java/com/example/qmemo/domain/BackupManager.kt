@@ -36,7 +36,7 @@ class BackupManager(private val context: Context) {
                             put("start_page", log.startPage)
                             put("end_page", log.endPage)
                             put("timestamp", log.timestamp)
-                            put("difficulty", log.difficulty)
+                            put("manual_stability", log.manualStability)
                             put("date_millis", log.dateMillis)
                         })
                     }
@@ -56,7 +56,7 @@ class BackupManager(private val context: Context) {
                         put(JSONObject().apply {
                             put("id", group.id)
                             put("description", group.description)
-                            put("master_strength", group.masterStrength)
+                            put("master_quality", group.masterQuality)
                             put("memorization_notes", group.memorizationNotes)
                             put("folder_id", group.folderId)
                         })
@@ -100,7 +100,7 @@ class BackupManager(private val context: Context) {
                         startPage = obj.getInt("start_page"),
                         endPage = obj.getInt("end_page"),
                         timestamp = obj.getLong("timestamp"),
-                        difficulty = obj.getInt("difficulty"),
+                        manualStability = obj.getDouble("manual_stability").toFloat(),
                         dateMillis = obj.optLong("date_millis", 0L)
                     ))
                 }
@@ -128,7 +128,7 @@ class BackupManager(private val context: Context) {
                     groups.add(SimilarityGroupEntity(
                         id = obj.optInt("id", 0),
                         description = obj.getString("description"),
-                        masterStrength = obj.getInt("master_strength"),
+                        masterQuality = obj.optDouble("master_quality", 0.5).toFloat(),
                         memorizationNotes = obj.optString("memorization_notes", ""),
                         folderId = if (obj.isNull("folder_id")) null else obj.getInt("folder_id")
                     ))

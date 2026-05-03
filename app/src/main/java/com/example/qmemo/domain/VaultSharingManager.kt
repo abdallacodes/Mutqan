@@ -35,7 +35,7 @@ class VaultSharingManager(private val context: Context) {
                         val members = dao.getMembersForGroup(item.group.id).first()
                         put(JSONObject().apply {
                             put("description", item.group.description)
-                            put("master_strength", item.group.masterStrength)
+                            put("master_quality", item.group.masterQuality)
                             put("memorization_notes", item.group.memorizationNotes)
                             put("members", JSONArray().apply {
                                 members.forEach { m ->
@@ -80,7 +80,7 @@ class VaultSharingManager(private val context: Context) {
                 val groupObj = groupsArray.getJSONObject(i)
                 val group = SimilarityGroupEntity(
                     description = groupObj.getString("description"),
-                    masterStrength = groupObj.getInt("master_strength"),
+                    masterQuality = groupObj.optDouble("master_quality", 0.5).toFloat(),
                     memorizationNotes = groupObj.optString("memorization_notes", ""),
                     folderId = folderId
                 )

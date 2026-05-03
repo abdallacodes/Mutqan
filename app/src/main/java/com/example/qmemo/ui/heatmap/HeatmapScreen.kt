@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -68,7 +69,7 @@ fun HeatmapScreen(
     viewModel: HeatmapViewModel = viewModel(factory = HeatmapViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showCoachmark by rememberSaveable { mutableStateOf(false) }
+    var showHelp by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -80,7 +81,7 @@ fun HeatmapScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { showCoachmark = true }) {
+                    IconButton(onClick = { showHelp = true }) {
                         Icon(Icons.Default.Info, contentDescription = "Help")
                     }
                     IconButton(onClick = onSettingsClick) {
@@ -103,7 +104,6 @@ fun HeatmapScreen(
             ) {
                 // ── Global Stats ───────────────────────────────────
                 item(span = { GridItemSpan(2) }) {
-                    val trackedSum = uiState.juzSummaries.sumOf { it.trackedCount }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -119,9 +119,41 @@ fun HeatmapScreen(
                             modifier = Modifier.weight(1f),
                             value    = "${(uiState.stats.stabilityIndex * 100).roundToInt()}%",
                             label    = stringResource(R.string.stat_stability_index),
-                            sublabel = stringResource(R.string.stat_pages_tracked, trackedSum),
+                            sublabel = stringResource(R.string.stat_pages_tracked, uiState.stats.trackedPages),
                             valueColor = healthColor(uiState.stats.stabilityIndex)
                         )
+                    }
+                }
+
+                // ── Forecast Slider ─────────────────────────────────
+                item(span = { GridItemSpan(2) }) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(R.string.stat_forecast_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.stat_forecast_days, uiState.forecastDays),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Slider(
+                                value = uiState.forecastDays.toFloat(),
+                                onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
+                                valueRange = 0f..30f,
+                                steps = 30
+                            )
+                        }
                     }
                 }
 
@@ -143,11 +175,11 @@ fun HeatmapScreen(
                 }
             }
 
-            if (showCoachmark) {
+            if (showHelp) {
                 HelpDialog(
-                    title = stringResource(R.string.brain_how_it_works),
-                    description = stringResource(R.string.brain_how_it_works_intro),
-                    onDismiss = { showCoachmark = false }
+                    title = stringResource(R.string.help_brain_title),
+                    description = stringResource(R.string.help_brain_desc),
+                    onDismiss = { showHelp = false }
                 )
             }
         }
@@ -179,10 +211,11 @@ private fun StatCard(
         ) {
             Text(
                 text       = value,
-                style      = MaterialTheme.typography.headlineMedium,
+                style      = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 color      = valueColor,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1
             )
             Text(
                 text          = label,
@@ -201,8 +234,6 @@ private fun StatCard(
         }
     }
 }
-
-// ── Legend ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun HeatmapLegend() {
@@ -228,10 +259,6 @@ private fun LegendDot(color: Color, label: String, border: Boolean = false) {
                 .size(8.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(color)
-                .then(
-                    if (border) Modifier.background(color)
-                    else Modifier
-                )
         )
         Spacer(Modifier.width(4.dp))
         Text(
@@ -241,8 +268,6 @@ private fun LegendDot(color: Color, label: String, border: Boolean = false) {
         )
     }
 }
-
-// ── Juz Card ──────────────────────────────────────────────────────────────────
 
 @Composable
 internal fun JuzCard(juz: JuzSummary, onClick: () -> Unit) {

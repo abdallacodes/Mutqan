@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.qmemo.data.local.ArabicNormalization
 import com.example.qmemo.data.local.AppDatabase
 import com.example.qmemo.data.local.dao.MemberVerseRef
 import com.example.qmemo.data.local.dao.QuranDao
@@ -26,18 +27,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// ── Strength model ────────────────────────────────────────────────────────────
-
-enum class MasterStrength(val id: Int, val label: String) {
-    WEAK(1, "Weak"),
-    STABLE(2, "Stable"),
-    SOLID(3, "Solid");
-
-    companion object {
-        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: WEAK
-    }
-}
-
 // ── Verse-add feedback ────────────────────────────────────────────────────────
 
 sealed interface AddVerseResult {
@@ -53,7 +42,7 @@ sealed interface AddVerseResult {
 data class EditGroupUiState(
     val description: String = "",
     val memorizationNotes: String = "",
-    val strength: MasterStrength = MasterStrength.WEAK,
+    val masterQuality: Float = 0.5f,
     val folderId: Int? = null,
     // ── Verse picker fields ──
     val selectedSurahId: Int? = null,   // set when user picks from dropdown
@@ -106,7 +95,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
             
             flow {
                 val results = dao.searchVerses(
-                    query = query.normalizeArabic(),
+                    query = ArabicNormalization.normalizeForSearch(query),
                     surahId = state.searchFilterSurahId,
                     juzStart = state.searchFilterJuzStart,
                     juzEnd = state.searchFilterJuzEnd
@@ -134,7 +123,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
                 it.copy(
                     description        = group.description,
                     memorizationNotes  = group.memorizationNotes,
-                    strength           = MasterStrength.fromId(group.masterStrength),
+                    masterQuality      = group.masterQuality,
                     folderId           = group.folderId,
                     isSaved            = true
                 )
@@ -150,8 +139,8 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
     fun onMemorizationNotesChange(value: String) =
         _uiState.update { it.copy(memorizationNotes = value) }
 
-    fun onStrengthChange(s: MasterStrength) =
-        _uiState.update { it.copy(strength = s) }
+    fun onQualityChange(q: Float) =
+        _uiState.update { it.copy(masterQuality = q) }
 
     fun onSurahSelected(id: Int) = _uiState.update {
         it.copy(selectedSurahId = id, surahFilterQuery = "", addVerseResult = AddVerseResult.Idle)
@@ -202,7 +191,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
                 val newId = dao.insertSimilarityGroup(
                     SimilarityGroupEntity(
                         description        = state.description.trim(),
-                        masterStrength     = state.strength.id,
+                        masterQuality      = state.masterQuality,
                         memorizationNotes  = state.memorizationNotes.trim(),
                         folderId           = state.folderId
                     )
@@ -235,7 +224,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
                 val newId = dao.insertSimilarityGroup(
                     SimilarityGroupEntity(
                         description        = state.description.trim(),
-                        masterStrength     = state.strength.id,
+                        masterQuality      = state.masterQuality,
                         memorizationNotes  = state.memorizationNotes.trim(),
                         folderId           = state.folderId
                     )
@@ -246,7 +235,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
                     SimilarityGroupEntity(
                         id                 = existingId,
                         description        = state.description.trim(),
-                        masterStrength     = state.strength.id,
+                        masterQuality      = state.masterQuality,
                         memorizationNotes  = state.memorizationNotes.trim(),
                         folderId           = state.folderId
                     )
@@ -270,7 +259,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
                 val newId = dao.insertSimilarityGroup(
                     SimilarityGroupEntity(
                         description        = state.description.trim(),
-                        masterStrength     = state.strength.id,
+                        masterQuality      = state.masterQuality,
                         memorizationNotes  = state.memorizationNotes.trim(),
                         folderId           = state.folderId
                     )
@@ -312,25 +301,6 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
         }
     }
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-private val arabicDiacriticsRegex  = Regex("[\u064B-\u065F]")
-private val arabicAlefVariantsRegex = Regex("[\u0622\u0623\u0625\u0671\u0670\u0621\u0626\u0624]") // آ أ إ ٱ ٰ ء ئ ؤ
-private val arabicYaaVariantsRegex = Regex("[\u0649]") // ى
-private val arabicTehVariantsRegex = Regex("[\u0629]") // ة
-
-/**
- * Normalizes an Arabic string for search comparison:
- * 1. Strips common diacritics.
- * 2. Normalizes ALL Alef/Hamza variants to plain Alef (\u0627).
- * 3. Normalizes ى to ي (\u064A).
- * 4. Normalizes ة to ه (\u0647).
- */
-private fun String.normalizeArabic() = replace(arabicDiacriticsRegex, "")
-    .replace(arabicAlefVariantsRegex, "\u0627")
-    .replace(arabicYaaVariantsRegex, "\u064A")
-    .replace(arabicTehVariantsRegex, "\u0647")
 
 class EditGroupViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

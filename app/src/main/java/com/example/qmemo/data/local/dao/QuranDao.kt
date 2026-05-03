@@ -88,29 +88,19 @@ abstract class QuranDao {
     abstract suspend fun findVerse(surahId: Int, ayahNumber: Int): VerseEntity?
 
     /**
-     * Relaxed full-text search with optional filters.
-     * 18 levels of REPLACE used to normalize:
-     * - All Alef/Hamza variants (آ أ إ ٱ ء ئ ؤ ٰ) -> ا
-     * - Yaa/Maksura (ي ى) -> ي
-     * - Teh Marbuta/Heh (ة ه) -> ه
-     * - All common diacritics stripped.
+     * Upgraded search functionality using the pre-normalized content column.
+     * High performance text search leveraging the shadow FTS table.
      */
     @Query("""
-        SELECT * FROM verses
+        SELECT v.* FROM verses v
+        JOIN verses_fts f ON v.id = f.rowid
         WHERE (
-            :surahId IS NULL OR surah_id = :surahId
+            :surahId IS NULL OR v.surah_id = :surahId
         ) AND (
-            :juzStart IS NULL OR juz_id >= :juzStart
+            :juzStart IS NULL OR v.juz_id >= :juzStart
         ) AND (
-            :juzEnd IS NULL OR juz_id <= :juzEnd
-        ) AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(text_arabic,
-              char(1611),''),char(1612),''),char(1613),''),char(1614),''),char(1615),''),char(1616),''),char(1617),''),char(1618),''),
-              char(1648),char(1575)),
-              char(1570),char(1575)),char(1571),char(1575)),char(1573),char(1575)),char(1649),char(1575)),
-              char(1569),char(1575)),char(1572),char(1575)),char(1574),char(1575)),
-              char(1609),char(1610)),
-              char(1577),char(1607))
-        LIKE '%' || :query || '%'
+            :juzEnd IS NULL OR v.juz_id <= :juzEnd
+        ) AND f.normalized_content LIKE '%' || :query || '%'
         LIMIT 40
     """)
     abstract suspend fun searchVerses(
@@ -120,8 +110,22 @@ abstract class QuranDao {
         juzEnd: Int? = null
     ): List<VerseEntity>
 
-    @Query("SELECT * FROM similarity_groups WHERE id = :groupId LIMIT 1")
-    abstract suspend fun getGroupById(groupId: Int): SimilarityGroupEntity?
+    @Query("SELECT * FROM similarity_groups WHERE id = :id LIMIT 1")
+    abstract suspend fun getGroupById(id: Int): SimilarityGroupEntity?
+
+    /**
+     * Returns all pairs of pages that are "linked" through similarity groups.
+     * Used for Semantic Interference calculation in the Memory Engine.
+     */
+    @Query("""
+        SELECT DISTINCT v1.page_number as pageA, v2.page_number as pageB
+        FROM similarity_members sm1
+        JOIN verses v1 ON sm1.verse_id = v1.id
+        JOIN similarity_members sm2 ON sm1.group_id = sm2.group_id
+        JOIN verses v2 ON sm2.verse_id = v2.id
+        WHERE v1.page_number != v2.page_number
+    """)
+    abstract suspend fun getPageSimilarityLinks(): List<PageSimilarityLink>
 
     // ─────────────────────────────────────────────────────────
     // Folders
@@ -258,7 +262,7 @@ abstract class QuranDao {
         """
         SELECT sg.id            AS group_id,
                sg.description,
-               sg.master_strength,
+               sg.master_quality,
                sg.memorization_notes,
                sg.folder_id,
                v.id             AS verse_id,
@@ -389,3 +393,5 @@ abstract class QuranDao {
     )
     abstract suspend fun getSurahRangeForJuz(juzId: Int): JuzSurahRange?
 }
+
+data class PageSimilarityLink(val pageA: Int, val pageB: Int)

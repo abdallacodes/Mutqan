@@ -65,7 +65,7 @@ class SurahDetailViewModel(
                         group = SimilarityGroupEntity(
                             id                 = groupId,
                             description        = first.description,
-                            masterStrength     = first.masterStrength,
+                            masterQuality      = first.masterQuality,
                             memorizationNotes  = first.memorizationNotes
                         ),
                         internalVerses = groupRefs

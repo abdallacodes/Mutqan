@@ -61,7 +61,8 @@ import com.example.qmemo.ui.components.QuickPeekTarget
 fun GroupDetailScreen(
     groupId: Int,
     currentSurahId: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenMushaf: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: GroupDetailViewModel = viewModel(
@@ -187,7 +188,8 @@ fun GroupDetailScreen(
                                 quickPeekTarget = QuickPeekTarget(
                                     verseId = ref.verseId,
                                     surahId = ref.surahId,
-                                    ayahNumber = ref.ayahNumber
+                                    ayahNumber = ref.ayahNumber,
+                                    pageNumber = ref.pageNumber
                                 )
                             }
                         )
@@ -221,7 +223,8 @@ fun GroupDetailScreen(
                                 quickPeekTarget = QuickPeekTarget(
                                     verseId    = ref.verseId,
                                     surahId    = ref.surahId,
-                                    ayahNumber = ref.ayahNumber
+                                    ayahNumber = ref.ayahNumber,
+                                    pageNumber = ref.pageNumber
                                 )
                             }
                         )
@@ -257,7 +260,8 @@ fun GroupDetailScreen(
                                 quickPeekTarget = QuickPeekTarget(
                                     verseId    = ref.verseId,
                                     surahId    = ref.surahId,
-                                    ayahNumber = ref.ayahNumber
+                                    ayahNumber = ref.ayahNumber,
+                                    pageNumber = ref.pageNumber
                                 )
                             }
                         )
@@ -272,7 +276,8 @@ fun GroupDetailScreen(
     quickPeekTarget?.let { target ->
         QuickPeekBottomSheet(
             target    = target,
-            onDismiss = { quickPeekTarget = null }
+            onDismiss = { quickPeekTarget = null },
+            onOpenMushaf = onOpenMushaf
         )
     }
 }

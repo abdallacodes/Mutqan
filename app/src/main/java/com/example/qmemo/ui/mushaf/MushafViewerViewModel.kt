@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -50,25 +49,31 @@ class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
         }
     }
 
-    // ── Stability pipeline (mirrors HeatmapViewModel) ─────────────────────────
-
-    private val stabilities: StateFlow<List<PageStability>> = dao
-        .getAllRevisionLogs()
-        .map { logs -> MemoryEngine.computeStabilities(logs) }
-        .flowOn(Dispatchers.Default)
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
-
-    // ── Combined output ───────────────────────────────────────────────────────
+    // ── Combined pipeline (Standard FSRS Logic) ───────────────────────────────
 
     val state: StateFlow<MushafViewerState> = combine(
-        stabilities,
+        dao.getAllRevisionLogs(),
         _pageSurahMap
-    ) { stabs, surahMap ->
-        MushafViewerState(stabilities = stabs, pageSurahMap = surahMap)
+    ) { logs, surahMap ->
+        val links = dao.getPageSimilarityLinks()
+        val linkMap = links.groupBy({ it.pageA }, { it.pageB })
+
+        // 1. Compute BASE state
+        val state = MemoryEngine.computeCurrentState(logs, linkMap)
+        
+        // 2. Project (0 days)
+        val rValues = MemoryEngine.projectRetrievability(state, 0)
+
+        val pages = (1..MemoryEngine.TOTAL_PAGES).map { page ->
+            val idx = page - 1
+            PageStability(
+                page = page,
+                score = rValues[idx],
+                lastRevised = state.lastRevisionTimestamps[idx].let { if (it == 0L) null else it }
+            )
+        }
+
+        MushafViewerState(stabilities = pages, pageSurahMap = surahMap)
     }
     .flowOn(Dispatchers.Default)
     .stateIn(

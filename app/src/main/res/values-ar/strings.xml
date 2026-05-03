@@ -5,10 +5,11 @@
     <string name="app_name">متقن</string>
 
     <!-- Bottom navigation labels -->
-    <string name="nav_journal">السجل</string>
-    <string name="nav_vault">المخزن</string>
-    <string name="nav_surahs">السور</string>
-    <string name="nav_brain">المركز</string>
+    <string name="nav_journal">دفتر المراجعة</string>
+    <string name="nav_vault">المتشابهات</string>
+    <string name="nav_surahs">سور القرآن</string>
+    <string name="nav_search">البحث</string>
+    <string name="nav_brain">لوحة الحفظ</string>
 
     <!-- Settings sheet -->
     <string name="settings">الإعدادات</string>
@@ -16,6 +17,10 @@
     <string name="settings_language">اللغة</string>
     <string name="settings_theme">المظهر</string>
     <string name="settings_data_management">إدارة البيانات</string>
+    <string name="btn_download_mushaf">تحميل المصحف (للاستخدام بدون إنترنت)</string>
+    <string name="downloading_mushaf">جاري تحميل الصفحات: %1$d/%2$d (%3$d٪)</string>
+    <string name="mushaf_download_complete">تم تحميل جميع الصفحات (604) بنجاح.</string>
+    <string name="mushaf_download_failed">فشل التحميل: %s</string>
     <string name="btn_backup">نسخة احتياطية</string>
     <string name="btn_restore">استعادة البيانات</string>
     <string name="backup_success">تم تصدير النسخة الاحتياطية بنجاح</string>
@@ -41,11 +46,11 @@
     <string name="btn_add">إضافة</string>
 
     <!-- ── Revision Log Screen ──────────────────────────────────────────────── -->
-    <string name="journal_title">سجل المراجعة</string>
-    <string name="journal_subtitle">متابعة المراجعة اليومية</string>
-    <string name="btn_log_revision">تسجيل المراجعة</string>
-    <string name="recent_revisions">آخر المراجعات</string>
-    <string name="view_all">عرض الكل</string>
+    <string name="journal_title">دفتر المراجعة</string>
+    <string name="journal_subtitle">دوّن كل جلسة وشاهد الصورة تتضح</string>
+    <string name="btn_log_revision">تسجيل مراجعة جديدة</string>
+    <string name="recent_revisions">آخر ما تمت مراجعته</string>
+    <string name="view_all">عرض السجل الكامل</string>
     <string name="label_start_page">صفحة البداية</string>
     <string name="label_end_page">صفحة النهاية</string>
     <string name="placeholder_start_page">1</string>
@@ -63,7 +68,7 @@
     <!-- ── Revision History Screen ─────────────────────────────────────────── -->
     <string name="history_title">سجل المراجعات</string>
     <string name="history_subtitle">اضغط للتعديل · اسحب لليسار للحذف</string>
-    <string name="no_revisions_history">لا توجد مراجعات مسجّلة بعد.\nابدأ من تبويب السجل.</string>
+    <string name="no_revisions_history">لا توجد مراجعات مسجّلة بعد.\nابدأ من تبويب دفتر المراجعة.</string>
     <string name="delete_entry_title">حذف السجل؟</string>
     <string name="delete_entry_body">هل تريد حذف الصفحات %1$d–%2$d من السجل؟\nلا يمكن التراجع عن هذا الإجراء.</string>
     <string name="edit_revision_title">تعديل المراجعة</string>
@@ -142,23 +147,20 @@
     <string name="strength_stable">متوسط</string>
     <string name="strength_solid">متقن</string>
 
-    <!-- ── Difficulty labels ───────────────────────────────────────────────── -->
-    <string name="difficulty_smooth">متقن</string>
-    <string name="difficulty_struggled">يحتاج مراجعة</string>
-    <string name="difficulty_critical">ضعيف</string>
-
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
-    <string name="brain_title">مركز الحفظ</string>
-    <string name="brain_subtitle">30 جزءًا  ·  لوحة تتبع التراجع</string>
-    <string name="brain_how_it_works">كيف يعمل مركز الحفظ</string>
-    <string name="brain_how_it_works_intro">يقدّر مركز الحفظ ثبات كل صفحة بناءً على سجل مراجعاتك.</string>
-    <string name="brain_how_it_works_item_1">• تبدأ كل صفحة كغير مرصودة حتى تقوم بمراجعتها.</string>
-    <string name="brain_how_it_works_item_2">• المراجعة المتقنة حديثًا تُبقي الصفحة قوية؛ أما التعثر أو الضعف فيُسرّع التراجع.</string>
-    <string name="brain_how_it_works_item_3">• دين المراجعة يحسب الصفحات التي هبطت تحت ثبات 50٪.</string>
-    <string name="brain_how_it_works_item_4">• اضغط أي جزء لمراجعة الصفحات وتحديث حالة اليوم.</string>
-    <string name="stat_revision_debt">دين المراجعة</string>
-    <string name="stat_debt_sublabel">صفحات دون 50%%</string>
-    <string name="stat_stability_index">مؤشر الثبات</string>
+    <string name="brain_title">لوحة الحفظ</string>
+    <string name="brain_subtitle">ثلاثون جزءًا في لمحة واحدة عن ثبات الحفظ</string>
+    <string name="help_brain_title">كيف تقرأ لوحة الحفظ؟</string>
+    <string name="help_brain_desc">تعتمد اللوحة على نموذج FSRS لتقدير ثبات كل صفحة في ذاكرتك مع مرور الوقت.\n\n\u25cf <b>معنى الألوان</b>: الأخضر يدل على رسوخ، وميل الألوان نحو الأصفر والأحمر يعني أن الصفحة تستحق مراجعة قريبة قبل أن يضعف استحضارها.\n\n\u25cf <b>توقيت المراجعة</b>: يزداد الأثر حين تراجع الصفحة في «نافذة» مناسبة — لا مبكرًا جدًا فيُقلّ الفائدة، ولا متأخرًا جدًا فيضيع الثبات.\n\n\u25cf <b>شريط التنبؤ</b>: حرّك الشريط في الأعلى لترى كيف قد يتغير وضع الصفحات بعد 7 أو 14 أو 30 يومًا دون مراجعة.\n\n\u25cf <b>المتشابهات</b>: إذا سجّلت صعوبة على آية في المخزن، يُنبّه التطبيق إلى صفحات قد تتداخل معها لأنها غالبًا مصدر لبس.\n\n\u25cf <b>صفحات تحتاج مراجعة</b>: عدد الصفحات التي انخفض فيها تقدير الثبات عن 50٪.</string>
+    <string name="stat_revision_debt">صفحات تحتاج مراجعة</string>
+    <string name="stat_debt_sublabel">ثباتها دون 50٪</string>
+    <string name="stat_stability_index">متوسط الثبات</string>
+    <string name="stat_forecast_label">التنبؤ</string>
+    <string name="stat_forecast_days">%d يوم</string>
+    <string name="stat_growth_rate">تراكم الصفحات الضعيفة</string>
+    <string name="stat_growth_rate_val">%.1f صفحة/يوم</string>
+    <string name="stat_recovery_target">هدف التعافي</string>
+    <string name="stat_recovery_target_val">%d صفحة/يوم</string>
     <string name="stat_pages_tracked">%d صفحة مرصودة</string>
     <string name="stat_critical_label">حرج</string>
     <string name="stat_critical_sublabel">أقل من 25%%</string>
@@ -189,12 +191,9 @@
     <string name="count_critical">%d حرج</string>
     <string name="count_fading">%d متراجع</string>
     <string name="dialog_page_title">صفحة %d</string>
-    <string name="quick_status_smooth">متقن</string>
-    <string name="quick_status_smooth_desc">استرجاع موثوق · يوقف التراجع</string>
-    <string name="quick_status_struggled">يحتاج مراجعة</string>
-    <string name="quick_status_struggled_desc">بذل جهدًا · تراجع أسرع</string>
-    <string name="quick_status_critical">ضعيف</string>
-    <string name="quick_status_critical_desc">أخطاء جسيمة · متابعة عاجلة</string>
+
+    <string name="label_manual_quality">مستوى الإتقان</string>
+    <string name="label_starting_quality">مستوى الإتقان الأولي</string>
 
     <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
     <string name="surahs_title">السور</string>
@@ -247,15 +246,15 @@
     <string name="mushaf_cd_spread_fit_page">إظهار الصفحة كاملة</string>
 
     <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
-    <string name="onboarding_skip">تخطي</string>
+    <string name="onboarding_skip">تخطّي المقدّمة</string>
     <string name="onboarding_next">التالي</string>
-    <string name="onboarding_get_started">ابدأ الآن</string>
-    <string name="onboarding_slide1_title">تابع تقدمك</string>
-    <string name="onboarding_slide1_body">سجّل نطاقات مراجعتك اليومية. تتبع الخوارزمية قوة حفظك عبر الزمن.</string>
-    <string name="onboarding_slide2_title">حل الآيات المتشابهة</string>
-    <string name="onboarding_slide2_body">اربط الآيات المتشابهة في مجموعات. سنعرض لك تلقائيًا نقاط التشابه داخل السورة وعبر القرآن.</string>
-    <string name="onboarding_slide3_title">تخلص من تراكم المراجعة</string>
-    <string name="onboarding_slide3_body">تابع خريطة حرارة 604 صفحة. الأخضر راسخ والأحمر يتراجع. لا تدع أساسك يتآكل.</string>
+    <string name="onboarding_get_started">ابدأ الاستخدام</string>
+    <string name="onboarding_slide1_title">سجّل مراجعتك بثقة</string>
+    <string name="onboarding_slide1_body">دوّن كل جلسة بنطاق الصفحات وما شعرت به أثناء المراجعة. يبني التطبيق تقديرًا عمليًا لثبات كل صفحة ويحدّثه معك مع الوقت.</string>
+    <string name="onboarding_slide2_title">نظّم المتشابهات</string>
+    <string name="onboarding_slide2_body">اجمع الآيات التي تختلط عليك في مجموعات، فيُسهّل عليك التمييز بينها. يبرز لك التطبيق التداخل داخل السورة وبين السور حتى لا تفاجأ في التلاوة.</string>
+    <string name="onboarding_slide3_title">خريطة 604 صفحة بين يديك</string>
+    <string name="onboarding_slide3_body">ألوان الخريطة تعبّر عن رسوخ الحفظ: ما استقر يظهر بثقة، وما بدأ يضعف يطلب منك لفتة قبل أن يضيق الوقت.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">المخزن فارغ</string>
@@ -272,11 +271,27 @@
     <string name="coachmark_got_it">فهمت</string>
 
     <!-- Help Dialogs -->
-    <string name="help_journal_title">مساعدة السجل</string>
-    <string name="help_journal_desc">تتبع مراجعاتك اليومية من خلال تسجيل نطاق الصفحات ومستوى الصعوبة. يقوم التطبيق بحساب ثبات حفظك بناءً على هذه السجلات.</string>
-    <string name="help_vault_title">مساعدة المخزن</string>
-    <string name="help_vault_desc">قم بتنظيم الآيات المتشابهة في مجلدات ومجموعات لحل الخلط بينها. يمكنك تصدير المجلدات لمشاركة عملك مع الآخرين.</string>
-    <string name="help_surahs_title">مساعدة السور</string>
-    <string name="help_surahs_desc">تصفح جميع سور القرآن الـ 114. تعرف على السور التي تحتوي على مجموعات متشابهات وافتح أي صفحة مباشرة في المصحف.</string>
+    <string name="help_journal_title">دفتر المراجعة</string>
+    <string name="help_journal_desc">كلما دوّنت مراجعةً بنطاق صفحات ووصفت شعورك أثناءها، ازدادت دقة صورة التطبيق عن ثبات حفظك. لا حاجة لإكمال كل الصفحات دفعةً واحدة — المهم الاستمرار بصدق.</string>
+    <string name="help_vault_title">مخزن المتشابهات</string>
+    <string name="help_vault_desc">هنا تجمع الآيات التي تتشابه في سمعك أو خطك، وتضيف لها وصفًا يساعدك على التمييز. يمكنك ترتيب المجموعات في مجلدات وتصديرها إن أردت مشاركة عملك.</string>
+    <string name="help_surahs_title">فهرس السور</string>
+    <string name="help_surahs_desc">تصفّح السور الـ114 واطّلع على أي سورة فيها مجموعات متشابهات مرتبطة بها، وافتح الصفحة في المصحف بضغطة واحدة.</string>
+
+    <!-- Verse Search Screen -->
+    <string name="search_help_title">البحث في الآيات</string>
+    <string name="search_help_desc">اكتب مقطعًا من الآية أو كلماتها؛ يمكنك ضيق النتائج بسورة أو بنطاق أجزاء. البحث يتسامح مع اختلافات الخط الشائعة حتى لا يفوتك ما تبحث عنه.</string>
+    <string name="search_no_results">لم يتم العثور على نتائج</string>
+    <string name="search_hint">اكتب حرفين على الأقل للبحث…</string>
+    <string name="label_filters">عناصر التصفية</string>
+    <string name="label_hide">إخفاء</string>
+    <string name="label_show">إظهار</string>
+    <string name="label_groups_header">المجموعات</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_lang_title">لغة الواجهة</string>
+    <string name="onboarding_lang_subtitle">يمكنك تغييرها لاحقًا من الإعدادات في أي وقت.</string>
+    <string name="onboarding_welcome_title">أهلًا بك في %s</string>
+
 
 </resources>

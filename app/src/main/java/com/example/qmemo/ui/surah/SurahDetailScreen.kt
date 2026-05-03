@@ -50,6 +50,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
 import com.example.qmemo.ui.theme.AmiriFontFamily
+import com.example.qmemo.ui.theme.DifficultyCritical
+import com.example.qmemo.ui.theme.DifficultySmooth
+import com.example.qmemo.ui.theme.DifficultyStruggled
+import kotlin.math.roundToInt
 import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.vault.MasterStrength
 
@@ -207,7 +211,12 @@ private fun SurahGroupCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val strength    = MasterStrength.fromId(gwv.group.masterStrength)
+    val quality     = gwv.group.masterQuality
+    val healthColor = when {
+        quality >= 0.70f -> DifficultySmooth
+        quality >= 0.40f -> DifficultyStruggled
+        else          -> DifficultyCritical
+    }
     val primary     = MaterialTheme.colorScheme.primary
     val tertiary    = MaterialTheme.colorScheme.tertiary
     val stripeColor = if (gwv.hasExternal) tertiary else primary
@@ -252,7 +261,20 @@ private fun SurahGroupCard(
                     overflow   = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.width(8.dp))
-                StrengthBadge(strength = strength)
+                
+                Surface(
+                    shape  = RoundedCornerShape(4.dp),
+                    color  = healthColor.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, healthColor.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text       = "${(quality * 100).roundToInt()}%",
+                        modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        style      = MaterialTheme.typography.labelSmall,
+                        color      = healthColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             if (gwv.group.memorizationNotes.isNotBlank()) {
@@ -303,32 +325,6 @@ private fun MetaBadge(text: String, borderColor: Color) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-// ── Strength badge ────────────────────────────────────────────────────────────
-
-private fun strengthBadgeColor(s: MasterStrength): Color = when (s) {
-    MasterStrength.WEAK   -> com.example.qmemo.ui.theme.DifficultyCritical
-    MasterStrength.STABLE -> com.example.qmemo.ui.theme.DifficultyStruggled
-    MasterStrength.SOLID  -> com.example.qmemo.ui.theme.DifficultySmooth
-}
-
-@Composable
-private fun StrengthBadge(strength: MasterStrength) {
-    val color = strengthBadgeColor(strength)
-    Surface(
-        shape  = RoundedCornerShape(4.dp),
-        color  = color.copy(alpha = 0.12f),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.4f))
-    ) {
-        Text(
-            text       = strength.localizedLabel(),
-            modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-            style      = MaterialTheme.typography.labelSmall,
-            color      = color,
-            fontWeight = FontWeight.Bold
         )
     }
 }

@@ -12,6 +12,7 @@ import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
 import com.example.qmemo.data.local.entity.VaultFolderEntity
 import com.example.qmemo.data.local.entity.VerseEntity
+import com.example.qmemo.data.local.entity.VerseFtsEntity
 import org.json.JSONArray
 
 @Database(
@@ -20,9 +21,10 @@ import org.json.JSONArray
         RevisionLogEntity::class,
         SimilarityGroupEntity::class,
         SimilarityMemberEntity::class,
-        VaultFolderEntity::class
+        VaultFolderEntity::class,
+        VerseFtsEntity::class
     ],
-    version = 5,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -69,6 +71,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds normalized_content to verses and creates FTS table. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE verses ADD COLUMN normalized_content TEXT NOT NULL DEFAULT ''"
+                )
+                db.execSQL(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS `verses_fts` USING fts4(content=`verses`, `normalized_content`)"
+                )
+            }
+        }
+        
+        /** Refines normalized_content logic. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Population handled in onOpen
+            }
+        }
+
+        /** Second refinement of normalized_content logic (Hamza-Alif symmetry). */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Population handled in onOpen
+            }
+        }
+
+        /** Refined normalized_content logic for الصلوات and ءاتيناهم. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Population handled in onOpen
+            }
+        }
+
+        /** Adds manual_stability column to revision_logs. */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE revision_logs ADD COLUMN manual_stability REAL"
+                )
+            }
+        }
+
+        // Migration 10-11 is destructive, so we rely on fallbackToDestructiveMigration()
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -77,7 +123,9 @@ abstract class AppDatabase : RoomDatabase() {
                     "qmemo.db"
                 )
                     .addCallback(PrepopulateCallback(context.applicationContext))
-                    .addMigrations(MIGRATION_1_2, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                    // Early-dev: wipe and reseed when no migration path exists.
+                    // Remove once the schema stabilises and write proper migrations.
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
@@ -88,6 +136,9 @@ abstract class AppDatabase : RoomDatabase() {
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
             db.execSQL("PRAGMA foreign_keys = ON")
+            // Ensure FTS is synced if we just migrated
+            seedVerses(context, db)
+            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
         }
 
         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -111,15 +162,19 @@ private fun seedVerses(context: Context, db: SupportSQLiteDatabase) {
     val array = JSONArray(json)
     for (i in 0 until array.length()) {
         val obj = array.getJSONObject(i)
+        val textArabic = obj.optString("text_arabic", "")
+        val normalized = ArabicNormalization.normalizeForSearch(textArabic)
+        
         db.execSQL(
-            "INSERT OR IGNORE INTO verses (id, surah_id, ayah_number, page_number, juz_id, text_arabic) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO verses (id, surah_id, ayah_number, page_number, juz_id, text_arabic, normalized_content) VALUES (?, ?, ?, ?, ?, ?, ?)",
             arrayOf(
                 obj.getInt("id"),
                 obj.getInt("surah_id"),
                 obj.getInt("ayah_number"),
                 obj.getInt("page_number"),
                 obj.getInt("juz_id"),
-                obj.optString("text_arabic", "")
+                textArabic,
+                normalized
             )
         )
     }

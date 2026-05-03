@@ -37,7 +37,7 @@ data class EditLogUiState(
     val originalLog: RevisionLogEntity,
     val startPage: String,
     val endPage: String,
-    val difficulty: Difficulty,
+    val manualQuality: Float,
     val selectedDateMillis: Long,
     val startError: Boolean = false,
     val endError: Boolean = false
@@ -94,7 +94,7 @@ class RevisionHistoryViewModel(private val dao: QuranDao) : ViewModel() {
             originalLog        = log,
             startPage          = log.startPage.toString(),
             endPage            = log.endPage.toString(),
-            difficulty         = Difficulty.fromId(log.difficulty),
+            manualQuality      = log.manualStability,
             selectedDateMillis = if (log.dateMillis > 0L) log.dateMillis else startOfTodayUtcMillis()
         )
     }
@@ -105,7 +105,7 @@ class RevisionHistoryViewModel(private val dao: QuranDao) : ViewModel() {
     fun onEditEndPage(v: String)    = _editState.update {
         it?.copy(endPage = v.filter(Char::isDigit).take(3), endError = false)
     }
-    fun onEditDifficulty(d: Difficulty) = _editState.update { it?.copy(difficulty = d) }
+    fun onEditQuality(q: Float) = _editState.update { it?.copy(manualQuality = q) }
     fun onEditDate(millis: Long)     = _editState.update { it?.copy(selectedDateMillis = millis) }
 
     fun saveEdit() {
@@ -126,8 +126,8 @@ class RevisionHistoryViewModel(private val dao: QuranDao) : ViewModel() {
                 state.originalLog.copy(
                     startPage  = start!!,
                     endPage    = end!!,
-                    difficulty = state.difficulty.id,
-                    dateMillis = state.selectedDateMillis
+                    dateMillis = state.selectedDateMillis,
+                    manualStability = state.manualQuality
                     // timestamp (creation time) is preserved unchanged
                 )
             )

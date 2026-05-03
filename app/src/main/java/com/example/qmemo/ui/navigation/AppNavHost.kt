@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MenuBook
@@ -51,6 +50,7 @@ import com.example.qmemo.ui.mushaf.MushafViewerScreen
 import com.example.qmemo.ui.onboarding.OnboardingScreen
 import com.example.qmemo.ui.revision.RevisionHistoryScreen
 import com.example.qmemo.ui.revision.RevisionLogScreen
+import com.example.qmemo.ui.search.VerseSearchScreen
 import com.example.qmemo.ui.surah.GroupDetailScreen
 import com.example.qmemo.ui.surah.SurahDetailScreen
 import com.example.qmemo.ui.surah.SurahListScreen
@@ -66,6 +66,7 @@ object Routes {
     const val REVISION_LOG   = "revision_log"
     const val VAULT_LIST     = "vault_list"
     const val SURAH_LIST     = "surah_list"
+    const val VERSE_SEARCH   = "verse_search"
     const val HEATMAP        = "heatmap"
 
     const val EDIT_GROUP        = "edit_group"
@@ -118,7 +119,7 @@ fun AppNavHost(
     val backStack    by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
-    val topLevelRoutes = setOf(Routes.REVISION_LOG, Routes.VAULT_LIST, Routes.SURAH_LIST, Routes.HEATMAP)
+    val topLevelRoutes = setOf(Routes.REVISION_LOG, Routes.VAULT_LIST, Routes.SURAH_LIST, Routes.VERSE_SEARCH, Routes.HEATMAP)
     val showBottomBar  = currentRoute in topLevelRoutes
 
     // Settings bottom sheet state — shared across all top-level screens
@@ -204,6 +205,13 @@ fun AppNavHost(
                 )
             }
 
+            composable(Routes.VERSE_SEARCH) {
+                VerseSearchScreen(
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onSettingsClick = { showSettingsSheet = true }
+                )
+            }
+
             composable(Routes.HEATMAP) {
                 HeatmapScreen(
                     onJuzClick      = { juzId -> navController.navigate(Routes.juzDetail(juzId)) },
@@ -231,7 +239,8 @@ fun AppNavHost(
                 EditSimilarityGroupScreen(
                     groupId = if (rawId == -1) null else rawId,
                     folderId = if (folderId == -1) null else folderId,
-                    onBack  = { navController.popBackStack() }
+                    onBack  = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )
             }
 
@@ -262,7 +271,8 @@ fun AppNavHost(
                 GroupDetailScreen(
                     groupId        = groupId,
                     currentSurahId = surahId,
-                    onBack         = { navController.popBackStack() }
+                    onBack         = { navController.popBackStack() },
+                    onOpenMushaf   = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )
             }
 
@@ -303,7 +313,7 @@ private fun QMemoBottomBar(
         BottomNavItem(
             route = Routes.REVISION_LOG,
             label = stringResource(R.string.nav_journal),
-            selectedIcon = Icons.Default.MenuBook,
+            selectedIcon = Icons.Default.List,
             unselectedIcon = Icons.Outlined.MenuBook
         ),
         BottomNavItem(
@@ -313,10 +323,16 @@ private fun QMemoBottomBar(
             unselectedIcon = Icons.Outlined.AutoStories
         ),
         BottomNavItem(
-            route = Routes.SURAH_LIST,
-            label = stringResource(R.string.nav_surahs),
+            route = Routes.VERSE_SEARCH,
+            label = stringResource(R.string.nav_search),
             selectedIcon = Icons.Default.Search,
             unselectedIcon = Icons.Outlined.Search
+        ),
+        BottomNavItem(
+            route = Routes.SURAH_LIST,
+            label = stringResource(R.string.nav_surahs),
+            selectedIcon = Icons.Default.MenuBook, // Reusing icons since Article is missing
+            unselectedIcon = Icons.Outlined.MenuBook
         ),
         BottomNavItem(
             route = Routes.HEATMAP,

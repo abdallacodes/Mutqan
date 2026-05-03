@@ -22,16 +22,23 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +47,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -174,7 +185,7 @@ fun JuzDetailScreen(
         QuickStatusDialog(
             selection    = selectedPage!!,
             onDismiss    = viewModel::dismissDialog,
-            onSelect     = { diff -> viewModel.logPage(selectedPage!!.page, diff) },
+            onSelect     = { quality -> viewModel.logPage(selectedPage!!.page, quality) },
             onViewInMushaf = { page -> viewModel.dismissDialog(); onPageOpen(page) }
         )
     }
@@ -335,9 +346,11 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
 private fun QuickStatusDialog(
     selection:      PageSelection,
     onDismiss:      () -> Unit,
-    onSelect:       (Int) -> Unit,
+    onSelect:       (Float) -> Unit,
     onViewInMushaf: (Int) -> Unit = {}
 ) {
+    var manualQuality by remember { mutableFloatStateOf(0.9f) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor   = MaterialTheme.colorScheme.surface,
@@ -361,27 +374,67 @@ private fun QuickStatusDialog(
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickStatusButton(
-                    label       = stringResource(R.string.quick_status_smooth),
-                    description = stringResource(R.string.quick_status_smooth_desc),
-                    color       = DifficultySmooth,
-                    onClick     = { onSelect(1) }
-                )
-                QuickStatusButton(
-                    label       = stringResource(R.string.quick_status_struggled),
-                    description = stringResource(R.string.quick_status_struggled_desc),
-                    color       = DifficultyStruggled,
-                    onClick     = { onSelect(2) }
-                )
-                QuickStatusButton(
-                    label       = stringResource(R.string.quick_status_critical),
-                    description = stringResource(R.string.quick_status_critical_desc),
-                    color       = DifficultyCritical,
-                    onClick     = { onSelect(3) }
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.label_manual_quality),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "${(manualQuality * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    Spacer(Modifier.height(8.dp))
 
-                androidx.compose.material3.HorizontalDivider(
+                    Slider(
+                        value = manualQuality,
+                        onValueChange = { manualQuality = it },
+                        valueRange = 0.1f..1f,
+                        steps = 8,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = { onSelect(manualQuality) },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_save),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                HorizontalDivider(
                     modifier = Modifier.padding(top = 4.dp),
                     color    = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                 )
@@ -391,7 +444,7 @@ private fun QuickStatusDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector        = Icons.Default.MenuBook,
+                        imageVector        = Icons.AutoMirrored.Filled.MenuBook,
                         contentDescription = null,
                         modifier           = Modifier.size(16.dp),
                         tint               = MaterialTheme.colorScheme.primary
@@ -419,48 +472,3 @@ private fun QuickStatusDialog(
     )
 }
 
-@Composable
-private fun QuickStatusButton(
-    label:       String,
-    description: String,
-    color:       Color,
-    onClick:     () -> Unit
-) {
-    Button(
-        onClick   = onClick,
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(8.dp),
-        colors    = ButtonDefaults.buttonColors(
-            containerColor = color.copy(alpha = 0.15f),
-            contentColor   = color
-        ),
-        border    = BorderStroke(1.dp, color.copy(alpha = 0.45f)),
-        elevation = ButtonDefaults.buttonElevation(0.dp)
-    ) {
-        Row(
-            modifier          = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(color, RoundedCornerShape(2.dp))
-            )
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text          = label,
-                    style         = MaterialTheme.typography.labelMedium,
-                    fontWeight    = FontWeight.Black,
-                    color         = color,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text  = description,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = color.copy(alpha = 0.70f)
-                )
-            }
-        }
-    }
-}

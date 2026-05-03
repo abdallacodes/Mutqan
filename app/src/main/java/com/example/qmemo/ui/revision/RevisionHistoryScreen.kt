@@ -37,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -49,6 +51,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,10 +70,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.local.entity.RevisionLogEntity
-import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.theme.DifficultyCritical
-import com.example.qmemo.ui.theme.DifficultySmooth
-import com.example.qmemo.ui.theme.DifficultyStruggled
+import kotlin.math.roundToInt
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -95,7 +96,7 @@ fun RevisionHistoryScreen(onBack: () -> Unit) {
             editState    = state,
             onStartPage  = viewModel::onEditStartPage,
             onEndPage    = viewModel::onEditEndPage,
-            onDifficulty = viewModel::onEditDifficulty,
+            onQuality    = viewModel::onEditQuality,
             onDate       = viewModel::onEditDate,
             onSave       = viewModel::saveEdit,
             onCancel     = viewModel::cancelEdit
@@ -268,11 +269,11 @@ private fun SwipeToDismissLogItem(
 
 @Composable
 private fun HistoryLogItem(log: RevisionLogEntity, onClick: () -> Unit) {
-    val difficulty = Difficulty.fromId(log.difficulty)
-    val diffColor  = when (difficulty) {
-        Difficulty.SMOOTH    -> DifficultySmooth
-        Difficulty.STRUGGLED -> DifficultyStruggled
-        Difficulty.CRITICAL  -> DifficultyCritical
+    val quality = log.manualStability
+    val healthClr = when {
+        quality >= 0.70f -> Color(0xFF4CAF50)
+        quality >= 0.40f -> Color(0xFFFFC107)
+        else          -> Color(0xFFF44336)
     }
 
     Row(
@@ -287,7 +288,7 @@ private fun HistoryLogItem(log: RevisionLogEntity, onClick: () -> Unit) {
             modifier = Modifier
                 .width(4.dp)
                 .fillMaxHeight()
-                .background(diffColor)
+                .background(healthClr)
         )
         Row(
             modifier = Modifier
@@ -313,14 +314,14 @@ private fun HistoryLogItem(log: RevisionLogEntity, onClick: () -> Unit) {
             }
             Surface(
                 shape  = RoundedCornerShape(4.dp),
-                color  = diffColor.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, diffColor.copy(alpha = 0.4f))
+                color  = healthClr.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text       = difficulty.localizedLabel(),
+                    text       = "${(quality * 100).roundToInt()}%",
                     modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style      = MaterialTheme.typography.labelSmall,
-                    color      = diffColor,
+                    color      = healthClr,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -386,7 +387,7 @@ private fun EditRevisionDialog(
     editState: EditLogUiState,
     onStartPage: (String) -> Unit,
     onEndPage: (String) -> Unit,
-    onDifficulty: (Difficulty) -> Unit,
+    onQuality: (Float) -> Unit,
     onDate: (Long) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
@@ -448,9 +449,9 @@ private fun EditRevisionDialog(
                     )
                 }
 
-                EditDifficultyRow(
-                    selected = editState.difficulty,
-                    onSelect = onDifficulty
+                EditQualitySlider(
+                    quality = editState.manualQuality,
+                    onSelect = onQuality
                 )
 
                 EditDateButton(
@@ -489,40 +490,44 @@ private fun EditRevisionDialog(
 // ── Edit dialog helpers ───────────────────────────────────────────────────────
 
 @Composable
-private fun EditDifficultyRow(selected: Difficulty, onSelect: (Difficulty) -> Unit) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(12.dp)
     ) {
-        Difficulty.entries.forEach { diff ->
-            val isSelected = diff == selected
-            val color      = when (diff) {
-                Difficulty.SMOOTH    -> DifficultySmooth
-                Difficulty.STRUGGLED -> DifficultyStruggled
-                Difficulty.CRITICAL  -> DifficultyCritical
-            }
-            Surface(
-                onClick  = { onSelect(diff) },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(6.dp),
-                color    = if (isSelected) color.copy(alpha = 0.15f) else Color.Transparent,
-                border   = BorderStroke(
-                    width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) color else MaterialTheme.colorScheme.outline
-                )
-            ) {
-                Text(
-                    text       = diff.localizedLabel(),
-                    modifier   = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                    style      = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color      = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign  = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.label_manual_quality),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${(quality * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
+        Slider(
+            value = quality,
+            onValueChange = onSelect,
+            valueRange = 0.1f..1f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary
+            )
+        )
     }
 }
+
 
 @Composable
 private fun EditDateButton(millis: Long, onClick: () -> Unit) {

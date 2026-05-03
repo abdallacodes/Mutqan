@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 
 /**
  * A user-defined "Confusion Point" — a named cluster of similar/confusable verses.
- * masterStrength: overall mastery rating for the group. 1 = Weak, 2 = Fair, 3 = Strong
+ * masterQuality: overall mastery rating for the group. Range: 0.1 to 1.0 (10% to 100%)
  */
 @Entity(
     tableName = "similarity_groups",
@@ -25,7 +25,7 @@ import androidx.room.PrimaryKey
 data class SimilarityGroupEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val description: String,
-    @ColumnInfo(name = "master_strength") val masterStrength: Int,
+    @ColumnInfo(name = "master_quality", defaultValue = "0.5") val masterQuality: Float = 0.5f,
     /** User notes to aid memorization (mnemonics, patterns, audio cues, etc.). */
     @ColumnInfo(name = "memorization_notes", defaultValue = "") val memorizationNotes: String = "",
     @ColumnInfo(name = "folder_id") val folderId: Int? = null

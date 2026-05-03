@@ -5,17 +5,25 @@ import com.example.qmemo.domain.PageStability
 import kotlin.math.pow
 
 internal fun pageColor(ps: PageStability): Color {
-    if (!ps.isTracked) return Color(0xFF1E2020)
-    return healthColor(ps.score)
+    return pageColor(ps.score, ps.isTracked)
 }
 
-/** Packed ARGB for lists / arrays — same pixels as [pageColor], no extra [Color] retention. */
+internal fun pageColor(score: Float, isTracked: Boolean): Color {
+    if (!isTracked) return Color(0xFF1E2020)
+    return healthColor(score)
+}
+
+/** Packed ARGB for lists / arrays — optimized for primitive score input. */
+internal fun pageColorValue(score: Float, isTracked: Boolean): ULong =
+    if (!isTracked) 0xFF1E2020UL
+    else healthColor(score).value
+
 internal fun pageColorValue(ps: PageStability): ULong =
-    if (!ps.isTracked) 0xFF1E2020UL
-    else healthColor(ps.score).value
+    pageColorValue(ps.score, ps.isTracked)
 
 internal fun healthColor(score: Float): Color {
     if (!score.isFinite() || score <= 0f) return Color(0xFF1E2020)
+    // Scale hue from 0 (red) to 120 (green) based on retrievability
     val hue = score.coerceIn(0f, 1f) * 120f
     return Color.hsv(hue, saturation = 0.82f, value = 0.76f)
 }

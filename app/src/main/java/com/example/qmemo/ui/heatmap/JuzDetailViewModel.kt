@@ -16,10 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -27,8 +25,6 @@ class JuzDetailViewModel(
     private val dao:   QuranDao,
     val          juzId: Int
 ) : ViewModel() {
-
-    // ── Surah range (subtitle in top bar) ────────────────────────────────────
 
     private val _surahRange = MutableStateFlow<JuzSurahRange?>(null)
     val surahRange: StateFlow<JuzSurahRange?> = _surahRange.asStateFlow()
@@ -39,40 +35,41 @@ class JuzDetailViewModel(
         }
     }
 
-    // ── Pages with Surah names + live stabilities ─────────────────────────────
-
     /**
-     * Reactive pipeline — optimised for scroll performance:
-     *
-     * 1. The first two DB calls ([getPagesByJuz] and [getPageSurahsForJuz]) are
-     *    one-shot suspend functions on static data.  Their results are captured
-     *    in the [flow] closure and **never re-queried**.
-     * 2. [surahMap] (page → sorted surah names) is built once from [getPageSurahsForJuz]
-     *    and reused on every revision-log update — zero allocations on scroll.
-     * 3. Only [getAllRevisionLogs] is a reactive Flow; it re-emits only when a log
-     *    is inserted/deleted, triggering a fresh stability computation.
+     * Standard reactive pipeline using the optimized FSRS MemoryEngine.
      */
-    val pagesWithSurahs: StateFlow<List<PageWithSurahs>> = flow {
-        // One-time static loads — cached for the lifetime of this ViewModel
-        val pages     = dao.getPagesByJuz(juzId)
+    val pagesWithSurahs: StateFlow<List<PageWithSurahs>> = combine(
+        dao.getAllRevisionLogs(),
+        // We use a fixed 0-day projection here for simplicity. 
+        // A future update could add a forecast slider to this screen as well.
+        MutableStateFlow(0) 
+    ) { logs, forecastDays ->
+        val pages = dao.getPagesByJuz(juzId)
         val pageSurahs = dao.getPageSurahsForJuz(juzId)
+        val links = dao.getPageSimilarityLinks()
+        val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
         val surahMap: Map<Int, List<String>> = pageSurahs.associate { ref ->
             ref.pageNumber to ref.surahIds.map { id -> SurahData.nameOf(id) }
         }
 
-        emitAll(
-            dao.getAllRevisionLogs().map { logs ->
-                val all = MemoryEngine.computeStabilities(logs)
-                pages.map { page ->
-                    PageWithSurahs(
-                        stability  = all.getOrNull(page - 1)
-                                         ?: PageStability(page, 0f, null, null),
-                        surahNames = surahMap[page] ?: emptyList()
-                    )
-                }
-            }
-        )
+        // 1. Compute BASE state
+        val state = MemoryEngine.computeCurrentState(logs, linkMap)
+        
+        // 2. Project
+        val rValues = MemoryEngine.projectRetrievability(state, forecastDays)
+
+        pages.map { page ->
+            val idx = page - 1
+            PageWithSurahs(
+                stability = PageStability(
+                    page = page,
+                    score = rValues[idx],
+                    lastRevised = state.lastRevisionTimestamps[idx].let { if (it == 0L) null else it }
+                ),
+                surahNames = surahMap[page] ?: emptyList()
+            )
+        }
     }
     .flowOn(Dispatchers.Default)
     .stateIn(
@@ -81,12 +78,6 @@ class JuzDetailViewModel(
         initialValue = emptyList()
     )
 
-    // ── Quick-status dialog selection ─────────────────────────────────────────
-
-    /**
-     * Carries both page number (for [logPage]) and the surah label (for the
-     * dialog title).  Null means the dialog is closed.
-     */
     private val _selectedPage = MutableStateFlow<PageSelection?>(null)
     val selectedPage: StateFlow<PageSelection?> = _selectedPage.asStateFlow()
 
@@ -96,12 +87,7 @@ class JuzDetailViewModel(
 
     fun dismissDialog() { _selectedPage.value = null }
 
-    /**
-     * Inserts a single-page [RevisionLogEntity] with the chosen [difficulty].
-     * The decay logic in [MemoryEngine] applies automatically on the next
-     * stability recomputation — no special-casing needed here.
-     */
-    fun logPage(page: Int, difficulty: Int) {
+    fun logPage(page: Int, quality: Float) {
         _selectedPage.value = null
         viewModelScope.launch {
             dao.insertRevisionLog(
@@ -109,14 +95,12 @@ class JuzDetailViewModel(
                     startPage  = page,
                     endPage    = page,
                     timestamp  = System.currentTimeMillis(),
-                    difficulty = difficulty
+                    manualStability = quality
                 )
             )
         }
     }
 }
-
-// ── Factory ───────────────────────────────────────────────────────────────────
 
 class JuzDetailViewModelFactory(
     private val context: Context,

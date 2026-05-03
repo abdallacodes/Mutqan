@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -55,7 +57,8 @@ import com.example.qmemo.ui.theme.AmiriFontFamily
 data class QuickPeekTarget(
     val verseId: Int,
     val surahId: Int,
-    val ayahNumber: Int
+    val ayahNumber: Int,
+    val pageNumber: Int
 )
 
 /**
@@ -67,6 +70,7 @@ data class QuickPeekTarget(
 fun QuickPeekBottomSheet(
     target: QuickPeekTarget,
     onDismiss: () -> Unit,
+    onOpenMushaf: ((Int) -> Unit)? = null,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
@@ -193,6 +197,29 @@ fun QuickPeekBottomSheet(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.btn_share))
+                }
+            }
+
+            if (onOpenMushaf != null) {
+                Spacer(Modifier.height(12.dp))
+                FilledTonalButton(
+                    onClick = {
+                        onOpenMushaf(target.pageNumber)
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = stringResource(R.string.open_in_mushaf),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.open_in_mushaf))
                 }
             }
         }

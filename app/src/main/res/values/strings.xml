@@ -8,6 +8,7 @@
     <string name="nav_journal">Journal</string>
     <string name="nav_vault">Vault</string>
     <string name="nav_surahs">Surahs</string>
+    <string name="nav_search">Search</string>
     <string name="nav_brain">Brain</string>
 
     <!-- Settings sheet -->
@@ -16,6 +17,10 @@
     <string name="settings_language">LANGUAGE</string>
     <string name="settings_theme">THEME</string>
     <string name="settings_data_management">DATA MANAGEMENT</string>
+    <string name="btn_download_mushaf">DOWNLOAD MUSHAF (OFFLINE)</string>
+    <string name="downloading_mushaf">Downloading pages: %1$d/%2$d (%3$d%%)</string>
+    <string name="mushaf_download_complete">All 604 pages are now offline.</string>
+    <string name="mushaf_download_failed">Download failed: %s</string>
     <string name="btn_backup">BACKUP DATA</string>
     <string name="btn_restore">RESTORE DATA</string>
     <string name="backup_success">Backup exported successfully</string>
@@ -108,7 +113,7 @@
     <string name="section_group_desc">GROUP DESCRIPTION</string>
     <string name="section_memorization_notes">MEMORIZATION NOTES</string>
     <string name="placeholder_memorization_notes">Mnemonics, patterns, word links, or anything that helps you keep this group distinct…</string>
-    <string name="section_mastery">MASTERY STRENGTH</string>
+    <string name="section_mastery">MEMORIZATION QUALITY</string>
     <string name="section_link_verse">LINK A VERSE</string>
     <string name="linked_verses_header">LINKED VERSES  (%d)</string>
     <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
@@ -142,23 +147,20 @@
     <string name="strength_stable">Stable</string>
     <string name="strength_solid">Solid</string>
 
-    <!-- ── Difficulty labels ───────────────────────────────────────────────── -->
-    <string name="difficulty_smooth">Smooth</string>
-    <string name="difficulty_struggled">Struggled</string>
-    <string name="difficulty_critical">Critical</string>
-
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
     <string name="brain_title">THE BRAIN</string>
     <string name="brain_subtitle">30 Juz  \u00b7  Memory Decay Dashboard</string>
-    <string name="brain_how_it_works">How Brain Works</string>
-    <string name="brain_how_it_works_intro">Brain estimates the stability of each page from your revision history.</string>
-    <string name="brain_how_it_works_item_1">• Every page starts untracked until you revise it.</string>
-    <string name="brain_how_it_works_item_2">• Recent smooth revisions keep a page fresh; struggled/critical entries decay faster.</string>
-    <string name="brain_how_it_works_item_3">• Revision Debt counts pages that fell below 50% stability.</string>
-    <string name="brain_how_it_works_item_4">• Tap any Juz to inspect pages and update today’s status.</string>
+    <string name="help_brain_title">How The Brain Works</string>
+    <string name="help_brain_desc">The Brain is your intelligent memorization assistant. It uses a scientific model (FSRS) to predict how well you remember every page.\n\n\u25cf <b>Stability (Colors)</b>: Green means the page is solid in your memory. Yellow/Red means it is fading and needs revision soon.\n\n\u25cf <b>Symmetry</b>: The app rewards you more if you revise a page right before you forget it. Revising too early provides a smaller boost to long-term memory.\n\n\u25cf <b>Forecast Slider</b>: Move the slider at the top to travel through time! See which pages will turn red in 7, 14, or 30 days if you don\'t revise them.\n\n\u25cf <b>Semantic Interference</b>: If you struggle with a verse in the Vault (Mutashabihat), the app automatically lowers the stability of similar verses elsewhere, as they are likely confusion points.\n\n\u25cf <b>Revision Debt</b>: The number of pages that have fallen below 50% stability.\n\n\u25cf <b>Recovery Goal</b>: The number of pages you need to revise daily to turn your entire Brain green within a month.</string>
     <string name="stat_revision_debt">REVISION DEBT</string>
     <string name="stat_debt_sublabel">pages below 50%%</string>
     <string name="stat_stability_index">STABILITY INDEX</string>
+    <string name="stat_forecast_label">FORECAST</string>
+    <string name="stat_forecast_days">%d days</string>
+    <string name="stat_growth_rate">DEBT GROWTH</string>
+    <string name="stat_growth_rate_val">%.1f p/day</string>
+    <string name="stat_recovery_target">RECOVERY GOAL</string>
+    <string name="stat_recovery_target_val">%d pages/day</string>
     <string name="stat_pages_tracked">%d pages tracked</string>
     <string name="stat_critical_label">CRITICAL</string>
     <string name="stat_critical_sublabel">score &lt; 25%%</string>
@@ -189,12 +191,9 @@
     <string name="count_critical">%d critical</string>
     <string name="count_fading">%d fading</string>
     <string name="dialog_page_title">PAGE %d</string>
-    <string name="quick_status_smooth">SMOOTH</string>
-    <string name="quick_status_smooth_desc">Confident recall \u00b7 resets decay</string>
-    <string name="quick_status_struggled">STRUGGLED</string>
-    <string name="quick_status_struggled_desc">Needed effort \u00b7 faster decay</string>
-    <string name="quick_status_critical">CRITICAL</string>
-    <string name="quick_status_critical_desc">Major errors \u00b7 urgent follow-up</string>
+
+    <string name="label_manual_quality">Memorization quality</string>
+    <string name="label_starting_quality">Starting memorization quality</string>
 
     <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
     <string name="surahs_title">SURAHS</string>
@@ -247,15 +246,15 @@
     <string name="mushaf_cd_spread_fit_page">Show full page in view</string>
 
     <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
-    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_skip">Skip intro</string>
     <string name="onboarding_next">Next</string>
-    <string name="onboarding_get_started">Get Started</string>
-    <string name="onboarding_slide1_title">Master Your Progress</string>
-    <string name="onboarding_slide1_body">Log your daily revision ranges. Our algorithm tracks the strength of your memorization over time.</string>
-    <string name="onboarding_slide2_title">Solve Confusing Verses</string>
-    <string name="onboarding_slide2_body">Link similar verses into groups. We\'ll automatically show you clashes within a Surah and across the whole Quran.</string>
-    <string name="onboarding_slide3_title">Eliminate Revision Debt</string>
-    <string name="onboarding_slide3_body">Watch your 604-page heatmap. Green is solid; Red is rusting. Don\'t let your foundation decay.</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_slide1_title">Know where you stand</string>
+    <string name="onboarding_slide1_body">Log each revision by page range and how it felt. Mutqan estimates how strong each page is in memory and updates as you go.</string>
+    <string name="onboarding_slide2_title">Untangle look‑alikes</string>
+    <string name="onboarding_slide2_body">Group verses that trip you up. The app surfaces in‑Surah and cross‑Surah clashes so you rehearse the right contrasts.</string>
+    <string name="onboarding_slide3_title">Stay ahead of slip</string>
+    <string name="onboarding_slide3_body">Your 604‑page map shows what is firm and what is fading. Nudge weak pages before they cost you in recitation.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">Your Vault is Empty</string>
@@ -278,5 +277,21 @@
     <string name="help_vault_desc">Organize similar verses into folders and groups to resolve confusion. You can export folders to share your work with others.</string>
     <string name="help_surahs_title">Surah List Help</string>
     <string name="help_surahs_desc">Browse all 114 Surahs. See which Surahs have Mutashabihat groups linked to them and open any page directly in the Mushaf.</string>
+
+    <!-- Verse Search Screen -->
+    <string name="search_help_title">Search Help</string>
+    <string name="search_help_desc">Search for any verse using keywords. You can filter by a specific Surah or a range of Juzs. The search is smart and handles common Arabic typing variations.</string>
+    <string name="search_no_results">No results found</string>
+    <string name="search_hint">Type at least 2 characters to search...</string>
+    <string name="label_filters">FILTERS</string>
+    <string name="label_hide">HIDE</string>
+    <string name="label_show">SHOW</string>
+    <string name="label_groups_header">GROUPS</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_lang_title">Interface language</string>
+    <string name="onboarding_lang_subtitle">You can change this anytime in Settings.</string>
+    <string name="onboarding_welcome_title">Welcome to %s</string>
+
 
 </resources>

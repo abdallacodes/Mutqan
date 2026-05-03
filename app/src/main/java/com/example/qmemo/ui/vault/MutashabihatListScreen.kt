@@ -45,6 +45,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +83,7 @@ import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.DifficultyStruggled
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,30 +172,54 @@ fun MutashabihatListScreen(
                     }
                 },
                 actions = {
+                    var showMainOverflow by remember { mutableStateOf(false) }
+
                     IconButton(onClick = { showAddFolderDialog = true }) {
                         Icon(Icons.Default.CreateNewFolder, contentDescription = stringResource(R.string.cd_add_folder))
                     }
-                    IconButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
-                        Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.cd_import_vault))
-                    }
-                    IconButton(onClick = { 
-                        exportLauncher.launch("vault_${currentFolderName ?: "all"}_${System.currentTimeMillis()}.json") 
-                    }) {
-                        Icon(Icons.Default.FileUpload, contentDescription = stringResource(R.string.btn_export))
-                    }
-                    IconButton(onClick = { showHelpDialog = true }) {
-                        Icon(
-                            imageVector        = Icons.Default.Info,
-                            contentDescription = "Help",
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector        = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                    Box {
+                        IconButton(onClick = { showMainOverflow = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = showMainOverflow,
+                            onDismissRequest = { showMainOverflow = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.cd_import_vault)) },
+                                onClick = {
+                                    showMainOverflow = false
+                                    importLauncher.launch(arrayOf("application/json"))
+                                },
+                                leadingIcon = { Icon(Icons.Default.FileDownload, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.btn_export)) },
+                                onClick = {
+                                    showMainOverflow = false
+                                    exportLauncher.launch("vault_${currentFolderName ?: "all"}_${System.currentTimeMillis()}.json")
+                                },
+                                leadingIcon = { Icon(Icons.Default.FileUpload, null) }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Help") },
+                                onClick = {
+                                    showMainOverflow = false
+                                    showHelpDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Info, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.settings)) },
+                                onClick = {
+                                    showMainOverflow = false
+                                    onSettingsClick()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Settings, null) }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -523,8 +549,12 @@ private fun GroupCard(
     onDelete: () -> Unit,
     onMove: () -> Unit
 ) {
-    val strength      = MasterStrength.fromId(item.group.masterStrength)
-    val strengthColor = strengthColor(strength)
+    val quality       = item.group.masterQuality
+    val strengthColor = when {
+        quality >= 0.70f -> Color(0xFF4CAF50)
+        quality >= 0.40f -> Color(0xFFFFC107)
+        else          -> Color(0xFFF44336)
+    }
     val versesLabel   = if (item.memberCount == 1)
         stringResource(R.string.verses_singular, item.memberCount)
     else
@@ -596,7 +626,7 @@ private fun GroupCard(
                         border = BorderStroke(1.dp, strengthColor.copy(alpha = 0.4f))
                     ) {
                         Text(
-                            text      = strength.localizedLabel(),
+                            text      = "${(quality * 100).roundToInt()}%",
                             modifier  = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style     = MaterialTheme.typography.labelSmall,
                             color     = strengthColor,
@@ -638,8 +668,8 @@ private fun GroupCard(
 }
 
 
-private fun strengthColor(strength: MasterStrength): Color = when (strength) {
-    MasterStrength.WEAK   -> DifficultyCritical
-    MasterStrength.STABLE -> DifficultyStruggled
-    MasterStrength.SOLID  -> DifficultySmooth
+private fun strengthColor(quality: Float): Color = when {
+    quality >= 0.70f -> DifficultySmooth
+    quality >= 0.40f -> DifficultyStruggled
+    else          -> DifficultyCritical
 }

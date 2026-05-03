@@ -16,6 +16,6 @@ data class RevisionLogEntity(
     @ColumnInfo(name = "start_page") val startPage: Int,
     @ColumnInfo(name = "end_page") val endPage: Int,
     val timestamp: Long,
-    val difficulty: Int,
-    @ColumnInfo(name = "date_millis", defaultValue = "0") val dateMillis: Long = 0L
+    @ColumnInfo(name = "date_millis", defaultValue = "0") val dateMillis: Long = 0L,
+    @ColumnInfo(name = "manual_stability") val manualStability: Float
 )

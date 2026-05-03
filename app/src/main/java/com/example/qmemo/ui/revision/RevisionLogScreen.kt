@@ -27,9 +27,12 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +40,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +78,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.roundToInt
 
 // ── Screen entry point ────────────────────────────────────────────────────────
 
@@ -167,9 +173,9 @@ fun RevisionLogScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                DifficultySelector(
-                    selected = uiState.difficulty,
-                    onSelect = viewModel::onDifficultyChange
+                ManualQualitySection(
+                    quality = uiState.manualQuality,
+                    onQualityChange = viewModel::onManualQualityChange
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -400,45 +406,59 @@ private fun PageRangeInputRow(
     }
 }
 
-// ── Difficulty selector ───────────────────────────────────────────────────────
+// ── Manual Quality Section ──────────────────────────────────────────
 
 @Composable
-private fun DifficultySelector(
-    selected: Difficulty,
-    onSelect: (Difficulty) -> Unit
+private fun ManualQualitySection(
+    quality: Float,
+    onQualityChange: (Float) -> Unit
 ) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
-        Difficulty.entries.forEach { diff ->
-            val isSelected = diff == selected
-            val diffColor  = when (diff) {
-                Difficulty.SMOOTH    -> DifficultySmooth
-                Difficulty.STRUGGLED -> DifficultyStruggled
-                Difficulty.CRITICAL  -> DifficultyCritical
-            }
-            OutlinedButton(
-                onClick  = { onSelect(diff) },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(8.dp),
-                colors   = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (isSelected) diffColor.copy(alpha = 0.15f) else Color.Transparent,
-                    contentColor   = if (isSelected) diffColor else MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                border = BorderStroke(
-                    width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) diffColor else MaterialTheme.colorScheme.outline
-                )
-            ) {
-                Text(
-                    text       = diff.localizedLabel(),
-                    style      = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    maxLines   = 1
-                )
-            }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.label_starting_quality),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${(quality * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        Slider(
+            value = quality,
+            onValueChange = onQualityChange,
+            valueRange = 0.1f..1f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+            ),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
     }
 }
 
@@ -447,12 +467,8 @@ private fun DifficultySelector(
 @Composable
 private fun RevisionLogItem(log: RevisionLogEntity) {
     val context    = LocalContext.current
-    val difficulty = Difficulty.fromId(log.difficulty)
-    val diffColor  = when (difficulty) {
-        Difficulty.SMOOTH    -> DifficultySmooth
-        Difficulty.STRUGGLED -> DifficultyStruggled
-        Difficulty.CRITICAL  -> DifficultyCritical
-    }
+    val quality    = log.manualStability
+    val healthClr = healthColor(quality)
 
     Row(
         modifier = Modifier
@@ -465,7 +481,7 @@ private fun RevisionLogItem(log: RevisionLogEntity) {
             modifier = Modifier
                 .width(4.dp)
                 .fillMaxHeight()
-                .background(diffColor)
+                .background(healthClr)
         )
 
         Row(
@@ -493,19 +509,27 @@ private fun RevisionLogItem(log: RevisionLogEntity) {
 
             Surface(
                 shape  = RoundedCornerShape(4.dp),
-                color  = diffColor.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, diffColor.copy(alpha = 0.4f))
+                color  = healthClr.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text       = difficulty.localizedLabel(),
+                    text       = "${(quality * 100).roundToInt()}%",
                     modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style      = MaterialTheme.typography.labelSmall,
-                    color      = diffColor,
+                    color      = healthClr,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     }
+}
+
+// Add this helper if it doesn't exist or use the one from JuzDetailScreen
+@Composable
+private fun healthColor(score: Float): Color = when {
+    score >= 0.70f -> Color(0xFF4CAF50) // Green
+    score >= 0.40f -> Color(0xFFFFC107) // Amber
+    else          -> Color(0xFFF44336) // Red
 }
 
 // ── Date formatting helpers ───────────────────────────────────────────────────

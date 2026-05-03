@@ -43,6 +43,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -78,13 +80,15 @@ import com.example.qmemo.ui.theme.AmiriFontFamily
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.DifficultyStruggled
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSimilarityGroupScreen(
     groupId: Int?,
     folderId: Int?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenMushaf: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: EditGroupViewModel = viewModel(factory = EditGroupViewModelFactory(context))
@@ -222,9 +226,9 @@ fun EditSimilarityGroupScreen(
             item {
                 SectionLabel(stringResource(R.string.section_mastery))
                 Spacer(Modifier.height(6.dp))
-                StrengthSegmentedControl(
-                    selected = uiState.strength,
-                    onSelect = viewModel::onStrengthChange
+                EditQualitySlider(
+                    quality = uiState.masterQuality,
+                    onSelect = viewModel::onQualityChange
                 )
             }
 
@@ -286,7 +290,8 @@ fun EditSimilarityGroupScreen(
                                 peekTarget = QuickPeekTarget(
                                     verseId = verse.id,
                                     surahId = verse.surahId,
-                                    ayahNumber = verse.ayahNumber
+                                    ayahNumber = verse.ayahNumber,
+                                    pageNumber = verse.pageNumber
                                 )
                             }
                         )
@@ -326,7 +331,8 @@ fun EditSimilarityGroupScreen(
                             peekTarget = QuickPeekTarget(
                                 verseId     = member.verseId,
                                 surahId     = member.surahId,
-                                ayahNumber  = member.ayahNumber
+                                ayahNumber  = member.ayahNumber,
+                                pageNumber  = member.pageNumber
                             )
                         }
                     )
@@ -341,7 +347,8 @@ fun EditSimilarityGroupScreen(
     peekTarget?.let { target ->
         QuickPeekBottomSheet(
             target    = target,
-            onDismiss = { peekTarget = null }
+            onDismiss = { peekTarget = null },
+            onOpenMushaf = onOpenMushaf
         )
     }
 }
@@ -729,37 +736,41 @@ private fun MemberRow(
 // ── Strength segmented control ────────────────────────────────────────────────
 
 @Composable
-private fun StrengthSegmentedControl(
-    selected: MasterStrength,
-    onSelect: (MasterStrength) -> Unit
-) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(12.dp)
     ) {
-        MasterStrength.entries.forEach { s ->
-            val isSelected = s == selected
-            val color      = strengthColor(s)
-            OutlinedButton(
-                onClick  = { onSelect(s) },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(8.dp),
-                colors   = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (isSelected) color.copy(alpha = 0.15f) else Color.Transparent,
-                    contentColor   = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                border = BorderStroke(
-                    width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) color else MaterialTheme.colorScheme.outline
-                )
-            ) {
-                Text(
-                    text       = s.localizedLabel(),
-                    style      = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.section_mastery),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${(quality * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
+        Slider(
+            value = quality,
+            onValueChange = onSelect,
+            valueRange = 0.1f..1f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary
+            )
+        )
     }
 }
 
