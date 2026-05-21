@@ -1,5 +1,12 @@
 package com.example.qmemo.ui.heatmap
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,42 +22,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,9 +52,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
+import com.example.qmemo.data.local.entity.UserSubjectEntity
+import com.example.qmemo.ui.heatmap.components.AnchorCard
+import com.example.qmemo.ui.heatmap.components.AyahPreviewBottomSheet
+import com.example.qmemo.ui.heatmap.components.PeekDetailBottomSheet
+import com.example.qmemo.ui.heatmap.components.SubjectEditorDialog
 import com.example.qmemo.ui.theme.AmiriFontFamily
 import com.example.qmemo.ui.theme.DifficultyCritical
-import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.DifficultyStruggled
 import kotlin.math.roundToInt
 
@@ -88,10 +77,40 @@ fun JuzDetailScreen(
         factory = JuzDetailViewModelFactory(context, juzId)
     )
 
-    val pages        by viewModel.pagesWithSurahs.collectAsState()
-    val surahRange   by viewModel.surahRange.collectAsState()
-    val selectedPage by viewModel.selectedPage.collectAsState()
-    val isArabic     = LocalConfiguration.current.locales[0].language == "ar"
+    val pages            by viewModel.pagesWithSurahs.collectAsState()
+    val timelineItems    by viewModel.timelineItems.collectAsState()
+    val isStructural     by viewModel.isStructuralMode.collectAsState()
+    val surahRange       by viewModel.surahRange.collectAsState()
+    val selectedPage     by viewModel.selectedPage.collectAsState()
+    val peekData         by viewModel.peekData.collectAsState()
+    val ayahPreview      by viewModel.ayahPreview.collectAsState()
+    val isArabic         = LocalConfiguration.current.locales[0].language == "ar"
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.exportSubjects(it) }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importSubjects(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SharingEvent.Success -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                is SharingEvent.Error -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    var editingUnitId by remember { mutableStateOf<Int?>(null) }
+    var editingSubject by remember { mutableStateOf<UserSubjectEntity?>(null) }
+    var editingAyahs by remember { mutableStateOf<List<com.example.qmemo.data.local.entity.VerseEntity>>(emptyList()) }
+    var subjectToDelete by remember { mutableStateOf<UserSubjectEntity?>(null) }
 
     val subtitle = surahRange?.let { range ->
         val from = "${range.firstSurah}. ${SurahData.nameOf(range.firstSurah)}"
@@ -132,61 +151,188 @@ fun JuzDetailScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
-                )
+                ),
+                actions = {
+                    com.example.qmemo.ui.components.TopBarOverflowMenu(
+                        onHelpClick = { /* TODO */ },
+                        onSettingsClick = {},
+                        extraItems = { dismiss ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.btn_export_subjects)) },
+                                onClick = {
+                                    dismiss()
+                                    exportLauncher.launch("juz_${juzId}_subjects.json")
+                                },
+                                leadingIcon = { Icon(Icons.Default.FileUpload, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.btn_import_subjects)) },
+                                onClick = {
+                                    dismiss()
+                                    importLauncher.launch(arrayOf("application/json"))
+                                },
+                                leadingIcon = { Icon(Icons.Default.FileDownload, null) }
+                            )
+                        }
+                    )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-
-        LazyVerticalGrid(
-            columns               = GridCells.Fixed(4),
-            modifier              = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding        = PaddingValues(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement   = Arrangement.spacedBy(8.dp)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                JuzHealthSummary(pages = pages)
-            }
-
-            if (pages.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Box(
-                        modifier         = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 64.dp),
-                        contentAlignment = Alignment.Center
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            AnimatedContent(
+                targetState = isStructural,
+                transitionSpec = {
+                    fadeIn() togetherWith fadeOut()
+                },
+                label = "mode_transition"
+            ) { structural ->
+                if (structural) {
+                    // ── Structural Flow View (Anchor Cards) ─────────────────
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Text(
-                            text  = stringResource(R.string.loading_pages),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        items(timelineItems) { cardData ->
+                            AnchorCard(
+                                data = cardData,
+                                onAddSubject = { 
+                                    editingUnitId = cardData.unit.id 
+                                    editingAyahs = cardData.ayahsInQuarter
+                                    editingSubject = null
+                                },
+                                onEditSubject = { subject ->
+                                    editingUnitId = cardData.unit.id
+                                    editingAyahs = cardData.ayahsInQuarter
+                                    editingSubject = subject
+                                },
+                                onDeleteSubject = { subject ->
+                                    subjectToDelete = subject
+                                },
+                                onSubjectClick = { subject ->
+                                    viewModel.showAyahPreview(subject.startAyahId)
+                                },
+                                onPageClick = { pageNum ->
+                                    viewModel.onPageTap(pageNum, "")
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    // ── Memory Health View ──────────────────────────────────
+                    LazyVerticalGrid(
+                        columns               = GridCells.Fixed(4),
+                        modifier              = Modifier.fillMaxSize(),
+                        contentPadding        = PaddingValues(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement   = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item(span = { GridItemSpan(4) }) {
+                            JuzHealthSummary(pages = pages)
+                        }
+
+                        if (pages.isEmpty()) {
+                            item(span = { GridItemSpan(4) }) {
+                                Box(
+                                    modifier         = Modifier.fillMaxWidth().padding(top = 64.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text  = stringResource(R.string.loading_pages),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            items(pages, key = { it.stability.page }) { pwS ->
+                                PageTile(
+                                    pwS     = pwS,
+                                    onClick = { viewModel.onPageTap(pwS.stability.page, pwS.surahLabel) }
+                                )
+                            }
+                        }
                     }
                 }
-            } else {
-                items(pages, key = { it.stability.page }) { pwS ->
-                    PageTile(
-                        pwS     = pwS,
-                        onClick = { viewModel.onPageTap(pwS.stability.page, pwS.surahLabel) }
-                    )
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Spacer(Modifier.height(24.dp))
             }
         }
     }
 
-    if (selectedPage != null) {
+    // ── Sheets / Dialogs ───────────────────────────────────────────────────
+
+    selectedPage?.let { selection ->
         QuickStatusDialog(
-            selection    = selectedPage!!,
+            selection    = selection,
             onDismiss    = viewModel::dismissDialog,
-            onSelect     = { quality -> viewModel.logPage(selectedPage!!.page, quality) },
+            onSelect     = { quality -> viewModel.logPage(selection.page, quality) },
             onViewInMushaf = { page -> viewModel.dismissDialog(); onPageOpen(page) }
+        )
+    }
+
+    peekData?.let { data ->
+        PeekDetailBottomSheet(
+            pageNumber = data.pageNumber,
+            startSnippet = data.startSnippet,
+            endSnippet = data.endSnippet,
+            onOpenInMushaf = { viewModel.dismissPeek(); onPageOpen(data.pageNumber) },
+            onDismiss = { viewModel.dismissPeek() }
+        )
+    }
+
+    ayahPreview?.let { verse ->
+        AyahPreviewBottomSheet(
+            verse = verse,
+            onOpenInMushaf = { viewModel.dismissAyahPreview(); onPageOpen(verse.pageNumber) },
+            onShare = { /* TODO */ },
+            onDismiss = { viewModel.dismissAyahPreview() }
+        )
+    }
+
+    editingUnitId?.let { unitId ->
+        SubjectEditorDialog(
+            ayahs = editingAyahs,
+            initialText = editingSubject?.subjectText ?: "",
+            initialAyahId = editingSubject?.startAyahId,
+            onSave = { text, startAyahId ->
+                val current = editingSubject
+                if (current == null) {
+                    viewModel.addSubject(unitId, text, startAyahId)
+                } else {
+                    viewModel.updateSubject(current, text, startAyahId)
+                }
+                editingUnitId = null
+                editingSubject = null
+            },
+            onDismiss = { 
+                editingUnitId = null
+                editingSubject = null
+            }
+        )
+    }
+
+    subjectToDelete?.let { subject ->
+        AlertDialog(
+            onDismissRequest = { subjectToDelete = null },
+            title = { Text(stringResource(R.string.btn_delete)) },
+            text = { Text(stringResource(R.string.delete_subject_confirmation)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSubject(subject)
+                        subjectToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.btn_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToDelete = null }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
         )
     }
 }
@@ -210,9 +356,7 @@ private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
         shape    = RoundedCornerShape(10.dp),
         color    = MaterialTheme.colorScheme.surfaceVariant,
         border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 4.dp)
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -298,14 +442,10 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
             color = if (ps.isTracked) textColor.copy(alpha = 0.10f)
                     else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
         ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
+        modifier = Modifier.fillMaxWidth().aspectRatio(1f)
     ) {
         Column(
-            modifier            = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 4.dp, vertical = 5.dp),
+            modifier            = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -471,4 +611,3 @@ private fun QuickStatusDialog(
         }
     )
 }
-

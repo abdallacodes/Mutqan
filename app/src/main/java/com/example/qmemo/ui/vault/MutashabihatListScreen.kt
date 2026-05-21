@@ -34,10 +34,9 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MoveUp
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -79,6 +78,8 @@ import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
 import com.example.qmemo.data.local.dao.GroupWithCount
 import com.example.qmemo.data.local.entity.VaultFolderEntity
+import com.example.qmemo.ui.components.HelpDialog
+import com.example.qmemo.ui.components.TopBarOverflowMenu
 import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
@@ -91,6 +92,7 @@ fun MutashabihatListScreen(
     onAddGroup: (folderId: Int?) -> Unit,
     onViewGroup: (groupId: Int, currentSurahId: Int) -> Unit,
     onEditGroup: (Int) -> Unit,
+    onStartTest: (folderId: Int?, groupId: Int?) -> Unit,
     onSettingsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -172,24 +174,17 @@ fun MutashabihatListScreen(
                     }
                 },
                 actions = {
-                    var showMainOverflow by remember { mutableStateOf(false) }
-
                     IconButton(onClick = { showAddFolderDialog = true }) {
                         Icon(Icons.Default.CreateNewFolder, contentDescription = stringResource(R.string.cd_add_folder))
                     }
-
-                    Box {
-                        IconButton(onClick = { showMainOverflow = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                        }
-                        DropdownMenu(
-                            expanded = showMainOverflow,
-                            onDismissRequest = { showMainOverflow = false }
-                        ) {
+                    TopBarOverflowMenu(
+                        onHelpClick = { showHelpDialog = true },
+                        onSettingsClick = onSettingsClick,
+                        extraItems = { dismissMenu ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.cd_import_vault)) },
                                 onClick = {
-                                    showMainOverflow = false
+                                    dismissMenu()
                                     importLauncher.launch(arrayOf("application/json"))
                                 },
                                 leadingIcon = { Icon(Icons.Default.FileDownload, null) }
@@ -197,30 +192,13 @@ fun MutashabihatListScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.btn_export)) },
                                 onClick = {
-                                    showMainOverflow = false
+                                    dismissMenu()
                                     exportLauncher.launch("vault_${currentFolderName ?: "all"}_${System.currentTimeMillis()}.json")
                                 },
                                 leadingIcon = { Icon(Icons.Default.FileUpload, null) }
                             )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Help") },
-                                onClick = {
-                                    showMainOverflow = false
-                                    showHelpDialog = true
-                                },
-                                leadingIcon = { Icon(Icons.Default.Info, null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.settings)) },
-                                onClick = {
-                                    showMainOverflow = false
-                                    onSettingsClick()
-                                },
-                                leadingIcon = { Icon(Icons.Default.Settings, null) }
-                            )
                         }
-                    }
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -274,7 +252,8 @@ fun MutashabihatListScreen(
                                 onClick = { viewModel.navigateToFolder(folder) },
                                 onRename = { showRenameFolderDialog = folder },
                                 onDelete = { viewModel.deleteFolder(folder) },
-                                onMove = { movingFolder = folder }
+                                onMove = { movingFolder = folder },
+                                onTest = { onStartTest(folder.id, null) }
                             )
                         }
                         item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -296,7 +275,8 @@ fun MutashabihatListScreen(
                                 onView   = { onViewGroup(item.group.id, currentSurahId) },
                                 onEdit   = { onEditGroup(item.group.id) },
                                 onDelete = { viewModel.deleteGroup(item) },
-                                onMove   = { movingGroup = item }
+                                onMove   = { movingGroup = item },
+                                onTest   = { onStartTest(null, item.group.id) }
                             )
                         }
                     }
@@ -386,7 +366,8 @@ private fun FolderCard(
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    onMove: () -> Unit
+    onMove: () -> Unit,
+    onTest: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -417,6 +398,13 @@ private fun FolderCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            IconButton(onClick = onTest) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = stringResource(R.string.cd_start_test),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -547,7 +535,8 @@ private fun GroupCard(
     onView: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onMove: () -> Unit
+    onMove: () -> Unit,
+    onTest: () -> Unit
 ) {
     val quality       = item.group.masterQuality
     val strengthColor = when {
@@ -634,6 +623,14 @@ private fun GroupCard(
                         )
                     }
                 }
+            }
+
+            IconButton(onClick = onTest) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = stringResource(R.string.cd_start_test),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
             }
 
             Box {

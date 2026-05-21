@@ -43,6 +43,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
@@ -54,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -366,6 +370,11 @@ private fun SearchFiltersSection(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
+    // Track active mode explicitly (0=Surah, 1=Juz Range)
+    var filterMode by remember { 
+        mutableIntStateOf(if (juzStart != null || juzEnd != null) 1 else 0) 
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -388,62 +397,90 @@ private fun SearchFiltersSection(
         }
 
         if (expanded) {
-            Spacer(Modifier.height(8.dp))
-            
-            // Surah Filter
-            var surahExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = surahExpanded,
-                onExpandedChange = { surahExpanded = it }
+            Spacer(Modifier.height(12.dp))
+
+            // ── Mode Toggle ──────────────────────────────────────────────────
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
             ) {
-                OutlinedTextField(
-                    value = selectedSurahId?.let { "${it}. ${SurahData.nameOf(it)}" } ?: stringResource(R.string.all_surahs),
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
-                    label = { Text(stringResource(R.string.label_filter_surah)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = fieldColors()
-                )
-                ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.all_surahs)) },
-                        onClick = { onSurahSelect(null); surahExpanded = false }
-                    )
-                    SurahData.ALL.forEach { info ->
-                        DropdownMenuItem(
-                            text = { Text("${info.id}. ${info.getDisplayName()}") },
-                            onClick = { onSurahSelect(info.id); surahExpanded = false }
-                        )
-                    }
+                SegmentedButton(
+                    selected = filterMode == 0,
+                    onClick = { 
+                        filterMode = 0
+                        onSurahSelect(null) 
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                ) {
+                    Text("Surah", style = MaterialTheme.typography.labelLarge)
+                }
+                SegmentedButton(
+                    selected = filterMode == 1,
+                    onClick = { 
+                        filterMode = 1
+                        onJuzRangeChange(null, null) 
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                ) {
+                    Text("Juz Range", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            // Juz Range
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = juzStart?.toString() ?: "",
-                    onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(v, juzEnd) },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(stringResource(R.string.label_juz_start)) },
-                    placeholder = { Text("1") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = fieldColors()
-                )
-                OutlinedTextField(
-                    value = juzEnd?.toString() ?: "",
-                    onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(juzStart, v) },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(stringResource(R.string.label_juz_end)) },
-                    placeholder = { Text("30") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = fieldColors()
-                )
+            if (filterMode == 0) {
+                // Surah Filter
+                var surahExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = surahExpanded,
+                    onExpandedChange = { surahExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedSurahId?.let { "${it}. ${SurahData.nameOf(it)}" } ?: stringResource(R.string.all_surahs),
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+                        label = { Text(stringResource(R.string.label_filter_surah)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = fieldColors()
+                    )
+                    ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.all_surahs)) },
+                            onClick = { onSurahSelect(null); surahExpanded = false }
+                        )
+                        SurahData.ALL.forEach { info ->
+                            DropdownMenuItem(
+                                text = { Text("${info.id}. ${info.getDisplayName()}") },
+                                onClick = { onSurahSelect(info.id); surahExpanded = false }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Juz Range
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = juzStart?.toString() ?: "",
+                        onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(v, juzEnd) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.label_juz_start)) },
+                        placeholder = { Text("1") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = fieldColors()
+                    )
+                    OutlinedTextField(
+                        value = juzEnd?.toString() ?: "",
+                        onValueChange = { val v = it.filter(Char::isDigit).toIntOrNull(); if (v == null || v in 1..30) onJuzRangeChange(juzStart, v) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.label_juz_end)) },
+                        placeholder = { Text("30") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = fieldColors()
+                    )
+                }
             }
         }
     }

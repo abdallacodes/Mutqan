@@ -58,6 +58,7 @@ import com.example.qmemo.ui.theme.ThemeViewModel
 import com.example.qmemo.ui.theme.ThemeViewModelFactory
 import com.example.qmemo.ui.vault.EditSimilarityGroupScreen
 import com.example.qmemo.ui.vault.MutashabihatListScreen
+import com.example.qmemo.ui.vault.SimilarityTestScreen
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ object Routes {
     const val GROUP_DETAIL      = "group_detail"
     const val REVISION_HISTORY  = "revision_history"
     const val JUZ_DETAIL        = "juz_detail"
+    const val SIMILARITY_TEST   = "similarity_test?folderId={folderId}&groupId={groupId}"
     const val MUSHAF_VIEWER     = "mushaf_viewer"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
@@ -82,6 +84,7 @@ object Routes {
     fun surahDetail(surahId: Int)                = "surah_detail/$surahId"
     fun groupDetail(groupId: Int, surahId: Int)  = "group_detail/$groupId/$surahId"
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
+    fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
 }
 
@@ -193,6 +196,9 @@ fun AppNavHost(
                         navController.navigate(Routes.groupDetail(groupId, 0))
                     },
                     onEditGroup     = { id -> navController.navigate(Routes.editGroup(id)) },
+                    onStartTest     = { folderId, groupId -> 
+                        navController.navigate(Routes.similarityTest(folderId, groupId)) 
+                    },
                     onSettingsClick = { showSettingsSheet = true }
                 )
             }
@@ -241,6 +247,25 @@ fun AppNavHost(
                     folderId = if (folderId == -1) null else folderId,
                     onBack  = { navController.popBackStack() },
                     onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                )
+            }
+
+            composable(
+                route     = Routes.SIMILARITY_TEST,
+                arguments = listOf(
+                    navArgument("folderId") { type = NavType.IntType; defaultValue = -1 },
+                    navArgument("groupId") { type = NavType.IntType; defaultValue = -1 }
+                )
+            ) { entry ->
+                val fId = entry.arguments?.getInt("folderId")?.takeIf { it != -1 }
+                val gId = entry.arguments?.getInt("groupId")?.takeIf { it != -1 }
+                SimilarityTestScreen(
+                    groupId = gId,
+                    folderId = fId,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToGroup = { id -> 
+                        navController.navigate(Routes.groupDetail(id, 0))
+                    }
                 )
             }
 

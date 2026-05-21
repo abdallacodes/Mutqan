@@ -9,6 +9,8 @@ import androidx.room.Update
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
+import com.example.qmemo.data.local.entity.StructureUnitEntity
+import com.example.qmemo.data.local.entity.UserSubjectEntity
 import com.example.qmemo.data.local.entity.VaultFolderEntity
 import com.example.qmemo.data.local.entity.VerseEntity
 import kotlinx.coroutines.flow.Flow
@@ -86,6 +88,9 @@ abstract class QuranDao {
 
     @Query("SELECT * FROM verses WHERE surah_id = :surahId AND ayah_number = :ayahNumber LIMIT 1")
     abstract suspend fun findVerse(surahId: Int, ayahNumber: Int): VerseEntity?
+
+    @Query("SELECT * FROM verses WHERE juz_id = :juzId AND ayah_number = :ayahNumber LIMIT 1")
+    abstract suspend fun findVerseInJuz(juzId: Int, ayahNumber: Int): VerseEntity?
 
     /**
      * Upgraded search functionality using the pre-normalized content column.
@@ -305,6 +310,9 @@ abstract class QuranDao {
     @Query("SELECT * FROM vault_folders")
     abstract suspend fun getAllFoldersSync(): List<VaultFolderEntity>
 
+    @Query("SELECT * FROM user_subjects")
+    abstract suspend fun getAllUserSubjectsSync(): List<UserSubjectEntity>
+
     @Query("DELETE FROM revision_logs")
     abstract suspend fun deleteAllRevisionLogs()
 
@@ -317,12 +325,16 @@ abstract class QuranDao {
     @Query("DELETE FROM vault_folders")
     abstract suspend fun deleteAllFolders()
 
+    @Query("DELETE FROM user_subjects")
+    abstract suspend fun deleteAllUserSubjects()
+
     @androidx.room.Transaction
     open suspend fun clearUserData() {
         deleteAllRevisionLogs()
         deleteAllSimilarityGroups()
         deleteAllSimilarityMembers()
         deleteAllFolders()
+        deleteAllUserSubjects()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -336,6 +348,9 @@ abstract class QuranDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun insertFolders(folders: List<VaultFolderEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertUserSubjects(subjects: List<UserSubjectEntity>)
 
     // ─────────────────────────────────────────────────────────
     // Juz Explorer — static page/surah mappings
@@ -383,15 +398,74 @@ abstract class QuranDao {
     )
     abstract suspend fun getPageSurahsForJuz(juzId: Int): List<PageSurahsRef>
 
+    @Query("SELECT MIN(surah_id) AS first_surah, MAX(surah_id) AS last_surah FROM verses WHERE juz_id = :juzId")
+    abstract suspend fun getSurahRangeForJuz(juzId: Int): JuzSurahRange?
+
+    // ─────────────────────────────────────────────────────────
+    // Structural Mode
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM verses WHERE page_number = :pageNumber ORDER BY id ASC")
+    abstract suspend fun getVersesByPage(pageNumber: Int): List<VerseEntity>
+
+    @Query("SELECT * FROM verses WHERE id = :id LIMIT 1")
+    abstract suspend fun getVerseById(id: Int): VerseEntity?
+
+    @Query("SELECT * FROM structure_units WHERE juz_id = :juzId ORDER BY id ASC")
+    abstract fun getStructureUnitsByJuz(juzId: Int): Flow<List<StructureUnitEntity>>
+
+    @Query("SELECT * FROM user_subjects WHERE unit_id IN (SELECT id FROM structure_units WHERE juz_id = :juzId) ORDER BY unit_id ASC, order_index ASC")
+    abstract fun getUserSubjectsByJuz(juzId: Int): Flow<List<UserSubjectEntity>>
+
+    @Query("SELECT * FROM user_subjects WHERE unit_id IN (SELECT id FROM structure_units WHERE juz_id = :juzId) ORDER BY unit_id ASC, order_index ASC")
+    abstract suspend fun getUserSubjectsByJuzSync(juzId: Int): List<UserSubjectEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertUserSubject(subject: UserSubjectEntity)
+
+    @Update
+    abstract suspend fun updateUserSubject(subject: UserSubjectEntity)
+
+    @Delete
+    abstract suspend fun deleteUserSubject(subject: UserSubjectEntity)
+
+    // ─────────────────────────────────────────────────────────
+    // Random Ayah
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM verses WHERE juz_id = :juzId ORDER BY RANDOM() LIMIT 1")
+    abstract suspend fun getRandomVerseInJuz(juzId: Int): VerseEntity?
+
+    @Query("SELECT * FROM verses WHERE surah_id = :surahId ORDER BY RANDOM() LIMIT 1")
+    abstract suspend fun getRandomVerseInSurah(surahId: Int): VerseEntity?
+
+    @Query("SELECT * FROM verses WHERE page_number BETWEEN :startPage AND :endPage ORDER BY RANDOM() LIMIT 1")
+    abstract suspend fun getRandomVerseInPageRange(startPage: Int, endPage: Int): VerseEntity?
+
     @Query(
         """
-        SELECT MIN(surah_id) AS first_surah,
-               MAX(surah_id) AS last_surah
-        FROM   verses
-        WHERE  juz_id = :juzId
+        WITH RECURSIVE subfolders AS (
+            SELECT id FROM vault_folders WHERE (:folderId IS NOT NULL AND id = :folderId)
+            UNION ALL
+            SELECT vf.id FROM vault_folders vf
+            JOIN subfolders sf ON vf.parent_id = sf.id
+        )
+        SELECT v.*, sg.id as group_id, sg.description as group_name
+        FROM verses v
+        JOIN similarity_members sm ON v.id = sm.verse_id
+        JOIN similarity_groups sg ON sm.group_id = sg.id
+        WHERE (:groupId IS NOT NULL AND sg.id = :groupId)
+           OR (:folderId IS NOT NULL AND sg.folder_id IN subfolders)
+        ORDER BY RANDOM() LIMIT 1
         """
     )
-    abstract suspend fun getSurahRangeForJuz(juzId: Int): JuzSurahRange?
+    abstract suspend fun getRandomVerseForTest(groupId: Int?, folderId: Int?): TestVerseResult?
 }
+
+data class TestVerseResult(
+    @androidx.room.Embedded val verse: VerseEntity,
+    @androidx.room.ColumnInfo(name = "group_id") val groupId: Int,
+    @androidx.room.ColumnInfo(name = "group_name") val groupName: String
+)
 
 data class PageSimilarityLink(val pageA: Int, val pageB: Int)

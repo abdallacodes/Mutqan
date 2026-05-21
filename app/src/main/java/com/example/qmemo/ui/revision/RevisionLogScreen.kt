@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -70,6 +69,7 @@ import com.example.qmemo.R
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.ui.components.EmptyStateCard
 import com.example.qmemo.ui.components.HelpDialog
+import com.example.qmemo.ui.components.TopBarOverflowMenu
 import com.example.qmemo.ui.components.localizedLabel
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
@@ -129,20 +129,10 @@ fun RevisionLogScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showHelpDialog = true }) {
-                        Icon(
-                            imageVector        = Icons.Default.Info,
-                            contentDescription = "Help",
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector        = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    TopBarOverflowMenu(
+                        onHelpClick = { showHelpDialog = true },
+                        onSettingsClick = onSettingsClick
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background

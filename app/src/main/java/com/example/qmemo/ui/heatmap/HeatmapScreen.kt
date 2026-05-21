@@ -23,14 +23,16 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
 import com.example.qmemo.ui.components.HelpDialog
+import com.example.qmemo.ui.components.TopBarOverflowMenu
 import com.example.qmemo.ui.theme.*
 import kotlin.math.roundToInt
 
@@ -81,12 +84,10 @@ fun HeatmapScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { showHelp = true }) {
-                        Icon(Icons.Default.Info, contentDescription = "Help")
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
+                    TopBarOverflowMenu(
+                        onHelpClick = { showHelp = true },
+                        onSettingsClick = onSettingsClick
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -102,64 +103,106 @@ fun HeatmapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // ── Global Stats ───────────────────────────────────
+                // ── Mode Toggle ───────────────────────────────────
                 item(span = { GridItemSpan(2) }) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
                     ) {
-                        StatCard(
-                            modifier = Modifier.weight(1f),
-                            value    = "${uiState.stats.revisionDebt}",
-                            label    = stringResource(R.string.stat_revision_debt),
-                            sublabel = stringResource(R.string.stat_debt_sublabel),
-                            valueColor = if (uiState.stats.revisionDebt > 5) DifficultyCritical else DifficultySmooth
-                        )
-                        StatCard(
-                            modifier = Modifier.weight(1f),
-                            value    = "${(uiState.stats.stabilityIndex * 100).roundToInt()}%",
-                            label    = stringResource(R.string.stat_stability_index),
-                            sublabel = stringResource(R.string.stat_pages_tracked, uiState.stats.trackedPages),
-                            valueColor = healthColor(uiState.stats.stabilityIndex)
-                        )
+                        SegmentedButton(
+                            selected = !uiState.isStructuralMode,
+                            onClick = { viewModel.toggleStructuralMode(false) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {
+                                Icon(
+                                    Icons.Default.Psychology,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
+                                )
+                            }
+                        ) {
+                            Text(stringResource(R.string.mode_memory_health))
+                        }
+                        SegmentedButton(
+                            selected = uiState.isStructuralMode,
+                            onClick = { viewModel.toggleStructuralMode(true) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {
+                                Icon(
+                                    Icons.Default.AccountTree,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
+                                )
+                            }
+                        ) {
+                            Text(stringResource(R.string.mode_structural_flow))
+                        }
                     }
                 }
 
-                // ── Forecast Slider ─────────────────────────────────
-                item(span = { GridItemSpan(2) }) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    stringResource(R.string.stat_forecast_label),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    stringResource(R.string.stat_forecast_days, uiState.forecastDays),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                // ── Global Stats ───────────────────────────────────
+                if (!uiState.isStructuralMode) {
+                    item(span = { GridItemSpan(2) }) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            StatCard(
+                                modifier = Modifier.weight(1f),
+                                value    = "${uiState.stats.revisionDebt}",
+                                label    = stringResource(R.string.stat_revision_debt),
+                                sublabel = stringResource(R.string.stat_debt_sublabel),
+                                valueColor = if (uiState.stats.revisionDebt > 5) DifficultyCritical else DifficultySmooth
+                            )
+                            StatCard(
+                                modifier = Modifier.weight(1f),
+                                value    = "${(uiState.stats.stabilityIndex * 100).roundToInt()}%",
+                                label    = stringResource(R.string.stat_stability_index),
+                                sublabel = stringResource(R.string.stat_pages_tracked, uiState.stats.trackedPages),
+                                valueColor = healthColor(uiState.stats.stabilityIndex)
+                            )
+                        }
+                    }
+
+                    // ── Forecast Slider ─────────────────────────────────
+                    item(span = { GridItemSpan(2) }) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        stringResource(R.string.stat_forecast_label),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        stringResource(R.string.stat_forecast_days, uiState.forecastDays),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Slider(
+                                    value = uiState.forecastDays.toFloat(),
+                                    onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
+                                    valueRange = 0f..30f,
+                                    steps = 30
                                 )
                             }
-                            Slider(
-                                value = uiState.forecastDays.toFloat(),
-                                onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
-                                valueRange = 0f..30f,
-                                steps = 30
-                            )
                         }
                     }
                 }
 
                 // ── Legend ──────────────────────────────────────────
-                item(span = { GridItemSpan(2) }) {
-                    HeatmapLegend()
+                if (!uiState.isStructuralMode) {
+                    item(span = { GridItemSpan(2) }) {
+                        HeatmapLegend()
+                    }
                 }
 
                 // ── Juz Cards ───────────────────────────────────────
@@ -169,6 +212,7 @@ fun HeatmapScreen(
                     items(uiState.juzSummaries, key = { it.juzId }) { juz ->
                         JuzCard(
                             juz     = juz,
+                            isStructural = uiState.isStructuralMode,
                             onClick = { onJuzClick(juz.juzId) }
                         )
                     }
@@ -270,10 +314,14 @@ private fun LegendDot(color: Color, label: String, border: Boolean = false) {
 }
 
 @Composable
-internal fun JuzCard(juz: JuzSummary, onClick: () -> Unit) {
+internal fun JuzCard(
+    juz: JuzSummary, 
+    isStructural: Boolean = false,
+    onClick: () -> Unit
+) {
     val healthScore  = (juz.healthPercent / 100f).coerceIn(0f, 1f)
     val healthClr    = juz.healthTone?.let { Color(it) } ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val borderColor  = juz.borderTone?.let { Color(it) } ?: MaterialTheme.colorScheme.outline
+    val borderColor  = if (isStructural) MaterialTheme.colorScheme.outlineVariant else (juz.borderTone?.let { Color(it) } ?: MaterialTheme.colorScheme.outline)
     val trackedLabel = "${juz.trackedCount}/${juz.totalPages}${stringResource(R.string.pages_short_suffix)}"
     val healthValue = stringResource(R.string.juz_meta_overall_health_short, juz.healthPercent)
 
@@ -282,14 +330,14 @@ internal fun JuzCard(juz: JuzSummary, onClick: () -> Unit) {
         shape    = RoundedCornerShape(12.dp),
         color    = MaterialTheme.colorScheme.surface,
         border   = BorderStroke(1.dp, borderColor),
-        shadowElevation = 1.dp,
+        shadowElevation = if (isStructural) 0.dp else 1.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 132.dp)
+            .heightIn(min = if (isStructural) 80.dp else 132.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -301,56 +349,60 @@ internal fun JuzCard(juz: JuzSummary, onClick: () -> Unit) {
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 12.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = if (isStructural) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isStructural) FontWeight.Black else FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Start,
                     maxLines = 1
                 )
-                Column(
-                    modifier = Modifier.width(64.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = healthValue,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.End,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = stringResource(R.string.juz_meta_overall_health_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.End
-                    )
+                if (!isStructural) {
+                    Column(
+                        modifier = Modifier.width(64.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = healthValue,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.End,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = stringResource(R.string.juz_meta_overall_health_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.End
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            if (!isStructural) {
+                Spacer(Modifier.height(4.dp))
 
-            LinearProgressIndicator(
-                progress   = { healthScore },
-                modifier   = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color      = healthClr,
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-                strokeCap  = StrokeCap.Round
-            )
+                LinearProgressIndicator(
+                    progress   = { healthScore },
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color      = healthClr,
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
+                    strokeCap  = StrokeCap.Round
+                )
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = trackedLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.End,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 2.dp)
-            )
+                Text(
+                    text = trackedLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 2.dp)
+                )
+            }
         }
     }
 }

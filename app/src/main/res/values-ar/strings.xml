@@ -14,6 +14,7 @@
     <!-- Settings sheet -->
     <string name="settings">الإعدادات</string>
     <string name="settings_title">الإعدادات</string>
+    <string name="help_title">المساعدة</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_theme">المظهر</string>
     <string name="settings_data_management">إدارة البيانات</string>
@@ -42,6 +43,7 @@
     <string name="btn_ok">موافق</string>
     <string name="btn_cancel">إلغاء</string>
     <string name="btn_save">حفظ</string>
+    <string name="btn_edit">تعديل</string>
     <string name="btn_delete">حذف</string>
     <string name="btn_add">إضافة</string>
 
@@ -121,6 +123,7 @@
     <string name="btn_save_group">حفظ المجموعة</string>
     <string name="btn_done">تم</string>
     <string name="cd_save_group">حفظ المجموعة</string>
+    <string name="cd_more_options">خيارات إضافية</string>
     <string name="cd_delete_verse">حذف الآية</string>
     <string name="cd_peek_verse">معاينة الآية</string>
     <string name="section_search_by_text">أو ابحث بالنص</string>
@@ -293,5 +296,31 @@
     <string name="onboarding_lang_subtitle">يمكنك تغييرها لاحقًا من الإعدادات في أي وقت.</string>
     <string name="onboarding_welcome_title">أهلًا بك في %s</string>
 
+    <!-- Structural Mode -->
+    <string name="mode_memory_health">جودة الحفظ</string>
+    <string name="mode_structural_flow">المخطط البنائي</string>
+    <string name="quarter_hizb_header">الحزب %1$d : الربع %2$d</string>
+    <string name="add_subject">إضافة موضوع</string>
+    <string name="edit_subjects">تعديل الموضوعات</string>
+    <string name="no_subjects_hint">لا توجد موضوعات مضافة بعد</string>
+    <string name="delete_subject_confirmation">هل أنت متأكد من حذف هذا الموضوع؟</string>
+
+    <!-- Random Ayah -->
+    <string name="label_random_ayah">آية عشوائية</string>
+    <string name="scope_juz">جزء</string>
+    <string name="scope_surah">سورة</string>
+    <string name="scope_page_range">نطاق الصفحات</string>
+    <string name="btn_generate_random">توليد آية عشوائية</string>
+
+    <!-- Vault Test -->
+    <string name="vault_test_title">اختبر نفسك</string>
+    <string name="btn_show_ayah">أظهر الآية</string>
+    <string name="btn_next_verse">الآية التالية</string>
+    <string name="label_part_of_group">جزء من مجموعة</string>
+    <string name="cd_start_test">ابدأ الاختبار</string>
+    <string name="test_empty_scope">هذا النطاق لا يحتوي على آيات للاختبار.</string>
+
+    <string name="btn_export_subjects">تصدير الموضوعات</string>
+    <string name="btn_import_subjects">استيراد الموضوعات</string>
 
 </resources>

@@ -71,3 +71,9 @@ val MidnightTertiary          = Color(0xFF4FC3F7)  // cyan — external links
 val DifficultySmooth    = Color(0xFF6FBF92)    // emerald mint
 val DifficultyStruggled = Color(0xFFE1B85A)    // warm honey
 val DifficultyCritical  = Color(0xFFE9897F)    // soft coral
+
+// ── Structural Flow Palette ──────────────────────────────────────────────────
+val StructuralEmerald = Color(0xFF2ECC71)
+val StructuralTeal    = Color(0xFF1ABC9C)
+val StructuralIndigo  = Color(0xFF3498DB)
+val StructuralAmber   = Color(0xFFF1C40F)

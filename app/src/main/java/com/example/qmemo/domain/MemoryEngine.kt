@@ -47,29 +47,43 @@ object MemoryEngine {
 
             for (page in start..end) {
                 val idx = page - 1
+                val oldS = stability[idx]
+                val oldT = lastRevisions[idx]
                 
-                // Priority override: Map quality 0.0-1.0 to a stability baseline.
-                // We use a cubic power law for stability: S = 50 * q^3.
-                // This ensures lower quality pages decay significantly faster than solid ones.
-                // q=1.0 -> S=50 days
-                // q=0.7 -> S=17 days
-                // q=0.5 -> S=6.25 days
-                // q=0.3 -> S=1.35 days
-                val baseS = log.manualStability.toDouble().pow(3.0).toFloat() * 50f
-                stability[idx] = baseS.coerceAtLeast(0.1f) // Ensure some stability
+                val currentQuality = log.manualStability
+                
+                // Map quality to FSRS ratings
+                // 1=Smooth (q >= 0.8), 2=Struggled (0.4 <= q < 0.8), 3=Critical (q < 0.4)
+                val rating = when {
+                    currentQuality >= 0.8f -> 1
+                    currentQuality >= 0.4f -> 2
+                    else -> 3
+                }
+
+                if (oldS == 0f || oldT == 0L) {
+                    // 1. Initial tracking: use cubic baseline
+                    // q=1.0 -> 50 days, q=0.7 -> 17 days, q=0.5 -> 6.25 days
+                    val baseS = currentQuality.toDouble().pow(3.0).toFloat() * 50f
+                    stability[idx] = baseS.coerceAtLeast(0.1f)
+                } else {
+                    // 2. Cumulative tracking: use FSRS growth
+                    val t = (logTime - oldT) / MS_PER_DAY
+                    val r = FSRSModel.calculateRetrievability(t.coerceAtLeast(0f), oldS)
+                    
+                    stability[idx] = FSRSModel.nextStability(oldS, r, rating)
+                }
                 
                 lastRevisions[idx] = logTime
 
-                // IMPORTANT: If the user logs a quality less than 100%, 
-                // we want R (Retrievability) to immediately reflect that.
-                if (log.manualStability < 1.0f && log.manualStability > 0f) {
-                    val virtualT = 9f * stability[idx] * (1f / log.manualStability - 1f)
+                // 3. UI Sync: adjust timestamp so R matches current manual quality
+                // This ensures the "Health" color immediately reflects the user's input.
+                if (currentQuality < 1.0f && currentQuality > 0f) {
+                    val virtualT = 9f * stability[idx] * (1f / currentQuality - 1f)
                     lastRevisions[idx] = logTime - (virtualT * MS_PER_DAY).toLong()
                 }
 
-                // Semantic Interference: If this page was a struggle (low quality), 
-                // penalize similar pages.
-                if (log.manualStability < 0.7f) {
+                // 4. Semantic Interference
+                if (currentQuality < 0.7f) {
                     similarityLinks[page]?.forEach { similarPage ->
                         val sIdx = similarPage - 1
                         if (stability[sIdx] > 0f) {

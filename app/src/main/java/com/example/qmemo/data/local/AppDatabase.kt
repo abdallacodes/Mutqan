@@ -10,6 +10,8 @@ import com.example.qmemo.data.local.dao.QuranDao
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
+import com.example.qmemo.data.local.entity.StructureUnitEntity
+import com.example.qmemo.data.local.entity.UserSubjectEntity
 import com.example.qmemo.data.local.entity.VaultFolderEntity
 import com.example.qmemo.data.local.entity.VerseEntity
 import com.example.qmemo.data.local.entity.VerseFtsEntity
@@ -22,9 +24,11 @@ import org.json.JSONArray
         SimilarityGroupEntity::class,
         SimilarityMemberEntity::class,
         VaultFolderEntity::class,
-        VerseFtsEntity::class
+        VerseFtsEntity::class,
+        StructureUnitEntity::class,
+        UserSubjectEntity::class
     ],
-    version = 11,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -136,21 +140,22 @@ abstract class AppDatabase : RoomDatabase() {
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
             db.execSQL("PRAGMA foreign_keys = ON")
-            // Ensure FTS is synced if we just migrated
-            seedVerses(context, db)
-            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
         }
 
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             db.execSQL("PRAGMA foreign_keys = ON")
             seedVerses(context, db)
+            // Initial FTS build
+            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
         }
 
         override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
             super.onDestructiveMigration(db)
             db.execSQL("PRAGMA foreign_keys = ON")
             seedVerses(context, db)
+            // Rebuild FTS after destruction
+            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
         }
     }
 }
@@ -160,22 +165,52 @@ private const val VERSES_ASSET = "quran_metadata.json"
 private fun seedVerses(context: Context, db: SupportSQLiteDatabase) {
     val json = context.assets.open(VERSES_ASSET).bufferedReader().use { it.readText() }
     val array = JSONArray(json)
+    
+    var quarterCount = 0
+    var lastUnitId: Long = -1
+
     for (i in 0 until array.length()) {
         val obj = array.getJSONObject(i)
+        val verseId = obj.getInt("id")
+        val surahId = obj.getInt("surah_id")
+        val ayahNumber = obj.getInt("ayah_number")
+        val pageNumber = obj.getInt("page_number")
+        val juzId = obj.getInt("juz_id")
         val textArabic = obj.optString("text_arabic", "")
         val normalized = ArabicNormalization.normalizeForSearch(textArabic)
         
         db.execSQL(
             "INSERT OR REPLACE INTO verses (id, surah_id, ayah_number, page_number, juz_id, text_arabic, normalized_content) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            arrayOf(
-                obj.getInt("id"),
-                obj.getInt("surah_id"),
-                obj.getInt("ayah_number"),
-                obj.getInt("page_number"),
-                obj.getInt("juz_id"),
-                textArabic,
-                normalized
-            )
+            arrayOf(verseId, surahId, ayahNumber, pageNumber, juzId, textArabic, normalized)
         )
+
+        // Identify structural units (۞ markers or 1:1)
+        if (textArabic.startsWith("۞") || (surahId == 1 && ayahNumber == 1)) {
+            // Update the previous unit's endAyahId and endPage
+            if (lastUnitId != -1L) {
+                db.execSQL(
+                    "UPDATE structure_units SET end_ayah_id = ?, end_page = ? WHERE id = ?",
+                    arrayOf(verseId - 1, pageNumber, lastUnitId)
+                )
+            }
+
+            val hizbNumber = (quarterCount / 4) + 1
+            val quarterInJuz = (quarterCount % 8) + 1
+            
+            // Insert new structural unit
+            db.execSQL(
+                "INSERT INTO structure_units (juz_id, hizb_number, quarter_number, start_ayah_id, end_ayah_id, start_page, end_page) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                arrayOf(juzId, hizbNumber, quarterInJuz, verseId, 6236, pageNumber, 604)
+            )
+            
+            // Get the last inserted ID to update later
+            val cursor = db.query("SELECT last_insert_rowid()", emptyArray<Any?>())
+            if (cursor.moveToFirst()) {
+                lastUnitId = cursor.getLong(0)
+            }
+            cursor.close()
+            
+            quarterCount++
+        }
     }
 }

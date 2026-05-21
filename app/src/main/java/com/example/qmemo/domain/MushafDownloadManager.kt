@@ -1,10 +1,7 @@
 package com.example.qmemo.domain
 
 import android.content.Context
-import coil.request.CachePolicy
-import coil.request.ImageRequest
-import coil.size.Size
-import com.example.qmemo.ui.mushaf.getMushafImageLoader
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicInteger
 
 sealed class DownloadState {
@@ -28,7 +28,8 @@ class MushafDownloadManager(private val context: Context) {
 
     private var downloadJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO)
-    private val imageLoader = getMushafImageLoader(context)
+    private val repository = MushafRepository(context)
+    private val httpClient = OkHttpClient()
 
     init {
         checkExistingDownloads()
@@ -42,24 +43,11 @@ class MushafDownloadManager(private val context: Context) {
     private fun checkExistingDownloads() {
         scope.launch {
             val totalPages = 604
-            var existingCount = 0
-            val diskCache = imageLoader.diskCache
-            
-            if (diskCache != null) {
-                for (page in 1..totalPages) {
-                    val key = "mushaf_page_$page"
-                    val snapshot = diskCache.openSnapshot(key)
-                    if (snapshot != null) {
-                        existingCount++
-                        snapshot.close()
-                    }
-                }
-            }
+            val existingCount = repository.getDownloadedCount()
 
             if (existingCount == totalPages) {
                 _downloadState.value = DownloadState.Completed(totalPages)
             } else {
-                // If not complete, show IDLE but include the current count so the UI can show "X/604"
                 _downloadState.value = DownloadState.Idle(
                     current = existingCount,
                     total = totalPages,
@@ -77,8 +65,14 @@ class MushafDownloadManager(private val context: Context) {
         downloadJob = scope.launch {
             try {
                 val totalPages = 604
-                // Start from what we already have in cache
-                val initialCount = if (currentState is DownloadState.Idle) currentState.current else 0
+                val pagesToDownload = repository.getMissingPages()
+
+                if (pagesToDownload.isEmpty()) {
+                    _downloadState.value = DownloadState.Completed(totalPages)
+                    return@launch
+                }
+
+                val initialCount = totalPages - pagesToDownload.size
                 val completedCount = AtomicInteger(initialCount)
                 
                 _downloadState.value = DownloadState.Downloading(
@@ -87,34 +81,35 @@ class MushafDownloadManager(private val context: Context) {
                     total = totalPages
                 )
 
-                // Only download pages that are NOT in cache
-                val diskCache = imageLoader.diskCache
-                val pagesToDownload = (1..totalPages).filter { page ->
-                    val key = "mushaf_page_$page"
-                    val snapshot = diskCache?.openSnapshot(key)
-                    val exists = snapshot != null
-                    snapshot?.close()
-                    !exists
-                }
-
-                if (pagesToDownload.isEmpty()) {
-                    _downloadState.value = DownloadState.Completed(totalPages)
-                    return@launch
-                }
-
-                // Download pages one by one to ensure absolute stability and avoid stalling.
                 for (page in pagesToDownload) {
                     val url = mushafPageUrl(page)
-                    val cacheKey = "mushaf_page_$page"
-                    val request = ImageRequest.Builder(context)
-                        .data(url)
-                        .diskCacheKey(cacheKey) // Stable custom key, ignores URL redirects
-                        .size(Size.ORIGINAL)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .build()
+                    val destFile = repository.getPageFile(page)
+                    val tempFile = context.cacheDir.resolve("temp_page_${page}.png")
                     
-                    imageLoader.execute(request)
+                    try {
+                        val request = Request.Builder().url(url).build()
+                        httpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) throw Exception("Unexpected code $response")
+                            
+                            response.body?.byteStream()?.use { input ->
+                                FileOutputStream(tempFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                        // Atomically rename the temp file to the destination file
+                        // This prevents partial/corrupted files from being saved in the repository
+                        if (!tempFile.renameTo(destFile)) {
+                            // Fallback if rename fails across file systems (though unlikely here)
+                            tempFile.copyTo(destFile, overwrite = true)
+                            tempFile.delete()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MushafDownloadManager", "Failed to download page $page", e)
+                        tempFile.delete()
+                        _downloadState.value = DownloadState.Failed("Failed at page $page: ${e.message}")
+                        return@launch
+                    }
                     
                     val current = completedCount.incrementAndGet()
                     _downloadState.value = DownloadState.Downloading(
@@ -133,6 +128,36 @@ class MushafDownloadManager(private val context: Context) {
 
     fun cancelDownload() {
         downloadJob?.cancel()
-        checkExistingDownloads() // Re-check to update idle state with current progress
+        checkExistingDownloads()
+    }
+
+    /**
+     * Downloads a single page on-demand.
+     * This is a blocking call (expected to be called from a background thread).
+     */
+    fun downloadSinglePage(page: Int) {
+        val url = mushafPageUrl(page)
+        val destFile = repository.getPageFile(page)
+        val tempFile = context.cacheDir.resolve("temp_on_demand_${page}.png")
+
+        try {
+            val request = Request.Builder().url(url).build()
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return
+
+                response.body?.byteStream()?.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+            if (!tempFile.renameTo(destFile)) {
+                tempFile.copyTo(destFile, overwrite = true)
+                tempFile.delete()
+            }
+        } catch (e: Exception) {
+            Log.e("MushafDownloadManager", "On-demand download failed for page $page", e)
+            tempFile.delete()
+        }
     }
 }

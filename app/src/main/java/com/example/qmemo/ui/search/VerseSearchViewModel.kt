@@ -21,12 +21,23 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+enum class RandomScope { JUZ, SURAH, PAGE_RANGE }
 
 data class SearchUiState(
     val query: String = "",
     val filterSurahId: Int? = null,
     val filterJuzStart: Int? = null,
-    val filterJuzEnd: Int? = null
+    val filterJuzEnd: Int? = null,
+
+    // Randomizer
+    val randomScope: RandomScope = RandomScope.JUZ,
+    val randomJuz: Int = 1,
+    val randomSurahId: Int = 1,
+    val randomPageStart: Int = 1,
+    val randomPageEnd: Int = 604
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -63,6 +74,34 @@ class VerseSearchViewModel(private val dao: QuranDao) : ViewModel() {
 
     fun onJuzRangeChange(start: Int?, end: Int?) = _uiState.update {
         it.copy(filterJuzStart = start, filterJuzEnd = end, filterSurahId = null)
+    }
+
+    // ── Randomizer ───────────────────────────────────────────
+
+    fun onRandomScopeChange(scope: RandomScope) = _uiState.update { it.copy(randomScope = scope) }
+
+    fun onRandomJuzChange(juz: Int) = _uiState.update { it.copy(randomJuz = juz) }
+
+    fun onRandomSurahChange(id: Int) = _uiState.update { it.copy(randomSurahId = id) }
+
+    fun onRandomPageRangeChange(start: Int, end: Int) = _uiState.update {
+        it.copy(randomPageStart = start, randomPageEnd = end)
+    }
+
+    fun generateRandomAyah(onResult: (VerseEntity) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val state = uiState.value
+            val verse = when (state.randomScope) {
+                RandomScope.JUZ -> dao.getRandomVerseInJuz(state.randomJuz)
+                RandomScope.SURAH -> dao.getRandomVerseInSurah(state.randomSurahId)
+                RandomScope.PAGE_RANGE -> dao.getRandomVerseInPageRange(state.randomPageStart, state.randomPageEnd)
+            }
+            verse?.let { 
+                withContext(Dispatchers.Main) {
+                    onResult(it)
+                }
+            }
+        }
     }
 }
 

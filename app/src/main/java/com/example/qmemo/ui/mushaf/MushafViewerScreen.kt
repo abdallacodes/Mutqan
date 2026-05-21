@@ -4,17 +4,15 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
-import android.graphics.Bitmap
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -35,6 +33,7 @@ import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Article
@@ -67,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
@@ -80,20 +80,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
-import coil.request.CachePolicy
-import coil.request.ImageRequest
-import coil.size.Size
 import com.example.qmemo.R
+import com.example.qmemo.domain.MushafDownloadManager
+import com.example.qmemo.domain.MushafPageLoader
+import com.example.qmemo.domain.MushafRepository
 import com.example.qmemo.domain.PageStability
 import com.example.qmemo.ui.theme.DifficultyCritical
 import com.example.qmemo.ui.theme.DifficultySmooth
 import com.example.qmemo.ui.theme.DifficultyStruggled
 
-private const val LOG_TAG      = "MushafViewer"
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
 private const val TOTAL_SPREADS = 302
@@ -117,13 +112,6 @@ private val MushafPageWarmthFilter = ColorFilter.colorMatrix(
     )
 )
 
-// ── URL helper ────────────────────────────────────────────────────────────────
-
-private fun mushafPageUrl(page: Int): String {
-    val p = page.toString().padStart(3, '0')
-    return "https://raw.githubusercontent.com/GovarJabbar/Quran-PNG/master/$p.png"
-}
-
 // ── Spread geometry helpers ───────────────────────────────────────────────────
 //
 // Spread layout (all 1-based, RTL → odd page on RIGHT, even page on LEFT):
@@ -143,33 +131,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else                -> null
 }
 
-// ── ImageLoader ───────────────────────────────────────────────────────────────
-
-private var sImageLoader: ImageLoader? = null
-
-fun getMushafImageLoader(context: Context): ImageLoader =
-    sImageLoader ?: buildMushafImageLoader(context.applicationContext)
-        .also { sImageLoader = it }
-
-private fun buildMushafImageLoader(appContext: Context): ImageLoader {
-    // Use filesDir instead of cacheDir to ensure the OS doesn't delete downloaded pages
-    val cacheDir = appContext.filesDir.resolve("mushaf_pages").also { it.mkdirs() }
-    return ImageLoader.Builder(appContext)
-        .diskCache {
-            DiskCache.Builder()
-                .directory(cacheDir)
-                .maxSizeBytes(512L * 1024 * 1024)
-                .build()
-        }
-        .memoryCache {
-            MemoryCache.Builder(appContext)
-                .maxSizePercent(0.20)
-                .build()
-        }
-        .crossfade(200)
-        .build()
-}
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -180,7 +141,14 @@ fun MushafViewerScreen(
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
     val state       by viewModel.state.collectAsState()
-    val imageLoader = remember(context) { getMushafImageLoader(context) }
+
+    val repository = remember(context) { MushafRepository(context.applicationContext) }
+    val downloadManager = remember(context) { MushafDownloadManager(context.applicationContext) }
+    val pageLoader = remember(context) { MushafPageLoader(context.applicationContext, repository, downloadManager) }
+
+    DisposableEffect(pageLoader) {
+        onDispose { pageLoader.clear() }
+    }
 
     // Tracks the \"primary\" Mushaf page for the top bar; persists across rotations.
     var currentPage by rememberSaveable { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
@@ -241,62 +209,68 @@ fun MushafViewerScreen(
             .fillMaxSize()
             .background(MushafParchment)
     ) {
-        key(useSpreadLayout) {
-            val pageCount    = if (useSpreadLayout) TOTAL_SPREADS else TOTAL_PAGES
-            val initialIndex = if (useSpreadLayout) (currentPage - 1) / 2 else currentPage - 1
-
-            val pagerState = rememberPagerState(
-                initialPage = initialIndex,
-                pageCount   = { pageCount }
-            )
-
-            LaunchedEffect(pagerState.currentPage) {
-                val n = pagerState.currentPage
-                currentPage = if (useSpreadLayout) {
-                    (2 * n + 1).coerceIn(1, TOTAL_PAGES)
-                } else {
-                    (n + 1).coerceIn(1, TOTAL_PAGES)
-                }
-                currentScale = 1f
+        if (state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MushafInk)
             }
+        } else {
+            key(useSpreadLayout) {
+                val pageCount    = if (useSpreadLayout) TOTAL_SPREADS else TOTAL_PAGES
+                val initialIndex = if (useSpreadLayout) (currentPage - 1) / 2 else currentPage - 1
 
-            // USER REQUIREMENT: 
-            // Swiping LEFT always moves to PREV page.
-            // Swiping RIGHT always moves to NEXT page.
-            // This is achieved by forcing LTR layout and using reverseLayout = true.
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                HorizontalPager(
-                    state                   = pagerState,
-                    reverseLayout           = true, 
-                    beyondViewportPageCount = 1,
-                    userScrollEnabled       = currentScale <= 1.05f,
-                    verticalAlignment       = Alignment.CenterVertically,
-                    modifier                = Modifier.fillMaxSize()
-                ) { pageIndex ->
-                    if (useSpreadLayout) {
-                        SpreadView(
-                            pagerState       = pagerState,
-                            spreadFillWidth  = spreadFillWidth,
-                            rightPage        = spreadRightPage(pageIndex),
-                            leftPage         = spreadLeftPage(pageIndex),
-                            rightStability   = spreadRightPage(pageIndex)?.let { state.stabilities.getOrNull(it - 1) },
-                            leftStability    = spreadLeftPage(pageIndex)?.let  { state.stabilities.getOrNull(it - 1) },
-                            activePage       = activePage,
-                            imageLoader      = imageLoader,
-                            onScaleChange    = { scale -> currentScale = scale },
-                            onTap            = { showHeader = !showHeader }
-                        )
+                val pagerState = rememberPagerState(
+                    initialPage = initialIndex,
+                    pageCount   = { pageCount }
+                )
+
+                LaunchedEffect(pagerState.currentPage) {
+                    val n = pagerState.currentPage
+                    currentPage = if (useSpreadLayout) {
+                        (2 * n + 1).coerceIn(1, TOTAL_PAGES)
                     } else {
-                        val page = pageIndex + 1
-                        SinglePageView(
-                            pagerState    = pagerState,
-                            page          = page,
-                            stability     = state.stabilities.getOrNull(page - 1),
-                            activePage    = activePage,
-                            imageLoader   = imageLoader,
-                            onScaleChange = { scale -> currentScale = scale },
-                            onTap         = { showHeader = !showHeader }
-                        )
+                        (n + 1).coerceIn(1, TOTAL_PAGES)
+                    }
+                    currentScale = 1f
+                }
+
+                // USER REQUIREMENT: 
+                // Swiping LEFT always moves to PREV page.
+                // Swiping RIGHT always moves to NEXT page.
+                // This is achieved by forcing LTR layout and using reverseLayout = true.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    HorizontalPager(
+                        state                   = pagerState,
+                        reverseLayout           = true, 
+                        beyondViewportPageCount = 1,
+                        userScrollEnabled       = currentScale <= 1.05f,
+                        verticalAlignment       = Alignment.CenterVertically,
+                        modifier                = Modifier.fillMaxSize()
+                    ) { pageIndex ->
+                        if (useSpreadLayout) {
+                            SpreadView(
+                                pagerState       = pagerState,
+                                spreadFillWidth  = spreadFillWidth,
+                                rightPage        = spreadRightPage(pageIndex),
+                                leftPage         = spreadLeftPage(pageIndex),
+                                rightStability   = spreadRightPage(pageIndex)?.let { state.stabilities.getOrNull(it - 1) },
+                                leftStability    = spreadLeftPage(pageIndex)?.let  { state.stabilities.getOrNull(it - 1) },
+                                activePage       = activePage,
+                                pageLoader       = pageLoader,
+                                onScaleChange    = { scale -> currentScale = scale },
+                                onTap            = { showHeader = !showHeader }
+                            )
+                        } else {
+                            val page = pageIndex + 1
+                            SinglePageView(
+                                pagerState    = pagerState,
+                                page          = page,
+                                stability     = state.stabilities.getOrNull(page - 1),
+                                activePage    = activePage,
+                                pageLoader    = pageLoader,
+                                onScaleChange = { scale -> currentScale = scale },
+                                onTap         = { showHeader = !showHeader }
+                            )
+                        }
                     }
                 }
             }
@@ -380,7 +354,7 @@ private fun SinglePageView(
     page:          Int,
     stability:     PageStability?,
     activePage:    Int,
-    imageLoader:   ImageLoader,
+    pageLoader:    MushafPageLoader,
     onScaleChange: (Float) -> Unit,
     onTap:         () -> Unit,
     modifier:      Modifier = Modifier
@@ -393,7 +367,7 @@ private fun SinglePageView(
     ) {
         PageImage(
             page          = page,
-            imageLoader   = imageLoader,
+            pageLoader    = pageLoader,
             isActive      = page == activePage,
             contentScale  = ContentScale.Fit,
             imageAlign    = Alignment.Center,
@@ -428,7 +402,7 @@ private fun SpreadView(
     rightStability:   PageStability?,
     leftStability:    PageStability?,
     activePage:       Int,
-    imageLoader:      ImageLoader,
+    pageLoader:       MushafPageLoader,
     onScaleChange:    (Float) -> Unit,
     onTap:            () -> Unit,
     modifier:         Modifier = Modifier
@@ -462,7 +436,7 @@ private fun SpreadView(
                     if (leftPage != null) {
                         PageImage(
                             page                     = leftPage,
-                            imageLoader              = imageLoader,
+                            pageLoader               = pageLoader,
                             isActive                 = leftPage == activePage,
                             contentScale             = ContentScale.Fit,
                             imageAlign               = Alignment.Center,
@@ -497,7 +471,7 @@ private fun SpreadView(
                     if (rightPage != null) {
                         PageImage(
                             page                     = rightPage,
-                            imageLoader              = imageLoader,
+                            pageLoader               = pageLoader,
                             isActive                 = rightPage == activePage,
                             contentScale             = ContentScale.Fit,
                             imageAlign               = Alignment.Center,
@@ -605,7 +579,7 @@ private fun ZoomableSurface(
 @Composable
 private fun PageImage(
     page:                    Int,
-    imageLoader:             ImageLoader,
+    pageLoader:              MushafPageLoader,
     isActive:                Boolean = false,
     contentScale:            ContentScale = ContentScale.Fit,
     imageAlign:              Alignment = Alignment.Center,
@@ -613,12 +587,12 @@ private fun PageImage(
     /** Spread “fill width” mode: image uses full column width; scroll to see full height. */
     fillWidthVerticalScroll: ScrollState? = null
 ) {
-    val context = LocalContext.current
+    val loadingState by pageLoader.loadingState.collectAsState()
+    val bitmap = loadingState[page]
 
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMsg  by remember { mutableStateOf<String?>(null) }
-
-    val url = mushafPageUrl(page)
+    LaunchedEffect(page) {
+        pageLoader.loadPage(page)
+    }
 
     val borderMod = if (isActive)
         Modifier.border(width = 3.dp, color = DifficultySmooth, shape = RectangleShape)
@@ -631,90 +605,38 @@ private fun PageImage(
             .background(MushafParchment),
         contentAlignment  = if (fillWidthVerticalScroll != null) Alignment.TopCenter else Alignment.Center
     ) {
-        if (fillWidthVerticalScroll != null) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(fillWidthVerticalScroll)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(url)
-                        .diskCacheKey("mushaf_page_$page") // Forces a stable key for all sizes
-                        .size(Size.ORIGINAL) // Ensures we always request/cache the full image
-                        .bitmapConfig(Bitmap.Config.RGB_565)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    imageLoader        = imageLoader,
+        if (bitmap != null) {
+            if (fillWidthVerticalScroll != null) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(fillWidthVerticalScroll)
+                ) {
+                    Image(
+                        bitmap             = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        colorFilter        = MushafPageWarmthFilter,
+                        alignment          = Alignment.TopCenter,
+                        contentScale       = ContentScale.FillWidth,
+                        modifier           = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Image(
+                    bitmap             = bitmap.asImageBitmap(),
                     contentDescription = null,
                     colorFilter        = MushafPageWarmthFilter,
-                    alignment          = Alignment.TopCenter,
-                    contentScale       = ContentScale.FillWidth,
-                    onLoading          = { isLoading = true;  errorMsg = null },
-                    onSuccess          = { isLoading = false; errorMsg = null },
-                    onError            = { state ->
-                        val msg = state.result.throwable.message
-                            ?: state.result.throwable.javaClass.simpleName
-                        Log.e(LOG_TAG, "Page $page failed [$url]: $msg", state.result.throwable)
-                        isLoading = false
-                        errorMsg  = msg
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    alignment          = imageAlign,
+                    contentScale       = contentScale,
+                    modifier           = Modifier.fillMaxSize()
                 )
             }
         } else {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(url)
-                    .diskCacheKey("mushaf_page_$page")
-                    .size(Size.ORIGINAL)
-                    .bitmapConfig(Bitmap.Config.RGB_565)   // 16-bit — ideal for B&W pages
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .networkCachePolicy(CachePolicy.ENABLED)
-                    .build(),
-                imageLoader        = imageLoader,
-                contentDescription = null,
-                colorFilter        = MushafPageWarmthFilter,
-                alignment          = imageAlign,
-                contentScale       = contentScale,
-                onLoading          = { isLoading = true;  errorMsg = null },
-                onSuccess          = { isLoading = false; errorMsg = null },
-                onError            = { state ->
-                    val msg = state.result.throwable.message
-                        ?: state.result.throwable.javaClass.simpleName
-                    Log.e(LOG_TAG, "Page $page failed [$url]: $msg", state.result.throwable)
-                    isLoading = false
-                    errorMsg  = msg
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        if (isLoading) {
             CircularProgressIndicator(
                 modifier    = Modifier.size(48.dp),
                 color       = MaterialTheme.colorScheme.primary,
                 strokeWidth = 3.dp
             )
-        }
-
-        if (errorMsg != null) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier            = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text  = "Page $page",
-                    color = MushafInkMuted,
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text  = errorMsg!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
         }
     }
 }

@@ -19,9 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.qmemo.R
+import com.example.qmemo.ui.components.TopBarOverflowMenu
 import com.example.qmemo.ui.theme.AmiriFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,20 +88,10 @@ fun SurahListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showHelpDialog = true }) {
-                        Icon(
-                            imageVector        = Icons.Default.Info,
-                            contentDescription = "Help",
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector        = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                            tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    TopBarOverflowMenu(
+                        onHelpClick = { showHelpDialog = true },
+                        onSettingsClick = onSettingsClick
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background

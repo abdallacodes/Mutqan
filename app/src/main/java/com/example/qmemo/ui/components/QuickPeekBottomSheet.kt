@@ -50,6 +50,7 @@ import com.example.qmemo.R
 import com.example.qmemo.data.SurahData
 import com.example.qmemo.data.local.AppDatabase
 import com.example.qmemo.ui.theme.AmiriFontFamily
+import com.example.qmemo.util.toCleanQuranicText
 
 /**
  * Carries the minimal data needed to open the Quick Peek sheet for a verse.
@@ -150,13 +151,13 @@ fun QuickPeekBottomSheet(
                     )
                 } else {
                     Text(
-                        text     = text,
+                        text     = text.toCleanQuranicText(),
                         color    = MaterialTheme.colorScheme.onSurface,
                         style    = MaterialTheme.typography.bodyLarge.copy(
                             textDirection = TextDirection.Rtl,
                             fontFamily    = AmiriFontFamily,
                             fontSize      = 26.sp,
-                            lineHeight    = 46.sp,
+                            lineHeight    = 56.sp,
                             textAlign     = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth()

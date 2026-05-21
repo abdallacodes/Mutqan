@@ -25,10 +25,11 @@ data class MushafViewerState(
     val stabilities: List<PageStability> = emptyList(),
     /**
      * Maps each page number (1–604) to the localised display name of its
-     * primary Surah (the first Surah that starts on that page, or the Surah
-     * that covers most of it when no new Surah begins there).
+     * primary Surah.
      */
-    val pageSurahMap: Map<Int, String> = emptyMap()
+    val pageSurahMap: Map<Int, String> = emptyMap(),
+    /** True if the initial FSRS calculation is still running. */
+    val isLoading: Boolean = true
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -42,7 +43,6 @@ class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val rows = dao.getAllPageSurahMappings()
             _pageSurahMap.value = rows.associate { ref ->
-                // Use the first (lowest) Surah ID on the page as the primary surah
                 val primarySurahId = ref.surahIds.firstOrNull() ?: return@associate ref.pageNumber to ""
                 ref.pageNumber to SurahData.nameOf(primarySurahId)
             }
@@ -55,13 +55,11 @@ class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
         dao.getAllRevisionLogs(),
         _pageSurahMap
     ) { logs, surahMap ->
+        // Heavy lifting moved to Default dispatcher via flowOn
         val links = dao.getPageSimilarityLinks()
         val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
-        // 1. Compute BASE state
         val state = MemoryEngine.computeCurrentState(logs, linkMap)
-        
-        // 2. Project (0 days)
         val rValues = MemoryEngine.projectRetrievability(state, 0)
 
         val pages = (1..MemoryEngine.TOTAL_PAGES).map { page ->
@@ -73,13 +71,17 @@ class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
             )
         }
 
-        MushafViewerState(stabilities = pages, pageSurahMap = surahMap)
+        MushafViewerState(
+            stabilities = pages,
+            pageSurahMap = surahMap,
+            isLoading = false
+        )
     }
-    .flowOn(Dispatchers.Default)
+    .flowOn(Dispatchers.Default) // Ensures all logic inside 'combine' runs off-main
     .stateIn(
         scope        = viewModelScope,
         started      = SharingStarted.WhileSubscribed(5_000),
-        initialValue = MushafViewerState()
+        initialValue = MushafViewerState(isLoading = true)
     )
 }
 

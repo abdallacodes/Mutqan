@@ -6,6 +6,7 @@ import com.example.qmemo.data.local.AppDatabase
 import com.example.qmemo.data.local.entity.RevisionLogEntity
 import com.example.qmemo.data.local.entity.SimilarityGroupEntity
 import com.example.qmemo.data.local.entity.SimilarityMemberEntity
+import com.example.qmemo.data.local.entity.UserSubjectEntity
 import com.example.qmemo.data.local.entity.VaultFolderEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,10 +26,11 @@ class BackupManager(private val context: Context) {
             val groups = dao.getAllSimilarityGroupsSync()
             val members = dao.getAllSimilarityMembersSync()
             val folders = dao.getAllFoldersSync()
+            val subjects = dao.getAllUserSubjectsSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
-                put("version", 2)
+                put("version", 3)
                 put("revision_logs", JSONArray().apply {
                     logs.forEach { log ->
                         put(JSONObject().apply {
@@ -67,6 +69,17 @@ class BackupManager(private val context: Context) {
                         put(JSONObject().apply {
                             put("group_id", member.groupId)
                             put("verse_id", member.verseId)
+                        })
+                    }
+                })
+                put("user_subjects", JSONArray().apply {
+                    subjects.forEach { subject ->
+                        put(JSONObject().apply {
+                            put("id", subject.id)
+                            put("unit_id", subject.unitId)
+                            put("subject_text", subject.subjectText)
+                            put("start_ayah_id", subject.startAyahId)
+                            put("order_index", subject.orderIndex)
                         })
                     }
                 })
@@ -147,12 +160,28 @@ class BackupManager(private val context: Context) {
                 }
             }
 
+            val subjects = mutableListOf<UserSubjectEntity>()
+            val subjectsArray = root.optJSONArray("user_subjects")
+            if (subjectsArray != null) {
+                for (i in 0 until subjectsArray.length()) {
+                    val obj = subjectsArray.getJSONObject(i)
+                    subjects.add(UserSubjectEntity(
+                        id = obj.optInt("id", 0),
+                        unitId = obj.getInt("unit_id"),
+                        subjectText = obj.getString("subject_text"),
+                        startAyahId = obj.getInt("start_ayah_id"),
+                        orderIndex = obj.getInt("order_index")
+                    ))
+                }
+            }
+
             // Perform DB operations
             dao.clearUserData()
             dao.insertFolders(folders)
             dao.insertRevisionLogs(logs)
             dao.insertSimilarityGroups(groups)
             dao.insertSimilarityMembers(members)
+            dao.insertUserSubjects(subjects)
 
             Result.success(Unit)
         } catch (e: Exception) {
