@@ -144,7 +144,7 @@ private fun LanguageSelectionSlide(
     onLanguageSelected: (String) -> Unit,
     onNext: () -> Unit
 ) {
-    val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "en"
+    val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "ar"
 
     val appName = stringResource(R.string.app_name)
     Column(
@@ -205,13 +205,13 @@ private fun LanguageSelectionSlide(
         // Language Buttons
         LanguageOption(
             label = "English",
-            isSelected = currentLang == "en" || currentLang.isEmpty(),
+            isSelected = currentLang == "en",
             onClick = { onLanguageSelected("en") }
         )
         Spacer(Modifier.height(12.dp))
         LanguageOption(
             label = "العربية",
-            isSelected = currentLang == "ar",
+            isSelected = currentLang == "ar" || currentLang.isEmpty(),
             onClick = { onLanguageSelected("ar") }
         )
 

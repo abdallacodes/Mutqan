@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.R
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.data.local.dao.StudyDao
@@ -12,6 +13,7 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.VaultSharingManager
+import com.example.mutqan.ui.components.UiText
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,8 +26,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class VaultUiEvent {
-    data class Success(val message: String) : VaultUiEvent()
-    data class Error(val message: String) : VaultUiEvent()
+    data class Success(val message: UiText) : VaultUiEvent()
+    data class Error(val message: UiText) : VaultUiEvent()
 }
 
 class VaultViewModel(
@@ -79,7 +81,7 @@ class VaultViewModel(
     fun addFolder(name: String) {
         viewModelScope.launch {
             if (dao.getFolderByName(name, _currentFolderId.value) != null) {
-                _events.emit(VaultUiEvent.Error("Folder already exists in this directory"))
+                _events.emit(VaultUiEvent.Error(UiText(R.string.error_folder_exists)))
                 return@launch
             }
             dao.insertFolder(VaultFolderEntity(name = name, parentId = _currentFolderId.value))
@@ -89,7 +91,7 @@ class VaultViewModel(
     fun renameFolder(folder: VaultFolderEntity, newName: String) {
         viewModelScope.launch {
             if (dao.getFolderByName(newName, folder.parentId) != null) {
-                _events.emit(VaultUiEvent.Error("Folder name already exists"))
+                _events.emit(VaultUiEvent.Error(UiText(R.string.error_folder_name_exists)))
                 return@launch
             }
             dao.updateFolder(folder.copy(name = newName))
@@ -113,14 +115,14 @@ class VaultViewModel(
         viewModelScope.launch {
             if (folder.id == newParentId) return@launch // Can't move into itself
             dao.updateFolder(folder.copy(parentId = newParentId))
-            _events.emit(VaultUiEvent.Success("Folder moved"))
+            _events.emit(VaultUiEvent.Success(UiText(R.string.msg_move_success)))
         }
     }
 
     fun moveGroup(group: SimilarityGroupEntity, newFolderId: Int?) {
         viewModelScope.launch {
             dao.updateSimilarityGroup(group.copy(folderId = newFolderId))
-            _events.emit(VaultUiEvent.Success("Group moved"))
+            _events.emit(VaultUiEvent.Success(UiText(R.string.msg_move_success)))
         }
     }
 
@@ -128,9 +130,9 @@ class VaultViewModel(
         viewModelScope.launch {
             val result = sharingManager.exportVault(uri, folderId)
             if (result.isSuccess) {
-                _events.emit(VaultUiEvent.Success("Vault exported successfully"))
+                _events.emit(VaultUiEvent.Success(UiText(R.string.msg_export_success)))
             } else {
-                _events.emit(VaultUiEvent.Error("Export failed: ${result.exceptionOrNull()?.message}"))
+                _events.emit(VaultUiEvent.Error(UiText(R.string.msg_export_error_detail, result.exceptionOrNull()?.message ?: "")))
             }
         }
     }
@@ -138,14 +140,14 @@ class VaultViewModel(
     fun importVault(uri: Uri, folderName: String) {
         viewModelScope.launch {
             if (dao.getFolderByName(folderName, _currentFolderId.value) != null) {
-                _events.emit(VaultUiEvent.Error("Folder name already exists"))
+                _events.emit(VaultUiEvent.Error(UiText(R.string.error_folder_name_exists)))
                 return@launch
             }
             val result = sharingManager.importVault(uri, folderName)
             if (result.isSuccess) {
-                _events.emit(VaultUiEvent.Success("Vault imported into folder \"$folderName\""))
+                _events.emit(VaultUiEvent.Success(UiText(R.string.msg_vault_imported_into_folder, folderName)))
             } else {
-                _events.emit(VaultUiEvent.Error("Import failed: ${result.exceptionOrNull()?.message}"))
+                _events.emit(VaultUiEvent.Error(UiText(R.string.msg_import_error_detail, result.exceptionOrNull()?.message ?: "")))
             }
         }
     }

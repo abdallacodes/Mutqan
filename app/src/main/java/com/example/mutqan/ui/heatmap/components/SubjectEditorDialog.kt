@@ -37,7 +37,7 @@ fun SubjectEditorDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("Subject Name") },
+                    label = { Text(stringResource(R.string.subject_name_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
@@ -47,10 +47,10 @@ fun SubjectEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = selectedVerse?.let { "Ayah ${it.ayah} (Surah ${it.surah})" } ?: "",
+                        value = selectedVerse?.let { stringResource(R.string.subject_ayah_option, it.ayah, it.surah) } ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Start Ayah") },
+                        label = { Text(stringResource(R.string.subject_start_ayah_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -60,7 +60,7 @@ fun SubjectEditorDialog(
                     ) {
                         ayahs.forEach { verse ->
                             DropdownMenuItem(
-                                text = { Text("Ayah ${verse.ayah} (Surah ${verse.surah})") },
+                                text = { Text(stringResource(R.string.subject_ayah_option, verse.ayah, verse.surah)) },
                                 onClick = {
                                     selectedVerse = verse
                                     expanded = false

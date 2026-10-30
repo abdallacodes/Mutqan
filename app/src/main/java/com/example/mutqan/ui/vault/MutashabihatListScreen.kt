@@ -132,8 +132,8 @@ fun MutashabihatListScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is VaultUiEvent.Success -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                is VaultUiEvent.Error -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                is VaultUiEvent.Success -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                is VaultUiEvent.Error -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_LONG).show()
             }
         }
     }

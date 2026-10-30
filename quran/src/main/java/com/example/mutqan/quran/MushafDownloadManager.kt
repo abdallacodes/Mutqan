@@ -13,7 +13,8 @@ sealed class DownloadState {
     data class Idle(val progress: Float, val current: Int, val total: Int) : DownloadState()
     data class Downloading(val progress: Float, val current: Int, val total: Int) : DownloadState()
     data class Completed(val total: Int) : DownloadState()
-    data class Failed(val error: String) : DownloadState()
+    /** The download stopped at the pack covering [firstPage]..[lastPage]. */
+    data class Failed(val firstPage: Int, val lastPage: Int) : DownloadState()
 }
 
 /**
@@ -54,7 +55,7 @@ class MushafDownloadManager(context: Context) {
             for (pack in missing) {
                 publishProgress()
                 if (!fonts.downloadPack(pack)) {
-                    _downloadState.value = DownloadState.Failed("Failed at pages ${pack.firstPage}–${pack.lastPage}")
+                    _downloadState.value = DownloadState.Failed(pack.firstPage, pack.lastPage)
                     return@launch
                 }
             }

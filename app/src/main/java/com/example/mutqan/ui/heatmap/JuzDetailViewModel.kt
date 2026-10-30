@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.R
 import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
@@ -18,6 +19,7 @@ import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranRub
 import com.example.mutqan.quran.toCleanQuranicText
+import com.example.mutqan.ui.components.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -207,23 +209,23 @@ class JuzDetailViewModel(
     fun exportSubjects(uri: android.net.Uri) {
         viewModelScope.launch {
             val res = sharingManager.exportSubjects(uri, juzId)
-            if (res.isSuccess) _events.emit(SharingEvent.Success("Subjects exported"))
-            else _events.emit(SharingEvent.Error(res.exceptionOrNull()?.message ?: "Export failed"))
+            if (res.isSuccess) _events.emit(SharingEvent.Success(UiText(R.string.subjects_exported)))
+            else _events.emit(SharingEvent.Error(UiText(R.string.msg_export_error_detail, res.exceptionOrNull()?.message ?: "")))
         }
     }
 
     fun importSubjects(uri: android.net.Uri) {
         viewModelScope.launch {
             val res = sharingManager.importSubjects(uri)
-            if (res.isSuccess) _events.emit(SharingEvent.Success("Subjects imported"))
-            else _events.emit(SharingEvent.Error(res.exceptionOrNull()?.message ?: "Import failed"))
+            if (res.isSuccess) _events.emit(SharingEvent.Success(UiText(R.string.subjects_imported)))
+            else _events.emit(SharingEvent.Error(UiText(R.string.msg_import_error_detail, res.exceptionOrNull()?.message ?: "")))
         }
     }
 }
 
 sealed class SharingEvent {
-    data class Success(val message: String) : SharingEvent()
-    data class Error(val message: String) : SharingEvent()
+    data class Success(val message: UiText) : SharingEvent()
+    data class Error(val message: UiText) : SharingEvent()
 }
 
 data class PagePeekData(

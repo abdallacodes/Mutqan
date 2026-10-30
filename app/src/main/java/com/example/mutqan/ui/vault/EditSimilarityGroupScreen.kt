@@ -277,7 +277,7 @@ fun EditSimilarityGroupScreen(
                 if (searchResults.isEmpty()) {
                     item {
                         Text(
-                            "No results found with current filters",
+                            stringResource(R.string.search_no_results_filtered),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -387,7 +387,7 @@ private fun SearchFiltersSection(
         ) {
             Icon(Icons.Default.FilterAlt, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
-            Text("SEARCH FILTERS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.search_filters_title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.weight(1f))
             Text(
                 if (expanded) "HIDE" else "SHOW",
@@ -413,7 +413,7 @@ private fun SearchFiltersSection(
                     },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                 ) {
-                    Text("Surah", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.label_surah), style = MaterialTheme.typography.labelLarge)
                 }
                 SegmentedButton(
                     selected = filterMode == 1,
@@ -423,7 +423,7 @@ private fun SearchFiltersSection(
                     },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                 ) {
-                    Text("Juz Range", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.label_filter_juz_range), style = MaterialTheme.typography.labelLarge)
                 }
             }
 

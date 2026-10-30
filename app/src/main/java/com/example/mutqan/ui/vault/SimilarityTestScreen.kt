@@ -78,7 +78,7 @@ fun SimilarityTestScreen(
                 }
                 is TestUiState.Error -> {
                     Text(
-                        text = state.message,
+                        text = state.message.asString(LocalContext.current),
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(32.dp)

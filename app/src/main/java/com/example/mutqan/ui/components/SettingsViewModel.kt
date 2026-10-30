@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.R
 import com.example.mutqan.domain.BackupManager
 import com.example.mutqan.quran.DownloadState
 import com.example.mutqan.quran.MushafDownloadManager
@@ -14,8 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 sealed class BackupUiEvent {
-    data class Success(val message: String) : BackupUiEvent()
-    data class Error(val message: String) : BackupUiEvent()
+    data class Success(val message: UiText) : BackupUiEvent()
+    data class Error(val message: UiText) : BackupUiEvent()
 }
 
 class SettingsViewModel(
@@ -34,9 +35,9 @@ class SettingsViewModel(
         viewModelScope.launch {
             val result = backupManager.exportData(uri)
             if (result.isSuccess) {
-                _events.emit(BackupUiEvent.Success("Backup exported successfully"))
+                _events.emit(BackupUiEvent.Success(UiText(R.string.backup_success)))
             } else {
-                _events.emit(BackupUiEvent.Error("Failed to export backup: ${result.exceptionOrNull()?.message}"))
+                _events.emit(BackupUiEvent.Error(UiText(R.string.backup_error_detail, result.exceptionOrNull()?.message ?: "")))
             }
         }
     }
@@ -45,9 +46,9 @@ class SettingsViewModel(
         viewModelScope.launch {
             val result = backupManager.importData(uri)
             if (result.isSuccess) {
-                _events.emit(BackupUiEvent.Success("Data restored successfully"))
+                _events.emit(BackupUiEvent.Success(UiText(R.string.restore_success)))
             } else {
-                _events.emit(BackupUiEvent.Error("Failed to restore data: ${result.exceptionOrNull()?.message}"))
+                _events.emit(BackupUiEvent.Error(UiText(R.string.restore_error_detail, result.exceptionOrNull()?.message ?: "")))
             }
         }
     }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mushaf_font_failed">Couldn\'t download this page. Check your connection.</string>
+    <string name="mushaf_retry">Retry</string>
+</resources>

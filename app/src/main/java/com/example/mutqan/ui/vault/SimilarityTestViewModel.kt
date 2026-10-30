@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.R
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.TestVerseResult
+import com.example.mutqan.ui.components.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +22,7 @@ sealed class TestUiState {
         val isRevealed: Boolean = false
     ) : TestUiState()
     object Empty : TestUiState()
-    data class Error(val message: String) : TestUiState()
+    data class Error(val message: UiText) : TestUiState()
 }
 
 class SimilarityTestViewModel(
@@ -50,7 +52,7 @@ class SimilarityTestViewModel(
                     _uiState.update { TestUiState.Empty }
                 }
             } catch (e: Exception) {
-                _uiState.update { TestUiState.Error(e.message ?: "Unknown error") }
+                _uiState.update { TestUiState.Error(UiText(R.string.error_unknown)) }
             }
         }
     }

@@ -28,7 +28,7 @@ import com.example.mutqan.R
 
 @Composable
 fun LanguagePickerDialog(onDismiss: () -> Unit) {
-    val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "en"
+    val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "ar"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -47,13 +47,13 @@ fun LanguagePickerDialog(onDismiss: () -> Unit) {
                 LanguageRow(
                     displayName = stringResource(R.string.lang_english),
                     tag         = "en",
-                    isSelected  = currentLang == "en" || currentLang.isEmpty(),
+                    isSelected  = currentLang == "en",
                     onDismiss   = onDismiss
                 )
                 LanguageRow(
                     displayName = stringResource(R.string.lang_arabic),
                     tag         = "ar",
-                    isSelected  = currentLang == "ar",
+                    isSelected  = currentLang == "ar" || currentLang.isEmpty(),
                     onDismiss   = onDismiss
                 )
             }

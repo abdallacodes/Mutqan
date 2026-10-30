@@ -108,8 +108,8 @@ fun SettingsBottomSheet(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is BackupUiEvent.Success -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                is BackupUiEvent.Error -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                is BackupUiEvent.Success -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                is BackupUiEvent.Error -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -188,17 +188,17 @@ fun SettingsBottomSheet(
             SectionLabel(stringResource(R.string.settings_language))
             Spacer(Modifier.height(8.dp))
 
-            val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "en"
+            val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "ar"
             LanguageSettingsRow(
                 displayName = stringResource(R.string.lang_english),
                 tag         = "en",
-                isSelected  = currentLang == "en" || currentLang.isEmpty(),
+                isSelected  = currentLang == "en",
                 onDismiss   = onDismiss
             )
             LanguageSettingsRow(
                 displayName = stringResource(R.string.lang_arabic),
                 tag         = "ar",
-                isSelected  = currentLang == "ar",
+                isSelected  = currentLang == "ar" || currentLang.isEmpty(),
                 onDismiss   = onDismiss
             )
 
@@ -316,7 +316,7 @@ private fun DownloadActionRow(
                 }
                 is DownloadState.Failed -> {
                     Text(
-                        text = stringResource(R.string.mushaf_download_failed, state.error),
+                        text = stringResource(R.string.mushaf_download_failed, state.firstPage, state.lastPage),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )

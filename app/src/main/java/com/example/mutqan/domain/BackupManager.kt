@@ -2,6 +2,7 @@ package com.example.mutqan.domain
 
 import android.content.Context
 import android.net.Uri
+import com.example.mutqan.R
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
@@ -86,7 +87,7 @@ class BackupManager(private val context: Context) {
 
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(root.toString(2).toByteArray())
-            } ?: return@withContext Result.failure(Exception("Failed to open output stream"))
+            } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_output)))
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -98,7 +99,7 @@ class BackupManager(private val context: Context) {
         try {
             val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
-            } ?: return@withContext Result.failure(Exception("Failed to open input stream"))
+            } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_input)))
 
             val root = JSONObject(jsonString)
             

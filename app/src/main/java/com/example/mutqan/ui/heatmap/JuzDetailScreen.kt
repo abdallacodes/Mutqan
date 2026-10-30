@@ -101,8 +101,8 @@ fun JuzDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is SharingEvent.Success -> Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                is SharingEvent.Error -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                is SharingEvent.Success -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
+                is SharingEvent.Error -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_LONG).show()
             }
         }
     }

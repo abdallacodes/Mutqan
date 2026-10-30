@@ -2,325 +2,344 @@
 <resources>
 
     <!-- App -->
-    <string name="app_name">Mutqan</string>
+    <string name="app_name">متقن</string>
 
     <!-- Bottom navigation labels -->
-    <string name="nav_journal">Journal</string>
-    <string name="nav_vault">Vault</string>
-    <string name="nav_surahs">Surahs</string>
-    <string name="nav_search">Search</string>
-    <string name="nav_brain">Brain</string>
+    <string name="nav_journal">دفتر المراجعة</string>
+    <string name="nav_vault">المتشابهات</string>
+    <string name="nav_surahs">سور القرآن</string>
+    <string name="nav_search">البحث</string>
+    <string name="nav_brain">لوحة الحفظ</string>
 
     <!-- Settings sheet -->
-    <string name="settings">Settings</string>
-    <string name="settings_title">Settings</string>
-    <string name="help_title">Help</string>
-    <string name="settings_language">LANGUAGE</string>
-    <string name="settings_theme">THEME</string>
-    <string name="settings_data_management">DATA MANAGEMENT</string>
-    <string name="btn_download_mushaf">DOWNLOAD MUSHAF (OFFLINE)</string>
-    <string name="downloading_mushaf">Downloading pages: %1$d/%2$d (%3$d%%)</string>
-    <string name="mushaf_download_complete">All 604 pages are now offline.</string>
-    <string name="mushaf_download_failed">Download failed: %s</string>
-    <string name="btn_backup">BACKUP DATA</string>
-    <string name="btn_restore">RESTORE DATA</string>
-    <string name="backup_success">Backup exported successfully</string>
-    <string name="restore_success">Data restored successfully</string>
-    <string name="backup_error">Failed to export backup</string>
-    <string name="restore_error">Failed to restore data</string>
+    <string name="settings">الإعدادات</string>
+    <string name="settings_title">الإعدادات</string>
+    <string name="help_title">المساعدة</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_theme">المظهر</string>
+    <string name="settings_data_management">إدارة البيانات</string>
+    <string name="btn_download_mushaf">تحميل المصحف (للاستخدام بدون إنترنت)</string>
+    <string name="downloading_mushaf">جاري تحميل الصفحات: %1$d/%2$d (%3$d٪)</string>
+    <string name="mushaf_download_complete">تم تحميل جميع الصفحات (604) بنجاح.</string>
+    <string name="mushaf_download_failed">فشل التحميل (الصفحات %1$d–%2$d)</string>
+    <string name="btn_backup">نسخة احتياطية</string>
+    <string name="btn_restore">استعادة البيانات</string>
+    <string name="backup_success">تم تصدير النسخة الاحتياطية بنجاح</string>
+    <string name="restore_success">تم استعادة البيانات بنجاح</string>
+    <string name="backup_error">فشل تصدير النسخة الاحتياطية</string>
+    <string name="restore_error">فشل استعادة البيانات</string>
 
     <!-- Theme names -->
-    <string name="theme_auto">Auto</string>
-    <string name="theme_modern_dark">Modern\nDark</string>
-    <string name="theme_oled_black">Pure\nOLED</string>
-    <string name="theme_mushaf_cream">Mushaf\nCream</string>
-    <string name="theme_midnight_blue">Midnight\nBlue</string>
+    <string name="theme_auto">تلقائي</string>
+    <string name="theme_modern_dark">داكن\nعصري</string>
+    <string name="theme_oled_black">أسود\nOLED</string>
+    <string name="theme_mushaf_cream">كريمي\nمصحف</string>
+    <string name="theme_midnight_blue">أزرق\nليلي</string>
     <string name="lang_english">English</string>
     <string name="lang_arabic">العربية</string>
 
     <!-- Common actions -->
-    <string name="back">Back</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">CANCEL</string>
-    <string name="btn_save">SAVE</string>
-    <string name="btn_edit">EDIT</string>
-    <string name="btn_delete">DELETE</string>
-    <string name="btn_add">ADD</string>
+    <string name="back">رجوع</string>
+    <string name="btn_ok">موافق</string>
+    <string name="btn_cancel">إلغاء</string>
+    <string name="btn_save">حفظ</string>
+    <string name="btn_edit">تعديل</string>
+    <string name="btn_delete">حذف</string>
+    <string name="btn_add">إضافة</string>
 
     <!-- ── Revision Log Screen ──────────────────────────────────────────────── -->
-    <string name="journal_title">THE JOURNAL</string>
-    <string name="journal_subtitle">Revision Tracker</string>
-    <string name="btn_log_revision">LOG REVISION</string>
-    <string name="recent_revisions">RECENT REVISIONS</string>
-    <string name="view_all">VIEW ALL</string>
-    <string name="label_start_page">Start Page</string>
-    <string name="label_end_page">End Page</string>
+    <string name="journal_title">دفتر المراجعة</string>
+    <string name="journal_subtitle">دوّن كل جلسة وشاهد الصورة تتضح</string>
+    <string name="btn_log_revision">تسجيل مراجعة جديدة</string>
+    <string name="recent_revisions">آخر ما تمت مراجعته</string>
+    <string name="view_all">عرض السجل الكامل</string>
+    <string name="label_start_page">صفحة البداية</string>
+    <string name="label_end_page">صفحة النهاية</string>
     <string name="placeholder_start_page">1</string>
     <string name="placeholder_end_page">604</string>
-    <string name="error_page_range">Enter 1\u2013604</string>
-    <string name="error_end_before_start">Must be \u2265 start</string>
-    <string name="no_revisions_hint">No revisions logged yet.\nLog your first session above.</string>
-    <string name="select_date">Select Date</string>
-    <string name="pages_range">Pages %1$d\u2013%2$d</string>
-    <string name="just_now">Just now</string>
-    <string name="x_min_ago">%d min ago</string>
-    <string name="x_hr_ago">%d hr ago</string>
-    <string name="x_day_ago">%d day ago</string>
+    <string name="error_page_range">أدخل رقمًا بين 1–604</string>
+    <string name="error_end_before_start">يجب أن تكون أكبر من البداية</string>
+    <string name="no_revisions_hint">لا توجد مراجعات مسجّلة بعد.\nسجّل جلستك الأولى من الأعلى.</string>
+    <string name="select_date">اختر التاريخ</string>
+    <string name="pages_range">الصفحات %1$d–%2$d</string>
+    <string name="just_now">الآن</string>
+    <string name="x_min_ago">منذ %d دقيقة</string>
+    <string name="x_hr_ago">منذ %d ساعة</string>
+    <string name="x_day_ago">منذ %d يوم</string>
 
     <!-- ── Revision History Screen ─────────────────────────────────────────── -->
-    <string name="history_title">REVISION HISTORY</string>
-    <string name="history_subtitle">Tap to edit  \u00b7  Swipe left to delete</string>
-    <string name="no_revisions_history">No revisions logged yet.\nStart from the Journal tab.</string>
-    <string name="delete_entry_title">Delete Entry?</string>
-    <string name="delete_entry_body">Remove Pages %1$d\u2013%2$d from your history?\nThis cannot be undone.</string>
-    <string name="edit_revision_title">EDIT REVISION</string>
-    <string name="label_start">Start</string>
-    <string name="label_end">End</string>
-    <string name="select_date_inline">Select date</string>
-    <string name="cd_delete">Delete</string>
+    <string name="history_title">سجل المراجعات</string>
+    <string name="history_subtitle">اضغط للتعديل · اسحب لليسار للحذف</string>
+    <string name="no_revisions_history">لا توجد مراجعات مسجّلة بعد.\nابدأ من تبويب دفتر المراجعة.</string>
+    <string name="delete_entry_title">حذف السجل؟</string>
+    <string name="delete_entry_body">هل تريد حذف الصفحات %1$d–%2$d من السجل؟\nلا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="edit_revision_title">تعديل المراجعة</string>
+    <string name="label_start">البداية</string>
+    <string name="label_end">النهاية</string>
+    <string name="select_date_inline">اختر التاريخ</string>
+    <string name="cd_delete">حذف</string>
 
     <!-- ── Vault (Mutashabihat) ────────────────────────────────────────────── -->
-    <string name="vault_title">THE VAULT</string>
-    <string name="vault_subtitle">Mutashabihat Groups</string>
-    <string name="cd_add_group">Add group</string>
-    <string name="cd_view_group">View group</string>
-    <string name="cd_edit_group">Edit group</string>
-    <string name="cd_delete_group">Delete group</string>
-    <string name="verses_singular">%d verse</string>
-    <string name="verses_plural">%d verses</string>
-    <string name="vault_empty_title">THE VAULT IS EMPTY</string>
-    <string name="vault_empty_body">Tap + to create your first\nMutashabihat group or folder.</string>
-    <string name="label_folders">FOLDERS</string>
-    <string name="label_uncategorized">UNCATEGORIZED</string>
-    <string name="cd_add_folder">Add folder</string>
-    <string name="cd_import_vault">Import vault</string>
-    <string name="btn_rename">RENAME</string>
-    <string name="dialog_new_folder_title">New Folder</string>
-    <string name="dialog_rename_folder_title">Rename Folder</string>
-    <string name="dialog_import_vault_title">Import Vault</string>
-    <string name="placeholder_folder_name">Folder name</string>
-    <string name="error_folder_exists">Folder already exists</string>
-    <string name="btn_export">EXPORT</string>
-    <string name="btn_move">MOVE</string>
-    <string name="dialog_move_title">Move to Folder</string>
-    <string name="label_root_folder">Vault (Home)</string>
-    <string name="msg_move_success">Moved successfully</string>
-    <string name="msg_export_success">Vault exported successfully</string>
-    <string name="msg_import_success">Vault imported successfully</string>
-    <string name="msg_import_error">Import failed</string>
+    <string name="vault_title">مخزن المتشابهات</string>
+    <string name="vault_subtitle">مجموعات المتشابهات</string>
+    <string name="cd_add_group">إضافة مجموعة</string>
+    <string name="cd_view_group">عرض المجموعة</string>
+    <string name="cd_edit_group">تعديل المجموعة</string>
+    <string name="cd_delete_group">حذف المجموعة</string>
+    <string name="verses_singular">آية واحدة</string>
+    <string name="verses_plural">%d آيات</string>
+    <string name="vault_empty_title">المخزن فارغ</string>
+    <string name="vault_empty_body">اضغط + لإنشاء أولى مجموعات المتشابهات\nأو المجلدات.</string>
+    <string name="label_folders">المجلدات</string>
+    <string name="label_uncategorized">غير مصنف</string>
+    <string name="cd_add_folder">إضافة مجلد</string>
+    <string name="cd_import_vault">استيراد مخزن</string>
+    <string name="btn_rename">إعادة تسمية</string>
+    <string name="dialog_new_folder_title">مجلد جديد</string>
+    <string name="dialog_rename_folder_title">إعادة تسمية المجلد</string>
+    <string name="dialog_import_vault_title">استيراد مخزن</string>
+    <string name="placeholder_folder_name">اسم المجلد</string>
+    <string name="error_folder_exists">المجلد موجود بالفعل</string>
+    <string name="btn_export">تصدير</string>
+    <string name="btn_move">نقل</string>
+    <string name="dialog_move_title">نقل إلى مجلد</string>
+    <string name="label_root_folder">المخزن (الرئيسية)</string>
+    <string name="msg_move_success">تم النقل بنجاح</string>
+    <string name="msg_export_success">تم تصدير المخزن بنجاح</string>
+    <string name="msg_import_success">تم استيراد المخزن بنجاح</string>
+    <string name="msg_import_error">فشل الاستيراد</string>
 
     <!-- ── Edit Group Screen ───────────────────────────────────────────────── -->
-    <string name="new_group_title">NEW GROUP</string>
-    <string name="edit_group_title">EDIT GROUP</string>
-    <string name="section_group_desc">GROUP DESCRIPTION</string>
-    <string name="section_memorization_notes">MEMORIZATION NOTES</string>
-    <string name="placeholder_memorization_notes">Mnemonics, patterns, word links, or anything that helps you keep this group distinct…</string>
-    <string name="section_mastery">MEMORIZATION QUALITY</string>
-    <string name="section_link_verse">LINK A VERSE</string>
-    <string name="linked_verses_header">LINKED VERSES  (%d)</string>
-    <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
-    <string name="btn_saved">SAVED</string>
-    <string name="btn_save_group">SAVE GROUP</string>
-    <string name="btn_done">Done</string>
-    <string name="cd_save_group">Save group</string>
-    <string name="cd_more_options">More options</string>
-    <string name="cd_delete_verse">Delete verse</string>
-    <string name="cd_peek_verse">Preview verse</string>
-    <string name="section_search_by_text">OR SEARCH BY TEXT</string>
-    <string name="label_filter_surah">Filter by Surah</string>
-    <string name="label_filter_juz_range">Juz Range</string>
-    <string name="label_juz_start">From Juz</string>
-    <string name="label_juz_end">To Juz</string>
-    <string name="all_surahs">All Surahs</string>
-    <string name="placeholder_search_arabic">Type Arabic words to search…</string>
-    <string name="label_surah">Surah</string>
-    <string name="label_ayah">Ayah</string>
-    <string name="placeholder_surah_range">1\u2013114</string>
-    <string name="placeholder_ayah_range">1\u2013\u2026</string>
-    <string name="error_invalid_ref">Invalid Surah/Ayah</string>
-    <string name="snackbar_no_verse">No verse found for that Surah/Ayah.</string>
-    <string name="snackbar_already_member">That verse is already in this group.</string>
-    <string name="snackbar_desc_required">Enter a description before adding verses.</string>
-    <string name="label_page">Page %d</string>
-    <string name="cd_remove_verse">Remove verse</string>
-    <string name="group_notes_detail_label">Memorization notes</string>
+    <string name="new_group_title">مجموعة جديدة</string>
+    <string name="edit_group_title">تعديل المجموعة</string>
+    <string name="section_group_desc">وصف المجموعة</string>
+    <string name="section_memorization_notes">ملاحظات الحفظ</string>
+    <string name="placeholder_memorization_notes">تلميحات، روابط بين الكلمات، أو أي ما يساعدك على تمييز هذه المجموعة…</string>
+    <string name="section_mastery">مستوى الإتقان</string>
+    <string name="section_link_verse">ربط آية</string>
+    <string name="linked_verses_header">الآيات المرتبطة  (%d)</string>
+    <string name="group_desc_placeholder">مثال: وَإِذْ قَالَ رَبُّكَ / وَإِذْ قَالَ اللَّهُ</string>
+    <string name="btn_saved">محفوظ</string>
+    <string name="btn_save_group">حفظ المجموعة</string>
+    <string name="btn_done">تم</string>
+    <string name="cd_save_group">حفظ المجموعة</string>
+    <string name="cd_more_options">خيارات إضافية</string>
+    <string name="cd_delete_verse">حذف الآية</string>
+    <string name="cd_peek_verse">معاينة الآية</string>
+    <string name="section_search_by_text">أو ابحث بالنص</string>
+    <string name="label_filter_surah">تصفية حسب السورة</string>
+    <string name="label_filter_juz_range">نطاق الأجزاء</string>
+    <string name="label_juz_start">من جزء</string>
+    <string name="label_juz_end">إلى جزء</string>
+    <string name="all_surahs">كل السور</string>
+    <string name="placeholder_search_arabic">اكتب كلمات عربية للبحث…</string>
+    <string name="label_surah">السورة</string>
+    <string name="label_ayah">الآية</string>
+    <string name="placeholder_surah_range">1–114</string>
+    <string name="placeholder_ayah_range">1–…</string>
+    <string name="error_invalid_ref">سورة/آية غير صحيحة</string>
+    <string name="snackbar_no_verse">لم يُعثر على هذه الآية.</string>
+    <string name="snackbar_already_member">هذه الآية موجودة في المجموعة بالفعل.</string>
+    <string name="snackbar_desc_required">أدخل وصفًا قبل إضافة الآيات.</string>
+    <string name="label_page">صفحة %d</string>
+    <string name="cd_remove_verse">حذف الآية</string>
+    <string name="group_notes_detail_label">ملاحظات الحفظ</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
-    <string name="strength_weak">Weak</string>
-    <string name="strength_stable">Stable</string>
-    <string name="strength_solid">Solid</string>
+    <string name="strength_weak">ضعيف</string>
+    <string name="strength_stable">متوسط</string>
+    <string name="strength_solid">متقن</string>
 
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
-    <string name="brain_title">THE BRAIN</string>
-    <string name="brain_subtitle">30 Juz  \u00b7  Memory Decay Dashboard</string>
-    <string name="help_brain_title">How The Brain Works</string>
-    <string name="help_brain_desc">The Brain is your intelligent memorization assistant. It uses a scientific model (FSRS) to predict how well you remember every page.\n\n\u25cf <b>Stability (Colors)</b>: Green means the page is solid in your memory. Yellow/Red means it is fading and needs revision soon.\n\n\u25cf <b>Symmetry</b>: The app rewards you more if you revise a page right before you forget it. Revising too early provides a smaller boost to long-term memory.\n\n\u25cf <b>Forecast Slider</b>: Move the slider at the top to travel through time! See which pages will turn red in 7, 14, or 30 days if you don\'t revise them.\n\n\u25cf <b>Semantic Interference</b>: If you struggle with a verse in the Vault (Mutashabihat), the app automatically lowers the stability of similar verses elsewhere, as they are likely confusion points.\n\n\u25cf <b>Revision Debt</b>: The number of pages that have fallen below 50% stability.\n\n\u25cf <b>Recovery Goal</b>: The number of pages you need to revise daily to turn your entire Brain green within a month.</string>
-    <string name="stat_revision_debt">REVISION DEBT</string>
-    <string name="stat_debt_sublabel">pages below 50%%</string>
-    <string name="stat_stability_index">STABILITY INDEX</string>
-    <string name="stat_forecast_label">FORECAST</string>
-    <string name="stat_forecast_days">%d days</string>
-    <string name="stat_growth_rate">DEBT GROWTH</string>
-    <string name="stat_growth_rate_val">%.1f p/day</string>
-    <string name="stat_recovery_target">RECOVERY GOAL</string>
-    <string name="stat_recovery_target_val">%d pages/day</string>
-    <string name="stat_pages_tracked">%d pages tracked</string>
-    <string name="stat_critical_label">CRITICAL</string>
-    <string name="stat_critical_sublabel">score &lt; 25%%</string>
-    <string name="legend_fresh">Fresh (\u2265 70%%)</string>
-    <string name="legend_fading">Fading (40\u201370%%)</string>
-    <string name="legend_critical">Critical (&lt; 40%%)</string>
-    <string name="legend_untracked">Untracked</string>
-    <string name="juz_label">JUZ</string>
-    <string name="juz_meta_overall_health">Health: %d%%</string>
-    <string name="juz_meta_overall_health_untracked">Health: Untracked</string>
-    <string name="juz_meta_overall_health_short">%d%%</string>
+    <string name="brain_title">لوحة الحفظ</string>
+    <string name="brain_subtitle">ثلاثون جزءًا في لمحة واحدة عن ثبات الحفظ</string>
+    <string name="help_brain_title">كيف تقرأ لوحة الحفظ؟</string>
+    <string name="help_brain_desc">تعتمد اللوحة على نموذج FSRS لتقدير ثبات كل صفحة في ذاكرتك مع مرور الوقت.\n\n\u25cf <b>معنى الألوان</b>: الأخضر يدل على رسوخ، وميل الألوان نحو الأصفر والأحمر يعني أن الصفحة تستحق مراجعة قريبة قبل أن يضعف استحضارها.\n\n\u25cf <b>توقيت المراجعة</b>: يزداد الأثر حين تراجع الصفحة في «نافذة» مناسبة — لا مبكرًا جدًا فيُقلّ الفائدة، ولا متأخرًا جدًا فيضيع الثبات.\n\n\u25cf <b>شريط التنبؤ</b>: حرّك الشريط في الأعلى لترى كيف قد يتغير وضع الصفحات بعد 7 أو 14 أو 30 يومًا دون مراجعة.\n\n\u25cf <b>المتشابهات</b>: إذا سجّلت صعوبة على آية في المخزن، يُنبّه التطبيق إلى صفحات قد تتداخل معها لأنها غالبًا مصدر لبس.\n\n\u25cf <b>صفحات تحتاج مراجعة</b>: عدد الصفحات التي انخفض فيها تقدير الثبات عن 50٪.</string>
+    <string name="stat_revision_debt">صفحات تحتاج مراجعة</string>
+    <string name="stat_debt_sublabel">ثباتها دون 50٪</string>
+    <string name="stat_stability_index">متوسط الثبات</string>
+    <string name="stat_forecast_label">التنبؤ</string>
+    <string name="stat_forecast_days">%d يوم</string>
+    <string name="stat_growth_rate">تراكم الصفحات الضعيفة</string>
+    <string name="stat_growth_rate_val">%.1f صفحة/يوم</string>
+    <string name="stat_recovery_target">هدف التعافي</string>
+    <string name="stat_recovery_target_val">%d صفحة/يوم</string>
+    <string name="stat_pages_tracked">%d صفحة مرصودة</string>
+    <string name="stat_critical_label">حرج</string>
+    <string name="stat_critical_sublabel">أقل من 25%%</string>
+    <string name="legend_fresh">ممتاز (≥ 70%%)</string>
+    <string name="legend_fading">متراجع (40–70%%)</string>
+    <string name="legend_critical">حرج (&lt; 40%%)</string>
+    <string name="legend_untracked">غير مرصود</string>
+    <string name="juz_label">جزء</string>
+    <string name="juz_meta_overall_health">الجودة: %d٪</string>
+    <string name="juz_meta_overall_health_untracked">الجودة: غير مرصودة</string>
+    <string name="juz_meta_overall_health_short">%d٪</string>
     <string name="juz_meta_overall_health_untracked_short">—</string>
-    <string name="juz_meta_overall_health_label">Overall health</string>
-    <string name="juz_meta_tracked_suffix">tracked</string>
-    <string name="juz_meta_tracked">Tracked: %d</string>
-    <string name="juz_meta_untracked">%d untracked</string>
-    <string name="juz_meta_coverage">Coverage: %d%%</string>
-    <string name="pages_short_suffix">p</string>
-    <string name="untracked_dash">\u2014</string>
+    <string name="juz_meta_overall_health_label">جودة الحفظ</string>
+    <string name="juz_meta_tracked_suffix">مرصودة</string>
+    <string name="juz_meta_tracked">مرصود: %d</string>
+    <string name="juz_meta_untracked">%d غير مرصودة</string>
+    <string name="juz_meta_coverage">التغطية: %d٪</string>
+    <string name="pages_short_suffix">ص</string>
+    <string name="untracked_dash">—</string>
 
     <!-- ── Juz Detail Screen ───────────────────────────────────────────────── -->
-    <string name="loading_subtitle">Loading\u2026</string>
-    <string name="loading_pages">Loading pages\u2026</string>
-    <string name="juz_title">JUZ %d</string>
-    <string name="juz_health">JUZ HEALTH</string>
-    <string name="no_revisions_juz">No revisions yet</string>
-    <string name="pages_tracked_summary">%1$d%%  \u00b7  %2$d/%3$d pages tracked</string>
-    <string name="count_critical">%d critical</string>
-    <string name="count_fading">%d fading</string>
-    <string name="dialog_page_title">PAGE %d</string>
+    <string name="loading_subtitle">جار التحميل…</string>
+    <string name="loading_pages">جار تحميل الصفحات…</string>
+    <string name="juz_title">الجزء %d</string>
+    <string name="juz_health">جودة الجزء</string>
+    <string name="no_revisions_juz">لا توجد مراجعات بعد</string>
+    <string name="pages_tracked_summary">%1$d%%  ·  %2$d/%3$d صفحة مرصودة</string>
+    <string name="count_critical">%d حرج</string>
+    <string name="count_fading">%d متراجع</string>
+    <string name="dialog_page_title">صفحة %d</string>
 
-    <string name="label_manual_quality">Memorization quality</string>
-    <string name="label_starting_quality">Starting memorization quality</string>
+    <string name="label_manual_quality">مستوى الإتقان</string>
+    <string name="label_starting_quality">مستوى الإتقان الأولي</string>
 
     <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
-    <string name="surahs_title">SURAHS</string>
-    <string name="surahs_subtitle">114 Surahs  \u00b7  30 Juz  \u00b7  604 Pages</string>
-    <string name="juz_badge">Juz %d</string>
-    <string name="group_count_max">9+</string>
+    <string name="surahs_title">السور</string>
+    <string name="surahs_subtitle">114 سورة  ·  30 جزءًا  ·  604 صفحة</string>
+    <string name="juz_badge">جزء %d</string>
+    <string name="group_count_max">+9</string>
 
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
-    <string name="linked_groups_header">LINKED GROUPS</string>
-    <string name="linked_groups_hint">Tap a group to view full details</string>
-    <string name="section_in_this_surah">IN THIS SURAH</string>
-    <string name="section_other_surahs">OTHER SURAHS</string>
-    <string name="group_meta_total_verses">%d verses</string>
-    <string name="group_meta_in_surah">In this Surah: %d</string>
-    <string name="group_meta_other_surahs">Other Surahs: %d</string>
-    <string name="no_groups_for_surah">No similarity groups for this Surah yet.\nUse the Vault to create and link verse groups.</string>
-    <string name="ayah_n">Ayah %d</string>
-    <string name="page_n">p. %d</string>
-    <string name="surah_fallback_title">Surah %d</string>
+    <string name="linked_groups_header">المجموعات المرتبطة</string>
+    <string name="linked_groups_hint">اضغط على المجموعة لعرض التفاصيل كاملة</string>
+    <string name="section_in_this_surah">في هذه السورة</string>
+    <string name="section_other_surahs">سور أخرى</string>
+    <string name="group_meta_total_verses">%d آيات</string>
+    <string name="group_meta_in_surah">في هذه السورة: %d</string>
+    <string name="group_meta_other_surahs">سور أخرى: %d</string>
+    <string name="no_groups_for_surah">لا توجد مجموعات متشابهات لهذه السورة بعد.\nاستخدم المخزن لإنشاء المجموعات وربطها.</string>
+    <string name="ayah_n">آية %d</string>
+    <string name="page_n">ص. %d</string>
+    <string name="surah_fallback_title">سورة %d</string>
 
     <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
-    <string name="group_detail_fallback_title">Group Detail</string>
-    <string name="mutashabihat_breadcrumb">Mutashabihat \u00b7 %s</string>
-    <string name="mutashabihat_breadcrumb_all">Mutashabihat \u00b7 All linked verses</string>
-    <string name="section_all_linked_verses">ALL LINKED VERSES</string>
-    <string name="section_all_linked_verses_subtitle">All verses in this group \u00b7 tap to peek</string>
-    <string name="no_linked_verses">No verses linked to this group yet.</string>
-    <string name="section_context">CONTEXT</string>
-    <string name="section_context_subtitle">In %s \u00b7 tap a verse to peek</string>
-    <string name="no_context_verses">No verses from this Surah in this group.</string>
-    <string name="section_clashes">CLASHES</string>
-    <string name="section_clashes_subtitle">Verses from other Surahs \u00b7 tap to peek</string>
-    <string name="no_clash_verses">No cross-Surah verses in this group.</string>
+    <string name="group_detail_fallback_title">تفاصيل المجموعة</string>
+    <string name="mutashabihat_breadcrumb">متشابهات · %s</string>
+    <string name="mutashabihat_breadcrumb_all">متشابهات · كل الآيات المرتبطة</string>
+    <string name="section_all_linked_verses">كل الآيات المرتبطة</string>
+    <string name="section_all_linked_verses_subtitle">كل آيات هذه المجموعة · اضغط للمعاينة</string>
+    <string name="no_linked_verses">لا توجد آيات مرتبطة بهذه المجموعة بعد.</string>
+    <string name="section_context">السياق</string>
+    <string name="section_context_subtitle">في %s · اضغط للمعاينة</string>
+    <string name="no_context_verses">لا توجد آيات من هذه السورة في المجموعة.</string>
+    <string name="section_clashes">التشابهات</string>
+    <string name="section_clashes_subtitle">آيات من سور أخرى · اضغط للمعاينة</string>
+    <string name="no_clash_verses">لا توجد آيات من سور أخرى في هذه المجموعة.</string>
 
     <!-- ── Quick Peek Bottom Sheet ─────────────────────────────────────────── -->
-    <string name="quick_peek_subtitle">Quick Peek \u00b7 Arabic Text</string>
-    <string name="arabic_text_unavailable">Arabic text not available.</string>
-    <string name="btn_copy">Copy</string>
-    <string name="btn_share">Share</string>
-    <string name="share_verse_title">Share Verse</string>
-    <string name="verse_label_format">%1$s \u00b7 Ayah %2$d</string>
-    <string name="share_verse_body">%1$s\n\n\u2014 %2$s, Ayah %3$d</string>
+    <string name="quick_peek_subtitle">نظرة سريعة · النص العربي</string>
+    <string name="arabic_text_unavailable">النص العربي غير متوفر.</string>
+    <string name="btn_copy">نسخ</string>
+    <string name="btn_share">مشاركة</string>
+    <string name="share_verse_title">مشاركة الآية</string>
+    <string name="verse_label_format">%1$s · آية %2$d</string>
+    <string name="share_verse_body">%1$s\n\n— %2$s، آية %3$d</string>
 
     <!-- ── Mushaf Viewer ─────────────────────────────────────────────────── -->
-    <string name="open_in_mushaf">Open in Mushaf</string>
-    <string name="mushaf_pages_range">Pages %1$d–%2$d</string>
-    <string name="mushaf_cd_switch_two_page">Two-page spread</string>
-    <string name="mushaf_cd_switch_one_page">Single page</string>
-    <string name="mushaf_cd_spread_fill_width">Fill page width; scroll up and down</string>
-    <string name="mushaf_cd_spread_fit_page">Show full page in view</string>
+    <string name="open_in_mushaf">افتح في المصحف</string>
+    <string name="mushaf_pages_range">صفحات %1$d–%2$d</string>
+    <string name="mushaf_cd_switch_two_page">عرض صفحتين</string>
+    <string name="mushaf_cd_switch_one_page">صفحة واحدة</string>
+    <string name="mushaf_cd_spread_fill_width">ملء عرض الصفحة؛ مرّر لأعلى وأسفل</string>
+    <string name="mushaf_cd_spread_fit_page">إظهار الصفحة كاملة</string>
 
     <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
-    <string name="onboarding_skip">Skip intro</string>
-    <string name="onboarding_next">Next</string>
-    <string name="onboarding_get_started">Get started</string>
-    <string name="onboarding_slide1_title">Know where you stand</string>
-    <string name="onboarding_slide1_body">Log each revision by page range and how it felt. Mutqan estimates how strong each page is in memory and updates as you go.</string>
-    <string name="onboarding_slide2_title">Untangle look‑alikes</string>
-    <string name="onboarding_slide2_body">Group verses that trip you up. The app surfaces in‑Surah and cross‑Surah clashes so you rehearse the right contrasts.</string>
-    <string name="onboarding_slide3_title">Stay ahead of slip</string>
-    <string name="onboarding_slide3_body">Your 604‑page map shows what is firm and what is fading. Nudge weak pages before they cost you in recitation.</string>
+    <string name="onboarding_skip">تخطّي المقدّمة</string>
+    <string name="onboarding_next">التالي</string>
+    <string name="onboarding_get_started">ابدأ الاستخدام</string>
+    <string name="onboarding_slide1_title">سجّل مراجعتك بثقة</string>
+    <string name="onboarding_slide1_body">دوّن كل جلسة بنطاق الصفحات وما شعرت به أثناء المراجعة. يبني التطبيق تقديرًا عمليًا لثبات كل صفحة ويحدّثه معك مع الوقت.</string>
+    <string name="onboarding_slide2_title">نظّم المتشابهات</string>
+    <string name="onboarding_slide2_body">اجمع الآيات التي تختلط عليك في مجموعات، فيُسهّل عليك التمييز بينها. يبرز لك التطبيق التداخل داخل السورة وبين السور حتى لا تفاجأ في التلاوة.</string>
+    <string name="onboarding_slide3_title">خريطة 604 صفحة بين يديك</string>
+    <string name="onboarding_slide3_body">ألوان الخريطة تعبّر عن رسوخ الحفظ: ما استقر يظهر بثقة، وما بدأ يضعف يطلب منك لفتة قبل أن يضيق الوقت.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
-    <string name="empty_vault_title">Your Vault is Empty</string>
-    <string name="empty_vault_body">Start by adding a similarity group to map your confusion points.</string>
-    <string name="empty_history_title">No Revisions Yet</string>
-    <string name="empty_history_body">Track your first session to see your memory stability.</string>
+    <string name="empty_vault_title">المخزن فارغ</string>
+    <string name="empty_vault_body">ابدأ بإضافة مجموعة تشابه لتحديد نقاط الخلط لديك.</string>
+    <string name="empty_history_title">لا مراجعات بعد</string>
+    <string name="empty_history_body">سجّل جلستك الأولى لمتابعة ثبات حفظك.</string>
 
     <!-- ── New group hints ────────────────────────────────────────────────── -->
-    <string name="hint_add_two_verses">Add at least two verses to identify a similarity group.</string>
-    <string name="hint_group_ready">Group ready to save!</string>
+    <string name="hint_add_two_verses">أضف آيتين على الأقل لتعريف مجموعة تشابه.</string>
+    <string name="hint_group_ready">المجموعة جاهزة للحفظ!</string>
 
     <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
-    <string name="coachmark_heatmap_body">Tap any Juz to manage individual pages and update their stability.</string>
-    <string name="coachmark_got_it">Got it</string>
+    <string name="coachmark_heatmap_body">اضغط على أي جزء لإدارة صفحاته وتحديث ثباتها.</string>
+    <string name="coachmark_got_it">فهمت</string>
 
     <!-- Help Dialogs -->
-    <string name="help_journal_title">Journal Help</string>
-    <string name="help_journal_desc">Track your daily revisions by logging the page range and difficulty. The app calculates your memory stability based on these logs.</string>
-    <string name="help_vault_title">Vault Help</string>
-    <string name="help_vault_desc">Organize similar verses into folders and groups to resolve confusion. You can export folders to share your work with others.</string>
-    <string name="help_surahs_title">Surah List Help</string>
-    <string name="help_surahs_desc">Browse all 114 Surahs. See which Surahs have Mutashabihat groups linked to them and open any page directly in the Mushaf.</string>
+    <string name="help_journal_title">دفتر المراجعة</string>
+    <string name="help_journal_desc">كلما دوّنت مراجعةً بنطاق صفحات ووصفت شعورك أثناءها، ازدادت دقة صورة التطبيق عن ثبات حفظك. لا حاجة لإكمال كل الصفحات دفعةً واحدة — المهم الاستمرار بصدق.</string>
+    <string name="help_vault_title">مخزن المتشابهات</string>
+    <string name="help_vault_desc">هنا تجمع الآيات التي تتشابه في سمعك أو خطك، وتضيف لها وصفًا يساعدك على التمييز. يمكنك ترتيب المجموعات في مجلدات وتصديرها إن أردت مشاركة عملك.</string>
+    <string name="help_surahs_title">فهرس السور</string>
+    <string name="help_surahs_desc">تصفّح السور الـ114 واطّلع على أي سورة فيها مجموعات متشابهات مرتبطة بها، وافتح الصفحة في المصحف بضغطة واحدة.</string>
 
     <!-- Verse Search Screen -->
-    <string name="search_help_title">Search Help</string>
-    <string name="search_help_desc">Search for any verse using keywords. You can filter by a specific Surah or a range of Juzs. The search is smart and handles common Arabic typing variations.</string>
-    <string name="search_no_results">No results found</string>
-    <string name="search_hint">Type at least 2 characters to search...</string>
-    <string name="label_filters">FILTERS</string>
-    <string name="label_hide">HIDE</string>
-    <string name="label_show">SHOW</string>
-    <string name="label_groups_header">GROUPS</string>
-
-    <!-- Random Ayah -->
-    <string name="label_random_ayah">RANDOM AYAH</string>
-    <string name="scope_juz">Juz</string>
-    <string name="scope_surah">Surah</string>
-    <string name="scope_page_range">Page Range</string>
-    <string name="btn_generate_random">GENERATE RANDOM AYAH</string>
-
-    <!-- Vault Test -->
-    <string name="vault_test_title">Self-Test</string>
-    <string name="btn_show_ayah">Show Ayah</string>
-    <string name="btn_next_verse">Next Verse</string>
-    <string name="label_part_of_group">Part of group</string>
-    <string name="cd_start_test">Start test</string>
-    <string name="test_empty_scope">This scope has no verses to test.</string>
-
-    <string name="btn_export_subjects">Export Subjects</string>
-    <string name="btn_import_subjects">Import Subjects</string>
+    <string name="search_help_title">البحث في الآيات</string>
+    <string name="search_help_desc">اكتب مقطعًا من الآية أو كلماتها؛ يمكنك ضيق النتائج بسورة أو بنطاق أجزاء. البحث يتسامح مع اختلافات الخط الشائعة حتى لا يفوتك ما تبحث عنه.</string>
+    <string name="search_no_results">لم يتم العثور على نتائج</string>
+    <string name="search_hint">اكتب حرفين على الأقل للبحث…</string>
+    <string name="label_filters">عناصر التصفية</string>
+    <string name="label_hide">إخفاء</string>
+    <string name="label_show">إظهار</string>
+    <string name="label_groups_header">المجموعات</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_lang_title">Interface language</string>
-    <string name="onboarding_lang_subtitle">You can change this anytime in Settings.</string>
-    <string name="onboarding_welcome_title">Welcome to %s</string>
+    <string name="onboarding_lang_title">لغة الواجهة</string>
+    <string name="onboarding_lang_subtitle">يمكنك تغييرها لاحقًا من الإعدادات في أي وقت.</string>
+    <string name="onboarding_welcome_title">أهلًا بك في %s</string>
 
     <!-- Structural Mode -->
-    <string name="mode_memory_health">Memory Health</string>
-    <string name="mode_structural_flow">Structural Flow</string>
-    <string name="quarter_hizb_header">Hizb %1$d : Quarter %2$d</string>
-    <string name="add_subject">Add Subject</string>
-    <string name="edit_subjects">Edit Subjects</string>
-    <string name="no_subjects_hint">No subjects added yet</string>
-    <string name="delete_subject_confirmation">Are you sure you want to delete this subject?</string>
+    <string name="mode_memory_health">جودة الحفظ</string>
+    <string name="mode_structural_flow">المخطط البنائي</string>
+    <string name="quarter_hizb_header">الحزب %1$d : الربع %2$d</string>
+    <string name="add_subject">إضافة موضوع</string>
+    <string name="edit_subjects">تعديل الموضوعات</string>
+    <string name="no_subjects_hint">لا توجد موضوعات مضافة بعد</string>
+    <string name="delete_subject_confirmation">هل أنت متأكد من حذف هذا الموضوع؟</string>
 
+    <!-- Random Ayah -->
+    <string name="label_random_ayah">آية عشوائية</string>
+    <string name="scope_juz">جزء</string>
+    <string name="scope_surah">سورة</string>
+    <string name="scope_page_range">نطاق الصفحات</string>
+    <string name="btn_generate_random">توليد آية عشوائية</string>
+
+    <!-- Vault Test -->
+    <string name="vault_test_title">اختبر نفسك</string>
+    <string name="btn_show_ayah">أظهر الآية</string>
+    <string name="btn_next_verse">الآية التالية</string>
+    <string name="label_part_of_group">جزء من مجموعة</string>
+    <string name="cd_start_test">ابدأ الاختبار</string>
+    <string name="test_empty_scope">هذا النطاق لا يحتوي على آيات للاختبار.</string>
+
+    <string name="btn_export_subjects">تصدير الموضوعات</string>
+    <string name="btn_import_subjects">استيراد الموضوعات</string>
+
+    <!-- Messages previously hard-coded in code -->
+    <string name="backup_error_detail">فشل تصدير النسخة الاحتياطية: %s</string>
+    <string name="restore_error_detail">فشلت استعادة البيانات: %s</string>
+    <string name="subjects_exported">تم تصدير الموضوعات</string>
+    <string name="subjects_imported">تم استيراد الموضوعات</string>
+    <string name="msg_export_error_detail">فشل التصدير: %s</string>
+    <string name="msg_import_error_detail">فشل الاستيراد: %s</string>
+    <string name="msg_vault_imported_into_folder">تم استيراد المخزن إلى المجلد «%s»</string>
+    <string name="error_folder_name_exists">اسم المجلد موجود بالفعل</string>
+    <string name="subject_name_label">اسم الموضوع</string>
+    <string name="subject_start_ayah_label">آية البداية</string>
+    <string name="subject_ayah_option">الآية %1$d (سورة %2$d)</string>
+    <string name="search_filters_title">خيارات البحث</string>
+    <string name="search_no_results_filtered">لا توجد نتائج بالمرشحات الحالية</string>
+    <string name="error_unknown">خطأ غير معروف</string>
+    <string name="err_open_output">تعذّر فتح ملف الحفظ</string>
+    <string name="err_open_input">تعذّر فتح الملف المحدد</string>
+    <string name="err_invalid_vault_file">هذا الملف ليس ملف مخزن صالحًا</string>
+    <string name="err_invalid_structural_file">هذا الملف ليس ملف موضوعات صالحًا</string>
 </resources>
