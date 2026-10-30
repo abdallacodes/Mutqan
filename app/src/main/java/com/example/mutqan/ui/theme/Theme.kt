@@ -1,173 +1,86 @@
 package com.example.mutqan.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography as M3Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.mutqan.data.ThemeKey
 
-// ── Four named color schemes ──────────────────────────────────────────────────
+// ── Paper: one theme in two versions ──────────────────────────────────────────
+// Accents: primary is the action colour, tertiary is the gold used for marks and ornaments.
 
-private val modernDarkScheme = darkColorScheme(
-    primary              = ModernDarkPrimary,
-    onPrimary            = ModernDarkOnPrimary,
-    primaryContainer     = ModernDarkPrimaryContainer,
-    onPrimaryContainer   = ModernDarkOnPrimaryContainer,
-    secondary            = ModernDarkSecondary,
-    secondaryContainer   = ModernDarkSecondaryContainer,
-    tertiary             = ModernDarkTertiary,
-    background           = ModernDarkBg,
-    onBackground         = ModernDarkOnBg,
-    surface              = ModernDarkSurface,
-    onSurface            = ModernDarkOnBg,
-    surfaceVariant       = ModernDarkSurfaceVariant,
-    onSurfaceVariant     = ModernDarkOnSurfaceVariant,
-    outline              = ModernDarkOutline,
-    outlineVariant       = ModernDarkOutlineVariant,
-    error                = ModernDarkError,
+private val paperLightScheme = lightColorScheme(
+    primary              = PaperGreen,
+    onPrimary            = PaperBg,
+    primaryContainer     = PaperGreenContainer,
+    onPrimaryContainer   = PaperOnGreenContainer,
+    secondary            = PaperInkSoft,
+    onSecondary          = PaperBg,
+    secondaryContainer   = PaperSurfaceVariant,
+    onSecondaryContainer = PaperInk,
+    tertiary             = PaperGoldText,
+    background           = PaperBg,
+    onBackground         = PaperInk,
+    surface              = PaperSurface,
+    onSurface            = PaperInk,
+    surfaceVariant       = PaperSurfaceVariant,
+    onSurfaceVariant     = PaperInkSoft,
+    outline              = PaperRule,
+    outlineVariant       = PaperRuleSoft,
+    error                = PaperError,
 )
 
-private val oledBlackScheme = darkColorScheme(
-    primary              = OLEDPrimary,
-    onPrimary            = OLEDOnPrimary,
-    primaryContainer     = OLEDPrimaryContainer,
-    onPrimaryContainer   = OLEDOnPrimaryContainer,
-    tertiary             = OLEDTertiary,
-    background           = OLEDBg,
-    onBackground         = OLEDOnBg,
-    surface              = OLEDSurface,
-    onSurface            = OLEDOnBg,
-    surfaceVariant       = OLEDSurfaceVariant,
-    onSurfaceVariant     = OLEDOnSurfaceVariant,
-    outline              = OLEDOutline,
-    outlineVariant       = OLEDOutlineVariant,
-    error                = DifficultyCritical,
+private val paperDarkScheme = darkColorScheme(
+    primary              = NightGold,
+    onPrimary            = NightBg,
+    primaryContainer     = NightGoldContainer,
+    onPrimaryContainer   = NightOnGoldContainer,
+    secondary            = NightInkSoft,
+    onSecondary          = NightBg,
+    secondaryContainer   = NightSurfaceVariant,
+    onSecondaryContainer = NightInk,
+    tertiary             = NightGold,
+    background           = NightBg,
+    onBackground         = NightInk,
+    surface              = NightSurface,
+    onSurface            = NightInk,
+    surfaceVariant       = NightSurfaceVariant,
+    onSurfaceVariant     = NightInkSoft,
+    outline              = NightRule,
+    outlineVariant       = NightRuleSoft,
+    error                = NightError,
 )
 
-private val mushafCreamScheme = lightColorScheme(
-    primary              = MushafPrimary,
-    onPrimary            = MushafOnPrimary,
-    primaryContainer     = MushafPrimaryContainer,
-    onPrimaryContainer   = MushafOnPrimaryContainer,
-    secondary            = MushafSecondary,
-    secondaryContainer   = MushafSecondaryContainer,
-    tertiary             = MushafTertiary,
-    background           = MushafBg,
-    onBackground         = MushafOnBg,
-    surface              = MushafSurface,
-    onSurface            = MushafOnBg,
-    surfaceVariant       = MushafSurfaceVariant,
-    onSurfaceVariant     = MushafOnSurfaceVariant,
-    outline              = MushafOutline,
-    outlineVariant       = MushafOutlineVariant,
-    error                = MushafError,
+// Small radii: printed, not bubbly.
+private val paperShapes = Shapes(
+    extraSmall = RoundedCornerShape(2.dp),
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(6.dp),
+    large = RoundedCornerShape(8.dp),
+    extraLarge = RoundedCornerShape(14.dp)
 )
-
-private val midnightBlueScheme = darkColorScheme(
-    primary              = MidnightPrimary,
-    onPrimary            = MidnightOnPrimary,
-    primaryContainer     = MidnightPrimaryContainer,
-    onPrimaryContainer   = MidnightOnPrimaryContainer,
-    tertiary             = MidnightTertiary,
-    background           = MidnightBg,
-    onBackground         = MidnightOnBg,
-    surface              = MidnightSurface,
-    onSurface            = MidnightOnBg,
-    surfaceVariant       = MidnightSurfaceVariant,
-    onSurfaceVariant     = MidnightOnSurfaceVariant,
-    outline              = MidnightOutline,
-    outlineVariant       = MidnightOutlineVariant,
-    error                = DifficultyCritical,
-)
-
-// ── Theme composable ──────────────────────────────────────────────────────────
 
 @Composable
 fun MutqanTheme(
     themeKey: ThemeKey = ThemeKey.AUTO,
     content: @Composable () -> Unit
 ) {
-    val systemDark = isSystemInDarkTheme()
-
-    val colorScheme = when (themeKey) {
-        ThemeKey.AUTO         -> if (systemDark) modernDarkScheme else mushafCreamScheme
-        ThemeKey.MODERN_DARK  -> modernDarkScheme
-        ThemeKey.OLED_BLACK   -> oledBlackScheme
-        ThemeKey.MUSHAF_CREAM -> mushafCreamScheme
-        ThemeKey.MIDNIGHT_BLUE -> midnightBlueScheme
+    val dark = when (themeKey) {
+        ThemeKey.AUTO  -> isSystemInDarkTheme()
+        ThemeKey.LIGHT -> false
+        ThemeKey.DARK  -> true
     }
-
-    val isMushaf = themeKey == ThemeKey.MUSHAF_CREAM ||
-                   (themeKey == ThemeKey.AUTO && !systemDark)
-
-    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
-
-    // For Arabic locale, expand line heights so the script has breathing room.
-    // For Mushaf Cream, use the serif base; otherwise use the modern sans-serif base.
-    val typography = when {
-        isArabic -> M3Typography(
-            bodyLarge = TextStyle(
-                fontFamily    = FontFamily.Default,
-                fontWeight    = FontWeight.Normal,
-                fontSize      = 16.sp,
-                lineHeight    = 28.sp,
-                letterSpacing = 0.5.sp
-            ),
-            bodyMedium = TextStyle(
-                fontFamily    = FontFamily.Default,
-                fontWeight    = FontWeight.Normal,
-                fontSize      = 14.sp,
-                lineHeight    = 24.sp,
-                letterSpacing = 0.25.sp
-            ),
-            bodySmall = TextStyle(
-                fontFamily    = FontFamily.Default,
-                fontWeight    = FontWeight.Normal,
-                fontSize      = 12.sp,
-                lineHeight    = 20.sp,
-                letterSpacing = 0.4.sp
-            ),
-            labelMedium = TextStyle(
-                fontFamily    = FontFamily.Default,
-                fontWeight    = FontWeight.Medium,
-                fontSize      = 12.sp,
-                lineHeight    = 18.sp,
-                letterSpacing = 0.5.sp
-            ),
-            labelSmall = TextStyle(
-                fontFamily    = FontFamily.Default,
-                fontWeight    = FontWeight.Medium,
-                fontSize      = 11.sp,
-                lineHeight    = 17.sp,
-                letterSpacing = 0.5.sp
-            )
-        )
-        isMushaf -> MushafTypography
-        else     -> Typography
-    }
-
-    val shapes = Shapes(
-        extraSmall = RoundedCornerShape(12.dp),
-        small = RoundedCornerShape(16.dp),
-        medium = RoundedCornerShape(20.dp),
-        large = RoundedCornerShape(24.dp),
-        extraLarge = RoundedCornerShape(24.dp)
-    )
+    val arabic = LocalConfiguration.current.locales[0].language == "ar"
 
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography  = typography,
-        shapes      = shapes,
+        colorScheme = if (dark) paperDarkScheme else paperLightScheme,
+        typography  = paperTypography(arabic),
+        shapes      = paperShapes,
         content     = content
     )
 }

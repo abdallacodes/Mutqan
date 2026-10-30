@@ -266,7 +266,6 @@ private fun StatCard(
                 style         = MaterialTheme.typography.labelSmall,
                 fontWeight    = FontWeight.Bold,
                 color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 1.sp,
                 textAlign     = TextAlign.Center
             )
             Text(

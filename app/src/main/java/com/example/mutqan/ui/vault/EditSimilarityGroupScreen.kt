@@ -153,7 +153,6 @@ fun EditSimilarityGroupScreen(
                                         else stringResource(R.string.edit_group_title),
                         style         = MaterialTheme.typography.titleMedium,
                         fontWeight    = FontWeight.Black,
-                        letterSpacing = 2.sp,
                         color         = MaterialTheme.colorScheme.onBackground
                     )
                 },
@@ -599,7 +598,6 @@ private fun VersePicker(
                 Text(
                     stringResource(R.string.btn_add),
                     fontWeight    = FontWeight.Black,
-                    letterSpacing = 1.sp,
                     fontSize      = 12.sp
                 )
             }
@@ -820,7 +818,6 @@ private fun SectionLabel(text: String) {
         style         = MaterialTheme.typography.labelSmall,
         color         = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight    = FontWeight.Bold,
-        letterSpacing = 1.5.sp
     )
 }
 

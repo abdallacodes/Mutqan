@@ -1,23 +1,23 @@
 package com.example.mutqan.data
 
 /**
- * Identifies which color scheme the app should use.
+ * Which look the app uses. There is one theme, Paper, in a light and a dark version.
  *
- * [AUTO]          → follows the system dark/light mode setting.
- * [MODERN_DARK]   → deep charcoal background with mint-green accent.
- * [OLED_BLACK]    → true black background with emerald-green accent (battery-saving).
- * [MUSHAF_CREAM]  → warm parchment background with deep-maroon accent (light theme).
- * [MIDNIGHT_BLUE] → deep navy background with warm-gold accent.
+ * [AUTO]  -> follows the system dark/light mode setting.
+ * [LIGHT] -> warm paper with ink text and a deep green accent.
+ * [DARK]  -> warm near-black with parchment text and a gold accent.
  */
 enum class ThemeKey {
     AUTO,
-    MODERN_DARK,
-    OLED_BLACK,
-    MUSHAF_CREAM,
-    MIDNIGHT_BLUE;
+    LIGHT,
+    DARK;
 
     companion object {
-        fun fromString(name: String): ThemeKey =
-            entries.firstOrNull { it.name == name } ?: AUTO
+        /** Reads a stored name; the four earlier themes map to the nearest of the two versions. */
+        fun fromString(name: String): ThemeKey = when (name) {
+            "LIGHT", "MUSHAF_CREAM" -> LIGHT
+            "DARK", "MODERN_DARK", "OLED_BLACK", "MIDNIGHT_BLUE" -> DARK
+            else -> AUTO
+        }
     }
 }

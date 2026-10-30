@@ -132,14 +132,12 @@ fun RevisionHistoryScreen(onBack: () -> Unit) {
                             text          = stringResource(R.string.history_title),
                             style         = MaterialTheme.typography.titleLarge,
                             fontWeight    = FontWeight.Black,
-                            letterSpacing = 3.sp,
                             color         = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text          = stringResource(R.string.history_subtitle),
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
                         )
                     }
                 },
@@ -212,7 +210,6 @@ private fun MonthYearHeader(label: String) {
             style         = MaterialTheme.typography.labelMedium,
             fontWeight    = FontWeight.Black,
             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = 1.5.sp
         )
     }
 }
@@ -300,7 +297,6 @@ private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
                     text          = historyDateLabel(log.dateMillis, log.timestamp),
                     style         = MaterialTheme.typography.labelSmall,
                     color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.3.sp
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -363,7 +359,7 @@ private fun DeleteConfirmDialog(
                     contentColor   = Color.White
                 )
             ) {
-                Text(stringResource(R.string.btn_delete), fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(stringResource(R.string.btn_delete), fontWeight = FontWeight.Black)
             }
         },
         dismissButton = {
@@ -418,7 +414,6 @@ private fun EditRevisionDialog(
                     text          = stringResource(R.string.edit_revision_title),
                     style         = MaterialTheme.typography.titleMedium,
                     fontWeight    = FontWeight.Black,
-                    letterSpacing = 2.sp,
                     color         = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -482,7 +477,7 @@ private fun EditRevisionDialog(
                             contentColor   = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Black)
                     }
                 }
             }

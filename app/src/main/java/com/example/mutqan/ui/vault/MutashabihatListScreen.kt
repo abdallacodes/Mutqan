@@ -151,7 +151,6 @@ fun MutashabihatListScreen(
                             text          = currentFolderName ?: stringResource(R.string.vault_title),
                             style         = MaterialTheme.typography.titleLarge,
                             fontWeight    = FontWeight.Black,
-                            letterSpacing = if (currentFolderName == null) 3.sp else 1.sp,
                             color         = MaterialTheme.colorScheme.onBackground,
                             maxLines      = 1,
                             overflow      = TextOverflow.Ellipsis
@@ -161,7 +160,6 @@ fun MutashabihatListScreen(
                                 text          = stringResource(R.string.vault_subtitle),
                                 style         = MaterialTheme.typography.labelSmall,
                                 color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                                letterSpacing = 1.sp
                             )
                         }
                     }

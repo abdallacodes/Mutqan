@@ -108,7 +108,6 @@ fun GroupDetailScreen(
                             },
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
                         )
                     }
                 },
@@ -330,7 +329,6 @@ private fun VerseRefCard(
                         ),
                         color         = accentColor,
                         fontWeight    = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
                     )
                     Spacer(Modifier.height(2.dp))
                 }
@@ -388,7 +386,6 @@ private fun DetailSectionHeader(
                 style         = MaterialTheme.typography.labelMedium,
                 fontWeight    = FontWeight.Black,
                 color         = accent,
-                letterSpacing = 2.sp
             )
             Text(
                 text  = subtitle,

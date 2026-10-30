@@ -31,10 +31,6 @@
 
     <!-- Theme names -->
     <string name="theme_auto">Auto</string>
-    <string name="theme_modern_dark">Modern\nDark</string>
-    <string name="theme_oled_black">Pure\nOLED</string>
-    <string name="theme_mushaf_cream">Mushaf\nCream</string>
-    <string name="theme_midnight_blue">Midnight\nBlue</string>
     <string name="lang_english">English</string>
     <string name="lang_arabic">العربية</string>
 
@@ -475,4 +471,7 @@
     <string name="day_sat">Sat</string>
     <string name="day_sun">Sun</string>
     <string name="home_btn_open">Open</string>
+    <string name="home_btn_open_mushaf">Open in the Mushaf</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

@@ -117,14 +117,12 @@ fun RevisionLogScreen(
                             text          = stringResource(R.string.journal_title),
                             style         = MaterialTheme.typography.titleLarge,
                             fontWeight    = FontWeight.Black,
-                            letterSpacing = 3.sp,
                             color         = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text          = stringResource(R.string.journal_subtitle),
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 1.sp
                         )
                     }
                 },
@@ -202,7 +200,6 @@ fun RevisionLogScreen(
                         text          = stringResource(R.string.btn_log_revision),
                         style         = MaterialTheme.typography.titleSmall,
                         fontWeight    = FontWeight.Black,
-                        letterSpacing = 2.sp
                     )
                 }
 
@@ -227,7 +224,6 @@ fun RevisionLogScreen(
                         style         = MaterialTheme.typography.labelMedium,
                         color         = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight    = FontWeight.Bold,
-                        letterSpacing = 2.sp,
                         modifier      = Modifier.weight(1f)
                     )
                     TextButton(onClick = onViewHistory) {
@@ -236,7 +232,6 @@ fun RevisionLogScreen(
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.primary,
                             fontWeight    = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
                         )
                     }
                 }
@@ -439,7 +434,6 @@ private fun RevisionLogItem(log: RevisionLog) {
                     text       = formatLogDate(log.dateMillis, log.timestamp, context),
                     style      = MaterialTheme.typography.labelSmall,
                     color      = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.3.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(

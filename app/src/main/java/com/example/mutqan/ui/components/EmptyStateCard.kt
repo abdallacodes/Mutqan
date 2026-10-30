@@ -62,7 +62,6 @@ fun EmptyStateCard(
                 text          = title,
                 style         = MaterialTheme.typography.titleSmall,
                 fontWeight    = FontWeight.Black,
-                letterSpacing = 1.5.sp,
                 color         = MaterialTheme.colorScheme.onBackground,
                 textAlign     = TextAlign.Center
             )

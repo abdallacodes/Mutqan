@@ -31,10 +31,6 @@
 
     <!-- Theme names -->
     <string name="theme_auto">تلقائي</string>
-    <string name="theme_modern_dark">داكن\nعصري</string>
-    <string name="theme_oled_black">أسود\nOLED</string>
-    <string name="theme_mushaf_cream">كريمي\nمصحف</string>
-    <string name="theme_midnight_blue">أزرق\nليلي</string>
     <string name="lang_english">English</string>
     <string name="lang_arabic">العربية</string>
 
@@ -475,4 +471,7 @@
     <string name="day_sat">السبت</string>
     <string name="day_sun">الأحد</string>
     <string name="home_btn_open">افتح</string>
+    <string name="home_btn_open_mushaf">افتح في المصحف</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
 </resources>

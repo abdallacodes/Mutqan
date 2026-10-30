@@ -177,7 +177,6 @@ private fun GroupsSectionHeader(count: Int) {
                 style         = MaterialTheme.typography.labelMedium,
                 fontWeight    = FontWeight.Black,
                 color         = MaterialTheme.colorScheme.primary,
-                letterSpacing = 2.sp
             )
             Text(
                 text  = stringResource(R.string.linked_groups_hint),

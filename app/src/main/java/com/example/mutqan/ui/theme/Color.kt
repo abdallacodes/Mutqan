@@ -2,69 +2,34 @@ package com.example.mutqan.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Modern Emerald Dark palette ────────────────────────────────────────────────
-val ModernDarkBg               = Color(0xFF171B19)
-val ModernDarkSurface          = Color(0xFF1A1C1B)
-val ModernDarkSurfaceVariant   = Color(0xFF222826)
-val ModernDarkOutline          = Color(0xFF39413D)
-val ModernDarkOutlineVariant   = Color(0xFF2E3432)
-val ModernDarkPrimary          = Color(0xFF2ECC71)
-val ModernDarkPrimaryContainer = Color(0xFF0F3A2A)
-val ModernDarkSecondary        = Color(0xFFA8ADAB)
-val ModernDarkSecondaryContainer = Color(0xFF2B312E)
-val ModernDarkOnPrimary        = Color(0xFF082014)
-val ModernDarkOnPrimaryContainer = Color(0xFFB8F3CF)
-val ModernDarkOnBg             = Color(0xFFE6ECE8)
-val ModernDarkOnSurfaceVariant = Color(0xFFA5AFAB)
-val ModernDarkTertiary         = Color(0xFFF1C40F)
-val ModernDarkError            = Color(0xFFE74C3C)
+// ── Paper, light: cream paper, ink text, deep green accent ─────────────────────
+val PaperBg                    = Color(0xFFF4EDDC)
+val PaperSurface               = Color(0xFFF8F2E4)
+val PaperSurfaceVariant        = Color(0xFFEBE1C8)
+val PaperInk                   = Color(0xFF1F1A14)
+val PaperInkSoft               = Color(0xFF6B5F4B)
+val PaperRule                  = Color(0xFFCDBB8E)
+val PaperRuleSoft              = Color(0xFFDDD0AE)
+val PaperGreen                 = Color(0xFF1F5A4A)
+val PaperGreenContainer        = Color(0xFFCFE0D2)
+val PaperOnGreenContainer      = Color(0xFF123A2F)
+val PaperGold                  = Color(0xFFA8812F)
+val PaperGoldText              = Color(0xFF7D5F16)
+val PaperError                 = Color(0xFFA33A2C)
 
-// ── Pure OLED palette ──────────────────────────────────────────────────────────
-// True black with emerald-green accent — maximum battery saving, night revision.
-val OLEDBg                    = Color(0xFF000000)
-val OLEDSurface               = Color(0xFF0A0A0A)
-val OLEDSurfaceVariant        = Color(0xFF111111)
-val OLEDOutline               = Color(0xFF1F1F1F)
-val OLEDOutlineVariant        = Color(0xFF161616)
-val OLEDPrimary               = Color(0xFF00C853)  // emerald green
-val OLEDPrimaryContainer      = Color(0xFF003314)
-val OLEDOnPrimary             = Color(0xFF001A09)
-val OLEDOnPrimaryContainer    = Color(0xFFA2F7B1)
-val OLEDOnBg                  = Color(0xFFF2F2F2)
-val OLEDOnSurfaceVariant      = Color(0xFF8A8A8A)
-val OLEDTertiary              = Color(0xFF4FC3F7)  // cyan — external links
-
-// ── Modern Emerald Light palette ───────────────────────────────────────────────
-val MushafBg                   = Color(0xFFF3F9F4)
-val MushafSurface              = Color(0xFFF6FBF7)
-val MushafSurfaceVariant       = Color(0xFFE9F2EC)
-val MushafOutline              = Color(0xFFB8C8BE)
-val MushafOutlineVariant       = Color(0xFFD3E0D8)
-val MushafPrimary              = Color(0xFF006C4C)
-val MushafPrimaryContainer     = Color(0xFFCDEFE0)
-val MushafSecondary            = Color(0xFF4D6357)
-val MushafSecondaryContainer   = Color(0xFFD7E7DE)
-val MushafOnPrimary            = Color(0xFFFFFFFF)
-val MushafOnPrimaryContainer   = Color(0xFF002116)
-val MushafOnBg                 = Color(0xFF122018)
-val MushafOnSurfaceVariant     = Color(0xFF4E6358)
-val MushafTertiary             = Color(0xFF715D00)
-val MushafError                = Color(0xFFBA1A1A)
-
-// ── Midnight Blue palette ─────────────────────────────────────────────────────
-// Deep navy with warm-gold accent — professional, calm aesthetic.
-val MidnightBg                = Color(0xFF090F1A)
-val MidnightSurface           = Color(0xFF101826)
-val MidnightSurfaceVariant    = Color(0xFF172030)
-val MidnightOutline           = Color(0xFF22334A)
-val MidnightOutlineVariant    = Color(0xFF1A2840)
-val MidnightPrimary           = Color(0xFFCBA135)  // warm gold
-val MidnightPrimaryContainer  = Color(0xFF3A2900)
-val MidnightOnPrimary         = Color(0xFF1A0F00)
-val MidnightOnPrimaryContainer = Color(0xFFFFDFA3)
-val MidnightOnBg              = Color(0xFFE0E8F5)
-val MidnightOnSurfaceVariant  = Color(0xFF7A8FA8)
-val MidnightTertiary          = Color(0xFF4FC3F7)  // cyan — external links
+// ── Paper, dark: warm near-black, parchment text, gold accent ──────────────────
+val NightBg                    = Color(0xFF14110D)
+val NightSurface               = Color(0xFF1B1712)
+val NightSurfaceVariant        = Color(0xFF241F18)
+val NightInk                   = Color(0xFFEDE3CF)
+val NightInkSoft               = Color(0xFFA89B83)
+val NightRule                  = Color(0xFF4A3F2A)
+val NightRuleSoft              = Color(0xFF2E271B)
+val NightGold                  = Color(0xFFD4A94C)
+val NightGoldContainer         = Color(0xFF3A2F17)
+val NightOnGoldContainer       = Color(0xFFF0D9A0)
+val NightSage                  = Color(0xFF7FB9A3)
+val NightError                 = Color(0xFFE9897F)
 
 // ── Shared semantic colours ───────────────────────────────────────────────────
 // Difficulty / health indicators — muted pastels for less visual strain.

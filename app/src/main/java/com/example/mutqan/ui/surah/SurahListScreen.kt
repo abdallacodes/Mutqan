@@ -76,14 +76,12 @@ fun SurahListScreen(
                             text          = stringResource(R.string.surahs_title),
                             style         = MaterialTheme.typography.titleLarge,
                             fontWeight    = FontWeight.Black,
-                            letterSpacing = 3.sp,
                             color         = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text          = stringResource(R.string.surahs_subtitle),
                             style         = MaterialTheme.typography.labelSmall,
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
                         )
                     }
                 },

@@ -1,6 +1,24 @@
 package com.example.mutqan.ui.navigation
 
 import androidx.compose.foundation.layout.padding
+import com.example.mutqan.ui.components.Hairline
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.GridView
@@ -15,9 +33,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -425,37 +440,47 @@ private fun MutqanBottomBar(
         )
     )
 
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-    ) {
-        items.forEach { item ->
-            val selected = currentRoute == item.route
-            NavigationBarItem(
-                selected = selected,
-                onClick  = { onNavSelected(item.route) },
-                icon = {
+    // A quiet bar: a rule on top, a small gold dot over the current tab, no filled pill.
+    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
+        Hairline()
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
+            items.forEach { item ->
+                val selected = currentRoute == item.route
+                val tint = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 56.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Tab,
+                            onClick = { onNavSelected(item.route) }
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(if (selected) MaterialTheme.colorScheme.tertiary else Color.Transparent, CircleShape)
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Icon(
                         imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = item.label
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(22.dp)
                     )
-                },
-                label = {
                     Text(
-                        text          = item.label,
-                        style         = MaterialTheme.typography.labelSmall,
-                        fontWeight    = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        letterSpacing = 0.5.sp
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        color = tint,
+                        maxLines = 1
                     )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor   = MaterialTheme.colorScheme.primary,
-                    selectedTextColor   = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor      = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
+                }
+            }
         }
     }
 }

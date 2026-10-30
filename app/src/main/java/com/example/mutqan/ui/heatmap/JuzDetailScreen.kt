@@ -143,7 +143,6 @@ fun JuzDetailScreen(
                             text          = stringResource(R.string.juz_title, juzId),
                             style         = MaterialTheme.typography.titleLarge,
                             fontWeight    = FontWeight.Black,
-                            letterSpacing = 2.sp,
                             color         = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
@@ -152,7 +151,6 @@ fun JuzDetailScreen(
                                 fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
                             ),
                             color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.3.sp
                         )
                     }
                 },
@@ -377,7 +375,6 @@ private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
                         style         = MaterialTheme.typography.labelSmall,
                         fontWeight    = FontWeight.Bold,
                         color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        letterSpacing = 1.5.sp
                     )
                     Text(
                         text       = if (tracked.isEmpty()) stringResource(R.string.no_revisions_juz)
@@ -510,7 +507,6 @@ private fun QuickStatusDialog(
                     style         = MaterialTheme.typography.titleMedium,
                     fontWeight    = FontWeight.Black,
                     color         = MaterialTheme.colorScheme.onSurface,
-                    letterSpacing = 2.sp
                 )
                 if (selection.surahLabel.isNotBlank()) {
                     Text(
@@ -565,7 +561,6 @@ private fun QuickStatusDialog(
                             text = stringResource(R.string.btn_save),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
                         )
                     }
                 }

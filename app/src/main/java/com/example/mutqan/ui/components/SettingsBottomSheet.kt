@@ -54,32 +54,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.ThemeKey
 import com.example.mutqan.ui.theme.DifficultySmooth
-import com.example.mutqan.ui.theme.MidnightBg
-import com.example.mutqan.ui.theme.MidnightPrimary
-import com.example.mutqan.ui.theme.ModernDarkBg
-import com.example.mutqan.ui.theme.ModernDarkPrimary
 import com.example.mutqan.quran.DownloadState
-import com.example.mutqan.ui.theme.MushafBg
-import com.example.mutqan.ui.theme.MushafPrimary
-import com.example.mutqan.ui.theme.OLEDBg
-import com.example.mutqan.ui.theme.OLEDPrimary
 
-// ── Metadata for each theme preview card ──────────────────────────────────────
+// ── Theme choices: follow the system, or Paper in its light or dark version ──────
 
-private data class ThemeOption(
-    val key: ThemeKey,
-    val labelResId: Int,
-    val bgColor: Color,
-    val accentColor: Color,
-    val sampleColor: Color   // second swatch dot — secondary visual
-)
-
-private val themeOptions = listOf(
-    ThemeOption(ThemeKey.AUTO,          R.string.theme_auto,          Color(0xFF1A1A2E), Color(0xFF3DA882), Color(0xFF00C853)),
-    ThemeOption(ThemeKey.MODERN_DARK,   R.string.theme_modern_dark,   ModernDarkBg,     ModernDarkPrimary, Color(0xFFE6EDF3)),
-    ThemeOption(ThemeKey.OLED_BLACK,    R.string.theme_oled_black,    OLEDBg,           OLEDPrimary,       Color(0xFFF2F2F2)),
-    ThemeOption(ThemeKey.MUSHAF_CREAM,  R.string.theme_mushaf_cream,  MushafBg,         MushafPrimary,     Color(0xFF5C4A3A)),
-    ThemeOption(ThemeKey.MIDNIGHT_BLUE, R.string.theme_midnight_blue, MidnightBg,       MidnightPrimary,   Color(0xFF7A8FA8)),
+private val themeChoices = listOf(
+    ThemeKey.AUTO to R.string.theme_auto,
+    ThemeKey.LIGHT to R.string.theme_light,
+    ThemeKey.DARK to R.string.theme_dark
 )
 
 // ── Bottom sheet ───────────────────────────────────────────────────────────────
@@ -167,16 +149,15 @@ fun SettingsBottomSheet(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                themeOptions.forEach { option ->
-                    ThemeCard(
-                        option    = option,
-                        label     = stringResource(option.labelResId),
-                        isSelected = option.key == currentTheme,
-                        onClick   = {
-                            onThemeChange(option.key)
+                themeChoices.forEach { (key, labelRes) ->
+                    ThemeChoice(
+                        label      = stringResource(labelRes),
+                        isSelected = key == currentTheme,
+                        onClick    = {
+                            onThemeChange(key)
                             onDismiss()
                         },
-                        modifier  = Modifier.weight(1f)
+                        modifier   = Modifier.weight(1f)
                     )
                 }
             }
@@ -264,7 +245,6 @@ private fun SectionLabel(text: String) {
         style         = MaterialTheme.typography.labelSmall,
         fontWeight    = FontWeight.Bold,
         color         = MaterialTheme.colorScheme.onSurfaceVariant,
-        letterSpacing = 1.5.sp
     )
 }
 
@@ -388,76 +368,26 @@ private fun DataActionRow(
 // ── Theme preview card ────────────────────────────────────────────────────────
 
 @Composable
-private fun ThemeCard(
-    option: ThemeOption,
+private fun ThemeChoice(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor = if (isSelected)
-        MaterialTheme.colorScheme.primary
-    else
-        MaterialTheme.colorScheme.outlineVariant
-
-    Column(
-        modifier            = modifier.clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val border = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    Box(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .border(if (isSelected) 2.dp else 1.dp, border, RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(option.bgColor)
-                .border(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(10.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSelected) {
-                // Selected indicator — checkmark in the primary accent color
-                Icon(
-                    imageVector        = Icons.Default.Check,
-                    contentDescription = null,
-                    tint               = option.accentColor,
-                    modifier           = Modifier.size(20.dp)
-                )
-            } else {
-                // Preview: stacked accent + text color dots
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .background(option.accentColor, CircleShape)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .background(option.sampleColor.copy(alpha = 0.6f), CircleShape)
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(5.dp))
-
         Text(
-            text      = label,
-            style     = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+            text       = label,
+            style      = MaterialTheme.typography.labelLarge,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color      = if (isSelected)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines  = 2,
-            lineHeight = 12.sp,
-            modifier  = Modifier.fillMaxWidth()
+            color      = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }
 }

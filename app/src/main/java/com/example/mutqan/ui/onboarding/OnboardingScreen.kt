@@ -173,7 +173,6 @@ private fun LanguageSelectionSlide(
             text = stringResource(R.string.app_name).uppercase(),
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.Black,
-            letterSpacing = 3.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
@@ -229,7 +228,6 @@ private fun LanguageSelectionSlide(
             Text(
                 text = stringResource(R.string.onboarding_next),
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
             )
         }
     }
@@ -350,7 +348,6 @@ private fun FeatureOnboardingContent(
                     text          = label,
                     style         = MaterialTheme.typography.titleSmall,
                     fontWeight    = FontWeight.Black,
-                    letterSpacing = 1.2.sp
                 )
             }
 
@@ -416,7 +413,6 @@ private fun SlideContent(slide: OnboardingSlide) {
             fontWeight    = FontWeight.ExtraBold,
             color         = MaterialTheme.colorScheme.onBackground,
             textAlign     = TextAlign.Center,
-            letterSpacing = 0.2.sp
         )
 
         Spacer(modifier = Modifier.height(14.dp))
