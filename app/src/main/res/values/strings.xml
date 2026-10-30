@@ -596,4 +596,8 @@
     <string name="ex_no_pages_body">جرّب جزءًا آخر أو ألغِ حصر التمرين في صفحاتك المحفوظة.</string>
     <string name="insights_log_title">سجّل مراجعة</string>
     <string name="insights_history_title">سجل المراجعات</string>
+    <string name="coverage_choose_surahs">اختر السور</string>
+    <string name="coverage_surah_picker_hint">اضغط على السورة التي تحفظها كاملة</string>
+    <string name="coverage_surah_search">ابحث عن سورة بالاسم أو الرقم</string>
+    <string name="coverage_surah_partly">جزء منها</string>
 </resources>

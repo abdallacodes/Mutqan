@@ -1,5 +1,18 @@
 package com.example.mutqan.ui.coverage
 
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.quran.ArabicNormalization
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -60,6 +73,16 @@ fun CoverageScreen(onDone: () -> Unit) {
     val viewModel: CoverageViewModel = viewModel(factory = CoverageViewModelFactory(context))
     val state by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showSurahPicker by remember { mutableStateOf(false) }
+
+    if (showSurahPicker) {
+        SurahPickerDialog(
+            full = state.fullSurahs,
+            partial = state.partialSurahs,
+            onToggle = viewModel::toggleSurah,
+            onDone = { showSurahPicker = false }
+        )
+    }
 
     if (showAddDialog) {
         AddRangeDialog(
@@ -101,6 +124,11 @@ fun CoverageScreen(onDone: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = viewModel::setWholeQuran) { Text(stringResource(R.string.coverage_whole_quran)) }
                     OutlinedButton(onClick = viewModel::clear, enabled = state.isSet) { Text(stringResource(R.string.coverage_clear)) }
+                }
+            }
+            item {
+                OutlinedButton(onClick = { showSurahPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.coverage_choose_surahs))
                 }
             }
             item { SectionTitle(stringResource(R.string.coverage_juz_section)) }
@@ -154,6 +182,87 @@ fun CoverageScreen(onDone: () -> Unit) {
                     Text(stringResource(R.string.coverage_done), fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+/** Every surah in a list to tick off; ticking marks the whole surah as memorised, ticking again takes it away. */
+@Composable
+private fun SurahPickerDialog(
+    full: Set<Int>,
+    partial: Set<Int>,
+    onToggle: (Int) -> Unit,
+    onDone: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val needle = ArabicNormalization.normalizeForSearch(query.trim())
+    val surahs = remember(needle) {
+        (1..114).filter { id ->
+            needle.isEmpty() || id.toString() == needle ||
+                ArabicNormalization.normalizeForSearch(SurahData.nameOf(id)).contains(needle) ||
+                SurahData.nameOf(id).contains(query.trim(), ignoreCase = true)
+        }
+    }
+    Dialog(
+        onDismissRequest = onDone,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+                PaperHeader(
+                    title = stringResource(R.string.coverage_choose_surahs),
+                    subtitle = stringResource(R.string.coverage_surah_picker_hint),
+                    onBack = onDone
+                )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.coverage_surah_search)) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(surahs, key = { it }) { id ->
+                        val isFull = id in full
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Checkbox) { onToggle(id) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "$id",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.width(40.dp)
+                            )
+                            Text(
+                                text = SurahData.nameOf(id),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f)
+                            )
+                            when {
+                                isFull -> Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                id in partial -> Text(
+                                    text = stringResource(R.string.coverage_surah_partly),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                                else -> Icon(Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                        Hairline()
+                    }
+                }
+                Hairline()
+                PaperButton(
+                    text = stringResource(R.string.coverage_done),
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                )
             }
         }
     }

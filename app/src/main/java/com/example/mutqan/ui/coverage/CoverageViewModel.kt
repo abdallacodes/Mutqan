@@ -38,6 +38,9 @@ data class CoverageUiState(
     val pageCount: Int = 0,
     /** Juz whose every ayah is covered. */
     val fullJuz: Set<Int> = emptySet(),
+    /** Surahs whose every ayah is covered, and surahs that are covered in part. */
+    val fullSurahs: Set<Int> = emptySet(),
+    val partialSurahs: Set<Int> = emptySet(),
     val isSet: Boolean = false
 )
 
@@ -48,14 +51,20 @@ class CoverageViewModel(
 
     private val index by lazy { quran.ayahIndex }
     private val juzRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
+    private val surahRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             juzRanges.value = (1..30).mapNotNull { juz -> quran.ayahIdRangeOfJuz(juz)?.let { juz to it } }.toMap()
+            surahRanges.value = (1..114).mapNotNull { s ->
+                val first = quran.ayah(s, 1)?.id
+                val last = quran.surah(s)?.let { quran.ayah(s, it.versesCount)?.id }
+                if (first != null && last != null) s to (first..last) else null
+            }.toMap()
         }
     }
 
-    val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), juzRanges) { ranges, juz ->
+    val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), juzRanges, surahRanges) { ranges, juz, surahs ->
         CoverageUiState(
             ranges = ranges.map {
                 CoverageRangeItem(it, index.surahOf(it.first), index.ayahOf(it.first), index.surahOf(it.last), index.ayahOf(it.last))
@@ -63,6 +72,10 @@ class CoverageViewModel(
             ayahCount = HifzCoverage.ayahCount(ranges),
             pageCount = HifzCoverage.coveredPages(ranges) { index.firstPageOf(it) }?.count { it } ?: 0,
             fullJuz = juz.filterValues { HifzCoverage.containsAll(ranges, it) }.keys,
+            fullSurahs = surahs.filterValues { HifzCoverage.containsAll(ranges, it) }.keys,
+            partialSurahs = surahs.filterValues { s ->
+                !HifzCoverage.containsAll(ranges, s) && ranges.any { it.first <= s.last && it.last >= s.first }
+            }.keys,
             isSet = ranges.isNotEmpty()
         )
     }
@@ -73,6 +86,18 @@ class CoverageViewModel(
 
     fun toggleJuz(juz: Int) {
         val range = juzRanges.value[juz] ?: return
+        viewModelScope.launch {
+            val ranges = current()
+            study.setCoverage(
+                if (HifzCoverage.containsAll(ranges, range)) HifzCoverage.remove(ranges, range)
+                else HifzCoverage.add(ranges, range)
+            )
+        }
+    }
+
+    /** Marks a whole surah as memorised, or takes it away when it already is entirely. */
+    fun toggleSurah(surah: Int) {
+        val range = surahRanges.value[surah] ?: return
         viewModelScope.launch {
             val ranges = current()
             study.setCoverage(

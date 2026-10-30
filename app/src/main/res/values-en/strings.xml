@@ -596,4 +596,8 @@
     <string name="ex_no_pages_body">Try another juz, or turn off the memorised-pages filter.</string>
     <string name="insights_log_title">Log a revision</string>
     <string name="insights_history_title">Revision history</string>
+    <string name="coverage_choose_surahs">Choose surahs</string>
+    <string name="coverage_surah_picker_hint">Tap each surah you know in full</string>
+    <string name="coverage_surah_search">Search a surah by name or number</string>
+    <string name="coverage_surah_partly">Partly</string>
 </resources>
