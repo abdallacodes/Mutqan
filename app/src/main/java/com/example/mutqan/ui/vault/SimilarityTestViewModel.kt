@@ -4,9 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
-import com.example.mutqan.data.local.dao.TestVerseResult
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.TestVerseResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +24,7 @@ sealed class TestUiState {
 }
 
 class SimilarityTestViewModel(
-    private val dao: QuranDao,
+    private val study: StudyRepository,
     private val groupId: Int?,
     private val folderId: Int?
 ) : ViewModel() {
@@ -41,7 +40,7 @@ class SimilarityTestViewModel(
         _uiState.update { TestUiState.Loading }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val res = dao.getRandomVerseForTest(
+                val res = study.randomVerseForTest(
                     groupId = if (groupId != null && groupId > 0) groupId else null,
                     folderId = if (folderId != null && folderId > 0) folderId else null
                 )
@@ -73,7 +72,7 @@ class SimilarityTestViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         SimilarityTestViewModel(
-            AppDatabase.getInstance(context).quranDao(),
+            StudyRepository.create(context),
             groupId,
             folderId
         ) as T

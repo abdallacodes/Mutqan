@@ -7,9 +7,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.GroupWithCount
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.VaultSharingManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,7 +29,8 @@ sealed class VaultUiEvent {
 }
 
 class VaultViewModel(
-    private val dao: QuranDao,
+    private val dao: StudyDao,
+    private val study: StudyRepository,
     private val sharingManager: VaultSharingManager
 ) : ViewModel() {
 
@@ -49,7 +51,7 @@ class VaultViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val groups: StateFlow<List<GroupWithCount>> = _currentFolderId
-        .flatMapLatest { dao.getGroupsByFolder(it) }
+        .flatMapLatest { study.groupsByFolder(it) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -154,7 +156,8 @@ class VaultViewModelFactory(private val context: Context) : ViewModelProvider.Fa
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val db = AppDatabase.getInstance(context)
         return VaultViewModel(
-            db.quranDao(),
+            db.studyDao(),
+            StudyRepository.create(context),
             VaultSharingManager(context.applicationContext)
         ) as T
     }

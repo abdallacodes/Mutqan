@@ -1,24 +1,15 @@
 package com.example.mutqan.data.local.dao
 
-import androidx.room.ColumnInfo
-import androidx.room.Embedded
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 
 /**
- * Flat projection returned by [QuranDao.getAllGroupsWithMemberCount].
- * Avoids a second query-per-row to get member counts in the list screen.
- *
- * [surahIdsRaw] is a comma-separated string of distinct Surah IDs that appear
- * in this group (e.g. "2,3,18").  Parse with [surahIds].  Empty string when
- * the group has no members yet.
+ * A similarity group with its member count and the surahs its members belong to.
+ * Built by [com.example.mutqan.domain.StudyRepository] so the list screen needs no
+ * per-row queries.
  */
 data class GroupWithCount(
-    @Embedded val group: SimilarityGroupEntity,
-    @ColumnInfo(name = "member_count")  val memberCount:  Int,
-    @ColumnInfo(name = "surah_ids_raw") val surahIdsRaw:  String = ""
-) {
-    /** Sorted list of distinct Surah IDs for this group. */
+    val group: SimilarityGroupEntity,
+    val memberCount: Int,
+    /** Sorted distinct surah ids of the group's members; empty when it has no members yet. */
     val surahIds: List<Int>
-        get() = if (surahIdsRaw.isBlank()) emptyList()
-                else surahIdsRaw.split(",").mapNotNull { it.trim().toIntOrNull() }.sorted()
-}
+)

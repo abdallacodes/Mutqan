@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.R
-import com.example.mutqan.data.local.entity.StructureUnitEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.ui.heatmap.AnchorCardData
 import com.example.mutqan.ui.heatmap.SubjectWithText
@@ -75,7 +74,7 @@ fun AnchorCard(
     val amber   = Color(0xFFFFA000)
     
     val palette = listOf(emerald, teal, indigo, amber)
-    val accentColor = palette[(data.unit.hizbNumber - 1) % palette.size]
+    val accentColor = palette[(data.unit.hizb - 1) % palette.size]
 
     ElevatedCard(
         modifier = modifier

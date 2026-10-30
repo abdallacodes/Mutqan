@@ -14,14 +14,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.R
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.ui.theme.AmiriFontFamily
-import com.example.mutqan.util.toCleanQuranicText
+import com.example.mutqan.quran.toCleanQuranicText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AyahPreviewBottomSheet(
-    verse: VerseEntity,
+    verse: QuranAyah,
     onOpenInMushaf: () -> Unit,
     onShare: () -> Unit,
     onDismiss: () -> Unit
@@ -38,7 +38,7 @@ fun AyahPreviewBottomSheet(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.ayah_n, verse.ayahNumber),
+                text = stringResource(R.string.ayah_n, verse.ayah),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -46,7 +46,7 @@ fun AyahPreviewBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = verse.textArabic.toCleanQuranicText(),
+                text = verse.text.toCleanQuranicText(),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = AmiriFontFamily,
                     fontSize = 24.sp,

@@ -7,16 +7,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.JuzSurahRange
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.RevisionLogEntity
-import com.example.mutqan.data.local.entity.StructureUnitEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
-import com.example.mutqan.data.local.entity.VerseEntity
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.domain.StructuralSharingManager
-import com.example.mutqan.util.toCleanQuranicText
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.quran.QuranAyah
+import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.quran.QuranRub
+import com.example.mutqan.quran.toCleanQuranicText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,19 +26,22 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class JuzDetailViewModel(
-    private val dao:   QuranDao,
+    private val dao:   StudyDao,
+    private val study: StudyRepository,
+    private val quran: QuranRepository,
     private val prefs: StructuralPrefsRepository,
     private val sharingManager: StructuralSharingManager,
     val          juzId: Int
 ) : ViewModel() {
 
-    private val _surahRange = MutableStateFlow<JuzSurahRange?>(null)
-    val surahRange: StateFlow<JuzSurahRange?> = _surahRange.asStateFlow()
+    private val _surahRange = MutableStateFlow<IntRange?>(null)
+    val surahRange: StateFlow<IntRange?> = _surahRange.asStateFlow()
 
     val isStructuralMode: StateFlow<Boolean> = prefs.isStructuralMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -45,9 +49,16 @@ class JuzDetailViewModel(
     private val _events = MutableSharedFlow<SharingEvent>()
     val events: SharedFlow<SharingEvent> = _events
 
+    // Static Quran data for this juz, read once on first use.
+    private val juzPages by lazy { quran.pagesOfJuz(juzId) }
+    private val surahsByPage by lazy { quran.surahsByPageInJuz(juzId) }
+    private val ayahIds by lazy { quran.ayahIdRangeOfJuz(juzId) }
+    private val rubs by lazy { quran.rubs(juzId) }
+    private val ayahsById by lazy { ayahIds?.let { quran.ayahsInRange(it.first, it.last) }.orEmpty().associateBy { it.id } }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _surahRange.value = dao.getSurahRangeForJuz(juzId)
+            _surahRange.value = quran.surahRangeOfJuz(juzId)
         }
     }
 
@@ -56,21 +67,15 @@ class JuzDetailViewModel(
      */
     val pagesWithSurahs: StateFlow<List<PageWithSurahs>> = combine(
         dao.getAllRevisionLogs(),
-        MutableStateFlow(0) 
+        MutableStateFlow(0)
     ) { logs, forecastDays ->
-        val pages = dao.getPagesByJuz(juzId)
-        val pageSurahs = dao.getPageSurahsForJuz(juzId)
-        val links = dao.getPageSimilarityLinks()
+        val links = study.pageSimilarityLinks()
         val linkMap = links.groupBy({ it.pageA }, { it.pageB })
-
-        val surahMap: Map<Int, List<String>> = pageSurahs.associate { ref ->
-            ref.pageNumber to ref.surahIds.map { id -> SurahData.nameOf(id) }
-        }
 
         val state = MemoryEngine.computeCurrentState(logs, linkMap)
         val rValues = MemoryEngine.projectRetrievability(state, forecastDays)
 
-        pages.map { page ->
+        juzPages.map { page ->
             val idx = page - 1
             PageWithSurahs(
                 stability = PageStability(
@@ -78,7 +83,7 @@ class JuzDetailViewModel(
                     score = rValues[idx],
                     lastRevised = state.lastRevisionTimestamps[idx].let { if (it == 0L) null else it }
                 ),
-                surahNames = surahMap[page] ?: emptyList()
+                surahNames = surahsByPage[page].orEmpty().map { id -> SurahData.nameOf(id) }
             )
         }
     }
@@ -86,36 +91,29 @@ class JuzDetailViewModel(
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * Combined timeline items for Structural Flow mode (Anchor Cards).
+     * Combined timeline items for Structural Flow mode (Anchor Cards): the juz's eight hizb
+     * quarters, each with the user's subjects that start inside it.
      */
-    val timelineItems: StateFlow<List<AnchorCardData>> = combine(
-        dao.getStructureUnitsByJuz(juzId),
-        dao.getUserSubjectsByJuz(juzId)
-    ) { units, subjects ->
-        val subjectMap = subjects.groupBy { it.unitId }
-        
-        units.map { unit ->
-            val startVerse = dao.getVerseById(unit.startAyahId)
-            val endVerse = dao.getVerseById(unit.endAyahId)
-            
-            val subjectsWithText = (subjectMap[unit.id] ?: emptyList()).map { subject ->
-                val verse = dao.getVerseById(subject.startAyahId)
-                val ayahText = verse?.textArabic?.toCleanQuranicText() ?: ""
-                SubjectWithText(subject, ayahText, verse?.ayahNumber ?: 0)
+    val timelineItems: StateFlow<List<AnchorCardData>> = (
+        ayahIds?.let { dao.observeUserSubjectsBetween(it.first, it.last) } ?: flowOf(emptyList())
+    ).let { subjectsFlow ->
+        subjectsFlow.combine(flowOf(Unit)) { subjects, _ ->
+            rubs.map { unit ->
+                val unitAyahs = unit.startAyahId..unit.endAyahId
+                val subjectsWithText = subjects.filter { it.startAyahId in unitAyahs }.map { subject ->
+                    val verse = ayahsById[subject.startAyahId]
+                    SubjectWithText(subject, verse?.text?.toCleanQuranicText() ?: "", verse?.ayah ?: 0)
+                }
+
+                AnchorCardData(
+                    unit = unit,
+                    subjects = subjectsWithText,
+                    startAyahText = ayahsById[unit.startAyahId]?.text?.toCleanQuranicText() ?: "",
+                    endAyahText = ayahsById[unit.endAyahId]?.text?.toCleanQuranicText() ?: "",
+                    pages = (unit.startPage..unit.endPage).toList(),
+                    ayahsInQuarter = unitAyahs.mapNotNull { ayahsById[it] }
+                )
             }
-            
-            val ayahsInQuarter = (unit.startAyahId..unit.endAyahId).mapNotNull { id ->
-                dao.getVerseById(id)
-            }
-            
-            AnchorCardData(
-                unit = unit,
-                subjects = subjectsWithText,
-                startAyahText = startVerse?.textArabic?.toCleanQuranicText() ?: "",
-                endAyahText = endVerse?.textArabic?.toCleanQuranicText() ?: "",
-                pages = (unit.startPage..unit.endPage).toList(),
-                ayahsInQuarter = ayahsInQuarter
-            )
         }
     }
     .flowOn(Dispatchers.Default)
@@ -127,8 +125,8 @@ class JuzDetailViewModel(
     private val _peekData = MutableStateFlow<PagePeekData?>(null)
     val peekData: StateFlow<PagePeekData?> = _peekData.asStateFlow()
 
-    private val _ayahPreview = MutableStateFlow<VerseEntity?>(null)
-    val ayahPreview: StateFlow<VerseEntity?> = _ayahPreview.asStateFlow()
+    private val _ayahPreview = MutableStateFlow<QuranAyah?>(null)
+    val ayahPreview: StateFlow<QuranAyah?> = _ayahPreview.asStateFlow()
 
     fun onPageTap(page: Int, surahLabel: String) {
         if (isStructuralMode.value) {
@@ -140,10 +138,8 @@ class JuzDetailViewModel(
 
     fun showAyahPreview(startAyahId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val verse = dao.getVerseById(startAyahId)
-            _ayahPreview.value = verse?.copy(
-                textArabic = verse.textArabic.toCleanQuranicText()
-            )
+            val verse = quran.ayahById(startAyahId)
+            _ayahPreview.value = verse?.copy(text = verse.text.toCleanQuranicText())
         }
     }
 
@@ -151,14 +147,13 @@ class JuzDetailViewModel(
 
     private fun peekPage(pageNumber: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val verses = dao.getVersesByPage(pageNumber)
-            if (verses.isNotEmpty()) {
-                val fullText = verses.joinToString(" ") { it.textArabic.toCleanQuranicText() }
-                val words = fullText.split(" ").filter { it.isNotBlank() }
-                
+            val words = quran.pageWords(pageNumber)
+                .map { it.toCleanQuranicText() }
+                .filter { it.isNotBlank() }
+            if (words.isNotEmpty()) {
                 val startSnippet = words.take(10).joinToString(" ")
                 val endSnippet = words.takeLast(10).joinToString(" ")
-                
+
                 _peekData.value = PagePeekData(pageNumber, startSnippet, endSnippet)
             }
         }
@@ -167,11 +162,10 @@ class JuzDetailViewModel(
     fun dismissPeek() { _peekData.value = null }
     fun dismissDialog() { _selectedPage.value = null }
 
-    fun addSubject(unitId: Int, text: String, startAyahId: Int) {
+    fun addSubject(text: String, startAyahId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertUserSubject(
                 UserSubjectEntity(
-                    unitId = unitId,
                     subjectText = text,
                     startAyahId = startAyahId,
                     orderIndex = 0
@@ -232,11 +226,6 @@ sealed class SharingEvent {
     data class Error(val message: String) : SharingEvent()
 }
 
-sealed class TimelineItem {
-    data class Header(val unit: StructureUnitEntity, val subjects: List<UserSubjectEntity>) : TimelineItem()
-    data class Page(val pageData: PageWithSurahs) : TimelineItem()
-}
-
 data class PagePeekData(
     val pageNumber: Int,
     val startSnippet: String,
@@ -244,12 +233,12 @@ data class PagePeekData(
 )
 
 data class AnchorCardData(
-    val unit: StructureUnitEntity,
+    val unit: QuranRub,
     val subjects: List<SubjectWithText>,
     val startAyahText: String,
     val endAyahText: String,
     val pages: List<Int>,
-    val ayahsInQuarter: List<VerseEntity>
+    val ayahsInQuarter: List<QuranAyah>
 )
 
 data class SubjectWithText(
@@ -265,7 +254,9 @@ class JuzDetailViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         JuzDetailViewModel(
-            AppDatabase.getInstance(context).quranDao(),
+            AppDatabase.getInstance(context).studyDao(),
+            StudyRepository.create(context),
+            QuranRepository.getInstance(context),
             StructuralPrefsRepository(context),
             StructuralSharingManager(context),
             juzId

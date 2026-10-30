@@ -48,9 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
-import com.example.mutqan.data.local.AppDatabase
+import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.theme.AmiriFontFamily
-import com.example.mutqan.util.toCleanQuranicText
+import com.example.mutqan.quran.toCleanQuranicText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Carries the minimal data needed to open the Quick Peek sheet for a verse.
@@ -64,7 +66,7 @@ data class QuickPeekTarget(
 
 /**
  * Modal bottom sheet showing the full Arabic text of a single verse.
- * Arabic text is lazy-loaded on open via a single SELECT.
+ * Arabic text is lazy-loaded on open from the Quran data.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,11 +77,11 @@ fun QuickPeekBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
-    val dao = remember { AppDatabase.getInstance(context).quranDao() }
+    val quran = remember { QuranRepository.getInstance(context) }
 
     var arabicText by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(target.verseId) {
-        arabicText = dao.getArabicText(target.verseId)
+        arabicText = withContext(Dispatchers.IO) { quran.ayahById(target.verseId)?.text }
     }
 
     val surahName  = SurahData.nameOf(target.surahId)

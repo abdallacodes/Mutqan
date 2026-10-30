@@ -6,8 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.SurahInfo
-import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -22,19 +21,15 @@ data class SurahListItem(
     val groupCount: Int
 )
 
-class SurahListViewModel(private val dao: QuranDao) : ViewModel() {
+class SurahListViewModel(private val study: StudyRepository) : ViewModel() {
 
     /**
-     * Merges the hardcoded Surah names with live DB metadata.
-     * The DB query is reactive — the list updates automatically whenever
-     * a new SimilarityGroup is linked to a Surah.
-     *
-     * While the verses table is still being pre-populated (first launch),
-     * the initial value is the full list at zero counts; it transitions to
-     * real data as soon as the DB emits.
+     * Merges the hardcoded Surah names with the Quran metadata and the user's group counts.
+     * The flow is reactive — the list updates automatically whenever a SimilarityGroup is
+     * linked to a Surah. The initial value is the full list at zero counts.
      */
-    val surahs: StateFlow<List<SurahListItem>> = dao
-        .getSurahMetaList()
+    val surahs: StateFlow<List<SurahListItem>> = study
+        .surahMetaList()
         .map { metaList ->
             val metaById = metaList.associateBy { it.surahId }
             SurahData.ALL.map { info ->
@@ -58,5 +53,5 @@ class SurahListViewModel(private val dao: QuranDao) : ViewModel() {
 class SurahListViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SurahListViewModel(AppDatabase.getInstance(context).quranDao()) as T
+        SurahListViewModel(StudyRepository.create(context)) as T
 }

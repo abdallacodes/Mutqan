@@ -67,7 +67,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.ui.components.HelpDialog
 import com.example.mutqan.ui.components.TopBarOverflowMenu
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
@@ -152,9 +152,9 @@ fun VerseSearchScreen(
                     viewModel.generateRandomAyah { verse ->
                         peekTarget = QuickPeekTarget(
                             verseId = verse.id,
-                            surahId = verse.surahId,
-                            ayahNumber = verse.ayahNumber,
-                            pageNumber = verse.pageNumber
+                            surahId = verse.surah,
+                            ayahNumber = verse.ayah,
+                            pageNumber = verse.firstPage
                         )
                     }
                 },
@@ -186,12 +186,12 @@ fun VerseSearchScreen(
                                 onPeek = {
                                     peekTarget = QuickPeekTarget(
                                         verseId = verse.id,
-                                        surahId = verse.surahId,
-                                        ayahNumber = verse.ayahNumber,
-                                        pageNumber = verse.pageNumber
+                                        surahId = verse.surah,
+                                        ayahNumber = verse.ayah,
+                                        pageNumber = verse.firstPage
                                     )
                                 },
-                                onOpenMushaf = { onOpenMushaf(verse.pageNumber) }
+                                onOpenMushaf = { onOpenMushaf(verse.firstPage) }
                             )
                         }
                     }
@@ -494,7 +494,7 @@ private fun RandomAyahSection(
 
 @Composable
 private fun SearchResultCard(
-    verse: VerseEntity,
+    verse: QuranAyah,
     onPeek: () -> Unit,
     onOpenMushaf: () -> Unit
 ) {
@@ -511,14 +511,14 @@ private fun SearchResultCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${verse.surahId}. ${SurahData.nameOf(verse.surahId)}  ·  ${verse.ayahNumber}",
+                    text = "${verse.surah}. ${SurahData.nameOf(verse.surah)}  ·  ${verse.ayah}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = verse.textArabic,
+                    text = verse.text,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         textDirection = TextDirection.Rtl,
                         fontFamily = AmiriFontFamily,

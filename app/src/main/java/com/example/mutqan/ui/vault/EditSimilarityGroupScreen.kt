@@ -76,7 +76,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.dao.MemberVerseRef
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
 import com.example.mutqan.ui.components.localizedLabel
@@ -293,9 +293,9 @@ fun EditSimilarityGroupScreen(
                             onPeek = {
                                 peekTarget = QuickPeekTarget(
                                     verseId = verse.id,
-                                    surahId = verse.surahId,
-                                    ayahNumber = verse.ayahNumber,
-                                    pageNumber = verse.pageNumber
+                                    surahId = verse.surah,
+                                    ayahNumber = verse.ayah,
+                                    pageNumber = verse.firstPage
                                 )
                             }
                         )
@@ -638,7 +638,7 @@ private fun VersePicker(
 
 @Composable
 private fun SearchResultRow(
-    verse: VerseEntity,
+    verse: QuranAyah,
     isAdded: Boolean,
     onAdd: () -> Unit,
     onPeek: () -> Unit
@@ -671,14 +671,14 @@ private fun SearchResultRow(
                 .padding(start = 12.dp, top = 10.dp, bottom = 10.dp)
         ) {
             Text(
-                text       = "${verse.surahId}. ${SurahData.nameOf(verse.surahId)}  ·  ${verse.ayahNumber}",
+                text       = "${verse.surah}. ${SurahData.nameOf(verse.surah)}  ·  ${verse.ayah}",
                 style      = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color      = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text     = verse.textArabic.let { t ->
+                text     = verse.text.let { t ->
                     if (t.length > 80) t.take(80) + "…" else t
                 },
                 style    = MaterialTheme.typography.bodySmall.copy(

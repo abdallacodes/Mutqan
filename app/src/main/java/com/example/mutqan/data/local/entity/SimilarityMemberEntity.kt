@@ -6,14 +6,14 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 
 /**
- * Join table linking a SimilarityGroup to its member verses.
+ * Join table linking a SimilarityGroup to its member ayahs.
  *
- * Foreign key constraints ensure referential integrity:
- * - Deleting a SimilarityGroup cascades and removes all its members automatically.
- * - Deleting a Verse cascades and removes all group memberships for that verse.
+ * [verseId] is the global ayah id (1..6236) of the `:quran` module's `QuranAyah.id`;
+ * the Quran text itself is not stored here.
  *
+ * Deleting a SimilarityGroup cascades and removes all its members automatically.
  * Composite primary key (group_id, verse_id) prevents duplicate membership entries.
- * Explicit index on verse_id speeds up reverse lookups (find all groups for a verse).
+ * Explicit index on verse_id speeds up reverse lookups (find all groups for an ayah).
  */
 @Entity(
     tableName = "similarity_members",
@@ -23,12 +23,6 @@ import androidx.room.Index
             entity = SimilarityGroupEntity::class,
             parentColumns = ["id"],
             childColumns = ["group_id"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = VerseEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["verse_id"],
             onDelete = ForeignKey.CASCADE
         )
     ],

@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,7 +46,9 @@ data class HeatmapUiState(
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 class HeatmapViewModel(
-    private val dao: QuranDao,
+    private val dao: StudyDao,
+    private val study: StudyRepository,
+    private val quran: QuranRepository,
     private val prefs: StructuralPrefsRepository
 ) : ViewModel() {
 
@@ -54,8 +58,7 @@ class HeatmapViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val mappings = dao.getAllPageJuzMappings()
-            _juzToPages.value = mappings.groupBy({ it.juzId }, { it.pageNumber })
+            _juzToPages.value = quran.pagesByJuz()
         }
     }
 
@@ -70,7 +73,7 @@ class HeatmapViewModel(
     ) { logs, juzToPages, forecastDays, isStructuralMode ->
         try {
             // 1. Fetch similarity links for semantic interference
-            val links = dao.getPageSimilarityLinks()
+            val links = study.pageSimilarityLinks()
             val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
             // 2. Compute the BASE state (Current Stability S)
@@ -214,7 +217,9 @@ class HeatmapViewModelFactory(private val context: Context) : ViewModelProvider.
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         HeatmapViewModel(
-            AppDatabase.getInstance(context).quranDao(),
+            AppDatabase.getInstance(context).studyDao(),
+            StudyRepository.create(context),
+            QuranRepository.getInstance(context),
             StructuralPrefsRepository(context)
         ) as T
 }

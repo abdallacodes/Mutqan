@@ -12,6 +12,7 @@ import java.io.File
 //   surah  1..114
 //   ayah   number within its surah, or the global [QuranAyah.id] 1..6236
 //   word   global [QuranWord.id] 1..83,668 (the last word of each ayah is its end marker)
+//   rub    hizb quarter 1..240 ([QuranRub.number]); 8 per juz
 // Page numbers (1..604) belong to the KFGQPC V2 (1421H) layout this module ships.
 
 data class QuranSurah(
@@ -22,7 +23,11 @@ data class QuranSurah(
     val revelationPlace: String,
     val revelationOrder: Int,
     val versesCount: Int,
-    val bismillahPre: Boolean
+    val bismillahPre: Boolean,
+    /** Page on which the surah starts. */
+    val firstPage: Int,
+    /** Juz in which the surah starts. */
+    val startJuz: Int
 )
 
 data class QuranAyah(
@@ -33,8 +38,9 @@ data class QuranAyah(
     val wordsCount: Int,
     val firstWordId: Int,
     val lastWordId: Int,
-    /** Hafs text, ending with the ayah number. */
+    /** Plain Hafs text, without the ayah number. */
     val text: String,
+    /** Page on which the ayah starts; an ayah may continue onto [lastPage]. */
     val firstPage: Int,
     val lastPage: Int,
     val juz: Int,
@@ -55,8 +61,44 @@ data class QuranWord(
     /** QPC V2 glyph; only displays correctly in that page's font. */
     val glyph: String,
     /** Plain Hafs text, safe to search and copy. */
-    val hafs: String
+    val hafs: String,
+    /** True for the ayah-number marker that closes every ayah. */
+    val isEnd: Boolean
 )
+
+/** A hizb quarter: the 1/240 division of the Quran. */
+data class QuranRub(
+    /** 1..240 */
+    val number: Int,
+    val juz: Int,
+    /** 1..60 */
+    val hizb: Int,
+    /** 1..8 within its juz. */
+    val quarterInJuz: Int,
+    val startAyahId: Int,
+    val endAyahId: Int,
+    val startPage: Int,
+    val endPage: Int
+)
+
+/**
+ * Compact id -> (surah, ayah, pages, juz) table for all 6,236 ayahs, for code that has to
+ * resolve many ayah ids without touching SQLite (e.g. enriching user data).
+ */
+class AyahIndex internal constructor(
+    private val surah: IntArray,
+    private val ayah: IntArray,
+    private val firstPage: IntArray,
+    private val lastPage: IntArray,
+    private val juz: IntArray
+) {
+    operator fun contains(id: Int) = id in 1 until surah.size && surah[id] != 0
+    fun surahOf(id: Int) = surah[id]
+    fun ayahOf(id: Int) = ayah[id]
+    fun firstPageOf(id: Int) = firstPage[id]
+    fun lastPageOf(id: Int) = lastPage[id]
+    fun juzOf(id: Int) = juz[id]
+}
 
 enum class MushafLineType { AYAH, SURAH_NAME, BASMALLAH }
 
@@ -76,8 +118,8 @@ data class MushafLine(
 data class MushafPageData(val page: Int, val lines: List<MushafLine>)
 
 /**
- * Read-only Quran content: surahs, ayahs, words, and the Mushaf page layout.
- * Knows nothing about revision, memory or user data.
+ * Read-only Quran content: surahs, ayahs, words, hizb quarters, search, and the Mushaf
+ * page layout. Knows nothing about revision, memory or user data.
  *
  * Backed by assets/quran.db (built by scripts/build_quran_db.py from the QUL KFGQPC V2
  * layout and glyph script), copied to internal storage once per [CONTENT_VERSION]; bump
@@ -95,10 +137,10 @@ class QuranRepository private constructor(context: Context) {
     // ── Surahs ────────────────────────────────────────────────────────────────
 
     fun surahs(): List<QuranSurah> =
-        db.rawQuery("SELECT $SURAH_COLUMNS FROM surahs ORDER BY id", null).use { it.readAll(::surah) }
+        db.rawQuery("$SURAH_SELECT ORDER BY s.id", null).use { it.readAll(::surah) }
 
     fun surah(id: Int): QuranSurah? =
-        db.rawQuery("SELECT $SURAH_COLUMNS FROM surahs WHERE id = ?", arrayOf(id.toString()))
+        db.rawQuery("$SURAH_SELECT WHERE s.id = ?", arrayOf(id.toString()))
             .use { c -> if (c.moveToFirst()) surah(c) else null }
 
     // ── Ayahs ─────────────────────────────────────────────────────────────────
@@ -115,6 +157,13 @@ class QuranRepository private constructor(context: Context) {
         db.rawQuery("SELECT $AYAH_COLUMNS FROM ayahs WHERE surah = ? ORDER BY ayah", arrayOf(surah.toString()))
             .use { it.readAll(::ayah) }
 
+    /** Ayahs with ids in [firstId]..[lastId], in order. */
+    fun ayahsInRange(firstId: Int, lastId: Int): List<QuranAyah> =
+        db.rawQuery(
+            "SELECT $AYAH_COLUMNS FROM ayahs WHERE id BETWEEN ? AND ? ORDER BY id",
+            arrayOf(firstId.toString(), lastId.toString())
+        ).use { it.readAll(::ayah) }
+
     /** Every ayah that has at least one word on [page], in reading order. */
     fun ayahsOnPage(page: Int): List<QuranAyah> =
         db.rawQuery(
@@ -124,6 +173,123 @@ class QuranRepository private constructor(context: Context) {
 
     /** Page on which the ayah starts, or null for an unknown ayah. */
     fun pageOf(surah: Int, ayah: Int): Int? = ayah(surah, ayah)?.firstPage
+
+    fun randomAyahInJuz(juz: Int): QuranAyah? = randomAyah("juz = ?", juz)
+
+    fun randomAyahInSurah(surah: Int): QuranAyah? = randomAyah("surah = ?", surah)
+
+    /** A random ayah that starts on a page in [startPage]..[endPage]. */
+    fun randomAyahInPages(startPage: Int, endPage: Int): QuranAyah? = randomAyah("first_page BETWEEN ? AND ?", startPage, endPage)
+
+    private fun randomAyah(where: String, vararg args: Int): QuranAyah? =
+        db.rawQuery(
+            "SELECT $AYAH_COLUMNS FROM ayahs WHERE $where ORDER BY RANDOM() LIMIT 1",
+            Array(args.size) { args[it].toString() }
+        ).use { c -> if (c.moveToFirst()) ayah(c) else null }
+
+    // ── Search ────────────────────────────────────────────────────────────────
+
+    /**
+     * Ayahs whose text contains [query], ignoring diacritics and common spelling variants
+     * (see [ArabicNormalization]), optionally limited to one surah or a juz range.
+     * The first call builds an in-memory index of the normalized text (a few hundred ms).
+     */
+    fun search(
+        query: String,
+        surah: Int? = null,
+        juzStart: Int? = null,
+        juzEnd: Int? = null,
+        limit: Int = DEFAULT_SEARCH_LIMIT
+    ): List<QuranAyah> {
+        val needle = ArabicNormalization.normalizeForSearch(query)
+        if (needle.isBlank()) return emptyList()
+        val matches = ArrayList<Int>()
+        for (entry in searchIndex) {
+            if (surah != null && entry.surah != surah) continue
+            if (juzStart != null && entry.juz < juzStart) continue
+            if (juzEnd != null && entry.juz > juzEnd) continue
+            if (entry.normalized.contains(needle)) {
+                matches.add(entry.id)
+                if (matches.size >= limit) break
+            }
+        }
+        return matches.mapNotNull(::ayahById)
+    }
+
+    private class SearchEntry(val id: Int, val surah: Int, val juz: Int, val normalized: String)
+
+    private val searchIndex: List<SearchEntry> by lazy {
+        db.rawQuery("SELECT id, surah, juz, text FROM ayahs ORDER BY id", null).use { c ->
+            c.readAll { SearchEntry(it.getInt(0), it.getInt(1), it.getInt(2), ArabicNormalization.normalizeForSearch(it.getString(3))) }
+        }
+    }
+
+    // ── Juz, pages and hizb quarters ──────────────────────────────────────────
+
+    /** Pages (first..last) that hold text of [juz]; boundary pages belong to both neighbouring juz. */
+    fun pagesOfJuz(juz: Int): List<Int> =
+        db.rawQuery("SELECT MIN(first_page), MAX(last_page) FROM ayahs WHERE juz = ?", arrayOf(juz.toString()))
+            .use { c -> if (c.moveToFirst() && !c.isNull(0)) (c.getInt(0)..c.getInt(1)).toList() else emptyList() }
+
+    /** Juz number -> its pages, for all 30 juz. */
+    fun pagesByJuz(): Map<Int, List<Int>> =
+        db.rawQuery("SELECT juz, MIN(first_page), MAX(last_page) FROM ayahs GROUP BY juz ORDER BY juz", null)
+            .use { c -> buildMap { while (c.moveToNext()) put(c.getInt(0), (c.getInt(1)..c.getInt(2)).toList()) } }
+
+    /** For every page of [juz], the surahs that have text on it, in reading order. */
+    fun surahsByPageInJuz(juz: Int): Map<Int, List<Int>> =
+        db.rawQuery(
+            """SELECT w.page, w.surah FROM words w
+               JOIN ayahs a ON a.surah = w.surah AND a.ayah = w.ayah
+               WHERE a.juz = ? GROUP BY w.page, w.surah ORDER BY w.page, MIN(w.id)""",
+            arrayOf(juz.toString())
+        ).use { c ->
+            val result = LinkedHashMap<Int, MutableList<Int>>()
+            while (c.moveToNext()) result.getOrPut(c.getInt(0)) { ArrayList() }.add(c.getInt(1))
+            result
+        }
+
+    /** First and last surah that have ayahs in [juz]. */
+    fun surahRangeOfJuz(juz: Int): IntRange? =
+        db.rawQuery("SELECT MIN(surah), MAX(surah) FROM ayahs WHERE juz = ?", arrayOf(juz.toString()))
+            .use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getInt(0)..c.getInt(1) else null }
+
+    /** Global ayah ids of the first and last ayah of [juz]. */
+    fun ayahIdRangeOfJuz(juz: Int): IntRange? =
+        db.rawQuery("SELECT MIN(id), MAX(id) FROM ayahs WHERE juz = ?", arrayOf(juz.toString()))
+            .use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getInt(0)..c.getInt(1) else null }
+
+    /** The eight hizb quarters of [juz]. */
+    fun rubs(juz: Int): List<QuranRub> =
+        db.rawQuery(
+            """SELECT rub, juz, hizb, MIN(id), MAX(id), MIN(first_page), MAX(last_page)
+               FROM ayahs WHERE juz = ? GROUP BY rub ORDER BY rub""",
+            arrayOf(juz.toString())
+        ).use { c ->
+            c.readAll {
+                QuranRub(
+                    number = it.getInt(0), juz = it.getInt(1), hizb = it.getInt(2),
+                    quarterInJuz = (it.getInt(0) - 1) % QUARTERS_PER_JUZ + 1,
+                    startAyahId = it.getInt(3), endAyahId = it.getInt(4),
+                    startPage = it.getInt(5), endPage = it.getInt(6)
+                )
+            }
+        }
+
+    /** Compact lookup of surah / ayah / pages / juz by global ayah id; built once, then cached. */
+    val ayahIndex: AyahIndex by lazy {
+        val size = TOTAL_AYAHS + 1
+        val surah = IntArray(size); val ayah = IntArray(size)
+        val first = IntArray(size); val last = IntArray(size); val juz = IntArray(size)
+        db.rawQuery("SELECT id, surah, ayah, first_page, last_page, juz FROM ayahs", null).use { c ->
+            while (c.moveToNext()) {
+                val id = c.getInt(0)
+                surah[id] = c.getInt(1); ayah[id] = c.getInt(2)
+                first[id] = c.getInt(3); last[id] = c.getInt(4); juz[id] = c.getInt(5)
+            }
+        }
+        AyahIndex(surah, ayah, first, last, juz)
+    }
 
     // ── Pages ─────────────────────────────────────────────────────────────────
 
@@ -140,6 +306,13 @@ class QuranRepository private constructor(context: Context) {
             "SELECT page, surah FROM words WHERE id IN (SELECT MIN(id) FROM words GROUP BY page)",
             null
         ).use { c -> buildMap { while (c.moveToNext()) put(c.getInt(0), c.getInt(1)) } }
+
+    /** The plain Hafs words printed on [page], in order, without ayah-number markers. */
+    fun pageWords(page: Int): List<String> =
+        db.rawQuery(
+            "SELECT hafs FROM words WHERE page = ? AND is_end = 0 ORDER BY id",
+            arrayOf(page.toString())
+        ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
 
     /** Lines of a page ready for [MushafPageView]. */
     fun page(page: Int): MushafPageData {
@@ -173,10 +346,12 @@ class QuranRepository private constructor(context: Context) {
     /** All words of an ayah including its end marker, in order. */
     fun wordsOfAyah(surah: Int, ayah: Int): List<QuranWord> =
         db.rawQuery(
-            "SELECT id, surah, ayah, word, glyph, hafs FROM words WHERE surah = ? AND ayah = ? ORDER BY word",
+            "SELECT id, surah, ayah, word, glyph, hafs, is_end FROM words WHERE surah = ? AND ayah = ? ORDER BY word",
             arrayOf(surah.toString(), ayah.toString())
         ).use { c ->
-            c.readAll { QuranWord(it.getInt(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getString(4), it.getString(5)) }
+            c.readAll {
+                QuranWord(it.getInt(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getString(4), it.getString(5), it.getInt(6) != 0)
+            }
         }
 
     // ── Internals ─────────────────────────────────────────────────────────────
@@ -190,7 +365,8 @@ class QuranRepository private constructor(context: Context) {
     private fun surah(c: Cursor) = QuranSurah(
         id = c.getInt(0), nameArabic = c.getString(1), nameSimple = c.getString(2),
         nameComplex = c.getString(3), revelationPlace = c.getString(4),
-        revelationOrder = c.getInt(5), versesCount = c.getInt(6), bismillahPre = c.getInt(7) != 0
+        revelationOrder = c.getInt(5), versesCount = c.getInt(6), bismillahPre = c.getInt(7) != 0,
+        firstPage = c.getInt(8), startJuz = c.getInt(9)
     )
 
     private fun ayah(c: Cursor) = QuranAyah(
@@ -220,11 +396,18 @@ class QuranRepository private constructor(context: Context) {
 
     companion object {
         private const val ASSET_NAME = "quran.db"
-        private const val CONTENT_VERSION = 1
+        private const val CONTENT_VERSION = 2
         private const val PAGE_CACHE_SIZE = 12
+        private const val DEFAULT_SEARCH_LIMIT = 40
+        private const val TOTAL_AYAHS = 6236
+        private const val QUARTERS_PER_JUZ = 8
 
-        private const val SURAH_COLUMNS =
-            "id, name_arabic, name_simple, name_complex, revelation_place, revelation_order, verses_count, bismillah_pre"
+        private const val SURAH_SELECT =
+            """SELECT s.id, s.name_arabic, s.name_simple, s.name_complex, s.revelation_place,
+                      s.revelation_order, s.verses_count, s.bismillah_pre,
+                      (SELECT MIN(first_page) FROM ayahs a WHERE a.surah = s.id),
+                      (SELECT MIN(juz) FROM ayahs a WHERE a.surah = s.id)
+               FROM surahs s"""
         private const val AYAH_COLUMNS =
             "id, surah, ayah, words_count, first_word_id, last_word_id, text, first_page, last_page, juz, hizb, rub, manzil, ruku, sajda"
 

@@ -1,4 +1,4 @@
-package com.example.mutqan.data.local
+package com.example.mutqan.quran
 
 /**
  * Robust Arabic normalization utility for Quranic search.

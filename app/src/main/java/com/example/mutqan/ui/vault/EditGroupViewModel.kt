@@ -4,13 +4,15 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.data.local.ArabicNormalization
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.MemberVerseRef
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.quran.QuranAyah
+import com.example.mutqan.quran.QuranRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,10 +24,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // ── Verse-add feedback ────────────────────────────────────────────────────────
 
@@ -61,7 +65,11 @@ data class EditGroupUiState(
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
+class EditGroupViewModel(
+    private val dao: StudyDao,
+    private val study: StudyRepository,
+    private val quran: QuranRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditGroupUiState())
     val uiState: StateFlow<EditGroupUiState> = _uiState.asStateFlow()
@@ -75,7 +83,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
      */
     val members: StateFlow<List<MemberVerseRef>> = _savedGroupId
         .flatMapLatest { id ->
-            if (id == null) flowOf(emptyList()) else dao.getMembersForGroup(id)
+            if (id == null) flowOf(emptyList()) else study.membersForGroup(id)
         }
         .stateIn(
             scope   = viewModelScope,
@@ -87,22 +95,23 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
      * Live Arabic text search results.
      * Uses the improved DAO search with filters.
      */
-    val textSearchResults: StateFlow<List<VerseEntity>> = _uiState
+    val textSearchResults: StateFlow<List<QuranAyah>> = _uiState
         .debounce(300L)
         .flatMapLatest { state ->
             val query = state.textSearchQuery
             if (query.length < 2) return@flatMapLatest flowOf(emptyList())
             
             flow {
-                val results = dao.searchVerses(
-                    query = ArabicNormalization.normalizeForSearch(query),
-                    surahId = state.searchFilterSurahId,
+                val results = quran.search(
+                    query = query,
+                    surah = state.searchFilterSurahId,
                     juzStart = state.searchFilterJuzStart,
                     juzEnd = state.searchFilterJuzEnd
                 )
                 emit(results)
             }
         }
+        .flowOn(Dispatchers.IO)
         .stateIn(
             scope   = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -179,7 +188,7 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
      * Called when the user clicks the "Check" (V) icon on a search result.
      * Adds the verse but DOES NOT clear the search query or filters.
      */
-    fun onVerseSearchAdd(verse: VerseEntity) {
+    fun onVerseSearchAdd(verse: QuranAyah) {
         val state = _uiState.value
         viewModelScope.launch {
             // Auto-persist the group header on the first verse add
@@ -269,7 +278,9 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
             }
 
             val groupId = _savedGroupId.value ?: return@launch
-            val verse   = if (surahId != null && ayah != null) dao.findVerse(surahId, ayah) else null
+            val verse   = if (surahId != null && ayah != null) {
+                withContext(Dispatchers.IO) { quran.ayah(surahId, ayah) }
+            } else null
 
             if (verse == null) {
                 _uiState.update { it.copy(addVerseResult = AddVerseResult.InvalidRef) }
@@ -305,5 +316,9 @@ class EditGroupViewModel(private val dao: QuranDao) : ViewModel() {
 class EditGroupViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        EditGroupViewModel(AppDatabase.getInstance(context).quranDao()) as T
+        EditGroupViewModel(
+            AppDatabase.getInstance(context).studyDao(),
+            StudyRepository.create(context),
+            QuranRepository.getInstance(context)
+        ) as T
 }

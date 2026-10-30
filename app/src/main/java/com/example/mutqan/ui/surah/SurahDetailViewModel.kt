@@ -6,19 +6,23 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.SurahInfo
-import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.MemberVerseRef
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * A SimilarityGroup enriched with its member verses split by Surah context.
  *
- * Built from a single [QuranDao.getMemberRefsBySurahGroups] query so the UI
+ * Built from a single [StudyRepository.memberRefsBySurahGroups] flow so the UI
  * never needs N+1 database calls.
  */
 data class GroupWithVerses(
@@ -33,27 +37,30 @@ data class GroupWithVerses(
 
 class SurahDetailViewModel(
     val surahId: Int,
-    private val dao: QuranDao
+    private val study: StudyRepository,
+    private val quran: QuranRepository
 ) : ViewModel() {
 
     val surahInfo: SurahInfo? = SurahData.getById(surahId)
 
-    /** First Mushaf page for this Surah; null until [verses] is populated. */
-    val mushafStartPage: StateFlow<Int?> = dao
-        .observeStartPageForSurah(surahId)
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
+    private val _mushafStartPage = MutableStateFlow<Int?>(null)
+
+    /** First Mushaf page for this Surah; null until it has been read from the Quran data. */
+    val mushafStartPage: StateFlow<Int?> = _mushafStartPage.asStateFlow()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            _mushafStartPage.value = quran.surah(surahId)?.firstPage
+        }
+    }
 
     /**
      * All groups that touch this Surah, each enriched with their member verses
      * split into internal (same Surah) and external (other Surahs).
      * One reactive query; grouping and sorting are done in Kotlin.
      */
-    val groupsWithVerses: StateFlow<List<GroupWithVerses>> = dao
-        .getMemberRefsBySurahGroups(surahId)
+    val groupsWithVerses: StateFlow<List<GroupWithVerses>> = study
+        .memberRefsBySurahGroups(surahId)
         .map { refs ->
             refs.groupBy { it.groupId }
                 .entries
@@ -92,5 +99,5 @@ class SurahDetailViewModelFactory(
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SurahDetailViewModel(surahId, AppDatabase.getInstance(context).quranDao()) as T
+        SurahDetailViewModel(surahId, StudyRepository.create(context), QuranRepository.getInstance(context)) as T
 }

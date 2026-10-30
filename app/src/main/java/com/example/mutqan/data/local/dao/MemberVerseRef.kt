@@ -1,14 +1,12 @@
 package com.example.mutqan.data.local.dao
 
-import androidx.room.ColumnInfo
-
 /**
- * Lightweight verse reference shown inside a group's member list.
- * Joins similarity_members → verses to surface human-readable Surah:Ayah labels.
+ * Lightweight ayah reference shown inside a group's member list: a member's ayah id with the
+ * human-readable surah:ayah and the page it starts on.
  */
 data class MemberVerseRef(
-    @ColumnInfo(name = "verse_id")    val verseId: Int,
-    @ColumnInfo(name = "surah_id")    val surahId: Int,
-    @ColumnInfo(name = "ayah_number") val ayahNumber: Int,
-    @ColumnInfo(name = "page_number") val pageNumber: Int
+    val verseId: Int,
+    val surahId: Int,
+    val ayahNumber: Int,
+    val pageNumber: Int
 )

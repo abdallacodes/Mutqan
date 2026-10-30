@@ -6,7 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.MemberVerseRef
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,7 +20,8 @@ import kotlinx.coroutines.launch
 class GroupDetailViewModel(
     val groupId: Int,
     val currentSurahId: Int,
-    private val dao: QuranDao
+    private val dao: StudyDao,
+    private val study: StudyRepository
 ) : ViewModel() {
 
     private val _group = MutableStateFlow<SimilarityGroupEntity?>(null)
@@ -28,8 +30,8 @@ class GroupDetailViewModel(
     /**
      * Verses that belong to [currentSurahId] — the "home" context for this group.
      */
-    val contextVerses: StateFlow<List<MemberVerseRef>> = dao
-        .getMembersForGroup(groupId)
+    val contextVerses: StateFlow<List<MemberVerseRef>> = study
+        .membersForGroup(groupId)
         .map { list -> list.filter { it.surahId == currentSurahId } }
         .stateIn(
             scope        = viewModelScope,
@@ -40,8 +42,8 @@ class GroupDetailViewModel(
     /**
      * Verses from every Surah other than [currentSurahId] — the "clashes".
      */
-    val clashVerses: StateFlow<List<MemberVerseRef>> = dao
-        .getMembersForGroup(groupId)
+    val clashVerses: StateFlow<List<MemberVerseRef>> = study
+        .membersForGroup(groupId)
         .map { list -> list.filter { it.surahId != currentSurahId } }
         .stateIn(
             scope        = viewModelScope,
@@ -66,6 +68,7 @@ class GroupDetailViewModelFactory(
         GroupDetailViewModel(
             groupId        = groupId,
             currentSurahId = currentSurahId,
-            dao            = AppDatabase.getInstance(context).quranDao()
+            dao            = AppDatabase.getInstance(context).studyDao(),
+            study          = StudyRepository.create(context)
         ) as T
 }

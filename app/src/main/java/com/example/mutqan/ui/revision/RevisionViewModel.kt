@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,7 +42,7 @@ internal fun startOfTodayUtcMillis(): Long {
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-class RevisionViewModel(private val dao: QuranDao) : ViewModel() {
+class RevisionViewModel(private val dao: StudyDao) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RevisionUiState(selectedDateMillis = startOfTodayUtcMillis()))
     val uiState: StateFlow<RevisionUiState> = _uiState.asStateFlow()
@@ -110,5 +110,5 @@ class RevisionViewModel(private val dao: QuranDao) : ViewModel() {
 class RevisionViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        RevisionViewModel(AppDatabase.getInstance(context).quranDao()) as T
+        RevisionViewModel(AppDatabase.getInstance(context).studyDao()) as T
 }

@@ -4,10 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.data.local.ArabicNormalization
-import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.quran.QuranAyah
+import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,19 +39,19 @@ data class SearchUiState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class VerseSearchViewModel(private val dao: QuranDao) : ViewModel() {
+class VerseSearchViewModel(private val quran: QuranRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    val searchResults: StateFlow<List<VerseEntity>> = _uiState
+    val searchResults: StateFlow<List<QuranAyah>> = _uiState
         .debounce(300L)
         .flatMapLatest { state ->
             if (state.query.length < 2) return@flatMapLatest flowOf(emptyList())
             flow {
-                emit(dao.searchVerses(
-                    query = ArabicNormalization.normalizeForSearch(state.query),
-                    surahId = state.filterSurahId,
+                emit(quran.search(
+                    query = state.query,
+                    surah = state.filterSurahId,
                     juzStart = state.filterJuzStart,
                     juzEnd = state.filterJuzEnd
                 ))
@@ -88,13 +86,13 @@ class VerseSearchViewModel(private val dao: QuranDao) : ViewModel() {
         it.copy(randomPageStart = start, randomPageEnd = end)
     }
 
-    fun generateRandomAyah(onResult: (VerseEntity) -> Unit) {
+    fun generateRandomAyah(onResult: (QuranAyah) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val state = uiState.value
             val verse = when (state.randomScope) {
-                RandomScope.JUZ -> dao.getRandomVerseInJuz(state.randomJuz)
-                RandomScope.SURAH -> dao.getRandomVerseInSurah(state.randomSurahId)
-                RandomScope.PAGE_RANGE -> dao.getRandomVerseInPageRange(state.randomPageStart, state.randomPageEnd)
+                RandomScope.JUZ -> quran.randomAyahInJuz(state.randomJuz)
+                RandomScope.SURAH -> quran.randomAyahInSurah(state.randomSurahId)
+                RandomScope.PAGE_RANGE -> quran.randomAyahInPages(state.randomPageStart, state.randomPageEnd)
             }
             verse?.let { 
                 withContext(Dispatchers.Main) {
@@ -108,5 +106,5 @@ class VerseSearchViewModel(private val dao: QuranDao) : ViewModel() {
 class VerseSearchViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        VerseSearchViewModel(AppDatabase.getInstance(context).quranDao()) as T
+        VerseSearchViewModel(QuranRepository.getInstance(context)) as T
 }

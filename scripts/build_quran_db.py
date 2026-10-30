@@ -48,7 +48,8 @@ CREATE TABLE words (
     glyph TEXT NOT NULL,
     hafs TEXT NOT NULL,
     page INTEGER NOT NULL,
-    line INTEGER NOT NULL
+    line INTEGER NOT NULL,
+    is_end INTEGER NOT NULL
 );
 CREATE TABLE lines (
     page INTEGER NOT NULL,
@@ -156,6 +157,10 @@ def main() -> None:
                     word_pos[wid] = (page, line)
 
         # --- words
+        # the last word of every ayah is its end marker (is_end = 1)
+        last_word = {
+            (s, a): w for s, a, w in glyphs.execute("SELECT surah, ayah, MAX(word) FROM words GROUP BY surah, ayah")
+        }
         words = []
         for wid, surah, ayah, word, glyph in glyphs.execute(
             "SELECT id, surah, ayah, word, text FROM words ORDER BY id"
@@ -163,9 +168,10 @@ def main() -> None:
             h = hafs[f"{surah}:{ayah}:{word}"]
             assert h["id"] == wid, f"hafs/glyph id mismatch at {surah}:{ayah}:{word}"
             page, line = word_pos[wid]
-            words.append((wid, surah, ayah, word, glyph, h["text"], page, line))
+            words.append((wid, surah, ayah, word, glyph, h["text"], page, line, int(word == last_word[(surah, ayah)])))
 
-        # --- ayahs (id = global ayah number 1..6236)
+        # --- ayahs (id = global ayah number 1..6236); text = plain Hafs words, no end marker
+        hafs_text = {w[0]: w[5] for w in words}
         span: dict[tuple[int, int], list[int]] = {}
         for w in words:
             span.setdefault((w[1], w[2]), []).append(w[0])
@@ -180,7 +186,7 @@ def main() -> None:
             pages = [word_pos[i][0] for i in ids]
             ayahs.append((
                 a["id"], key[0], key[1], len(ids) - 1, min(ids), max(ids),
-                a["text"].replace("\xa0", " "), min(pages), max(pages),
+                " ".join(hafs_text[i] for i in ids[:-1]), min(pages), max(pages),
                 mappings["juz"][key], mappings["hizb"][key], mappings["rub"][key],
                 mappings["manzil"][key], mappings["ruku"][key], sajdas.get(key),
             ))
@@ -207,7 +213,7 @@ def main() -> None:
               s["revelation_place"], s["revelation_order"], s["verses_count"],
               int(s["bismillah_pre"])) for s in surah_names.values()],
         )
-        db.executemany("INSERT INTO words VALUES (?,?,?,?,?,?,?,?)", words)
+        db.executemany("INSERT INTO words VALUES (?,?,?,?,?,?,?,?,?)", words)
         db.executemany("INSERT INTO lines VALUES (?,?,?,?,?,?,?)", lines)
         db.executemany("INSERT INTO ayahs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", ayahs)
         db.executemany("INSERT INTO info VALUES (?,?)", [

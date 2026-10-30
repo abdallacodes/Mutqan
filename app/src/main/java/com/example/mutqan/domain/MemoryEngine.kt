@@ -1,6 +1,5 @@
 package com.example.mutqan.domain
 
-import com.example.mutqan.data.local.dao.PageSimilarityLink
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import kotlin.math.pow
 import kotlin.math.roundToInt

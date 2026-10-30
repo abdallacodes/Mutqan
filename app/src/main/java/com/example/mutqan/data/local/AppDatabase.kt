@@ -6,118 +6,73 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
-import com.example.mutqan.data.local.entity.StructureUnitEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
-import com.example.mutqan.data.local.entity.VerseEntity
-import com.example.mutqan.data.local.entity.VerseFtsEntity
-import org.json.JSONArray
 
+/**
+ * The user's own data only. Quran text, pages, juz and hizb quarters live in the `:quran`
+ * module; this database refers to them by ayah id.
+ */
 @Database(
     entities = [
-        VerseEntity::class,
         RevisionLogEntity::class,
         SimilarityGroupEntity::class,
         SimilarityMemberEntity::class,
         VaultFolderEntity::class,
-        VerseFtsEntity::class,
-        StructureUnitEntity::class,
         UserSubjectEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun quranDao(): QuranDao
+    abstract fun studyDao(): StudyDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        /** Adds date_millis column to revision_logs (existing rows default to 0). */
-        val MIGRATION_1_2 = object : Migration(1, 2) {
+        /**
+         * Quran text moved to the `:quran` module: drops `verses`, its FTS index and
+         * `structure_units`, and rebuilds the two tables that had foreign keys into them.
+         * Group members keep their ayah ids; a subject now belongs to the hizb quarter that
+         * contains its start ayah, so `unit_id` is gone.
+         */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE revision_logs ADD COLUMN date_millis INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
+                db.execSQL("DROP TABLE IF EXISTS `verses_fts`")
+                db.execSQL("DROP TABLE IF EXISTS `verses`")
 
-        /** Adds optional memorization notes on mutashabihat groups. */
-        val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "ALTER TABLE similarity_groups ADD COLUMN memorization_notes TEXT NOT NULL DEFAULT ''"
+                    "CREATE TABLE `similarity_members_new` (`group_id` INTEGER NOT NULL, `verse_id` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`group_id`, `verse_id`), " +
+                        "FOREIGN KEY(`group_id`) REFERENCES `similarity_groups`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
                 )
-            }
-        }
+                db.execSQL("INSERT INTO `similarity_members_new` SELECT `group_id`, `verse_id` FROM `similarity_members`")
+                db.execSQL("DROP TABLE `similarity_members`")
+                db.execSQL("ALTER TABLE `similarity_members_new` RENAME TO `similarity_members`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_similarity_members_group_id` ON `similarity_members` (`group_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_similarity_members_verse_id` ON `similarity_members` (`verse_id`)")
 
-        /** Adds vault_folders table and links similarity_groups to it. */
-        val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `vault_folders` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `parent_id` INTEGER DEFAULT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`parent_id`) REFERENCES `vault_folders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                    "CREATE TABLE `user_subjects_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`subject_text` TEXT NOT NULL, `start_ayah_id` INTEGER NOT NULL, `order_index` INTEGER NOT NULL)"
                 )
                 db.execSQL(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_vault_folders_name_parent_id` ON `vault_folders` (`name`, `parent_id`)"
+                    "INSERT INTO `user_subjects_new` (`id`, `subject_text`, `start_ayah_id`, `order_index`) " +
+                        "SELECT `id`, `subject_text`, `start_ayah_id`, `order_index` FROM `user_subjects`"
                 )
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_vault_folders_parent_id` ON `vault_folders` (`parent_id`)"
-                )
-                db.execSQL(
-                    "ALTER TABLE similarity_groups ADD COLUMN folder_id INTEGER DEFAULT NULL"
-                )
-            }
-        }
+                db.execSQL("DROP TABLE `user_subjects`")
+                db.execSQL("ALTER TABLE `user_subjects_new` RENAME TO `user_subjects`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_subjects_start_ayah_id` ON `user_subjects` (`start_ayah_id`)")
 
-        /** Adds normalized_content to verses and creates FTS table. */
-        val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE verses ADD COLUMN normalized_content TEXT NOT NULL DEFAULT ''"
-                )
-                db.execSQL(
-                    "CREATE VIRTUAL TABLE IF NOT EXISTS `verses_fts` USING fts4(content=`verses`, `normalized_content`)"
-                )
+                db.execSQL("DROP TABLE IF EXISTS `structure_units`")
             }
         }
-        
-        /** Refines normalized_content logic. */
-        val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Population handled in onOpen
-            }
-        }
-
-        /** Second refinement of normalized_content logic (Hamza-Alif symmetry). */
-        val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Population handled in onOpen
-            }
-        }
-
-        /** Refined normalized_content logic for الصلوات and ءاتيناهم. */
-        val MIGRATION_8_9 = object : Migration(8, 9) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Population handled in onOpen
-            }
-        }
-
-        /** Adds manual_stability column to revision_logs. */
-        val MIGRATION_9_10 = object : Migration(9, 10) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE revision_logs ADD COLUMN manual_stability REAL"
-                )
-            }
-        }
-
-        // Migration 10-11 is destructive, so we rely on fallbackToDestructiveMigration()
 
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
@@ -126,17 +81,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mutqan.db"
                 )
-                    .addCallback(PrepopulateCallback(context.applicationContext))
-                    .addMigrations(MIGRATION_1_2, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
-                    // Early-dev: wipe and reseed when no migration path exists.
-                    // Remove once the schema stabilises and write proper migrations.
-                    .fallbackToDestructiveMigration()
+                    .addCallback(ForeignKeysCallback())
+                    .addMigrations(MIGRATION_13_14)
                     .build()
                     .also { INSTANCE = it }
             }
     }
 
-    private class PrepopulateCallback(private val context: Context) : Callback() {
+    private class ForeignKeysCallback : Callback() {
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
             db.execSQL("PRAGMA foreign_keys = ON")
@@ -145,72 +97,6 @@ abstract class AppDatabase : RoomDatabase() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             db.execSQL("PRAGMA foreign_keys = ON")
-            seedVerses(context, db)
-            // Initial FTS build
-            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
-        }
-
-        override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
-            super.onDestructiveMigration(db)
-            db.execSQL("PRAGMA foreign_keys = ON")
-            seedVerses(context, db)
-            // Rebuild FTS after destruction
-            db.execSQL("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')")
-        }
-    }
-}
-
-private const val VERSES_ASSET = "quran_metadata.json"
-
-private fun seedVerses(context: Context, db: SupportSQLiteDatabase) {
-    val json = context.assets.open(VERSES_ASSET).bufferedReader().use { it.readText() }
-    val array = JSONArray(json)
-    
-    var quarterCount = 0
-    var lastUnitId: Long = -1
-
-    for (i in 0 until array.length()) {
-        val obj = array.getJSONObject(i)
-        val verseId = obj.getInt("id")
-        val surahId = obj.getInt("surah_id")
-        val ayahNumber = obj.getInt("ayah_number")
-        val pageNumber = obj.getInt("page_number")
-        val juzId = obj.getInt("juz_id")
-        val textArabic = obj.optString("text_arabic", "")
-        val normalized = ArabicNormalization.normalizeForSearch(textArabic)
-        
-        db.execSQL(
-            "INSERT OR REPLACE INTO verses (id, surah_id, ayah_number, page_number, juz_id, text_arabic, normalized_content) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            arrayOf(verseId, surahId, ayahNumber, pageNumber, juzId, textArabic, normalized)
-        )
-
-        // Identify structural units (۞ markers or 1:1)
-        if (textArabic.startsWith("۞") || (surahId == 1 && ayahNumber == 1)) {
-            // Update the previous unit's endAyahId and endPage
-            if (lastUnitId != -1L) {
-                db.execSQL(
-                    "UPDATE structure_units SET end_ayah_id = ?, end_page = ? WHERE id = ?",
-                    arrayOf(verseId - 1, pageNumber, lastUnitId)
-                )
-            }
-
-            val hizbNumber = (quarterCount / 4) + 1
-            val quarterInJuz = (quarterCount % 8) + 1
-            
-            // Insert new structural unit
-            db.execSQL(
-                "INSERT INTO structure_units (juz_id, hizb_number, quarter_number, start_ayah_id, end_ayah_id, start_page, end_page) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                arrayOf(juzId, hizbNumber, quarterInJuz, verseId, 6236, pageNumber, 604)
-            )
-            
-            // Get the last inserted ID to update later
-            val cursor = db.query("SELECT last_insert_rowid()", emptyArray<Any?>())
-            if (cursor.moveToFirst()) {
-                lastUnitId = cursor.getLong(0)
-            }
-            cursor.close()
-            
-            quarterCount++
         }
     }
 }

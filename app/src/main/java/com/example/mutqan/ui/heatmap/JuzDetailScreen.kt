@@ -109,13 +109,13 @@ fun JuzDetailScreen(
 
     var editingUnitId by remember { mutableStateOf<Int?>(null) }
     var editingSubject by remember { mutableStateOf<UserSubjectEntity?>(null) }
-    var editingAyahs by remember { mutableStateOf<List<com.example.mutqan.data.local.entity.VerseEntity>>(emptyList()) }
+    var editingAyahs by remember { mutableStateOf<List<com.example.mutqan.quran.QuranAyah>>(emptyList()) }
     var subjectToDelete by remember { mutableStateOf<UserSubjectEntity?>(null) }
 
     val subtitle = surahRange?.let { range ->
-        val from = "${range.firstSurah}. ${SurahData.nameOf(range.firstSurah)}"
-        if (range.firstSurah == range.lastSurah) from
-        else "$from – ${range.lastSurah}. ${SurahData.nameOf(range.lastSurah)}"
+        val from = "${range.first}. ${SurahData.nameOf(range.first)}"
+        if (range.first == range.last) from
+        else "$from – ${range.last}. ${SurahData.nameOf(range.last)}"
     } ?: stringResource(R.string.loading_subtitle)
 
     Scaffold(
@@ -199,12 +199,12 @@ fun JuzDetailScreen(
                             AnchorCard(
                                 data = cardData,
                                 onAddSubject = { 
-                                    editingUnitId = cardData.unit.id 
+                                    editingUnitId = cardData.unit.number
                                     editingAyahs = cardData.ayahsInQuarter
                                     editingSubject = null
                                 },
                                 onEditSubject = { subject ->
-                                    editingUnitId = cardData.unit.id
+                                    editingUnitId = cardData.unit.number
                                     editingAyahs = cardData.ayahsInQuarter
                                     editingSubject = subject
                                 },
@@ -284,13 +284,13 @@ fun JuzDetailScreen(
     ayahPreview?.let { verse ->
         AyahPreviewBottomSheet(
             verse = verse,
-            onOpenInMushaf = { viewModel.dismissAyahPreview(); onPageOpen(verse.pageNumber) },
+            onOpenInMushaf = { viewModel.dismissAyahPreview(); onPageOpen(verse.firstPage) },
             onShare = { /* TODO */ },
             onDismiss = { viewModel.dismissAyahPreview() }
         )
     }
 
-    editingUnitId?.let { unitId ->
+    editingUnitId?.let {
         SubjectEditorDialog(
             ayahs = editingAyahs,
             initialText = editingSubject?.subjectText ?: "",
@@ -298,7 +298,7 @@ fun JuzDetailScreen(
             onSave = { text, startAyahId ->
                 val current = editingSubject
                 if (current == null) {
-                    viewModel.addSubject(unitId, text, startAyahId)
+                    viewModel.addSubject(text, startAyahId)
                 } else {
                     viewModel.updateSubject(current, text, startAyahId)
                 }

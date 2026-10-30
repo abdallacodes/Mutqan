@@ -1,4 +1,4 @@
-package com.example.mutqan.util
+package com.example.mutqan.quran
 
 /**
  * Global sanitizer for Quranic text.

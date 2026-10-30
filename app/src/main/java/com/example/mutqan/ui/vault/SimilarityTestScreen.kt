@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
-import com.example.mutqan.util.toCleanQuranicText
+import com.example.mutqan.quran.toCleanQuranicText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,8 +107,8 @@ private fun QuizContent(
 ) {
     val result = state.result
     val verse = result.verse
-    val surahName = SurahData.nameOf(verse.surahId)
-    val cleanText = verse.textArabic.toCleanQuranicText()
+    val surahName = SurahData.nameOf(verse.surah)
+    val cleanText = verse.text.toCleanQuranicText()
     val words = cleanText.split(" ")
     val snippet = words.take(4).joinToString(" ") + " ..."
 
@@ -138,11 +138,11 @@ private fun QuizContent(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        text = stringResource(R.string.ayah_n, verse.ayahNumber),
+                        text = stringResource(R.string.ayah_n, verse.ayah),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = stringResource(R.string.label_page, verse.pageNumber),
+                        text = stringResource(R.string.label_page, verse.firstPage),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }

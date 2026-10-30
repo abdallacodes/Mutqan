@@ -7,12 +7,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
-import com.example.mutqan.data.local.entity.VerseEntity
+import com.example.mutqan.quran.QuranAyah
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectEditorDialog(
-    ayahs: List<VerseEntity>,
+    ayahs: List<QuranAyah>,
     initialText: String = "",
     initialAyahId: Int? = null,
     onSave: (String, Int) -> Unit,
@@ -47,7 +47,7 @@ fun SubjectEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = selectedVerse?.let { "Ayah ${it.ayahNumber} (Surah ${it.surahId})" } ?: "",
+                        value = selectedVerse?.let { "Ayah ${it.ayah} (Surah ${it.surah})" } ?: "",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Start Ayah") },
@@ -60,7 +60,7 @@ fun SubjectEditorDialog(
                     ) {
                         ayahs.forEach { verse ->
                             DropdownMenuItem(
-                                text = { Text("Ayah ${verse.ayahNumber} (Surah ${verse.surahId})") },
+                                text = { Text("Ayah ${verse.ayah} (Surah ${verse.surah})") },
                                 onClick = {
                                     selectedVerse = verse
                                     expanded = false

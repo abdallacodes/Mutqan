@@ -18,7 +18,7 @@ import java.io.InputStreamReader
 class BackupManager(private val context: Context) {
 
     private val db = AppDatabase.getInstance(context)
-    private val dao = db.quranDao()
+    private val dao = db.studyDao()
 
     suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -76,7 +76,6 @@ class BackupManager(private val context: Context) {
                     subjects.forEach { subject ->
                         put(JSONObject().apply {
                             put("id", subject.id)
-                            put("unit_id", subject.unitId)
                             put("subject_text", subject.subjectText)
                             put("start_ayah_id", subject.startAyahId)
                             put("order_index", subject.orderIndex)
@@ -167,7 +166,6 @@ class BackupManager(private val context: Context) {
                     val obj = subjectsArray.getJSONObject(i)
                     subjects.add(UserSubjectEntity(
                         id = obj.optInt("id", 0),
-                        unitId = obj.getInt("unit_id"),
                         subjectText = obj.getString("subject_text"),
                         startAyahId = obj.getInt("start_ayah_id"),
                         orderIndex = obj.getInt("order_index")

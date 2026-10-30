@@ -1,4 +1,4 @@
-package com.example.mutqan.data.local
+package com.example.mutqan.quran
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

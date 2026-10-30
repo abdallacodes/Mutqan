@@ -6,9 +6,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.QuranDao
+import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ data class MushafViewerState(
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 class MushafViewerViewModel(
-    private val dao: QuranDao,
+    private val dao: StudyDao,
+    private val study: StudyRepository,
     private val quran: QuranRepository
 ) : ViewModel() {
 
@@ -56,7 +58,7 @@ class MushafViewerViewModel(
         _pageSurahMap
     ) { logs, surahMap ->
         // Heavy lifting moved to Default dispatcher via flowOn
-        val links = dao.getPageSimilarityLinks()
+        val links = study.pageSimilarityLinks()
         val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
         val state = MemoryEngine.computeCurrentState(logs, linkMap)
@@ -90,5 +92,9 @@ class MushafViewerViewModel(
 class MushafViewerViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        MushafViewerViewModel(AppDatabase.getInstance(context).quranDao(), QuranRepository.getInstance(context)) as T
+        MushafViewerViewModel(
+            AppDatabase.getInstance(context).studyDao(),
+            StudyRepository.create(context),
+            QuranRepository.getInstance(context)
+        ) as T
 }

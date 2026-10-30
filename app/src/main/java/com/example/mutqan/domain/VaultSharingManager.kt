@@ -17,14 +17,15 @@ import java.io.InputStreamReader
 class VaultSharingManager(private val context: Context) {
 
     private val db = AppDatabase.getInstance(context)
-    private val dao = db.quranDao()
+    private val dao = db.studyDao()
+    private val study = StudyRepository.create(context)
 
     suspend fun exportVault(uri: Uri, folderId: Int?): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val groups = if (folderId != null) {
-                dao.getGroupsByFolder(folderId).first()
+                study.groupsByFolder(folderId).first()
             } else {
-                dao.getAllGroupsWithMemberCount().first()
+                study.allGroupsWithMemberCount().first()
             }
 
             val root = JSONObject().apply {
@@ -32,7 +33,7 @@ class VaultSharingManager(private val context: Context) {
                 put("version", 1)
                 put("groups", JSONArray().apply {
                     groups.forEach { item ->
-                        val members = dao.getMembersForGroup(item.group.id).first()
+                        val members = study.membersForGroup(item.group.id).first()
                         put(JSONObject().apply {
                             put("description", item.group.description)
                             put("master_quality", item.group.masterQuality)
