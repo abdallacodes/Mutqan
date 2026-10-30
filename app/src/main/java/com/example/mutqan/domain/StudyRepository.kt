@@ -9,6 +9,7 @@ import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.dao.SurahMeta
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.quran.QuranAyah
@@ -152,6 +153,29 @@ class StudyRepository(
             )
             true
         }
+
+    // ── Revision plans ────────────────────────────────────────────────────────
+
+    /** Oldest first. */
+    fun plans(): Flow<List<RevisionPlan>> =
+        dao.observePlans().map { rows -> rows.map(RevisionPlan::fromEntity) }.flowOn(Dispatchers.IO)
+
+    suspend fun savePlan(plan: RevisionPlan) = withContext(Dispatchers.IO) { dao.upsertPlan(plan.toEntity()) }
+
+    suspend fun deletePlan(id: Int) = withContext(Dispatchers.IO) { dao.deletePlan(id) }
+
+    private var cachedGeometry: PlanGeometry? = null
+
+    /** Which pages each juz and surah occupy, for building plan portions; computed once. */
+    suspend fun planGeometry(): PlanGeometry = withContext(Dispatchers.IO) {
+        cachedGeometry ?: PlanGeometry(
+            juzPages = quran.pagesByJuz(),
+            surahPages = surahs.map { surah ->
+                val last = quran.ayah(surah.id, surah.versesCount)?.lastPage ?: surah.firstPage
+                surah.firstPage..maxOf(last, surah.firstPage)
+            }
+        ).also { cachedGeometry = it }
+    }
 
     // ── Saved passages (bookmarks and weak passages) ──────────────────────────
 

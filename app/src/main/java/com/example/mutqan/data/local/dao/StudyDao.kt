@@ -10,6 +10,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
@@ -67,6 +68,28 @@ abstract class StudyDao {
         deleteAllCoverage()
         insertCoverage(ranges)
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Revision plans
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM revision_plans ORDER BY created_at")
+    abstract fun observePlans(): Flow<List<RevisionPlanEntity>>
+
+    @Query("SELECT * FROM revision_plans ORDER BY created_at")
+    abstract suspend fun getAllPlansSync(): List<RevisionPlanEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsertPlan(plan: RevisionPlanEntity): Long
+
+    @Query("DELETE FROM revision_plans WHERE id = :id")
+    abstract suspend fun deletePlan(id: Int)
+
+    @Query("DELETE FROM revision_plans")
+    abstract suspend fun deleteAllPlans()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertPlans(plans: List<RevisionPlanEntity>)
 
     // ─────────────────────────────────────────────────────────
     // Saved passages (bookmarks and weak passages)
@@ -238,6 +261,7 @@ abstract class StudyDao {
         deleteAllUserSubjects()
         deleteAllCoverage()
         deleteAllSavedPassages()
+        deleteAllPlans()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

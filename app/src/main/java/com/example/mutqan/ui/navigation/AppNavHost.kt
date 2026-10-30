@@ -7,10 +7,12 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -47,6 +49,8 @@ import com.example.mutqan.ui.components.SettingsBottomSheet
 import com.example.mutqan.ui.coverage.CoverageScreen
 import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
+import com.example.mutqan.ui.home.HomeScreen
+import com.example.mutqan.ui.home.PlanScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
 import com.example.mutqan.ui.onboarding.OnboardingScreen
 import com.example.mutqan.ui.revision.RevisionHistoryScreen
@@ -66,6 +70,8 @@ import com.example.mutqan.ui.vault.SimilarityTestScreen
 
 object Routes {
     const val ONBOARDING     = "onboarding"
+    const val HOME           = "home"
+    const val PLAN           = "plan"
     const val REVISION_LOG   = "revision_log"
     const val VAULT_LIST     = "vault_list"
     const val SURAH_LIST     = "surah_list"
@@ -121,12 +127,12 @@ fun AppNavHost(
     val isFirstRun by userPrefs.isFirstRun.collectAsState(initial = null)
     if (isFirstRun == null) return
 
-    val startDestination = if (isFirstRun == true) Routes.ONBOARDING else Routes.REVISION_LOG
+    val startDestination = if (isFirstRun == true) Routes.ONBOARDING else Routes.HOME
 
     val backStack    by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
-    val topLevelRoutes = setOf(Routes.REVISION_LOG, Routes.VAULT_LIST, Routes.SURAH_LIST, Routes.VERSE_SEARCH, Routes.HEATMAP)
+    val topLevelRoutes = setOf(Routes.HOME, Routes.REVISION_LOG, Routes.VAULT_LIST, Routes.SURAH_LIST, Routes.VERSE_SEARCH, Routes.HEATMAP)
     val showBottomBar  = currentRoute in topLevelRoutes
 
     // Settings bottom sheet state — shared across all top-level screens
@@ -179,7 +185,7 @@ fun AppNavHost(
             composable(Routes.ONBOARDING) {
                 OnboardingScreen(
                     onComplete = {
-                        navController.navigate(Routes.REVISION_LOG) {
+                        navController.navigate(Routes.HOME) {
                             popUpTo(Routes.ONBOARDING) { inclusive = true }
                         }
                         // First run: ask what the user has memorised before anything else.
@@ -189,6 +195,26 @@ fun AppNavHost(
             }
 
             // ── Top-level tabs ────────────────────────────────────────
+
+            composable(Routes.HOME) {
+                HomeScreen(
+                    onOpenPlan      = { navController.navigate(Routes.PLAN) },
+                    onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+                    onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onLogRevision   = {
+                        navController.navigate(Routes.REVISION_LOG) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState    = true
+                        }
+                    },
+                    onSettingsClick = { showSettingsSheet = true }
+                )
+            }
+
+            composable(Routes.PLAN) {
+                PlanScreen(onBack = { navController.popBackStack() })
+            }
 
             composable(Routes.REVISION_LOG) {
                 RevisionLogScreen(
@@ -361,6 +387,12 @@ private fun MutqanBottomBar(
     onNavSelected: (String) -> Unit
 ) {
     val items = listOf(
+        BottomNavItem(
+            route = Routes.HOME,
+            label = stringResource(R.string.nav_home),
+            selectedIcon = Icons.Default.Today,
+            unselectedIcon = Icons.Outlined.Today
+        ),
         BottomNavItem(
             route = Routes.REVISION_LOG,
             label = stringResource(R.string.nav_journal),

@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
@@ -30,9 +31,10 @@ import com.example.mutqan.quran.QuranRepository
         VaultFolderEntity::class,
         UserSubjectEntity::class,
         HifzCoverageEntity::class,
-        SavedPassageEntity::class
+        SavedPassageEntity::class,
+        RevisionPlanEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -145,6 +147,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Revision plans. */
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE `revision_plans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `unit` INTEGER NOT NULL, `amount_per_day` INTEGER NOT NULL, " +
+                        "`rest_days` INTEGER NOT NULL DEFAULT 0, `plan_order` INTEGER NOT NULL DEFAULT 0, " +
+                        "`paused` INTEGER NOT NULL DEFAULT 0, `created_at` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         /** Bookmarks and weak passages. */
         val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -168,7 +182,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

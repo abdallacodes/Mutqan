@@ -7,6 +7,7 @@ import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
@@ -35,6 +36,7 @@ class BackupManager(private val context: Context) {
             val subjects = dao.getAllUserSubjectsSync()
             val coverage = dao.getAllCoverageSync()
             val saved = dao.getAllSavedPassagesSync()
+            val plans = dao.getAllPlansSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
@@ -61,6 +63,20 @@ class BackupManager(private val context: Context) {
                         put(JSONObject().apply {
                             put("start_ayah_id", range.startAyahId)
                             put("end_ayah_id", range.endAyahId)
+                        })
+                    }
+                })
+                put("revision_plans", JSONArray().apply {
+                    plans.forEach { p ->
+                        put(JSONObject().apply {
+                            put("id", p.id)
+                            put("name", p.name)
+                            put("unit", p.unit)
+                            put("amount_per_day", p.amountPerDay)
+                            put("rest_days", p.restDays)
+                            put("plan_order", p.order)
+                            put("paused", p.paused)
+                            put("created_at", p.createdAt)
                         })
                     }
                 })
@@ -233,6 +249,24 @@ class BackupManager(private val context: Context) {
                 logs.map { it.startAyahId..it.endAyahId }
             }
 
+            val plans = mutableListOf<RevisionPlanEntity>()
+            val plansArray = root.optJSONArray("revision_plans")
+            if (plansArray != null) {
+                for (i in 0 until plansArray.length()) {
+                    val obj = plansArray.getJSONObject(i)
+                    plans.add(RevisionPlanEntity(
+                        id = obj.optInt("id", 0),
+                        name = obj.getString("name"),
+                        unit = obj.getInt("unit"),
+                        amountPerDay = obj.getInt("amount_per_day"),
+                        restDays = obj.optInt("rest_days", 0),
+                        order = obj.optInt("plan_order", 0),
+                        paused = obj.optInt("paused", 0),
+                        createdAt = obj.getLong("created_at")
+                    ))
+                }
+            }
+
             val savedPassages = mutableListOf<SavedPassageEntity>()
             val savedArray = root.optJSONArray("saved_passages")
             if (savedArray != null) {
@@ -262,6 +296,7 @@ class BackupManager(private val context: Context) {
             dao.insertSimilarityMembers(members)
             dao.insertUserSubjects(subjects)
             dao.insertSavedPassages(savedPassages)
+            dao.insertPlans(plans)
 
             Result.success(Unit)
         } catch (e: Exception) {
