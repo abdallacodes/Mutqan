@@ -83,6 +83,8 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addCallback(ForeignKeysCallback())
                     .addMigrations(MIGRATION_13_14)
+                    // Versions 1..12 never had a migration path (see git history); start them fresh.
+                    .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                     .build()
                     .also { INSTANCE = it }
             }
