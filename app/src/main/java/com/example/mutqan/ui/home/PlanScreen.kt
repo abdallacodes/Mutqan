@@ -16,7 +16,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
+import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +85,7 @@ fun PlanScreen(onBack: () -> Unit) {
             Label(stringResource(R.string.plan_label_unit))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PlanUnit.entries.forEach { unit ->
-                    FilterChip(
+                    PaperChip(
                         selected = state.unit == unit,
                         onClick = { viewModel.setUnit(unit) },
                         label = {
@@ -127,7 +127,7 @@ fun PlanScreen(onBack: () -> Unit) {
             Label(stringResource(R.string.plan_label_rest))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 (1..7).forEach { day ->
-                    FilterChip(
+                    PaperChip(
                         selected = day in state.restDays,
                         onClick = { viewModel.toggleRestDay(day) },
                         label = { Text(stringResource(WEEKDAY_LABELS[day - 1])) }
@@ -137,12 +137,12 @@ fun PlanScreen(onBack: () -> Unit) {
 
             Label(stringResource(R.string.plan_label_order))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
+                PaperChip(
                     selected = state.order == PlanOrder.ROTATION,
                     onClick = { viewModel.setOrder(PlanOrder.ROTATION) },
                     label = { Text(stringResource(R.string.plan_order_rotation)) }
                 )
-                FilterChip(
+                PaperChip(
                     selected = state.order == PlanOrder.WEAKEST_FIRST,
                     onClick = { viewModel.setOrder(PlanOrder.WEAKEST_FIRST) },
                     label = { Text(stringResource(R.string.plan_order_weakest)) }

@@ -19,14 +19,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
+import com.example.mutqan.ui.theme.AmiriFontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Reusable full-area empty state with an icon, a bold title, and a description.
+ * Reusable full-area empty state: the ayah-end mark, a title in display type and a short
+ * description. [icon] is kept so callers do not change; the page itself carries the tone.
  * Drop it into a Box/Scaffold content area that already has the correct padding.
  */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun EmptyStateCard(
     icon: ImageVector,
     title: String,
@@ -38,42 +42,27 @@ fun EmptyStateCard(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier              = Modifier.padding(32.dp),
-            horizontalAlignment   = Alignment.CenterHorizontally
+            modifier            = Modifier.padding(horizontal = 40.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier         = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector        = icon,
-                    contentDescription = null,
-                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier           = Modifier.size(40.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
             Text(
-                text          = title,
-                style         = MaterialTheme.typography.titleSmall,
-                fontWeight    = FontWeight.Black,
-                color         = MaterialTheme.colorScheme.onBackground,
-                textAlign     = TextAlign.Center
+                text  = "\u06DD",
+                style = TextStyle(fontFamily = AmiriFontFamily, fontSize = 40.sp, lineHeight = 48.sp),
+                color = MaterialTheme.colorScheme.tertiary
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text       = description,
-                style      = MaterialTheme.typography.bodyMedium,
-                color      = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign  = TextAlign.Center,
-                lineHeight = 22.sp
+                text      = title,
+                style     = MaterialTheme.typography.headlineSmall,
+                color     = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text      = description,
+                style     = MaterialTheme.typography.bodyMedium,
+                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
     }

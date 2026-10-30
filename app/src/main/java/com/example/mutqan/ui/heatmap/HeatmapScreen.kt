@@ -58,6 +58,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.ui.components.PaperSlider
+import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.ui.components.HelpDialog
@@ -98,40 +101,15 @@ fun HeatmapScreen(
             ) {
                 // ── Mode Toggle ───────────────────────────────────
                 item(span = { GridItemSpan(2) }) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    ) {
-                        SegmentedButton(
-                            selected = !uiState.isStructuralMode,
-                            onClick = { viewModel.toggleStructuralMode(false) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                            icon = {
-                                Icon(
-                                    Icons.Default.Psychology,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
-                                )
-                            }
-                        ) {
-                            Text(stringResource(R.string.mode_memory_health))
-                        }
-                        SegmentedButton(
-                            selected = uiState.isStructuralMode,
-                            onClick = { viewModel.toggleStructuralMode(true) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                            icon = {
-                                Icon(
-                                    Icons.Default.AccountTree,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
-                                )
-                            }
-                        ) {
-                            Text(stringResource(R.string.mode_structural_flow))
-                        }
-                    }
+                    PaperTabs(
+                        labels = listOf(
+                            stringResource(R.string.mode_memory_health),
+                            stringResource(R.string.mode_structural_flow)
+                        ),
+                        selectedIndex = if (uiState.isStructuralMode) 1 else 0,
+                        onSelect = { viewModel.toggleStructuralMode(it == 1) },
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                 }
 
                 // ── Global Stats ───────────────────────────────────
@@ -161,8 +139,8 @@ fun HeatmapScreen(
                     // ── Forecast Slider ─────────────────────────────────
                     item(span = { GridItemSpan(2) }) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color.Transparent,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -180,7 +158,7 @@ fun HeatmapScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Slider(
+                                PaperSlider(
                                     value = uiState.forecastDays.toFloat(),
                                     onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
                                     valueRange = 0f..30f,
@@ -233,41 +211,25 @@ private fun StatCard(
     sublabel: String,
     valueColor: Color
 ) {
-    Surface(
-        modifier = modifier,
-        shape    = RoundedCornerShape(8.dp),
-        color    = MaterialTheme.colorScheme.surface,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Column(
-            modifier            = Modifier
-                .heightIn(min = 108.dp)
-                .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text       = value,
-                style      = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color      = valueColor,
-                fontFamily = FontFamily.Monospace,
-                maxLines = 1
-            )
-            Text(
-                text          = label,
-                style         = MaterialTheme.typography.labelSmall,
-                fontWeight    = FontWeight.Bold,
-                color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign     = TextAlign.Center
-            )
-            Text(
-                text      = sublabel,
-                style     = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center
-            )
-        }
+    Column(modifier = modifier) {
+        Hairline()
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text     = value,
+            style    = MaterialTheme.typography.displaySmall,
+            color    = valueColor,
+            maxLines = 1
+        )
+        Text(
+            text  = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text  = sublabel,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -313,16 +275,16 @@ internal fun JuzCard(
 ) {
     val healthScore  = (juz.healthPercent / 100f).coerceIn(0f, 1f)
     val healthClr    = juz.healthTone?.let { Color(it) } ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val borderColor  = if (isStructural) MaterialTheme.colorScheme.outlineVariant else (juz.borderTone?.let { Color(it) } ?: MaterialTheme.colorScheme.outline)
+    val borderColor  = MaterialTheme.colorScheme.outlineVariant
     val trackedLabel = "${juz.trackedCount}/${juz.totalPages}${stringResource(R.string.pages_short_suffix)}"
     val healthValue = stringResource(R.string.juz_meta_overall_health_short, juz.healthPercent)
 
     Surface(
         onClick  = onClick,
-        shape    = RoundedCornerShape(12.dp),
-        color    = MaterialTheme.colorScheme.surface,
+        shape    = RoundedCornerShape(4.dp),
+        color    = Color.Transparent,
         border   = BorderStroke(1.dp, borderColor),
-        shadowElevation = if (isStructural) 0.dp else 1.dp,
+        shadowElevation = 0.dp,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = if (isStructural) 80.dp else 132.dp)
@@ -341,8 +303,8 @@ internal fun JuzCard(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 12.dp),
-                    style = if (isStructural) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isStructural) FontWeight.Black else FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Start,
                     maxLines = 1
@@ -377,10 +339,10 @@ internal fun JuzCard(
                     progress   = { healthScore },
                     modifier   = Modifier
                         .fillMaxWidth()
-                        .height(8.dp),
+                        .height(3.dp),
                     color      = healthClr,
-                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-                    strokeCap  = StrokeCap.Round
+                    trackColor = MaterialTheme.colorScheme.outlineVariant,
+                    strokeCap  = StrokeCap.Butt
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -402,8 +364,8 @@ internal fun JuzCard(
 @Composable
 private fun JuzCardSkeleton(juzId: Int) {
     Surface(
-        shape    = RoundedCornerShape(12.dp),
-        color    = MaterialTheme.colorScheme.surface,
+        shape    = RoundedCornerShape(4.dp),
+        color    = Color.Transparent,
         border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()

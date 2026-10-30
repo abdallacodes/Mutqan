@@ -68,10 +68,10 @@ fun AnchorCard(
     onDeleteSubject: (UserSubjectEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val emerald = Color(0xFF2E7D32)
-    val teal    = Color(0xFF00796B)
-    val indigo  = Color(0xFF303F9F)
-    val amber   = Color(0xFFFFA000)
+    val emerald = Color(0xFF5E8C6E)
+    val teal    = Color(0xFF4F8A86)
+    val indigo  = Color(0xFF6577A8)
+    val amber   = Color(0xFFC9A24B)
     
     val palette = listOf(emerald, teal, indigo, amber)
     val accentColor = palette[(data.unit.hizb - 1) % palette.size]

@@ -167,14 +167,12 @@ private fun SurahRow(
 
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 JuzBadge(juz = item.startJuz)
 
                 if (item.groupCount > 0) {
                     GroupCountBadge(count = item.groupCount)
-                } else {
-                    Spacer(Modifier.size(16.dp))
                 }
             }
         }
@@ -183,7 +181,7 @@ private fun SurahRow(
             onClick     = onOpenInMushaf,
             enabled     = item.startPage > 0,
             colors      = IconButtonDefaults.iconButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         ) {
             Icon(

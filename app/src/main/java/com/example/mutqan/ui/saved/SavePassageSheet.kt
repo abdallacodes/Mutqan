@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -82,7 +82,7 @@ fun SavePassageSheet(
             Label(stringResource(R.string.saved_label_kind))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SavedKind.entries.forEach { option ->
-                    FilterChip(
+                    PaperChip(
                         selected = option == kind,
                         onClick = { kind = option },
                         label = { Text(option.localizedLabel()) }
@@ -94,7 +94,7 @@ fun SavePassageSheet(
                 Label(stringResource(R.string.saved_label_tags))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     WeakTag.entries.forEach { tag ->
-                        FilterChip(
+                        PaperChip(
                             selected = tag in tags,
                             onClick = { tags = if (tag in tags) tags - tag else tags + tag },
                             label = { Text(tag.localizedLabel()) }
@@ -106,7 +106,7 @@ fun SavePassageSheet(
             Label(stringResource(R.string.saved_label_priority))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(SavedPassage.PRIORITY_LOW, SavedPassage.PRIORITY_NORMAL, SavedPassage.PRIORITY_HIGH).forEach { option ->
-                    FilterChip(
+                    PaperChip(
                         selected = option == priority,
                         onClick = { priority = option },
                         label = { Text(priorityLabel(option)) }

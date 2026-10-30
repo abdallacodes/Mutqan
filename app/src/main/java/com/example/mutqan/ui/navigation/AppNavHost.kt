@@ -24,11 +24,15 @@ import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.CompareArrows
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
@@ -411,14 +415,14 @@ private fun MutqanBottomBar(
         BottomNavItem(
             route = Routes.REVISION_LOG,
             label = stringResource(R.string.nav_journal),
-            selectedIcon = Icons.Default.List,
-            unselectedIcon = Icons.Outlined.MenuBook
+            selectedIcon = Icons.Default.EditNote,
+            unselectedIcon = Icons.Outlined.EditNote
         ),
         BottomNavItem(
             route = Routes.VAULT_LIST,
             label = stringResource(R.string.nav_vault),
-            selectedIcon = Icons.Default.AutoStories,
-            unselectedIcon = Icons.Outlined.AutoStories
+            selectedIcon = Icons.Default.CompareArrows,
+            unselectedIcon = Icons.Outlined.CompareArrows
         ),
         BottomNavItem(
             route = Routes.VERSE_SEARCH,

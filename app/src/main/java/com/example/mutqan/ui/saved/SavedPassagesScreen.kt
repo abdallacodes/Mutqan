@@ -16,7 +16,7 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -91,13 +91,13 @@ fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
+                PaperChip(
                     selected = state.kindFilter == null,
                     onClick = { viewModel.setKindFilter(null) },
                     label = { Text(stringResource(R.string.saved_filter_all)) }
                 )
                 SavedKind.entries.forEach { kind ->
-                    FilterChip(
+                    PaperChip(
                         selected = state.kindFilter == kind,
                         onClick = { viewModel.setKindFilter(kind) },
                         label = { Text(kind.localizedLabel()) }
@@ -107,7 +107,7 @@ fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
             if (state.kindFilter != SavedKind.BOOKMARK) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     WeakTag.entries.forEach { tag ->
-                        FilterChip(
+                        PaperChip(
                             selected = tag in state.tagFilter,
                             onClick = { viewModel.toggleTagFilter(tag) },
                             label = { Text(tag.localizedLabel()) }

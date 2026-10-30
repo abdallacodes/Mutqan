@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
@@ -76,7 +77,7 @@ import com.example.mutqan.ui.components.QuickPeekTarget
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.ui.theme.DifficultyCritical
 
-private val YellowAccent = Color(0xFFEDBB4A)
+private val YellowAccent = Color(0xFFD4A94C)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -234,16 +235,13 @@ private fun SearchFiltersSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-            .padding(8.dp)
+            .padding(horizontal = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { expanded = !expanded }.padding(vertical = 4.dp, horizontal = 8.dp)
         ) {
-            Icon(Icons.Default.FilterAlt, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.label_filters), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.label_filters), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
             Spacer(Modifier.weight(1f))
             Text(
                 if (expanded) stringResource(R.string.label_hide) else stringResource(R.string.label_show),
@@ -334,13 +332,7 @@ private fun RandomAyahSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-            .border(
-                width = 1.dp,
-                color = if (expanded) YellowAccent.copy(alpha = 0.5f) else Color.Transparent,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(8.dp)
+            .padding(horizontal = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -348,13 +340,10 @@ private fun RandomAyahSection(
                 .clickable { expanded = !expanded }
                 .padding(vertical = 4.dp, horizontal = 8.dp)
         ) {
-            Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp), tint = YellowAccent)
-            Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.label_random_ayah),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = YellowAccent
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.weight(1f))
             Text(
@@ -367,25 +356,17 @@ private fun RandomAyahSection(
         if (expanded) {
             Spacer(Modifier.height(12.dp))
 
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                RandomScope.values().forEachIndexed { index, randomScope ->
-                    SegmentedButton(
-                        selected = scope == randomScope,
-                        onClick = { onScopeChange(randomScope) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = RandomScope.values().size),
-                        label = {
-                            Text(
-                                text = when (randomScope) {
-                                    RandomScope.JUZ -> stringResource(R.string.scope_juz)
-                                    RandomScope.SURAH -> stringResource(R.string.scope_surah)
-                                    RandomScope.PAGE_RANGE -> stringResource(R.string.scope_page_range)
-                                },
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    )
-                }
-            }
+            PaperTabs(
+                labels = RandomScope.values().map {
+                    when (it) {
+                        RandomScope.JUZ -> stringResource(R.string.scope_juz)
+                        RandomScope.SURAH -> stringResource(R.string.scope_surah)
+                        RandomScope.PAGE_RANGE -> stringResource(R.string.scope_page_range)
+                    }
+                },
+                selectedIndex = RandomScope.values().indexOf(scope),
+                onSelect = { onScopeChange(RandomScope.values()[it]) }
+            )
 
             Spacer(Modifier.height(16.dp))
 

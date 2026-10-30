@@ -33,9 +33,9 @@ val NightError                 = Color(0xFFE9897F)
 
 // ── Shared semantic colours ───────────────────────────────────────────────────
 // Difficulty / health indicators — muted pastels for less visual strain.
-val DifficultySmooth    = Color(0xFF6FBF92)    // emerald mint
-val DifficultyStruggled = Color(0xFFE1B85A)    // warm honey
-val DifficultyCritical  = Color(0xFFE9897F)    // soft coral
+val DifficultySmooth    = Color(0xFF7FAE8C)    // sage
+val DifficultyStruggled = Color(0xFFD2A94A)    // ochre
+val DifficultyCritical  = Color(0xFFD0705F)    // terracotta
 
 // ── Structural Flow Palette ──────────────────────────────────────────────────
 val StructuralEmerald = Color(0xFF2ECC71)

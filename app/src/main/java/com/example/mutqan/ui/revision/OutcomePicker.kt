@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.FilterChip
+import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +51,7 @@ fun OutcomePicker(
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RecallOutcome.entries.forEach { option ->
-                FilterChip(
+                PaperChip(
                     selected = option == outcome,
                     onClick = { onOutcomeChange(option) },
                     label = { Text(option.localizedLabel()) }
@@ -73,7 +73,7 @@ fun OutcomePicker(
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MistakeTag.entries.forEach { tag ->
-                    FilterChip(
+                    PaperChip(
                         selected = tag in tags,
                         onClick = { onTagsChange(if (tag in tags) tags - tag else tags + tag) },
                         label = { Text(tag.localizedLabel()) }

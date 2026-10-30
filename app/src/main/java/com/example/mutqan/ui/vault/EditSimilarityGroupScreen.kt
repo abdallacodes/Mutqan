@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperSlider
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
@@ -757,9 +758,7 @@ private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(12.dp)
+            .padding(vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -778,15 +777,11 @@ private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
         }
-        Slider(
+        PaperSlider(
             value = quality,
             onValueChange = onSelect,
             valueRange = 0.1f..1f,
-            steps = 8,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary
-            )
+            steps = 8
         )
     }
 }

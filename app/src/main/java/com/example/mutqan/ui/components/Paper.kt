@@ -1,6 +1,14 @@
 package com.example.mutqan.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Slider
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import com.example.mutqan.R
 import androidx.compose.ui.res.stringResource
@@ -167,6 +175,104 @@ fun PaperHeader(
         }
         OrnamentDivider(Modifier.padding(horizontal = PaperSpace.Gutter))
     }
+}
+
+/** Two or three choices set as words with a rule under the current one, instead of a segmented block. */
+@Composable
+fun PaperTabs(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        labels.forEachIndexed { i, label ->
+            val selected = i == selectedIndex
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .clickable(role = Role.Tab, onClick = { onSelect(i) }),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                )
+            }
+        }
+    }
+}
+
+/** A choice that can be on or off: plain words, with a rule under them when chosen. Replaces filter chips. */
+@Composable
+fun PaperChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .heightIn(min = 44.dp)
+            .clickable(role = Role.Checkbox, onClick = onClick)
+            .padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        ProvideTextStyle(
+            MaterialTheme.typography.labelLarge.copy(
+                color = color,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+        ) { label() }
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .fillMaxWidth()
+                .height(if (selected) 2.dp else 1.dp)
+                .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+        )
+    }
+}
+
+/** A thin slider: a hairline track, the filled part in the action colour, a small round handle. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PaperSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    steps: Int = 0
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val rule = MaterialTheme.colorScheme.outline
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        valueRange = valueRange,
+        steps = steps,
+        thumb = {
+            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(14.dp).background(primary, CircleShape))
+            }
+        },
+        track = { state ->
+            val span = state.valueRange.endInclusive - state.valueRange.start
+            val fraction = if (span == 0f) 0f else ((state.value - state.valueRange.start) / span).coerceIn(0f, 1f)
+            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(rule)) {
+                Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(primary))
+            }
+        }
+    )
 }
 
 /** Spacing used between the parts of a page. */

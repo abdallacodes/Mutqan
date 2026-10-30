@@ -21,7 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -107,7 +107,7 @@ fun CoverageScreen(onDone: () -> Unit) {
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     (1..30).forEach { juz ->
-                        FilterChip(
+                        PaperChip(
                             selected = juz in state.fullJuz,
                             onClick = { viewModel.toggleJuz(juz) },
                             label = { Text(juz.toString()) }
@@ -205,7 +205,7 @@ private fun AddRangeDialog(
                         RangeMode.PAGE to R.string.coverage_by_page,
                         RangeMode.AYAH to R.string.coverage_by_ayah
                     ).forEach { (option, label) ->
-                        FilterChip(
+                        PaperChip(
                             selected = mode == option,
                             onClick = { mode = option; invalid = false },
                             label = { Text(stringResource(label)) }

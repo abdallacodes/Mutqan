@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.EmptyStateCard
 import androidx.compose.ui.unit.dp
@@ -179,15 +180,11 @@ fun MutashabihatListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick        = { onAddGroup(currentFolderId) },
-                shape          = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor   = MaterialTheme.colorScheme.onPrimary,
-                elevation      = FloatingActionButtonDefaults.elevation(0.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_group))
-            }
+            PaperButton(
+                text = stringResource(R.string.cd_add_group),
+                onClick = { onAddGroup(currentFolderId) },
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -513,9 +510,9 @@ private fun GroupCard(
 ) {
     val quality       = item.group.masterQuality
     val strengthColor = when {
-        quality >= 0.70f -> Color(0xFF4CAF50)
-        quality >= 0.40f -> Color(0xFFFFC107)
-        else          -> Color(0xFFF44336)
+        quality >= 0.70f -> Color(0xFF7FAE8C)
+        quality >= 0.40f -> Color(0xFFD2A94A)
+        else          -> Color(0xFFD0705F)
     }
     val versesLabel   = if (item.memberCount == 1)
         stringResource(R.string.verses_singular, item.memberCount)

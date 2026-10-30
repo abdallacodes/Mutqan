@@ -1,6 +1,7 @@
 package com.example.mutqan.ui.heatmap
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import com.example.mutqan.domain.PageStability
 import kotlin.math.pow
 
@@ -9,23 +10,28 @@ internal fun pageColor(ps: PageStability): Color {
 }
 
 internal fun pageColor(score: Float, isTracked: Boolean): Color {
-    if (!isTracked) return Color(0xFF1E2020)
+    if (!isTracked) return HealthUntracked
     return healthColor(score)
 }
 
 /** Packed ARGB for lists / arrays — optimized for primitive score input. */
 internal fun pageColorValue(score: Float, isTracked: Boolean): ULong =
-    if (!isTracked) 0xFF1E2020UL
+    if (!isTracked) HealthUntracked.value
     else healthColor(score).value
 
 internal fun pageColorValue(ps: PageStability): ULong =
     pageColorValue(ps.score, ps.isTracked)
 
+private val HealthLow = Color(0xFFC0614E)
+private val HealthMid = Color(0xFFC9A24B)
+private val HealthHigh = Color(0xFF6FA283)
+private val HealthUntracked = Color(0xFF2A251D)
+
 internal fun healthColor(score: Float): Color {
-    if (!score.isFinite() || score <= 0f) return Color(0xFF1E2020)
-    // Scale hue from 0 (red) to 120 (green) based on retrievability
-    val hue = score.coerceIn(0f, 1f) * 120f
-    return Color.hsv(hue, saturation = 0.82f, value = 0.76f)
+    if (!score.isFinite() || score <= 0f) return HealthUntracked
+    // terracotta (forgotten) -> ochre (fading) -> sage (solid)
+    val s = score.coerceIn(0f, 1f)
+    return if (s < 0.5f) lerp(HealthLow, HealthMid, s / 0.5f) else lerp(HealthMid, HealthHigh, (s - 0.5f) / 0.5f)
 }
 
 internal fun adaptiveTextColor(bgColor: Color): Color {
