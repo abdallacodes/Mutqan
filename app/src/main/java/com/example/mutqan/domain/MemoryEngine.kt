@@ -1,6 +1,5 @@
 package com.example.mutqan.domain
 
-import com.example.mutqan.data.local.entity.RevisionLogEntity
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -31,7 +30,7 @@ object MemoryEngine {
      * @param similarityLinks Map of page to its semantically similar pages
      */
     fun computeCurrentState(
-        logs: List<RevisionLogEntity>,
+        logs: List<RevisionLog>,
         similarityLinks: Map<Int, List<Int>>
     ): MemoryState {
         val stability = FloatArray(TOTAL_PAGES) { 0f }

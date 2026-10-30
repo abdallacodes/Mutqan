@@ -66,7 +66,7 @@ class HeatmapViewModel(
      * Optimized State pipeline.
      */
     val uiState: StateFlow<HeatmapUiState> = combine(
-        dao.getAllRevisionLogs(),
+        study.revisionLogs(),
         _juzToPages,
         _forecastDays,
         prefs.isStructuralMode
@@ -201,14 +201,7 @@ class HeatmapViewModel(
     fun quickLog(page: Int) {
         _selectedPage.value = null
         viewModelScope.launch {
-            dao.insertRevisionLog(
-                com.example.mutqan.data.local.entity.RevisionLogEntity(
-                    startPage  = page,
-                    endPage    = page,
-                    timestamp  = System.currentTimeMillis(),
-                    manualStability = 1.0f
-                )
-            )
+            study.addRevision(page, page, 1.0f)
         }
     }
 }

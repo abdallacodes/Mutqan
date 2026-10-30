@@ -4,9 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.StudyDao
-import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.domain.RevisionLog
+import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,14 +41,14 @@ internal fun startOfTodayUtcMillis(): Long {
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-class RevisionViewModel(private val dao: StudyDao) : ViewModel() {
+class RevisionViewModel(private val study: StudyRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RevisionUiState(selectedDateMillis = startOfTodayUtcMillis()))
     val uiState: StateFlow<RevisionUiState> = _uiState.asStateFlow()
 
     /** Latest 10 revision logs, newest first. Re-emits on every DB change. */
-    val recentLogs: StateFlow<List<RevisionLogEntity>> = dao
-        .getAllRevisionLogs()
+    val recentLogs: StateFlow<List<RevisionLog>> = study
+        .revisionLogs()
         .map { it.take(10) }
         .stateIn(
             scope = viewModelScope,
@@ -91,15 +90,7 @@ class RevisionViewModel(private val dao: StudyDao) : ViewModel() {
         }
 
         viewModelScope.launch {
-            dao.insertRevisionLog(
-                RevisionLogEntity(
-                    startPage  = start!!,
-                    endPage    = end!!,
-                    timestamp  = System.currentTimeMillis(),
-                    dateMillis = state.selectedDateMillis,
-                    manualStability = state.manualQuality
-                )
-            )
+            study.addRevision(start!!, end!!, state.manualQuality, state.selectedDateMillis)
             _uiState.update { RevisionUiState(selectedDateMillis = startOfTodayUtcMillis()) }
         }
     }
@@ -110,5 +101,5 @@ class RevisionViewModel(private val dao: StudyDao) : ViewModel() {
 class RevisionViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        RevisionViewModel(AppDatabase.getInstance(context).studyDao()) as T
+        RevisionViewModel(StudyRepository.create(context)) as T
 }

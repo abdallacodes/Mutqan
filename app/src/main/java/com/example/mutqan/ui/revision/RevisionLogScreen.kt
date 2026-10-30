@@ -66,7 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
-import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.domain.RevisionLog
 import com.example.mutqan.ui.components.EmptyStateCard
 import com.example.mutqan.ui.components.HelpDialog
 import com.example.mutqan.ui.components.TopBarOverflowMenu
@@ -455,7 +455,7 @@ private fun ManualQualitySection(
 // ── History items ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun RevisionLogItem(log: RevisionLogEntity) {
+private fun RevisionLogItem(log: RevisionLog) {
     val context    = LocalContext.current
     val quality    = log.manualStability
     val healthClr = healthColor(quality)

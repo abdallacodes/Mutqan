@@ -9,7 +9,6 @@ import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
-import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
@@ -68,7 +67,7 @@ class JuzDetailViewModel(
      * Standard reactive pipeline for pages.
      */
     val pagesWithSurahs: StateFlow<List<PageWithSurahs>> = combine(
-        dao.getAllRevisionLogs(),
+        study.revisionLogs(),
         MutableStateFlow(0)
     ) { logs, forecastDays ->
         val links = study.pageSimilarityLinks()
@@ -193,14 +192,7 @@ class JuzDetailViewModel(
     fun logPage(page: Int, quality: Float) {
         _selectedPage.value = null
         viewModelScope.launch {
-            dao.insertRevisionLog(
-                RevisionLogEntity(
-                    startPage  = page,
-                    endPage    = page,
-                    timestamp  = System.currentTimeMillis(),
-                    manualStability = quality
-                )
-            )
+            study.addRevision(page, page, quality)
         }
     }
 

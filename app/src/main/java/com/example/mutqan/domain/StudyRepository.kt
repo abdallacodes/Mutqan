@@ -7,6 +7,7 @@ import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.dao.SurahMeta
+import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
@@ -71,6 +72,58 @@ class StudyRepository(
         else null
 
     private val byReadingOrder = compareBy<MemberVerseRef>({ it.surahId }, { it.ayahNumber })
+
+    // ── Revision logs ─────────────────────────────────────────────────────────
+
+    /** Pages [RevisionLogEntity] covers in the current layout; null if its ayah ids are unknown. */
+    private fun RevisionLogEntity.toLog(): RevisionLog? {
+        if (startAyahId !in index || endAyahId !in index) return null
+        return RevisionLog(
+            id = id,
+            startPage = index.firstPageOf(startAyahId),
+            endPage = index.firstPageOf(endAyahId).coerceAtLeast(index.firstPageOf(startAyahId)),
+            timestamp = timestamp,
+            manualStability = manualStability,
+            dateMillis = dateMillis,
+            startAyahId = startAyahId,
+            endAyahId = endAyahId
+        )
+    }
+
+    /** Newest first. */
+    fun revisionLogs(): Flow<List<RevisionLog>> =
+        dao.getAllRevisionLogs().map { logs -> logs.mapNotNull { it.toLog() } }.flowOn(Dispatchers.IO)
+
+    /** Records that pages [startPage]..[endPage] were revised. Returns false if no ayah begins there. */
+    suspend fun addRevision(startPage: Int, endPage: Int, quality: Float, dateMillis: Long = 0L): Boolean =
+        withContext(Dispatchers.IO) {
+            val range = quran.ayahIdRangeOfPages(startPage, endPage) ?: return@withContext false
+            dao.insertRevisionLog(
+                RevisionLogEntity(
+                    startAyahId = range.first,
+                    endAyahId = range.last,
+                    timestamp = System.currentTimeMillis(),
+                    dateMillis = dateMillis,
+                    manualStability = quality
+                )
+            )
+            true
+        }
+
+    /** Rewrites [log] to cover [startPage]..[endPage]; its creation timestamp is kept. */
+    suspend fun updateRevision(log: RevisionLog, startPage: Int, endPage: Int, quality: Float, dateMillis: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            val range = quran.ayahIdRangeOfPages(startPage, endPage) ?: return@withContext false
+            dao.updateRevisionLog(
+                log.toEntity().copy(
+                    startAyahId = range.first,
+                    endAyahId = range.last,
+                    dateMillis = dateMillis,
+                    manualStability = quality
+                )
+            )
+            true
+        }
 
     // ── Vault lists ───────────────────────────────────────────────────────────
 

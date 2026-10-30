@@ -6,7 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
-import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.domain.RevisionLog
+import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,7 @@ import java.util.TimeZone
 /** All revision logs that share the same month and year, e.g. "APRIL 2026". */
 data class RevisionLogGroup(
     val label: String,
-    val logs: List<RevisionLogEntity>
+    val logs: List<RevisionLog>
 )
 
 /**
@@ -34,7 +35,7 @@ data class RevisionLogGroup(
  * create a precise copy with only the edited fields changed.
  */
 data class EditLogUiState(
-    val originalLog: RevisionLogEntity,
+    val originalLog: RevisionLog,
     val startPage: String,
     val endPage: String,
     val manualQuality: Float,
@@ -45,7 +46,10 @@ data class EditLogUiState(
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
+class RevisionHistoryViewModel(
+    private val dao: StudyDao,
+    private val study: StudyRepository
+) : ViewModel() {
 
     private val monthYearFmt = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).also {
         it.timeZone = TimeZone.getTimeZone("UTC")
@@ -53,11 +57,11 @@ class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
 
     /**
      * ALL revision logs grouped by month-year (newest group first, newest log
-     * first within each group).  Uses [RevisionLogEntity.dateMillis] when set;
-     * falls back to [RevisionLogEntity.timestamp] for legacy entries.
+     * first within each group).  Uses [RevisionLog.dateMillis] when set;
+     * falls back to [RevisionLog.timestamp] for legacy entries.
      */
-    val groupedLogs: StateFlow<List<RevisionLogGroup>> = dao
-        .getAllRevisionLogs()
+    val groupedLogs: StateFlow<List<RevisionLogGroup>> = study
+        .revisionLogs()
         .map { logs ->
             logs.groupBy { log ->
                 val millis = if (log.dateMillis > 0L) log.dateMillis else log.timestamp
@@ -89,7 +93,7 @@ class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
     private val _editState = MutableStateFlow<EditLogUiState?>(null)
     val editState: StateFlow<EditLogUiState?> = _editState.asStateFlow()
 
-    fun startEdit(log: RevisionLogEntity) {
+    fun startEdit(log: RevisionLog) {
         _editState.value = EditLogUiState(
             originalLog        = log,
             startPage          = log.startPage.toString(),
@@ -122,15 +126,8 @@ class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
         }
 
         viewModelScope.launch {
-            dao.updateRevisionLog(
-                state.originalLog.copy(
-                    startPage  = start!!,
-                    endPage    = end!!,
-                    dateMillis = state.selectedDateMillis,
-                    manualStability = state.manualQuality
-                    // timestamp (creation time) is preserved unchanged
-                )
-            )
+            // timestamp (creation time) is preserved unchanged
+            study.updateRevision(state.originalLog, start!!, end!!, state.manualQuality, state.selectedDateMillis)
             _editState.value = null
         }
     }
@@ -139,10 +136,10 @@ class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
 
     // ── Delete confirmation state ─────────────────────────────────────────────
 
-    private val _pendingDelete = MutableStateFlow<RevisionLogEntity?>(null)
-    val pendingDelete: StateFlow<RevisionLogEntity?> = _pendingDelete.asStateFlow()
+    private val _pendingDelete = MutableStateFlow<RevisionLog?>(null)
+    val pendingDelete: StateFlow<RevisionLog?> = _pendingDelete.asStateFlow()
 
-    fun requestDelete(log: RevisionLogEntity) { _pendingDelete.value = log }
+    fun requestDelete(log: RevisionLog) { _pendingDelete.value = log }
 
     fun confirmDelete() {
         val log = _pendingDelete.value ?: return
@@ -158,5 +155,5 @@ class RevisionHistoryViewModel(private val dao: StudyDao) : ViewModel() {
 class RevisionHistoryViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        RevisionHistoryViewModel(AppDatabase.getInstance(context).studyDao()) as T
+        RevisionHistoryViewModel(AppDatabase.getInstance(context).studyDao(), StudyRepository.create(context)) as T
 }

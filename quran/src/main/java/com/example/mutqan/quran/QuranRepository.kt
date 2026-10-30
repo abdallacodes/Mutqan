@@ -263,6 +263,17 @@ class QuranRepository private constructor(context: Context) {
         db.rawQuery("SELECT MIN(id), MAX(id) FROM ayahs WHERE juz = ?", arrayOf(juz.toString()))
             .use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getInt(0)..c.getInt(1) else null }
 
+    /**
+     * The ayahs that begin on pages [startPage]..[endPage] (inclusive), as global ids; null when
+     * none do. Every Mushaf page has an ayah that starts on it, so
+     * `firstPageOf(range.first)..firstPageOf(range.last)` gives the pages back exactly.
+     */
+    fun ayahIdRangeOfPages(startPage: Int, endPage: Int): IntRange? =
+        db.rawQuery(
+            "SELECT MIN(id), MAX(id) FROM ayahs WHERE first_page BETWEEN ? AND ?",
+            arrayOf(startPage.toString(), endPage.toString())
+        ).use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getInt(0)..c.getInt(1) else null }
+
     /** The eight hizb quarters of [juz]. */
     fun rubs(juz: Int): List<QuranRub> =
         db.rawQuery(

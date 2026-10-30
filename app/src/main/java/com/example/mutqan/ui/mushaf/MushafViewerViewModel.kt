@@ -61,7 +61,7 @@ class MushafViewerViewModel(
     // ── Combined pipeline (Standard FSRS Logic) ───────────────────────────────
 
     val state: StateFlow<MushafViewerState> = combine(
-        dao.getAllRevisionLogs(),
+        study.revisionLogs(),
         _pageSurahMap
     ) { logs, surahMap ->
         // Heavy lifting moved to Default dispatcher via flowOn

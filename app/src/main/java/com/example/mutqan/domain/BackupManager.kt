@@ -3,6 +3,7 @@ package com.example.mutqan.domain
 import android.content.Context
 import android.net.Uri
 import com.example.mutqan.R
+import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
@@ -20,6 +21,8 @@ class BackupManager(private val context: Context) {
 
     private val db = AppDatabase.getInstance(context)
     private val dao = db.studyDao()
+    private val quran = QuranRepository.getInstance(context)
+    private val index by lazy { quran.ayahIndex }
 
     suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -31,13 +34,16 @@ class BackupManager(private val context: Context) {
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
-                put("version", 3)
+                put("version", 4)
                 put("revision_logs", JSONArray().apply {
                     logs.forEach { log ->
                         put(JSONObject().apply {
                             put("id", log.id)
-                            put("start_page", log.startPage)
-                            put("end_page", log.endPage)
+                            put("start_ayah_id", log.startAyahId)
+                            put("end_ayah_id", log.endAyahId)
+                            // Derived page numbers: informational, and read by older builds.
+                            put("start_page", if (log.startAyahId in index) index.firstPageOf(log.startAyahId) else 0)
+                            put("end_page", if (log.endAyahId in index) index.firstPageOf(log.endAyahId) else 0)
                             put("timestamp", log.timestamp)
                             put("manual_stability", log.manualStability)
                             put("date_millis", log.dateMillis)
@@ -108,10 +114,17 @@ class BackupManager(private val context: Context) {
             if (logsArray != null) {
                 for (i in 0 until logsArray.length()) {
                     val obj = logsArray.getJSONObject(i)
+                    // Version 4 stores ayah ids; older files only have page numbers.
+                    val range = if (obj.has("start_ayah_id") && obj.has("end_ayah_id")) {
+                        obj.getInt("start_ayah_id")..obj.getInt("end_ayah_id")
+                    } else {
+                        val start = obj.getInt("start_page").coerceIn(1, 604)
+                        quran.ayahIdRangeOfPages(start, obj.getInt("end_page").coerceIn(start, 604)) ?: continue
+                    }
                     logs.add(RevisionLogEntity(
                         id = obj.optInt("id", 0),
-                        startPage = obj.getInt("start_page"),
-                        endPage = obj.getInt("end_page"),
+                        startAyahId = range.first,
+                        endAyahId = range.last,
                         timestamp = obj.getLong("timestamp"),
                         manualStability = obj.getDouble("manual_stability").toFloat(),
                         dateMillis = obj.optLong("date_millis", 0L)

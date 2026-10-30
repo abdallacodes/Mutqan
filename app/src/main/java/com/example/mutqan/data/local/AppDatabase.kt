@@ -12,6 +12,7 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.quran.QuranRepository
 
 /**
  * The user's own data only. Quran text, pages, juz and hizb quarters live in the `:quran`
@@ -25,7 +26,7 @@ import com.example.mutqan.data.local.entity.VaultFolderEntity
         VaultFolderEntity::class,
         UserSubjectEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -74,6 +75,36 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Revision logs move from page numbers to ayah ranges. A log of pages p1..p2 becomes the
+         * ayahs that begin on those pages (every page has one, so the pages come back exactly).
+         * Rows whose pages match no ayah are dropped.
+         */
+        fun migration14to15(context: Context) = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val quran = QuranRepository.getInstance(context)
+                db.execSQL(
+                    "CREATE TABLE `revision_logs_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`start_ayah_id` INTEGER NOT NULL, `end_ayah_id` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, " +
+                        "`date_millis` INTEGER NOT NULL DEFAULT 0, `manual_stability` REAL NOT NULL)"
+                )
+                db.query("SELECT `id`, `start_page`, `end_page`, `timestamp`, `date_millis`, `manual_stability` FROM `revision_logs`").use { c ->
+                    while (c.moveToNext()) {
+                        val start = c.getInt(1).coerceIn(1, 604)
+                        val end = c.getInt(2).coerceIn(start, 604)
+                        val range = quran.ayahIdRangeOfPages(start, end) ?: continue
+                        db.execSQL(
+                            "INSERT INTO `revision_logs_new` (`id`, `start_ayah_id`, `end_ayah_id`, `timestamp`, `date_millis`, `manual_stability`) " +
+                                "VALUES (?, ?, ?, ?, ?, ?)",
+                            arrayOf<Any>(c.getInt(0), range.first, range.last, c.getLong(3), c.getLong(4), if (c.isNull(5)) 0.5f else c.getFloat(5))
+                        )
+                    }
+                }
+                db.execSQL("DROP TABLE `revision_logs`")
+                db.execSQL("ALTER TABLE `revision_logs_new` RENAME TO `revision_logs`")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -82,7 +113,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "mutqan.db"
                 )
                     .addCallback(ForeignKeysCallback())
-                    .addMigrations(MIGRATION_13_14)
+                    .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext))
                     // Versions 1..12 never had a migration path (see git history); start them fresh.
                     .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                     .build()

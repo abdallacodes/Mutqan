@@ -69,7 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
-import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.domain.RevisionLog
 import com.example.mutqan.ui.theme.DifficultyCritical
 import kotlin.math.roundToInt
 import java.text.SimpleDateFormat
@@ -219,7 +219,7 @@ private fun MonthYearHeader(label: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeToDismissLogItem(
-    log: RevisionLogEntity,
+    log: RevisionLog,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -268,7 +268,7 @@ private fun SwipeToDismissLogItem(
 // ── Single history log card ───────────────────────────────────────────────────
 
 @Composable
-private fun HistoryLogItem(log: RevisionLogEntity, onClick: () -> Unit) {
+private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
     val quality = log.manualStability
     val healthClr = when {
         quality >= 0.70f -> Color(0xFF4CAF50)
@@ -333,7 +333,7 @@ private fun HistoryLogItem(log: RevisionLogEntity, onClick: () -> Unit) {
 
 @Composable
 private fun DeleteConfirmDialog(
-    log: RevisionLogEntity,
+    log: RevisionLog,
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
