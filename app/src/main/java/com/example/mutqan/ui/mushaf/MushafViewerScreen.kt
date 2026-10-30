@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
+import com.example.mutqan.domain.AyahGroup
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.quran.MushafFontManager
 import com.example.mutqan.quran.MushafPageView
@@ -167,9 +168,11 @@ fun MushafViewerScreen(
     var showGroupAyahs by rememberSaveable { mutableStateOf(true) }
     var peekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
     var peekAyahId by remember { mutableStateOf<Int?>(null) }
+    var peekGroups by remember { mutableStateOf<List<AyahGroup>>(emptyList()) }
     LaunchedEffect(peekAyahId) {
         val id = peekAyahId ?: return@LaunchedEffect
         val ayah = withContext(Dispatchers.IO) { quran.ayahById(id) }
+        peekGroups = viewModel.groupsOfAyah(id)
         peekTarget = ayah?.let { QuickPeekTarget(it.id, it.surah, it.ayah, it.firstPage) }
     }
     val marks = remember(groupAyahs, showGroupAyahs) {
@@ -368,7 +371,10 @@ fun MushafViewerScreen(
     peekTarget?.let { target ->
         QuickPeekBottomSheet(
             target    = target,
-            onDismiss = { peekTarget = null; peekAyahId = null }
+            onDismiss = { peekTarget = null; peekAyahId = null; peekGroups = emptyList() },
+            extraContent = if (peekGroups.isEmpty()) null else {
+                { AyahGroupsSection(peekGroups) }
+            }
         )
     }
 }

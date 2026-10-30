@@ -77,6 +77,12 @@ abstract class StudyDao {
     @Query("SELECT * FROM similarity_members WHERE group_id = :groupId")
     abstract fun observeMembersOfGroup(groupId: Int): Flow<List<SimilarityMemberEntity>>
 
+    @Query("SELECT g.* FROM similarity_groups g JOIN similarity_members m ON m.group_id = g.id WHERE m.verse_id = :ayahId ORDER BY g.id")
+    abstract suspend fun getGroupsOfAyah(ayahId: Int): List<SimilarityGroupEntity>
+
+    @Query("SELECT verse_id FROM similarity_members WHERE group_id = :groupId ORDER BY verse_id")
+    abstract suspend fun getMemberAyahIds(groupId: Int): List<Int>
+
     /**
      * Every (ayah, group) pair in the given group or folder tree, for the self-test quiz.
      * The caller picks one at random.

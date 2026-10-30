@@ -107,18 +107,17 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "mutqan.db"
-                )
-                    .addCallback(ForeignKeysCallback())
-                    .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext))
-                    // Versions 1..12 never had a migration path (see git history); start them fresh.
-                    .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-                    .build()
-                    .also { INSTANCE = it }
+                INSTANCE ?: create(context, "mutqan.db").also { INSTANCE = it }
             }
+
+        /** A database file of the given name with the app's migrations; tests use their own name. */
+        internal fun create(context: Context, name: String): AppDatabase =
+            Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
+                .addCallback(ForeignKeysCallback())
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext))
+                // Versions 1..12 never had a migration path (see git history); start them fresh.
+                .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+                .build()
     }
 
     private class ForeignKeysCallback : Callback() {

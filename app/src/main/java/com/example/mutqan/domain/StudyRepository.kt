@@ -27,6 +27,9 @@ data class TestVerseResult(
     val groupName: String
 )
 
+/** A group an ayah belongs to, with the group's other ayahs in reading order. */
+data class AyahGroup(val group: SimilarityGroupEntity, val others: List<QuranAyah>)
+
 object SimilarityLinks {
 
     /**
@@ -184,6 +187,16 @@ class StudyRepository(
                 .mapValues { it.value.distinct().size }
             surahs.map { SurahMeta(it.id, it.versesCount, it.startJuz, it.firstPage, groupsBySurah[it.id] ?: 0) }
         }.flowOn(Dispatchers.IO)
+
+    /** The groups [ayahId] belongs to, each with its other member ayahs. */
+    suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = withContext(Dispatchers.IO) {
+        dao.getGroupsOfAyah(ayahId).map { group ->
+            val others = dao.getMemberAyahIds(group.id)
+                .filter { it != ayahId }
+                .mapNotNull { quran.ayahById(it) }
+            AyahGroup(group, others)
+        }
+    }
 
     // ── Memory engine / quiz ──────────────────────────────────────────────────
 

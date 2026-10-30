@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.domain.AyahGroup
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.domain.StudyRepository
@@ -57,6 +58,8 @@ class MushafViewerViewModel(
         .map { members -> members.mapTo(HashSet()) { it.verseId } }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = study.groupsOfAyah(ayahId)
 
     // ── Combined pipeline (Standard FSRS Logic) ───────────────────────────────
 

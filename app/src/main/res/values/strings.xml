@@ -344,4 +344,6 @@
     <string name="err_invalid_structural_file">هذا الملف ليس ملف موضوعات صالحًا</string>
     <string name="mushaf_cd_hide_group_ayahs">إخفاء تمييز الآيات المتشابهة</string>
     <string name="mushaf_cd_show_group_ayahs">إظهار تمييز الآيات المتشابهة</string>
+    <string name="peek_group_also_in">ورد أيضًا في هذه المجموعة</string>
+    <string name="peek_group_ayah_ref">%1$s · %2$d</string>
 </resources>

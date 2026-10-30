@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -74,7 +77,9 @@ fun QuickPeekBottomSheet(
     target: QuickPeekTarget,
     onDismiss: () -> Unit,
     onOpenMushaf: ((Int) -> Unit)? = null,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    /** Extra content shown between the verse text and the action buttons. */
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val quran = remember { QuranRepository.getInstance(context) }
@@ -114,6 +119,7 @@ fun QuickPeekBottomSheet(
         Column(
             modifier              = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
             horizontalAlignment   = Alignment.CenterHorizontally
@@ -165,6 +171,11 @@ fun QuickPeekBottomSheet(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            }
+
+            if (extraContent != null) {
+                Spacer(Modifier.height(20.dp))
+                extraContent()
             }
 
             Spacer(Modifier.height(28.dp))
