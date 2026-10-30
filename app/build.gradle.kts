@@ -41,6 +41,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":quran"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

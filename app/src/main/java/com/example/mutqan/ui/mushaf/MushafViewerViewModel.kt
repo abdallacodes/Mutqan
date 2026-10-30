@@ -9,6 +9,7 @@ import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.QuranDao
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,18 +35,17 @@ data class MushafViewerState(
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
+class MushafViewerViewModel(
+    private val dao: QuranDao,
+    private val quran: QuranRepository
+) : ViewModel() {
 
-    // Loaded once from the static verses table — never changes at runtime
+    // Loaded once from the bundled Quran layout — never changes at runtime
     private val _pageSurahMap = MutableStateFlow<Map<Int, String>>(emptyMap())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val rows = dao.getAllPageSurahMappings()
-            _pageSurahMap.value = rows.associate { ref ->
-                val primarySurahId = ref.surahIds.firstOrNull() ?: return@associate ref.pageNumber to ""
-                ref.pageNumber to SurahData.nameOf(primarySurahId)
-            }
+            _pageSurahMap.value = quran.firstSurahByPage().mapValues { (_, surahId) -> SurahData.nameOf(surahId) }
         }
     }
 
@@ -90,5 +90,5 @@ class MushafViewerViewModel(private val dao: QuranDao) : ViewModel() {
 class MushafViewerViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        MushafViewerViewModel(AppDatabase.getInstance(context).quranDao()) as T
+        MushafViewerViewModel(AppDatabase.getInstance(context).quranDao(), QuranRepository.getInstance(context)) as T
 }

@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,14 +62,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -81,10 +76,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
-import com.example.mutqan.domain.MushafDownloadManager
-import com.example.mutqan.domain.MushafPageLoader
-import com.example.mutqan.domain.MushafRepository
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.quran.MushafFontManager
+import com.example.mutqan.quran.MushafPageView
+import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
@@ -99,18 +94,6 @@ private val MushafHeaderScrim = Color(0xE8E8E0D2)
 private val MushafInk         = Color(0xFF353028)
 private val MushafInkMuted    = Color(0xFF6B655C)
 private val MushafSpineLine   = Color(0x145C5346)
-
-/** Softens harsh white in page PNGs (slight warmth); keeps black verse ink dark */
-private val MushafPageWarmthFilter = ColorFilter.colorMatrix(
-    ColorMatrix(
-        floatArrayOf(
-            1f,     0f,     0f,     0f, 0f,
-            0f,     0.99f,  0f,     0f, 0f,
-            0f,     0f,     0.93f,  0f, 0f,
-            0f,     0f,     0f,     1f, 0f
-        )
-    )
-)
 
 // ── Spread geometry helpers ───────────────────────────────────────────────────
 //
@@ -142,13 +125,8 @@ fun MushafViewerScreen(
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
     val state       by viewModel.state.collectAsState()
 
-    val repository = remember(context) { MushafRepository(context.applicationContext) }
-    val downloadManager = remember(context) { MushafDownloadManager(context.applicationContext) }
-    val pageLoader = remember(context) { MushafPageLoader(context.applicationContext, repository, downloadManager) }
-
-    DisposableEffect(pageLoader) {
-        onDispose { pageLoader.clear() }
-    }
+    val quran  = remember(context) { QuranRepository.getInstance(context) }
+    val fonts  = remember(context) { MushafFontManager.getInstance(context) }
 
     // Tracks the \"primary\" Mushaf page for the top bar; persists across rotations.
     var currentPage by rememberSaveable { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
@@ -255,7 +233,8 @@ fun MushafViewerScreen(
                                 rightStability   = spreadRightPage(pageIndex)?.let { state.stabilities.getOrNull(it - 1) },
                                 leftStability    = spreadLeftPage(pageIndex)?.let  { state.stabilities.getOrNull(it - 1) },
                                 activePage       = activePage,
-                                pageLoader       = pageLoader,
+                                quran            = quran,
+                                fonts            = fonts,
                                 onScaleChange    = { scale -> currentScale = scale },
                                 onTap            = { showHeader = !showHeader }
                             )
@@ -266,7 +245,8 @@ fun MushafViewerScreen(
                                 page          = page,
                                 stability     = state.stabilities.getOrNull(page - 1),
                                 activePage    = activePage,
-                                pageLoader    = pageLoader,
+                                quran         = quran,
+                                fonts         = fonts,
                                 onScaleChange = { scale -> currentScale = scale },
                                 onTap         = { showHeader = !showHeader }
                             )
@@ -354,7 +334,8 @@ private fun SinglePageView(
     page:          Int,
     stability:     PageStability?,
     activePage:    Int,
-    pageLoader:    MushafPageLoader,
+    quran:         QuranRepository,
+    fonts:         MushafFontManager,
     onScaleChange: (Float) -> Unit,
     onTap:         () -> Unit,
     modifier:      Modifier = Modifier
@@ -367,10 +348,9 @@ private fun SinglePageView(
     ) {
         PageImage(
             page          = page,
-            pageLoader    = pageLoader,
+            quran         = quran,
+            fonts         = fonts,
             isActive      = page == activePage,
-            contentScale  = ContentScale.Fit,
-            imageAlign    = Alignment.Center,
             modifier      = Modifier.fillMaxSize()
         )
         StabilityDot(
@@ -402,7 +382,8 @@ private fun SpreadView(
     rightStability:   PageStability?,
     leftStability:    PageStability?,
     activePage:       Int,
-    pageLoader:       MushafPageLoader,
+    quran:            QuranRepository,
+    fonts:            MushafFontManager,
     onScaleChange:    (Float) -> Unit,
     onTap:            () -> Unit,
     modifier:         Modifier = Modifier
@@ -436,10 +417,9 @@ private fun SpreadView(
                     if (leftPage != null) {
                         PageImage(
                             page                     = leftPage,
-                            pageLoader               = pageLoader,
+                            quran                    = quran,
+                            fonts                    = fonts,
                             isActive                 = leftPage == activePage,
-                            contentScale             = ContentScale.Fit,
-                            imageAlign               = Alignment.Center,
                             fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
                             modifier                 = Modifier.fillMaxSize()
                         )
@@ -471,10 +451,9 @@ private fun SpreadView(
                     if (rightPage != null) {
                         PageImage(
                             page                     = rightPage,
-                            pageLoader               = pageLoader,
+                            quran                    = quran,
+                            fonts                    = fonts,
                             isActive                 = rightPage == activePage,
-                            contentScale             = ContentScale.Fit,
-                            imageAlign               = Alignment.Center,
                             fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
                             modifier                 = Modifier.fillMaxSize()
                         )
@@ -565,35 +544,24 @@ private fun ZoomableSurface(
     }
 }
 
-// ── Single Mushaf page image ──────────────────────────────────────────────────
+// ── Single Mushaf page ────────────────────────────────────────────────────────
 //
 // isActive = true  → 3dp green border (DifficultySmooth) — the navigated page
 // isActive = false → no border — companion page in the spread
 //
-// Use ContentScale.Fit so the full mushaf page is always visible (no edge crop).
-// Default Fit for call sites that omit scale.
-//
-// RGB_565 bitmap config halves memory vs ARGB_8888; imperceptible on
-// black-and-white Mushaf pages and beneficial on a Pixel 6a.
+// The page is drawn from the QPC V2 layout and its own font (see MushafPageView); the
+// canvas keeps the page aspect ratio, so the full page is always visible (no edge crop).
 
 @Composable
 private fun PageImage(
     page:                    Int,
-    pageLoader:              MushafPageLoader,
+    quran:                   QuranRepository,
+    fonts:                   MushafFontManager,
     isActive:                Boolean = false,
-    contentScale:            ContentScale = ContentScale.Fit,
-    imageAlign:              Alignment = Alignment.Center,
     modifier:                Modifier = Modifier,
-    /** Spread “fill width” mode: image uses full column width; scroll to see full height. */
+    /** Spread “fill width” mode: page uses full column width; scroll to see full height. */
     fillWidthVerticalScroll: ScrollState? = null
 ) {
-    val loadingState by pageLoader.loadingState.collectAsState()
-    val bitmap = loadingState[page]
-
-    LaunchedEffect(page) {
-        pageLoader.loadPage(page)
-    }
-
     val borderMod = if (isActive)
         Modifier.border(width = 3.dp, color = DifficultySmooth, shape = RectangleShape)
     else
@@ -605,37 +573,27 @@ private fun PageImage(
             .background(MushafParchment),
         contentAlignment  = if (fillWidthVerticalScroll != null) Alignment.TopCenter else Alignment.Center
     ) {
-        if (bitmap != null) {
-            if (fillWidthVerticalScroll != null) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(fillWidthVerticalScroll)
-                ) {
-                    Image(
-                        bitmap             = bitmap.asImageBitmap(),
-                        contentDescription = null,
-                        colorFilter        = MushafPageWarmthFilter,
-                        alignment          = Alignment.TopCenter,
-                        contentScale       = ContentScale.FillWidth,
-                        modifier           = Modifier.fillMaxWidth()
-                    )
-                }
-            } else {
-                Image(
-                    bitmap             = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    colorFilter        = MushafPageWarmthFilter,
-                    alignment          = imageAlign,
-                    contentScale       = contentScale,
-                    modifier           = Modifier.fillMaxSize()
+        if (fillWidthVerticalScroll != null) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(fillWidthVerticalScroll)
+            ) {
+                MushafPageView(
+                    page     = page,
+                    quran    = quran,
+                    fonts    = fonts,
+                    ink      = MushafInk,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         } else {
-            CircularProgressIndicator(
-                modifier    = Modifier.size(48.dp),
-                color       = MaterialTheme.colorScheme.primary,
-                strokeWidth = 3.dp
+            MushafPageView(
+                page     = page,
+                quran    = quran,
+                fonts    = fonts,
+                ink      = MushafInk,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }

@@ -51,12 +51,12 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.ThemeKey
-import com.example.mutqan.domain.DownloadState
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.MidnightBg
 import com.example.mutqan.ui.theme.MidnightPrimary
 import com.example.mutqan.ui.theme.ModernDarkBg
 import com.example.mutqan.ui.theme.ModernDarkPrimary
+import com.example.mutqan.quran.DownloadState
 import com.example.mutqan.ui.theme.MushafBg
 import com.example.mutqan.ui.theme.MushafPrimary
 import com.example.mutqan.ui.theme.OLEDBg

@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Mutqan"
 include(":app")
+include(":quran")

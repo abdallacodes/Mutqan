@@ -7,10 +7,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.R
+import com.example.mutqan.quran.R as QuranR
 
 /** Amiri is a classical Arabic typeface ideal for Quranic text display. */
 val AmiriFontFamily = FontFamily(
-    Font(R.font.amiri_regular, FontWeight.Normal)
+    Font(QuranR.font.amiri_regular, FontWeight.Normal)
 )
 
 /** Default typography for all modern/dark themes. */

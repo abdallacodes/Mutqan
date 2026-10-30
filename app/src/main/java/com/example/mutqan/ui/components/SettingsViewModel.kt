@@ -6,8 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.BackupManager
-import com.example.mutqan.domain.DownloadState
-import com.example.mutqan.domain.MushafDownloadManager
+import com.example.mutqan.quran.DownloadState
+import com.example.mutqan.quran.MushafDownloadManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow

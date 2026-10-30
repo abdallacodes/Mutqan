@@ -1,0 +1,246 @@
+{
+  "source": "QUL (qul.tarteel.ai) - KFGQPC QCF V2 (1421H), subset per page",
+  "font_pattern": "p{page}.ttf",
+  "packs": [
+    {
+      "file": "qpc-v2-juz01.zip",
+      "juz": 1,
+      "first_page": 1,
+      "last_page": 21,
+      "bytes": 4022952,
+      "sha256": "46bb3481aaee3ab21abc5b9e662ca3a2f2649ba9b2308be34077001623149c93"
+    },
+    {
+      "file": "qpc-v2-juz02.zip",
+      "juz": 2,
+      "first_page": 22,
+      "last_page": 41,
+      "bytes": 4167120,
+      "sha256": "e1b7f3f2428c0432c499a46b1f8d418a597825b935d521a6423bd99b89d3ef23"
+    },
+    {
+      "file": "qpc-v2-juz03.zip",
+      "juz": 3,
+      "first_page": 42,
+      "last_page": 61,
+      "bytes": 4034099,
+      "sha256": "d43f7c13ff3490ee10b5309d0e33d85f8608827f487281a26d38ca120d193fdf"
+    },
+    {
+      "file": "qpc-v2-juz04.zip",
+      "juz": 4,
+      "first_page": 62,
+      "last_page": 81,
+      "bytes": 4004144,
+      "sha256": "5e03447923706cd59687a28e4cb1b81818611c552cc19ea1db30ef5de8634567"
+    },
+    {
+      "file": "qpc-v2-juz05.zip",
+      "juz": 5,
+      "first_page": 82,
+      "last_page": 101,
+      "bytes": 4150984,
+      "sha256": "0d38db0ec193b10bea0b6ee7f6e46e0db23c4731f2f20f81040d57e60e969033"
+    },
+    {
+      "file": "qpc-v2-juz06.zip",
+      "juz": 6,
+      "first_page": 102,
+      "last_page": 120,
+      "bytes": 3981063,
+      "sha256": "6b5afd7b50be22a5383cc940cf3cbc0456cb24926df48639141a7a6cb4d3a907"
+    },
+    {
+      "file": "qpc-v2-juz07.zip",
+      "juz": 7,
+      "first_page": 121,
+      "last_page": 141,
+      "bytes": 4559247,
+      "sha256": "4bc30a739c6f4192c185b6db91188a672d6e1749c34a98f09a46c60e3aa0c53c"
+    },
+    {
+      "file": "qpc-v2-juz08.zip",
+      "juz": 8,
+      "first_page": 142,
+      "last_page": 161,
+      "bytes": 4162259,
+      "sha256": "dd75e0d83670bbca49c729ad6edf59f6e79f9d2fdec0850dba7e4f6751ef4dba"
+    },
+    {
+      "file": "qpc-v2-juz09.zip",
+      "juz": 9,
+      "first_page": 162,
+      "last_page": 181,
+      "bytes": 4172269,
+      "sha256": "e30ed734c91390fdd5a754a6134377be18d5b3ff359524fe75c6fe4decf77dd0"
+    },
+    {
+      "file": "qpc-v2-juz10.zip",
+      "juz": 10,
+      "first_page": 182,
+      "last_page": 200,
+      "bytes": 3894019,
+      "sha256": "6430f3d4ddca8c8b67405d2e368f4ffb9a7e761328cb188c1e97e93e92c48573"
+    },
+    {
+      "file": "qpc-v2-juz11.zip",
+      "juz": 11,
+      "first_page": 201,
+      "last_page": 221,
+      "bytes": 4376970,
+      "sha256": "53522a0e0424a26d2975f253d01f187bd0ed2310d08c04c8d77b83730b8471bc"
+    },
+    {
+      "file": "qpc-v2-juz12.zip",
+      "juz": 12,
+      "first_page": 222,
+      "last_page": 241,
+      "bytes": 4166955,
+      "sha256": "bf48610d65497d72f6a392131c534bb17a278be9170fb6f9ce8c8c2662aefec7"
+    },
+    {
+      "file": "qpc-v2-juz13.zip",
+      "juz": 13,
+      "first_page": 242,
+      "last_page": 261,
+      "bytes": 4111386,
+      "sha256": "5ecbd89e4573f1fa7d4148b3d964ae0619833f950bd25a2a6a94a3f591abb856"
+    },
+    {
+      "file": "qpc-v2-juz14.zip",
+      "juz": 14,
+      "first_page": 262,
+      "last_page": 281,
+      "bytes": 4145755,
+      "sha256": "66b6f1bfcdf98d9e6ae856400f76e1dc942292b248601f3c25e89e0018d2e598"
+    },
+    {
+      "file": "qpc-v2-juz15.zip",
+      "juz": 15,
+      "first_page": 282,
+      "last_page": 301,
+      "bytes": 4260239,
+      "sha256": "a4de2efc95904134c4e45899f2456069a8d13e5810ed8f40d030858658d6f40c"
+    },
+    {
+      "file": "qpc-v2-juz16.zip",
+      "juz": 16,
+      "first_page": 302,
+      "last_page": 321,
+      "bytes": 4304508,
+      "sha256": "43588846919ffc7722281929a5d42723c402b4004327f9d139b894b7234b1ebf"
+    },
+    {
+      "file": "qpc-v2-juz17.zip",
+      "juz": 17,
+      "first_page": 322,
+      "last_page": 341,
+      "bytes": 4068314,
+      "sha256": "56a5a982d0419858fdcc995a0411a0d6b6151ab58b2b93ebea9faed20baad654"
+    },
+    {
+      "file": "qpc-v2-juz18.zip",
+      "juz": 18,
+      "first_page": 342,
+      "last_page": 361,
+      "bytes": 4343888,
+      "sha256": "9fe3a30b879a1b30c2836dd55ff0d1580e02a91b538dbdbb70daa38cf8b8e85d"
+    },
+    {
+      "file": "qpc-v2-juz19.zip",
+      "juz": 19,
+      "first_page": 362,
+      "last_page": 381,
+      "bytes": 4372733,
+      "sha256": "7eb47ec01b4cc56d3fabd7f3d4f5182fb8c321b8767cd71a77041e0c8460c65c"
+    },
+    {
+      "file": "qpc-v2-juz20.zip",
+      "juz": 20,
+      "first_page": 382,
+      "last_page": 401,
+      "bytes": 4120550,
+      "sha256": "72b5bc3f435ccdbe1026e5f2df69fd7b92532ddee8166b9eccda7535f56cd0af"
+    },
+    {
+      "file": "qpc-v2-juz21.zip",
+      "juz": 21,
+      "first_page": 402,
+      "last_page": 421,
+      "bytes": 4149248,
+      "sha256": "46b5f99c2098962ea48f9e4a02e45f7e567cd5e7da13c0a854c382188764ab55"
+    },
+    {
+      "file": "qpc-v2-juz22.zip",
+      "juz": 22,
+      "first_page": 422,
+      "last_page": 441,
+      "bytes": 4194491,
+      "sha256": "2d76f883fb54902b67841abf2c31ddd6c5d07cf15e0a96ea90c084c1c763580b"
+    },
+    {
+      "file": "qpc-v2-juz23.zip",
+      "juz": 23,
+      "first_page": 442,
+      "last_page": 461,
+      "bytes": 4433405,
+      "sha256": "b383a57d9dad40dcb2d16d2ddbeda0639b6494aede9b28cf6c93fa218269c18f"
+    },
+    {
+      "file": "qpc-v2-juz24.zip",
+      "juz": 24,
+      "first_page": 462,
+      "last_page": 481,
+      "bytes": 4142586,
+      "sha256": "f8999a4c9680801256f779cb2c6e7b4b96022108839857fa8badf3073581e739"
+    },
+    {
+      "file": "qpc-v2-juz25.zip",
+      "juz": 25,
+      "first_page": 482,
+      "last_page": 501,
+      "bytes": 4273870,
+      "sha256": "331775635f4a8dc71c82417112a9c5282fb3218384002bd8dd3914e3bd4127f2"
+    },
+    {
+      "file": "qpc-v2-juz26.zip",
+      "juz": 26,
+      "first_page": 502,
+      "last_page": 521,
+      "bytes": 4311554,
+      "sha256": "105d7ad42c43893f576a539da44a0e0d3061ae6d4cbf1028b7d729198bf0b71d"
+    },
+    {
+      "file": "qpc-v2-juz27.zip",
+      "juz": 27,
+      "first_page": 522,
+      "last_page": 541,
+      "bytes": 4300397,
+      "sha256": "08f084501ca4918b46ae5fc57d62026b1fa9ef547b56c59115a38bd28c98923d"
+    },
+    {
+      "file": "qpc-v2-juz28.zip",
+      "juz": 28,
+      "first_page": 542,
+      "last_page": 561,
+      "bytes": 4223917,
+      "sha256": "a7bde3af252321198820cad6d782b5166ea69daa8f5a3746db9f10ff12cf1065"
+    },
+    {
+      "file": "qpc-v2-juz29.zip",
+      "juz": 29,
+      "first_page": 562,
+      "last_page": 581,
+      "bytes": 4401356,
+      "sha256": "7a4b6068b68ab19c8ec623085403f11a205663d9a0ed7f1c9768df6cacbc313c"
+    },
+    {
+      "file": "qpc-v2-juz30.zip",
+      "juz": 30,
+      "first_page": 582,
+      "last_page": 604,
+      "bytes": 3993000,
+      "sha256": "92ac798717ef17c2971d1907721685a361735b92fd0206191df5b5c49deb85cc"
+    }
+  ]
+}

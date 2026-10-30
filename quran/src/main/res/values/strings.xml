@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mushaf_basmallah" translatable="false">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</string>
+    <string name="mushaf_surah_title" translatable="false">سُورَةُ %1$s</string>
+    <string name="mushaf_font_failed">Couldn\'t download this page. Check your connection.</string>
+    <string name="mushaf_retry">Retry</string>
+</resources>
