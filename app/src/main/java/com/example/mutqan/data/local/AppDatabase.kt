@@ -36,7 +36,7 @@ import com.example.mutqan.quran.QuranRepository
         RevisionPlanEntity::class,
         ExerciseResultEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -161,6 +161,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Strength plans are set in pages a day per tier instead of days per tier. */
+        val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE `revision_plans_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `unit` INTEGER NOT NULL, `amount_per_day` INTEGER NOT NULL, " +
+                        "`rest_days` INTEGER NOT NULL DEFAULT 0, `plan_order` INTEGER NOT NULL DEFAULT 0, " +
+                        "`paused` INTEGER NOT NULL DEFAULT 0, `created_at` INTEGER NOT NULL, " +
+                        "`strong_pages` INTEGER NOT NULL DEFAULT 4, `fair_pages` INTEGER NOT NULL DEFAULT 6, " +
+                        "`weak_pages` INTEGER NOT NULL DEFAULT 10)"
+                )
+                db.execSQL(
+                    "INSERT INTO `revision_plans_new` (`id`, `name`, `unit`, `amount_per_day`, `rest_days`, `plan_order`, `paused`, `created_at`) " +
+                        "SELECT `id`, `name`, `unit`, `amount_per_day`, `rest_days`, `plan_order`, `paused`, `created_at` FROM `revision_plans`"
+                )
+                db.execSQL("DROP TABLE `revision_plans`")
+                db.execSQL("ALTER TABLE `revision_plans_new` RENAME TO `revision_plans`")
+            }
+        }
+
         /** Results of practice exercises. */
         val MIGRATION_19_20 = object : Migration(19, 20) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -204,7 +224,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

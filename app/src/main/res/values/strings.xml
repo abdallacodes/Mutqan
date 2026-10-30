@@ -486,14 +486,12 @@
     <string name="cd_ready_list">القائمة الجاهزة</string>
     <string name="plan_mode_fixed">كمية ثابتة</string>
     <string name="plan_mode_strength">حسب القوة</string>
-    <string name="plan_strength_intro">تُصنَّف صفحاتك حسب سجل التسميع: الضعيفة تعود كثيرًا، والقوية نادرًا. اختر كم يومًا تستغرق دورة كل فئة.</string>
+    <string name="plan_strength_intro">تُصنَّف صفحاتك حسب سجل التسميع: الضعيفة تعود كثيرًا، والقوية نادرًا. اختر أنت كم صفحة في اليوم لكل فئة.</string>
     <string name="plan_tier_weak">صفحات ضعيفة</string>
     <string name="plan_tier_fair">صفحات متوسطة</string>
     <string name="plan_tier_strong">صفحات قوية</string>
-    <string name="plan_tier_every">دورة كل %d يومًا</string>
-    <string name="plan_tier_detail">%1$d صفحة · نحو %2$d صفحة يوميًا</string>
     <string name="plan_tier_empty">لا صفحات هنا الآن</string>
-    <string name="plan_strength_total">المجموع: نحو %d صفحة يوميًا</string>
+    <string name="plan_strength_total">المجموع: %d صفحة يوميًا</string>
     <string name="home_plan_summary_strength">%1$s · نحو %2$d صفحة يوميًا</string>
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
@@ -600,4 +598,7 @@
     <string name="coverage_surah_picker_hint">اضغط على السورة التي تحفظها كاملة</string>
     <string name="coverage_surah_search">ابحث عن سورة بالاسم أو الرقم</string>
     <string name="coverage_surah_partly">جزء منها</string>
+    <string name="plan_tier_per_day">%d صفحة يوميًا</string>
+    <string name="plan_tier_cycle">%1$d صفحة في هذه الفئة · دورة كاملة كل %2$d يومًا تقريبًا</string>
+    <string name="plan_tier_off">%d صفحة في هذه الفئة · غير مضمَّنة في الخطة</string>
 </resources>

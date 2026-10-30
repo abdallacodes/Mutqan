@@ -32,22 +32,26 @@ data class PlanUiState(
     val paused: Boolean = false,
     /** Portions in the memorised coverage at the chosen unit; 0 when nothing is memorised yet. */
     val itemCount: Int = 0,
-    val strongDays: Int = RevisionPlan.DEFAULT_STRONG_DAYS,
-    val fairDays: Int = RevisionPlan.DEFAULT_FAIR_DAYS,
-    val weakDays: Int = RevisionPlan.DEFAULT_WEAK_DAYS,
+    val strongPages: Int = RevisionPlan.DEFAULT_STRONG_PAGES,
+    val fairPages: Int = RevisionPlan.DEFAULT_FAIR_PAGES,
+    val weakPages: Int = RevisionPlan.DEFAULT_WEAK_PAGES,
     /** Memorised pages in each strength tier right now. */
     val tierCounts: Map<PlanTier, Int> = emptyMap()
 ) {
     val byStrength: Boolean get() = order == PlanOrder.BY_STRENGTH
 
-    fun daysOf(tier: PlanTier): Int = when (tier) {
-        PlanTier.STRONG -> strongDays
-        PlanTier.FAIR -> fairDays
-        PlanTier.WEAK -> weakDays
+    /** Pages a day the user chose for a tier. */
+    fun pagesOf(tier: PlanTier): Int = when (tier) {
+        PlanTier.STRONG -> strongPages
+        PlanTier.FAIR -> fairPages
+        PlanTier.WEAK -> weakPages
     }
 
-    /** Pages a day a tier asks for. */
-    fun dailyOf(tier: PlanTier): Int = RevisionPlanner.tierQuota(tierCounts[tier] ?: 0, daysOf(tier))
+    /** Pages a day a tier really gives: what was chosen, but never more than the tier has. */
+    fun dailyOf(tier: PlanTier): Int = minOf(pagesOf(tier), tierCounts[tier] ?: 0)
+
+    /** Days one pass over a tier takes at the chosen pace. */
+    fun cycleOf(tier: PlanTier): Int = RevisionPlanner.tierCycleDays(tierCounts[tier] ?: 0, pagesOf(tier))
 
     val dailyTotal: Int get() = PlanTier.entries.sumOf(::dailyOf)
 
@@ -83,9 +87,9 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
                 restDays = plan.restDays,
                 order = plan.order,
                 paused = plan.paused,
-                strongDays = plan.strongDays,
-                fairDays = plan.fairDays,
-                weakDays = plan.weakDays,
+                strongPages = plan.strongPages,
+                fairPages = plan.fairPages,
+                weakPages = plan.weakPages,
                 tierCounts = tierCounts
             )
             recount()
@@ -116,12 +120,12 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
         it.copy(order = if (on) PlanOrder.BY_STRENGTH else if (it.byStrength) PlanOrder.ROTATION else it.order)
     }
 
-    /** Moves a tier's cycle by [delta] days, keeping weak <= fair <= strong. */
-    fun changeTierDays(tier: PlanTier, delta: Int) = _uiState.update {
+    /** Moves the pages a day of a tier by [delta]; 0 leaves the tier out of the plan. */
+    fun changeTierPages(tier: PlanTier, delta: Int) = _uiState.update {
         when (tier) {
-            PlanTier.WEAK -> it.copy(weakDays = (it.weakDays + delta).coerceIn(MIN_WEAK, it.fairDays))
-            PlanTier.FAIR -> it.copy(fairDays = (it.fairDays + delta).coerceIn(it.weakDays, it.strongDays))
-            PlanTier.STRONG -> it.copy(strongDays = (it.strongDays + delta).coerceIn(it.fairDays, MAX_STRONG))
+            PlanTier.WEAK -> it.copy(weakPages = (it.weakPages + delta).coerceIn(0, MAX_TIER_PAGES))
+            PlanTier.FAIR -> it.copy(fairPages = (it.fairPages + delta).coerceIn(0, MAX_TIER_PAGES))
+            PlanTier.STRONG -> it.copy(strongPages = (it.strongPages + delta).coerceIn(0, MAX_TIER_PAGES))
         }
     }
 
@@ -146,9 +150,9 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
                     order = s.order,
                     paused = s.paused,
                     createdAt = existing?.createdAt ?: System.currentTimeMillis(),
-                    strongDays = s.strongDays,
-                    fairDays = s.fairDays,
-                    weakDays = s.weakDays
+                    strongPages = s.strongPages,
+                    fairPages = s.fairPages,
+                    weakPages = s.weakPages
                 )
             )
             onDone()
@@ -165,8 +169,7 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 
     companion object {
         private const val MAX_NAME = 40
-        private const val MIN_WEAK = 2
-        private const val MAX_STRONG = 180
+        private const val MAX_TIER_PAGES = 100
 
         fun maxAmount(unit: PlanUnit): Int = when (unit) {
             PlanUnit.JUZ -> 10

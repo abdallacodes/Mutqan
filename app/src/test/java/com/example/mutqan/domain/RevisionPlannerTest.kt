@@ -158,8 +158,8 @@ class RevisionPlannerTest {
 
     // ── Strength-based plans ──────────────────────────────────────────────────
 
-    private fun strengthPlan(strong: Int = 40, fair: Int = 20, weak: Int = 8, rest: Set<Int> = emptySet(), paused: Boolean = false) =
-        RevisionPlan(name = "s", order = PlanOrder.BY_STRENGTH, strongDays = strong, fairDays = fair, weakDays = weak, restDays = rest, paused = paused)
+    private fun strengthPlan(strong: Int = 1, fair: Int = 2, weak: Int = 2, rest: Set<Int> = emptySet(), paused: Boolean = false) =
+        RevisionPlan(name = "s", order = PlanOrder.BY_STRENGTH, strongPages = strong, fairPages = fair, weakPages = weak, restDays = rest, paused = paused)
 
     private fun statesOf(weak: IntRange? = null, strong: IntRange? = null): Array<PassageState> {
         val states = Array(604) { PassageState.NOT_ASSESSED }
@@ -183,15 +183,16 @@ class RevisionPlannerTest {
     }
 
     @Test
-    fun `each tier owes its pages spread over its cycle rounded up`() {
-        assertEquals(10, RevisionPlanner.tierQuota(80, 8))
-        assertEquals(3, RevisionPlanner.tierQuota(41, 20))
-        assertEquals(0, RevisionPlanner.tierQuota(0, 8))
+    fun `a pass over a tier takes its pages divided by the pages a day, rounded up`() {
+        assertEquals(8, RevisionPlanner.tierCycleDays(80, 10))
+        assertEquals(3, RevisionPlanner.tierCycleDays(41, 20))
+        assertEquals(0, RevisionPlanner.tierCycleDays(0, 8))
+        assertEquals(0, RevisionPlanner.tierCycleDays(50, 0))
     }
 
     @Test
-    fun `weak pages come around more often than strong ones`() {
-        // 16 weak pages every 8 days = 2 a day; 40 strong pages every 40 days = 1 a day
+    fun `the user decides how many pages a day each tier gives`() {
+        // weak 2 a day, strong 1 a day, whatever the sizes of the tiers
         val today = strengthPlanToday(strengthPlan(), covered(1..16, 101..140), statesOf(weak = 1..16, strong = 101..140), LongArray(604))
         assertEquals(3, today.dailyPages)
         assertEquals(listOf(PlanTier.WEAK, PlanTier.STRONG), today.due.map { it.tier })
@@ -206,8 +207,7 @@ class RevisionPlannerTest {
         val last = LongArray(604)
         for (p in 1..20) last[p - 1] = 1L            // revised long ago
         for (p in 21..40) last[p - 1] = monday - 1   // revised yesterday
-        // 40 fair pages every 10 days = 4 a day
-        val today = strengthPlanToday(strengthPlan(fair = 10), covered(1..40), statesOf(), last)
+        val today = strengthPlanToday(strengthPlan(fair = 4), covered(1..40), statesOf(), last)
         assertEquals(listOf(1 to 4), today.due.map { it.startPage to it.endPage })
     }
 
@@ -216,7 +216,7 @@ class RevisionPlannerTest {
         val last = LongArray(604)
         last[0] = monday
         last[1] = monday
-        val today = strengthPlanToday(strengthPlan(fair = 10), covered(1..40), statesOf(), last)
+        val today = strengthPlanToday(strengthPlan(fair = 4), covered(1..40), statesOf(), last)
         assertEquals(listOf(1 to 2), today.done.map { it.startPage to it.endPage })
         assertEquals(listOf(3 to 4), today.due.map { it.startPage to it.endPage })
     }
@@ -228,6 +228,15 @@ class RevisionPlannerTest {
         assertTrue(rest.isRestDay)
         assertTrue(rest.due.isEmpty())
         assertTrue(strengthPlanToday(strengthPlan(paused = true), covered(1..40), statesOf(), LongArray(604)).due.isEmpty())
+    }
+
+    @Test
+    fun `a tier never gives more pages than it has, and 0 leaves it out`() {
+        val few = strengthPlanToday(strengthPlan(weak = 50), covered(1..3), statesOf(weak = 1..3), LongArray(604))
+        assertEquals(3, few.dailyPages)
+        val off = strengthPlanToday(strengthPlan(weak = 0, fair = 0, strong = 0), covered(1..3), statesOf(), LongArray(604))
+        assertTrue(off.due.isEmpty())
+        assertEquals(0, off.dailyPages)
     }
 
     @Test
@@ -252,7 +261,7 @@ class RevisionPlannerTest {
 
     @Test
     fun `tier cycles round trip through the entity`() {
-        val original = RevisionPlan(name = "s", order = PlanOrder.BY_STRENGTH, strongDays = 60, fairDays = 25, weakDays = 5, createdAt = 1L)
+        val original = RevisionPlan(name = "s", order = PlanOrder.BY_STRENGTH, strongPages = 3, fairPages = 7, weakPages = 12, createdAt = 1L)
         assertEquals(original, RevisionPlan.fromEntity(original.toEntity()))
     }
 }

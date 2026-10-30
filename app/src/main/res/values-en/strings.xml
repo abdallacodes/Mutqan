@@ -486,14 +486,12 @@
     <string name="cd_ready_list">Ready list</string>
     <string name="plan_mode_fixed">Fixed amount</string>
     <string name="plan_mode_strength">By strength</string>
-    <string name="plan_strength_intro">Your pages are sorted by your recall history: weak ones come around often, strong ones rarely. Choose how many days one pass over each group takes.</string>
+    <string name="plan_strength_intro">Your pages are sorted by your recall history: weak ones come around often, strong ones rarely. You choose how many pages a day each group gets.</string>
     <string name="plan_tier_weak">Weak pages</string>
     <string name="plan_tier_fair">Fair pages</string>
     <string name="plan_tier_strong">Strong pages</string>
-    <string name="plan_tier_every">A pass every %d days</string>
-    <string name="plan_tier_detail">%1$d pages · about %2$d pages a day</string>
     <string name="plan_tier_empty">No pages here right now</string>
-    <string name="plan_strength_total">Total: about %d pages a day</string>
+    <string name="plan_strength_total">Total: %d pages a day</string>
     <string name="home_plan_summary_strength">%1$s · about %2$d pages a day</string>
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
@@ -600,4 +598,7 @@
     <string name="coverage_surah_picker_hint">Tap each surah you know in full</string>
     <string name="coverage_surah_search">Search a surah by name or number</string>
     <string name="coverage_surah_partly">Partly</string>
+    <string name="plan_tier_per_day">%d pages a day</string>
+    <string name="plan_tier_cycle">%1$d pages in this group · a full pass about every %2$d days</string>
+    <string name="plan_tier_off">%d pages in this group · left out of the plan</string>
 </resources>

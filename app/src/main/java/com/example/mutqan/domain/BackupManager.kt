@@ -89,9 +89,9 @@ class BackupManager(private val context: Context) {
                             put("rest_days", p.restDays)
                             put("plan_order", p.order)
                             put("paused", p.paused)
-                            put("strong_days", p.strongDays)
-                            put("fair_days", p.fairDays)
-                            put("weak_days", p.weakDays)
+                            put("strong_pages", p.strongPages)
+                            put("fair_pages", p.fairPages)
+                            put("weak_pages", p.weakPages)
                             put("created_at", p.createdAt)
                         })
                     }
@@ -284,9 +284,9 @@ class BackupManager(private val context: Context) {
                         restDays = obj.optInt("rest_days", 0),
                         order = obj.optInt("plan_order", 0),
                         paused = obj.optInt("paused", 0),
-                        strongDays = obj.optInt("strong_days", 40).coerceAtLeast(1),
-                        fairDays = obj.optInt("fair_days", 20).coerceAtLeast(1),
-                        weakDays = obj.optInt("weak_days", 8).coerceAtLeast(1),
+                        strongPages = obj.optInt("strong_pages", 4).coerceAtLeast(0),
+                        fairPages = obj.optInt("fair_pages", 6).coerceAtLeast(0),
+                        weakPages = obj.optInt("weak_pages", 10).coerceAtLeast(0),
                         createdAt = obj.getLong("created_at")
                     ))
                 }

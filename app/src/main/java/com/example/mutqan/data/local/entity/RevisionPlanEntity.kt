@@ -20,8 +20,8 @@ data class RevisionPlanEntity(
     @ColumnInfo(name = "plan_order", defaultValue = "0") val order: Int = 0,
     @ColumnInfo(defaultValue = "0") val paused: Int = 0,
     @ColumnInfo(name = "created_at") val createdAt: Long,
-    /** Days one pass over each strength tier takes (plan_order BY_STRENGTH). */
-    @ColumnInfo(name = "strong_days", defaultValue = "40") val strongDays: Int = 40,
-    @ColumnInfo(name = "fair_days", defaultValue = "20") val fairDays: Int = 20,
-    @ColumnInfo(name = "weak_days", defaultValue = "8") val weakDays: Int = 8
+    /** Pages a day the user wants from each strength tier (plan_order BY_STRENGTH). */
+    @ColumnInfo(name = "strong_pages", defaultValue = "4") val strongPages: Int = 4,
+    @ColumnInfo(name = "fair_pages", defaultValue = "6") val fairPages: Int = 6,
+    @ColumnInfo(name = "weak_pages", defaultValue = "10") val weakPages: Int = 10
 )

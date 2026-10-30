@@ -94,10 +94,10 @@ fun PlanScreen(onBack: () -> Unit) {
                 listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
                     TierRow(
                         tier = tier,
-                        days = state.daysOf(tier),
+                        perDay = state.pagesOf(tier),
                         pages = state.tierCounts[tier] ?: 0,
-                        daily = state.dailyOf(tier),
-                        onChange = { viewModel.changeTierDays(tier, it) }
+                        cycleDays = state.cycleOf(tier),
+                        onChange = { viewModel.changeTierPages(tier, it) }
                     )
                 }
                 Text(
@@ -217,10 +217,9 @@ private val WEEKDAY_LABELS = listOf(
     R.string.day_fri, R.string.day_sat, R.string.day_sun
 )
 
-/** One strength tier: how often it comes around, with the pages in it and what that asks for per day. */
+/** One strength tier: the pages a day the user picks, with how many pages are in it and how long a pass then takes. */
 @Composable
-private fun TierRow(tier: PlanTier, days: Int, pages: Int, daily: Int, onChange: (Int) -> Unit) {
-    val step = if (tier == PlanTier.WEAK) 1 else 5
+private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onChange: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -239,19 +238,22 @@ private fun TierRow(tier: PlanTier, days: Int, pages: Int, daily: Int, onChange:
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = stringResource(R.string.plan_tier_every, days),
+                    text = stringResource(R.string.plan_tier_per_day, perDay),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalIconButton(onClick = { onChange(-step) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
-                FilledTonalIconButton(onClick = { onChange(step) }) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                FilledTonalIconButton(onClick = { onChange(-1) }, enabled = perDay > 0) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                FilledTonalIconButton(onClick = { onChange(1) }) { Text("+", style = MaterialTheme.typography.titleLarge) }
             }
         }
         Text(
-            text = if (pages == 0) stringResource(R.string.plan_tier_empty)
-            else stringResource(R.string.plan_tier_detail, pages, daily),
+            text = when {
+                pages == 0 -> stringResource(R.string.plan_tier_empty)
+                perDay == 0 -> stringResource(R.string.plan_tier_off, pages)
+                else -> stringResource(R.string.plan_tier_cycle, pages, cycleDays)
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
