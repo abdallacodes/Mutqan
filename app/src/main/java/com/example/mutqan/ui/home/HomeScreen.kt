@@ -113,8 +113,11 @@ fun HomeScreen(
         )
     }
 
-    val dateLine = DateUtils.formatDateTime(
-        context, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_WEEKDAY or DateUtils.FORMAT_SHOW_DATE
+    // The Hijri date leads, since it is the one the plan is lived by; the Gregorian date follows.
+    val now = System.currentTimeMillis()
+    val locale = context.resources.configuration.locales[0]
+    val dateLine = hijriDate(now, locale) + " · " + DateUtils.formatDateTime(
+        context, now, DateUtils.FORMAT_SHOW_WEEKDAY or DateUtils.FORMAT_SHOW_DATE
     )
 
     Column(
