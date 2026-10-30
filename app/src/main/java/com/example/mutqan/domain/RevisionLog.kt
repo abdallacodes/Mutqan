@@ -15,7 +15,9 @@ data class RevisionLog(
     val manualStability: Float,
     val dateMillis: Long = 0L,
     val startAyahId: Int = 0,
-    val endAyahId: Int = 0
+    val endAyahId: Int = 0,
+    val outcome: RecallOutcome = RecallOutcome.INDEPENDENT,
+    val mistakeTags: Set<MistakeTag> = emptySet()
 ) {
     fun toEntity() = RevisionLogEntity(
         id = id,
@@ -23,6 +25,8 @@ data class RevisionLog(
         endAyahId = endAyahId,
         timestamp = timestamp,
         dateMillis = dateMillis,
-        manualStability = manualStability
+        manualStability = manualStability,
+        outcome = outcome.code,
+        mistakeTags = MistakeTag.toMask(mistakeTags)
     )
 }

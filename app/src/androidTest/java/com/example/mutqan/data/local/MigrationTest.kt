@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 
 /**
  * Builds a database laid out like Room version 13 (the shape installed apps have), fills it with
- * user data, then opens it through the app's migrations (13 -> 14 -> 15) and checks that the
+ * user data, then opens it through the app's migrations (13 -> 14 -> 15 -> 16) and checks that the
  * data survived and Room accepts the resulting schema. Uses its own file, never `mutqan.db`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -74,6 +74,17 @@ class MigrationTest {
             assertEquals(0.5f, logs[1].manualStability, 0f)
             // pages 600..700 clamp to 600..604, ending at the last ayah of the Quran
             assertEquals(6236, logs[2].endAyahId)
+
+            // Recall outcomes come from the old slider values (0.9, 0.5, 0.3).
+            assertEquals(listOf(1, 3, 4), logs.map { it.outcome })
+            assertEquals(listOf(0, 0, 0), logs.map { it.mistakeTags })
+
+            // The memorised coverage starts as the revised ayahs, merged.
+            val coverage = dao.getAllCoverageSync()
+            assertEquals(3, coverage.size)
+            assertEquals(1, coverage.first().startAyahId)
+            assertEquals(7, coverage.first().endAyahId)
+            assertEquals(6236, coverage.last().endAyahId)
 
             // Everything else is kept.
             assertEquals(listOf(7, 262), dao.getAllSimilarityMembersSync().map { it.verseId }.sorted())

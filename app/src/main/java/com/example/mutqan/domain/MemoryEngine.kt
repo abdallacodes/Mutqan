@@ -28,10 +28,15 @@ object MemoryEngine {
      * 
      * @param logs All revision logs, sorted by timestamp
      * @param similarityLinks Map of page to its semantically similar pages
+     * @param coveredPages Pages (index 0 = page 1) the user has memorised; pages outside it are
+     *   never tracked. Null means no restriction.
+     *
+     * Logs that are practice only (reading, listening) are not recall evidence and are skipped.
      */
     fun computeCurrentState(
         logs: List<RevisionLog>,
-        similarityLinks: Map<Int, List<Int>>
+        similarityLinks: Map<Int, List<Int>>,
+        coveredPages: BooleanArray? = null
     ): MemoryState {
         val stability = FloatArray(TOTAL_PAGES) { 0f }
         val lastRevisions = LongArray(TOTAL_PAGES) { 0L }
@@ -39,12 +44,14 @@ object MemoryEngine {
         val sortedLogs = logs.sortedBy { it.timestamp }
 
         for (log in sortedLogs) {
+            if (!log.outcome.isRecallAttempt) continue
             val start = log.startPage.coerceIn(1, TOTAL_PAGES)
             val end   = log.endPage.coerceIn(start, TOTAL_PAGES)
             val logTime = log.timestamp
 
             for (page in start..end) {
                 val idx = page - 1
+                if (coveredPages != null && !coveredPages[idx]) continue
                 val oldS = stability[idx]
                 val oldT = lastRevisions[idx]
                 

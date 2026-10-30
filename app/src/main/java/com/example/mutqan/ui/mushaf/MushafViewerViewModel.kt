@@ -65,13 +65,14 @@ class MushafViewerViewModel(
 
     val state: StateFlow<MushafViewerState> = combine(
         study.revisionLogs(),
+        study.coveredPages(),
         _pageSurahMap
-    ) { logs, surahMap ->
+    ) { logs, covered, surahMap ->
         // Heavy lifting moved to Default dispatcher via flowOn
         val links = study.pageSimilarityLinks()
         val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
-        val state = MemoryEngine.computeCurrentState(logs, linkMap)
+        val state = MemoryEngine.computeCurrentState(logs, linkMap, covered)
         val rValues = MemoryEngine.projectRetrievability(state, 0)
 
         val pages = (1..MemoryEngine.TOTAL_PAGES).map { page ->

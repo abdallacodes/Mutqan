@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.domain.MistakeTag
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionLog
 import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +28,8 @@ data class RevisionUiState(
     val endPageError: Boolean = false,
     /** UTC-midnight millis for the user-selected revision date. */
     val selectedDateMillis: Long = 0L,
-    val manualQuality: Float = 0.9f
+    val outcome: RecallOutcome = RecallOutcome.INDEPENDENT,
+    val mistakeTags: Set<MistakeTag> = emptySet()
 )
 
 /** Returns UTC midnight of the current calendar day. */
@@ -72,8 +75,12 @@ class RevisionViewModel(private val study: StudyRepository) : ViewModel() {
         _uiState.update { it.copy(selectedDateMillis = millis) }
     }
 
-    fun onManualQualityChange(quality: Float) {
-        _uiState.update { it.copy(manualQuality = quality) }
+    fun onOutcomeChange(outcome: RecallOutcome) {
+        _uiState.update { it.copy(outcome = outcome) }
+    }
+
+    fun onTagsChange(tags: Set<MistakeTag>) {
+        _uiState.update { it.copy(mistakeTags = tags) }
     }
 
     fun logRevision() {
@@ -90,7 +97,11 @@ class RevisionViewModel(private val study: StudyRepository) : ViewModel() {
         }
 
         viewModelScope.launch {
-            study.addRevision(start!!, end!!, state.manualQuality, state.selectedDateMillis)
+            study.addRevision(
+                start!!, end!!, state.outcome,
+                if (state.outcome.isRecallAttempt) state.mistakeTags else emptySet(),
+                state.selectedDateMillis
+            )
             _uiState.update { RevisionUiState(selectedDateMillis = startOfTodayUtcMillis()) }
         }
     }

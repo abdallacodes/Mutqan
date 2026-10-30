@@ -1,6 +1,7 @@
 package com.example.mutqan.ui.heatmap
 
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.domain.PassageState
 
 /**
  * Combines a page's memory-decay [stability] with the Surah name(s) displayed on it.
@@ -11,7 +12,9 @@ import com.example.mutqan.domain.PageStability
 data class PageWithSurahs(
     val stability:  PageStability,
     /** 1 entry for a normal page, 2 entries for a Surah-transition page. */
-    val surahNames: List<String>
+    val surahNames: List<String>,
+    /** How much recall evidence there is for the page; see [PassageState]. */
+    val state: PassageState = PassageState.NOT_ASSESSED
 ) {
     /**
      * Short display label:
@@ -30,5 +33,6 @@ data class PageWithSurahs(
  */
 data class PageSelection(
     val page:       Int,
-    val surahLabel: String
+    val surahLabel: String,
+    val state:      PassageState = PassageState.NOT_ASSESSED
 )

@@ -5,6 +5,7 @@ import android.net.Uri
 import com.example.mutqan.R
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.AppDatabase
+import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
@@ -31,10 +32,11 @@ class BackupManager(private val context: Context) {
             val members = dao.getAllSimilarityMembersSync()
             val folders = dao.getAllFoldersSync()
             val subjects = dao.getAllUserSubjectsSync()
+            val coverage = dao.getAllCoverageSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
-                put("version", 4)
+                put("version", 5)
                 put("revision_logs", JSONArray().apply {
                     logs.forEach { log ->
                         put(JSONObject().apply {
@@ -47,6 +49,16 @@ class BackupManager(private val context: Context) {
                             put("timestamp", log.timestamp)
                             put("manual_stability", log.manualStability)
                             put("date_millis", log.dateMillis)
+                            put("outcome", log.outcome)
+                            put("mistake_tags", log.mistakeTags)
+                        })
+                    }
+                })
+                put("hifz_coverage", JSONArray().apply {
+                    coverage.forEach { range ->
+                        put(JSONObject().apply {
+                            put("start_ayah_id", range.startAyahId)
+                            put("end_ayah_id", range.endAyahId)
                         })
                     }
                 })
@@ -121,13 +133,17 @@ class BackupManager(private val context: Context) {
                         val start = obj.getInt("start_page").coerceIn(1, 604)
                         quran.ayahIdRangeOfPages(start, obj.getInt("end_page").coerceIn(start, 604)) ?: continue
                     }
+                    val quality = obj.getDouble("manual_stability").toFloat()
                     logs.add(RevisionLogEntity(
                         id = obj.optInt("id", 0),
                         startAyahId = range.first,
                         endAyahId = range.last,
                         timestamp = obj.getLong("timestamp"),
-                        manualStability = obj.getDouble("manual_stability").toFloat(),
-                        dateMillis = obj.optLong("date_millis", 0L)
+                        manualStability = quality,
+                        dateMillis = obj.optLong("date_millis", 0L),
+                        // Files from before version 5 only have the quality slider.
+                        outcome = if (obj.has("outcome")) obj.getInt("outcome") else RecallOutcome.fromQuality(quality).code,
+                        mistakeTags = obj.optInt("mistake_tags", 0)
                     ))
                 }
             }
@@ -187,8 +203,21 @@ class BackupManager(private val context: Context) {
                 }
             }
 
+            // Version 5 stores what the user has memorised; older files do not, so it is taken
+            // from the ayahs they revised, as when the database was upgraded.
+            val coverageArray = root.optJSONArray("hifz_coverage")
+            val coverageRanges = if (coverageArray != null) {
+                (0 until coverageArray.length()).map {
+                    val obj = coverageArray.getJSONObject(it)
+                    obj.getInt("start_ayah_id")..obj.getInt("end_ayah_id")
+                }
+            } else {
+                logs.map { it.startAyahId..it.endAyahId }
+            }
+
             // Perform DB operations
             dao.clearUserData()
+            dao.insertCoverage(HifzCoverage.merge(coverageRanges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
             dao.insertFolders(folders)
             dao.insertRevisionLogs(logs)
             dao.insertSimilarityGroups(groups)

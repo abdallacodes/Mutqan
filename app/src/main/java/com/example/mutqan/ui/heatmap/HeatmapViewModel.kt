@@ -10,6 +10,7 @@ import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -66,18 +67,19 @@ class HeatmapViewModel(
      * Optimized State pipeline.
      */
     val uiState: StateFlow<HeatmapUiState> = combine(
-        study.revisionLogs(),
+        combine(study.revisionLogs(), study.coveredPages()) { logs, covered -> logs to covered },
         _juzToPages,
         _forecastDays,
         prefs.isStructuralMode
-    ) { logs, juzToPages, forecastDays, isStructuralMode ->
+    ) { logsAndCoverage, juzToPages, forecastDays, isStructuralMode ->
+        val (logs, covered) = logsAndCoverage
         try {
             // 1. Fetch similarity links for semantic interference
             val links = study.pageSimilarityLinks()
             val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
             // 2. Compute the BASE state (Current Stability S)
-            val currentState = MemoryEngine.computeCurrentState(logs, linkMap)
+            val currentState = MemoryEngine.computeCurrentState(logs, linkMap, covered)
 
             // 3. Project Retrievability R for the requested forecast day
             val rValues = MemoryEngine.projectRetrievability(currentState, forecastDays)
@@ -201,7 +203,7 @@ class HeatmapViewModel(
     fun quickLog(page: Int) {
         _selectedPage.value = null
         viewModelScope.launch {
-            study.addRevision(page, page, 1.0f)
+            study.addRevision(page, page, RecallOutcome.INDEPENDENT)
         }
     }
 }

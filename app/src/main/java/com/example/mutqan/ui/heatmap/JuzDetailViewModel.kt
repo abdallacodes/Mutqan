@@ -11,7 +11,11 @@ import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.domain.MemoryEngine
+import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PageStability
+import com.example.mutqan.domain.PassageState
+import com.example.mutqan.domain.PassageStates
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.StructuralSharingManager
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranAyah
@@ -68,12 +72,14 @@ class JuzDetailViewModel(
      */
     val pagesWithSurahs: StateFlow<List<PageWithSurahs>> = combine(
         study.revisionLogs(),
+        study.coveredPages(),
         MutableStateFlow(0)
-    ) { logs, forecastDays ->
+    ) { logs, covered, forecastDays ->
         val links = study.pageSimilarityLinks()
         val linkMap = links.groupBy({ it.pageA }, { it.pageB })
 
-        val state = MemoryEngine.computeCurrentState(logs, linkMap)
+        val state = MemoryEngine.computeCurrentState(logs, linkMap, covered)
+        val passageStates = PassageStates.compute(logs)
         val rValues = MemoryEngine.projectRetrievability(state, forecastDays)
 
         juzPages.map { page ->
@@ -84,7 +90,8 @@ class JuzDetailViewModel(
                     score = rValues[idx],
                     lastRevised = state.lastRevisionTimestamps[idx].let { if (it == 0L) null else it }
                 ),
-                surahNames = surahsByPage[page].orEmpty().map { id -> SurahData.nameOf(id) }
+                surahNames = surahsByPage[page].orEmpty().map { id -> SurahData.nameOf(id) },
+                state = if (covered == null || covered[idx]) passageStates[idx] else PassageState.NOT_ASSESSED
             )
         }
     }
@@ -129,11 +136,11 @@ class JuzDetailViewModel(
     private val _ayahPreview = MutableStateFlow<QuranAyah?>(null)
     val ayahPreview: StateFlow<QuranAyah?> = _ayahPreview.asStateFlow()
 
-    fun onPageTap(page: Int, surahLabel: String) {
+    fun onPageTap(page: Int, surahLabel: String, state: PassageState = PassageState.NOT_ASSESSED) {
         if (isStructuralMode.value) {
             peekPage(page)
         } else {
-            _selectedPage.value = PageSelection(page, surahLabel)
+            _selectedPage.value = PageSelection(page, surahLabel, state)
         }
     }
 
@@ -189,10 +196,10 @@ class JuzDetailViewModel(
         }
     }
 
-    fun logPage(page: Int, quality: Float) {
+    fun logPage(page: Int, outcome: RecallOutcome, tags: Set<MistakeTag>) {
         _selectedPage.value = null
         viewModelScope.launch {
-            study.addRevision(page, page, quality)
+            study.addRevision(page, page, outcome, tags)
         }
     }
 

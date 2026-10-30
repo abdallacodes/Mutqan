@@ -44,6 +44,7 @@ import androidx.navigation.navArgument
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.ui.components.SettingsBottomSheet
+import com.example.mutqan.ui.coverage.CoverageScreen
 import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
@@ -78,6 +79,7 @@ object Routes {
     const val JUZ_DETAIL        = "juz_detail"
     const val SIMILARITY_TEST   = "similarity_test?folderId={folderId}&groupId={groupId}"
     const val MUSHAF_VIEWER     = "mushaf_viewer"
+    const val COVERAGE          = "coverage"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
     fun editGroupNew(folderId: Int?)             = "edit_group?groupId=-1${folderId?.let { "&folderId=$it" } ?: ""}"
@@ -131,7 +133,11 @@ fun AppNavHost(
         SettingsBottomSheet(
             currentTheme  = currentTheme,
             onThemeChange = themeViewModel::setTheme,
-            onDismiss     = { showSettingsSheet = false }
+            onDismiss     = { showSettingsSheet = false },
+            onOpenCoverage = {
+                showSettingsSheet = false
+                navController.navigate(Routes.COVERAGE)
+            }
         )
     }
 
@@ -170,6 +176,8 @@ fun AppNavHost(
                         navController.navigate(Routes.REVISION_LOG) {
                             popUpTo(Routes.ONBOARDING) { inclusive = true }
                         }
+                        // First run: ask what the user has memorised before anything else.
+                        navController.navigate(Routes.COVERAGE)
                     }
                 )
             }
@@ -181,6 +189,10 @@ fun AppNavHost(
                     onViewHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
                     onSettingsClick = { showSettingsSheet = true }
                 )
+            }
+
+            composable(Routes.COVERAGE) {
+                CoverageScreen(onDone = { navController.popBackStack() })
             }
 
             composable(Routes.REVISION_HISTORY) {

@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,8 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -69,9 +69,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
+import com.example.mutqan.domain.MistakeTag
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionLog
+import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.ui.theme.DifficultyCritical
-import kotlin.math.roundToInt
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -96,7 +98,8 @@ fun RevisionHistoryScreen(onBack: () -> Unit) {
             editState    = state,
             onStartPage  = viewModel::onEditStartPage,
             onEndPage    = viewModel::onEditEndPage,
-            onQuality    = viewModel::onEditQuality,
+            onOutcome    = viewModel::onEditOutcome,
+            onTags       = viewModel::onEditTags,
             onDate       = viewModel::onEditDate,
             onSave       = viewModel::saveEdit,
             onCancel     = viewModel::cancelEdit
@@ -269,12 +272,7 @@ private fun SwipeToDismissLogItem(
 
 @Composable
 private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
-    val quality = log.manualStability
-    val healthClr = when {
-        quality >= 0.70f -> Color(0xFF4CAF50)
-        quality >= 0.40f -> Color(0xFFFFC107)
-        else          -> Color(0xFFF44336)
-    }
+    val healthClr = log.outcome.color()
 
     Row(
         modifier = Modifier
@@ -318,7 +316,7 @@ private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
                 border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text       = "${(quality * 100).roundToInt()}%",
+                    text       = log.outcome.localizedLabel(),
                     modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style      = MaterialTheme.typography.labelSmall,
                     color      = healthClr,
@@ -387,7 +385,8 @@ private fun EditRevisionDialog(
     editState: EditLogUiState,
     onStartPage: (String) -> Unit,
     onEndPage: (String) -> Unit,
-    onQuality: (Float) -> Unit,
+    onOutcome: (RecallOutcome) -> Unit,
+    onTags: (Set<MistakeTag>) -> Unit,
     onDate: (Long) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
@@ -410,7 +409,9 @@ private fun EditRevisionDialog(
             tonalElevation = 6.dp
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
@@ -449,9 +450,11 @@ private fun EditRevisionDialog(
                     )
                 }
 
-                EditQualitySlider(
-                    quality = editState.manualQuality,
-                    onSelect = onQuality
+                OutcomePicker(
+                    outcome = editState.outcome,
+                    tags = editState.mistakeTags,
+                    onOutcomeChange = onOutcome,
+                    onTagsChange = onTags
                 )
 
                 EditDateButton(
@@ -488,46 +491,6 @@ private fun EditRevisionDialog(
 }
 
 // ── Edit dialog helpers ───────────────────────────────────────────────────────
-
-@Composable
-private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.label_manual_quality),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "${(quality * 100).roundToInt()}%",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Slider(
-            value = quality,
-            onValueChange = onSelect,
-            valueRange = 0.1f..1f,
-            steps = 8,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary
-            )
-        )
-    }
-}
-
 
 @Composable
 private fun EditDateButton(millis: Long, onClick: () -> Unit) {

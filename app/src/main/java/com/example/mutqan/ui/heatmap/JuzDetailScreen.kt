@@ -1,5 +1,12 @@
 package com.example.mutqan.ui.heatmap
 
+import com.example.mutqan.ui.revision.OutcomePicker
+import com.example.mutqan.ui.components.localizedLabel
+import com.example.mutqan.domain.RecallOutcome
+import com.example.mutqan.domain.MistakeTag
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -250,7 +257,7 @@ fun JuzDetailScreen(
                             items(pages, key = { it.stability.page }) { pwS ->
                                 PageTile(
                                     pwS     = pwS,
-                                    onClick = { viewModel.onPageTap(pwS.stability.page, pwS.surahLabel) }
+                                    onClick = { viewModel.onPageTap(pwS.stability.page, pwS.surahLabel, pwS.state) }
                                 )
                             }
                         }
@@ -266,7 +273,7 @@ fun JuzDetailScreen(
         QuickStatusDialog(
             selection    = selection,
             onDismiss    = viewModel::dismissDialog,
-            onSelect     = { quality -> viewModel.logPage(selection.page, quality) },
+            onSelect     = { outcome, tags -> viewModel.logPage(selection.page, outcome, tags) },
             onViewInMushaf = { page -> viewModel.dismissDialog(); onPageOpen(page) }
         )
     }
@@ -486,10 +493,11 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
 private fun QuickStatusDialog(
     selection:      PageSelection,
     onDismiss:      () -> Unit,
-    onSelect:       (Float) -> Unit,
+    onSelect:       (RecallOutcome, Set<MistakeTag>) -> Unit,
     onViewInMushaf: (Int) -> Unit = {}
 ) {
-    var manualQuality by remember { mutableFloatStateOf(0.9f) }
+    var outcome by remember { mutableStateOf(RecallOutcome.INDEPENDENT) }
+    var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -511,10 +519,23 @@ private fun QuickStatusDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Text(
+                    text  = stringResource(R.string.state_evidence_label, selection.state.localizedLabel()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text  = stringResource(R.string.state_self_reported),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -522,42 +543,17 @@ private fun QuickStatusDialog(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                         .padding(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.label_manual_quality),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "${(manualQuality * 100).roundToInt()}%",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    
-                    Spacer(Modifier.height(8.dp))
-
-                    Slider(
-                        value = manualQuality,
-                        onValueChange = { manualQuality = it },
-                        valueRange = 0.1f..1f,
-                        steps = 8,
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                    OutcomePicker(
+                        outcome = outcome,
+                        tags = tags,
+                        onOutcomeChange = { outcome = it },
+                        onTagsChange = { tags = it }
                     )
-                    
-                    Spacer(Modifier.height(8.dp))
+
+                    Spacer(Modifier.height(12.dp))
 
                     Button(
-                        onClick = { onSelect(manualQuality) },
+                        onClick = { onSelect(outcome, tags) },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(

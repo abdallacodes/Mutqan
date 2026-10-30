@@ -8,6 +8,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
@@ -42,6 +43,29 @@ abstract class StudyDao {
 
     @Update
     abstract suspend fun updateRevisionLog(log: RevisionLogEntity)
+
+    // ─────────────────────────────────────────────────────────
+    // Hifz coverage
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM hifz_coverage ORDER BY start_ayah_id")
+    abstract fun observeCoverage(): Flow<List<HifzCoverageEntity>>
+
+    @Query("SELECT * FROM hifz_coverage ORDER BY start_ayah_id")
+    abstract suspend fun getAllCoverageSync(): List<HifzCoverageEntity>
+
+    @Query("DELETE FROM hifz_coverage")
+    abstract suspend fun deleteAllCoverage()
+
+    @Insert
+    abstract suspend fun insertCoverage(ranges: List<HifzCoverageEntity>)
+
+    /** Replaces the whole coverage with [ranges] in one transaction. */
+    @Transaction
+    open suspend fun replaceCoverage(ranges: List<HifzCoverageEntity>) {
+        deleteAllCoverage()
+        insertCoverage(ranges)
+    }
 
     // ─────────────────────────────────────────────────────────
     // Similarity Groups + Members
@@ -186,6 +210,7 @@ abstract class StudyDao {
         deleteAllSimilarityMembers()
         deleteAllFolders()
         deleteAllUserSubjects()
+        deleteAllCoverage()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

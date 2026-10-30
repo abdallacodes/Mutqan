@@ -163,10 +163,20 @@ fun RevisionLogScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                ManualQualitySection(
-                    quality = uiState.manualQuality,
-                    onQualityChange = viewModel::onManualQualityChange
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(12.dp)
+                ) {
+                    OutcomePicker(
+                        outcome = uiState.outcome,
+                        tags = uiState.mistakeTags,
+                        onOutcomeChange = viewModel::onOutcomeChange,
+                        onTagsChange = viewModel::onTagsChange
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -396,69 +406,12 @@ private fun PageRangeInputRow(
     }
 }
 
-// ── Manual Quality Section ──────────────────────────────────────────
-
-@Composable
-private fun ManualQualitySection(
-    quality: Float,
-    onQualityChange: (Float) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(horizontal = 12.dp, vertical = 12.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.label_starting_quality),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "${(quality * 100).roundToInt()}%",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Slider(
-            value = quality,
-            onValueChange = onQualityChange,
-            valueRange = 0.1f..1f,
-            steps = 8,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
-            ),
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-    }
-}
-
 // ── History items ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun RevisionLogItem(log: RevisionLog) {
     val context    = LocalContext.current
-    val quality    = log.manualStability
-    val healthClr = healthColor(quality)
+    val healthClr = log.outcome.color()
 
     Row(
         modifier = Modifier
@@ -503,7 +456,7 @@ private fun RevisionLogItem(log: RevisionLog) {
                 border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text       = "${(quality * 100).roundToInt()}%",
+                    text       = log.outcome.localizedLabel(),
                     modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style      = MaterialTheme.typography.labelSmall,
                     color      = healthClr,
@@ -512,14 +465,6 @@ private fun RevisionLogItem(log: RevisionLog) {
             }
         }
     }
-}
-
-// Add this helper if it doesn't exist or use the one from JuzDetailScreen
-@Composable
-private fun healthColor(score: Float): Color = when {
-    score >= 0.70f -> Color(0xFF4CAF50) // Green
-    score >= 0.40f -> Color(0xFFFFC107) // Amber
-    else          -> Color(0xFFF44336) // Red
 }
 
 // ── Date formatting helpers ───────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.domain.MistakeTag
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionLog
 import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +40,8 @@ data class EditLogUiState(
     val originalLog: RevisionLog,
     val startPage: String,
     val endPage: String,
-    val manualQuality: Float,
+    val outcome: RecallOutcome,
+    val mistakeTags: Set<MistakeTag>,
     val selectedDateMillis: Long,
     val startError: Boolean = false,
     val endError: Boolean = false
@@ -98,7 +101,8 @@ class RevisionHistoryViewModel(
             originalLog        = log,
             startPage          = log.startPage.toString(),
             endPage            = log.endPage.toString(),
-            manualQuality      = log.manualStability,
+            outcome            = log.outcome,
+            mistakeTags        = log.mistakeTags,
             selectedDateMillis = if (log.dateMillis > 0L) log.dateMillis else startOfTodayUtcMillis()
         )
     }
@@ -109,7 +113,8 @@ class RevisionHistoryViewModel(
     fun onEditEndPage(v: String)    = _editState.update {
         it?.copy(endPage = v.filter(Char::isDigit).take(3), endError = false)
     }
-    fun onEditQuality(q: Float) = _editState.update { it?.copy(manualQuality = q) }
+    fun onEditOutcome(outcome: RecallOutcome) = _editState.update { it?.copy(outcome = outcome) }
+    fun onEditTags(tags: Set<MistakeTag>) = _editState.update { it?.copy(mistakeTags = tags) }
     fun onEditDate(millis: Long)     = _editState.update { it?.copy(selectedDateMillis = millis) }
 
     fun saveEdit() {
@@ -127,7 +132,7 @@ class RevisionHistoryViewModel(
 
         viewModelScope.launch {
             // timestamp (creation time) is preserved unchanged
-            study.updateRevision(state.originalLog, start!!, end!!, state.manualQuality, state.selectedDateMillis)
+            study.updateRevision(state.originalLog, start!!, end!!, state.outcome, state.mistakeTags, state.selectedDateMillis)
             _editState.value = null
         }
     }

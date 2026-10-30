@@ -7,6 +7,7 @@ import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.dao.SurahMeta
+import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.quran.QuranAyah
@@ -89,7 +90,9 @@ class StudyRepository(
             manualStability = manualStability,
             dateMillis = dateMillis,
             startAyahId = startAyahId,
-            endAyahId = endAyahId
+            endAyahId = endAyahId,
+            outcome = RecallOutcome.fromCode(outcome),
+            mistakeTags = MistakeTag.fromMask(mistakeTags)
         )
     }
 
@@ -98,7 +101,13 @@ class StudyRepository(
         dao.getAllRevisionLogs().map { logs -> logs.mapNotNull { it.toLog() } }.flowOn(Dispatchers.IO)
 
     /** Records that pages [startPage]..[endPage] were revised. Returns false if no ayah begins there. */
-    suspend fun addRevision(startPage: Int, endPage: Int, quality: Float, dateMillis: Long = 0L): Boolean =
+    suspend fun addRevision(
+        startPage: Int,
+        endPage: Int,
+        outcome: RecallOutcome,
+        mistakeTags: Set<MistakeTag> = emptySet(),
+        dateMillis: Long = 0L
+    ): Boolean =
         withContext(Dispatchers.IO) {
             val range = quran.ayahIdRangeOfPages(startPage, endPage) ?: return@withContext false
             dao.insertRevisionLog(
@@ -107,14 +116,27 @@ class StudyRepository(
                     endAyahId = range.last,
                     timestamp = System.currentTimeMillis(),
                     dateMillis = dateMillis,
-                    manualStability = quality
+                    manualStability = outcome.quality,
+                    outcome = outcome.code,
+                    mistakeTags = if (outcome.isRecallAttempt) MistakeTag.toMask(mistakeTags) else 0
                 )
             )
             true
         }
 
-    /** Rewrites [log] to cover [startPage]..[endPage]; its creation timestamp is kept. */
-    suspend fun updateRevision(log: RevisionLog, startPage: Int, endPage: Int, quality: Float, dateMillis: Long): Boolean =
+    /**
+     * Rewrites [log] to cover [startPage]..[endPage]; its creation timestamp is kept. A log
+     * whose outcome is unchanged keeps its stored quality, so editing the date does not
+     * flatten a migrated slider value.
+     */
+    suspend fun updateRevision(
+        log: RevisionLog,
+        startPage: Int,
+        endPage: Int,
+        outcome: RecallOutcome,
+        mistakeTags: Set<MistakeTag>,
+        dateMillis: Long
+    ): Boolean =
         withContext(Dispatchers.IO) {
             val range = quran.ayahIdRangeOfPages(startPage, endPage) ?: return@withContext false
             dao.updateRevisionLog(
@@ -122,11 +144,29 @@ class StudyRepository(
                     startAyahId = range.first,
                     endAyahId = range.last,
                     dateMillis = dateMillis,
-                    manualStability = quality
+                    manualStability = if (outcome == log.outcome) log.manualStability else outcome.quality,
+                    outcome = outcome.code,
+                    mistakeTags = if (outcome.isRecallAttempt) MistakeTag.toMask(mistakeTags) else 0
                 )
             )
             true
         }
+
+    // ── Hifz coverage ─────────────────────────────────────────────────────────
+
+    /** The memorised ranges as global ayah ids, sorted and merged; empty if the user has not said. */
+    fun coverage(): Flow<List<IntRange>> =
+        dao.observeCoverage().map { rows -> HifzCoverage.merge(rows.map { it.startAyahId..it.endAyahId }) }
+            .flowOn(Dispatchers.IO)
+
+    suspend fun setCoverage(ranges: List<IntRange>) = withContext(Dispatchers.IO) {
+        dao.replaceCoverage(HifzCoverage.merge(ranges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
+    }
+
+    /** Which pages (index 0 = page 1) the user has memorised; null means no restriction. */
+    fun coveredPages(): Flow<BooleanArray?> =
+        coverage().map { ranges -> HifzCoverage.coveredPages(ranges.filter { it.first in index && it.last in index }) { index.firstPageOf(it) } }
+            .flowOn(Dispatchers.IO)
 
     // ── Vault lists ───────────────────────────────────────────────────────────
 

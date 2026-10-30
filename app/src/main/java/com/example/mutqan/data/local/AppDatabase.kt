@@ -7,11 +7,14 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.domain.HifzCoverage
+import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.quran.QuranRepository
 
 /**
@@ -24,9 +27,10 @@ import com.example.mutqan.quran.QuranRepository
         SimilarityGroupEntity::class,
         SimilarityMemberEntity::class,
         VaultFolderEntity::class,
-        UserSubjectEntity::class
+        UserSubjectEntity::class,
+        HifzCoverageEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -105,6 +109,40 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Recall outcomes and the memorised-coverage table. Each old log gets the outcome closest
+         * to its slider value (see [RecallOutcome.fromQuality]); the coverage starts as the
+         * ayahs the user has already revised, so nothing they track disappears from the heatmap.
+         */
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `revision_logs` ADD COLUMN `outcome` INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE `revision_logs` ADD COLUMN `mistake_tags` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE `revision_logs` SET `outcome` = CASE " +
+                        "WHEN `manual_stability` >= 0.89 THEN ${RecallOutcome.INDEPENDENT.code} " +
+                        "WHEN `manual_stability` >= 0.69 THEN ${RecallOutcome.SELF_CORRECTED.code} " +
+                        "WHEN `manual_stability` >= 0.39 THEN ${RecallOutcome.HINTED.code} " +
+                        "ELSE ${RecallOutcome.UNABLE.code} END"
+                )
+
+                db.execSQL(
+                    "CREATE TABLE `hifz_coverage` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`start_ayah_id` INTEGER NOT NULL, `end_ayah_id` INTEGER NOT NULL)"
+                )
+                val revised = ArrayList<IntRange>()
+                db.query("SELECT `start_ayah_id`, `end_ayah_id` FROM `revision_logs`").use { c ->
+                    while (c.moveToNext()) revised.add(c.getInt(0)..c.getInt(1))
+                }
+                for (range in HifzCoverage.merge(revised)) {
+                    db.execSQL(
+                        "INSERT INTO `hifz_coverage` (`start_ayah_id`, `end_ayah_id`) VALUES (?, ?)",
+                        arrayOf<Any>(range.first, range.last)
+                    )
+                }
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: create(context, "mutqan.db").also { INSTANCE = it }
@@ -114,7 +152,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext))
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()
