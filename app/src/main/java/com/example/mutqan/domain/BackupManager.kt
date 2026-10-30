@@ -27,7 +27,7 @@ class BackupManager(private val context: Context) {
     private val quran = QuranRepository.getInstance(context)
     private val index by lazy { quran.ayahIndex }
 
-    suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun exportData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val logs = dao.getAllRevisionLogsSync()
             val groups = dao.getAllSimilarityGroupsSync()
@@ -141,7 +141,8 @@ class BackupManager(private val context: Context) {
             }
 
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(root.toString(2).toByteArray())
+                val text = root.toString(2)
+                outputStream.write((if (password.isNullOrEmpty()) text else BackupCrypto.encrypt(text, password)).toByteArray())
             } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_output)))
 
             Result.success(Unit)
@@ -150,11 +151,16 @@ class BackupManager(private val context: Context) {
         }
     }
 
-    suspend fun importData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun importData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val fileText = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
             } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_input)))
+            val jsonString = when {
+                !BackupCrypto.isEncrypted(fileText) -> fileText
+                password.isNullOrEmpty() -> return@withContext Result.failure(PasswordRequiredException())
+                else -> BackupCrypto.decrypt(fileText, password)
+            }
 
             val root = JSONObject(jsonString)
             

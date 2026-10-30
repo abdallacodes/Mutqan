@@ -530,4 +530,24 @@
     <string name="progress_none_attention">لا صفحات تحتاج عناية الآن. أحسنت.</string>
     <string name="progress_juz_attention">الجزء %1$d · %2$d صفحة</string>
     <string name="home_btn_progress">تقدّمك</string>
+    <string name="settings_privacy">الخصوصية</string>
+    <string name="settings_app_lock">قفل التطبيق</string>
+    <string name="settings_app_lock_hint">يطلب رمز الجهاز أو بصمتك عند فتح التطبيق</string>
+    <string name="lock_needs_screen_lock">فعّل قفل الشاشة في إعدادات الجهاز أولًا</string>
+    <string name="lock_title">التطبيق مقفل</string>
+    <string name="lock_btn_unlock">افتح</string>
+    <string name="lock_prompt_title">تأكيد هويتك</string>
+    <string name="backup_password_title">حماية النسخة الاحتياطية</string>
+    <string name="backup_password_body">اختياري: اكتب كلمة مرور (6 أحرف على الأقل) لتشفير الملف. لا يمكن فتحه بدونها ولا يمكن استرجاعها.</string>
+    <string name="backup_password_label">كلمة المرور</string>
+    <string name="backup_btn_encrypt">شفّر واحفظ</string>
+    <string name="backup_btn_plain">بدون كلمة مرور</string>
+    <string name="restore_password_title">نسخة مشفّرة</string>
+    <string name="restore_password_body">اكتب كلمة المرور لاستعادة هذه النسخة.</string>
+    <string name="restore_wrong_password">كلمة المرور غير صحيحة</string>
+    <string name="delete_all_row">حذف كل البيانات</string>
+    <string name="delete_all_title">حذف كل البيانات؟</string>
+    <string name="delete_all_body">سيُحذف نهائيًا من هذا الجهاز: سجل المراجعة والمحفوظ والمخزن والخطط والمحفوظات. خذ نسخة احتياطية أولًا إن كنت قد تحتاجها.</string>
+    <string name="delete_all_confirm">احذف كل شيء</string>
+    <string name="delete_all_done">حُذفت البيانات</string>
 </resources>

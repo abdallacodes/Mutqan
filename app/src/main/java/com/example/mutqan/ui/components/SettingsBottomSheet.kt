@@ -1,5 +1,20 @@
 package com.example.mutqan.ui.components
 
+import com.example.mutqan.domain.BackupCrypto
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.foundation.text.KeyboardOptions
+import android.net.Uri
+import android.app.KeyguardManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -79,10 +94,16 @@ fun SettingsBottomSheet(
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
 
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportPassword by remember { mutableStateOf<String?>(null) }
+    var importPasswordUri by remember { mutableStateOf<Uri?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        uri?.let { viewModel.exportData(it) }
+        uri?.let { viewModel.exportData(it, exportPassword) }
+        exportPassword = null
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -96,6 +117,7 @@ fun SettingsBottomSheet(
             when (event) {
                 is BackupUiEvent.Success -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_SHORT).show()
                 is BackupUiEvent.Error -> Toast.makeText(context, event.message.asString(context), Toast.LENGTH_LONG).show()
+                is BackupUiEvent.NeedsPassword -> importPasswordUri = event.uri
             }
         }
     }
@@ -220,9 +242,7 @@ fun SettingsBottomSheet(
             DataActionRow(
                 label = stringResource(R.string.btn_backup),
                 icon = Icons.Default.Backup,
-                onClick = {
-                    exportLauncher.launch("mutqan_backup_${System.currentTimeMillis()}.json")
-                }
+                onClick = { showExportDialog = true }
             )
 
             DataActionRow(
@@ -232,8 +252,139 @@ fun SettingsBottomSheet(
                     importLauncher.launch(arrayOf("application/json"))
                 }
             )
+
+            // ── Privacy ────────────────────────────────────────────────────
+            Spacer(Modifier.height(20.dp))
+            SectionLabel(stringResource(R.string.settings_privacy))
+            Spacer(Modifier.height(8.dp))
+
+            val appLock by viewModel.appLockEnabled.collectAsState()
+            val noScreenLock = stringResource(R.string.lock_needs_screen_lock)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_app_lock), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.settings_app_lock_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = appLock,
+                    onCheckedChange = { on ->
+                        val secure = context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+                        if (on && !secure) Toast.makeText(context, noScreenLock, Toast.LENGTH_LONG).show()
+                        else viewModel.setAppLock(on)
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDeleteDialog = true }
+                    .padding(vertical = 14.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    stringResource(R.string.delete_all_row),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
+
+    if (showExportDialog) {
+        PasswordDialog(
+            title = stringResource(R.string.backup_password_title),
+            body = stringResource(R.string.backup_password_body),
+            confirmText = stringResource(R.string.backup_btn_encrypt),
+            dismissText = stringResource(R.string.backup_btn_plain),
+            requireLength = BackupCrypto.MIN_PASSWORD_LENGTH,
+            onConfirm = { password ->
+                showExportDialog = false
+                exportPassword = password
+                exportLauncher.launch("mutqan_backup_${System.currentTimeMillis()}.json")
+            },
+            onDismiss = {
+                showExportDialog = false
+                exportPassword = null
+                exportLauncher.launch("mutqan_backup_${System.currentTimeMillis()}.json")
+            }
+        )
+    }
+
+    importPasswordUri?.let { uri ->
+        PasswordDialog(
+            title = stringResource(R.string.restore_password_title),
+            body = stringResource(R.string.restore_password_body),
+            confirmText = stringResource(R.string.btn_restore),
+            dismissText = stringResource(R.string.btn_cancel),
+            requireLength = 1,
+            onConfirm = { password ->
+                importPasswordUri = null
+                viewModel.importData(uri, password)
+            },
+            onDismiss = { importPasswordUri = null }
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.delete_all_title)) },
+            text = { Text(stringResource(R.string.delete_all_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel.deleteAllData()
+                }) { Text(stringResource(R.string.delete_all_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.btn_cancel)) } }
+        )
+    }
+}
+
+/** Asks for a password; [onConfirm] is enabled once it has [requireLength] characters. */
+@Composable
+private fun PasswordDialog(
+    title: String,
+    body: String,
+    confirmText: String,
+    dismissText: String,
+    requireLength: Int,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(body, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(stringResource(R.string.backup_password_label)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(password) }, enabled = password.length >= requireLength) { Text(confirmText) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissText) } }
+    )
 }
 
 // ── Section label ─────────────────────────────────────────────────────────────

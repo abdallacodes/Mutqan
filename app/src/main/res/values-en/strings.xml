@@ -530,4 +530,24 @@
     <string name="progress_none_attention">No pages need attention right now. Well done.</string>
     <string name="progress_juz_attention">Juz %1$d · %2$d pages</string>
     <string name="home_btn_progress">Your progress</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_app_lock">App lock</string>
+    <string name="settings_app_lock_hint">Asks for your device PIN, pattern or fingerprint when you open the app</string>
+    <string name="lock_needs_screen_lock">Set a screen lock in your device settings first</string>
+    <string name="lock_title">The app is locked</string>
+    <string name="lock_btn_unlock">Unlock</string>
+    <string name="lock_prompt_title">Confirm it is you</string>
+    <string name="backup_password_title">Protect the backup</string>
+    <string name="backup_password_body">Optional: set a password (at least 6 characters) to encrypt the file. It cannot be opened without it, and the password cannot be recovered.</string>
+    <string name="backup_password_label">Password</string>
+    <string name="backup_btn_encrypt">Encrypt and save</string>
+    <string name="backup_btn_plain">Without a password</string>
+    <string name="restore_password_title">Encrypted backup</string>
+    <string name="restore_password_body">Enter the password to restore this backup.</string>
+    <string name="restore_wrong_password">Wrong password</string>
+    <string name="delete_all_row">Delete all data</string>
+    <string name="delete_all_title">Delete all data?</string>
+    <string name="delete_all_body">This permanently deletes your revision history, memorised ranges, vault, plans and saved passages from this device. Make a backup first if you may want them.</string>
+    <string name="delete_all_confirm">Delete everything</string>
+    <string name="delete_all_done">All data deleted</string>
 </resources>

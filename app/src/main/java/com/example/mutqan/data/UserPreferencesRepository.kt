@@ -11,6 +11,7 @@ class UserPreferencesRepository(private val context: Context) {
     companion object {
         private val KEY_IS_FIRST_RUN      = booleanPreferencesKey("is_first_run")
         private val KEY_HEATMAP_COACHMARK = booleanPreferencesKey("heatmap_coachmark_seen")
+        private val KEY_APP_LOCK          = booleanPreferencesKey("app_lock_enabled")
     }
 
     /** `true` on fresh installs; `false` after onboarding is completed. */
@@ -21,6 +22,13 @@ class UserPreferencesRepository(private val context: Context) {
     /** `false` until the user dismisses the heatmap coachmark for the first time. */
     val hasSeenHeatmapCoachmark: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_HEATMAP_COACHMARK] ?: false
+    }
+
+    /** Whether the app asks for the device PIN, pattern or fingerprint when it is opened. */
+    val appLockEnabled: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_APP_LOCK] ?: false }
+
+    suspend fun setAppLockEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_APP_LOCK] = enabled }
     }
 
     suspend fun completeOnboarding() {
