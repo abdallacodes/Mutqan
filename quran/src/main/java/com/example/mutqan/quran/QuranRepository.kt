@@ -106,13 +106,17 @@ enum class MushafLineType { AYAH, SURAH_NAME, BASMALLAH }
  * One of the (up to) 15 lines of a Mushaf page.
  * [words] holds the QPC V2 glyph of every word, first word first (right-most on screen);
  * it is empty for surah-name and basmallah lines, where [surahNameArabic] names the surah.
+ * [wordIds] and [ayahIds] run parallel to [words]: the global word id and the global ayah id
+ * (`QuranAyah.id`) of each word.
  */
 data class MushafLine(
     val number: Int,
     val type: MushafLineType,
     val isCentered: Boolean,
     val words: List<String>,
-    val surahNameArabic: String?
+    val surahNameArabic: String?,
+    val wordIds: List<Int> = emptyList(),
+    val ayahIds: List<Int> = emptyList()
 )
 
 data class MushafPageData(val page: Int, val lines: List<MushafLine>)
@@ -317,6 +321,7 @@ class QuranRepository private constructor(context: Context) {
     /** Lines of a page ready for [MushafPageView]. */
     fun page(page: Int): MushafPageData {
         pageCache.get(page)?.let { return it }
+        val ayahOfWord = ayahIdsOfWordsOnPage(page)
         val lines = db.rawQuery(
             """SELECT l.line, l.type, l.is_centered, l.first_word_id, l.last_word_id, s.name_arabic
                FROM lines l LEFT JOIN surahs s ON s.id = l.surah
@@ -329,12 +334,15 @@ class QuranRepository private constructor(context: Context) {
                     "basmallah"  -> MushafLineType.BASMALLAH
                     else         -> MushafLineType.AYAH
                 }
+                val words = if (type == MushafLineType.AYAH) glyphs(it.getInt(3), it.getInt(4)) else emptyList()
                 MushafLine(
                     number          = it.getInt(0),
                     type            = type,
                     isCentered      = it.getInt(2) != 0,
-                    words           = if (type == MushafLineType.AYAH) glyphs(it.getInt(3), it.getInt(4)) else emptyList(),
-                    surahNameArabic = if (it.isNull(5)) null else it.getString(5)
+                    words           = words.map { w -> w.second },
+                    surahNameArabic = if (it.isNull(5)) null else it.getString(5),
+                    wordIds         = words.map { w -> w.first },
+                    ayahIds         = words.map { w -> ayahOfWord[w.first] ?: 0 }
                 )
             }
         }
@@ -356,11 +364,18 @@ class QuranRepository private constructor(context: Context) {
 
     // ── Internals ─────────────────────────────────────────────────────────────
 
-    private fun glyphs(firstWordId: Int, lastWordId: Int): List<String> =
+    /** (word id, QPC V2 glyph) of every word in the id range, in order. */
+    private fun glyphs(firstWordId: Int, lastWordId: Int): List<Pair<Int, String>> =
         db.rawQuery(
-            "SELECT glyph FROM words WHERE id BETWEEN ? AND ? ORDER BY id",
+            "SELECT id, glyph FROM words WHERE id BETWEEN ? AND ? ORDER BY id",
             arrayOf(firstWordId.toString(), lastWordId.toString())
-        ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+        ).use { c -> buildList { while (c.moveToNext()) add(c.getInt(0) to c.getString(1)) } }
+
+    private fun ayahIdsOfWordsOnPage(page: Int): Map<Int, Int> =
+        db.rawQuery(
+            "SELECT w.id, a.id FROM words w JOIN ayahs a ON a.surah = w.surah AND a.ayah = w.ayah WHERE w.page = ?",
+            arrayOf(page.toString())
+        ).use { c -> buildMap { while (c.moveToNext()) put(c.getInt(0), c.getInt(1)) } }
 
     private fun surah(c: Cursor) = QuranSurah(
         id = c.getInt(0), nameArabic = c.getString(1), nameSimple = c.getString(2),

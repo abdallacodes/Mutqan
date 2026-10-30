@@ -37,11 +37,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +51,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -80,9 +83,13 @@ import com.example.mutqan.domain.PageStability
 import com.example.mutqan.quran.MushafFontManager
 import com.example.mutqan.quran.MushafPageView
 import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.ui.components.QuickPeekBottomSheet
+import com.example.mutqan.ui.components.QuickPeekTarget
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
@@ -94,6 +101,13 @@ private val MushafHeaderScrim = Color(0xE8E8E0D2)
 private val MushafInk         = Color(0xFF353028)
 private val MushafInkMuted    = Color(0xFF6B655C)
 private val MushafSpineLine   = Color(0x145C5346)
+
+/** Ayahs to tint on every page, and what a tap on one of them does. Null = plain pages. */
+private class AyahMarks(val highlights: Map<Int, Color>, val onTap: (ayahId: Int) -> Unit)
+
+private val LocalAyahMarks = compositionLocalOf<AyahMarks?> { null }
+
+private val MushafGroupTint = Color(0x40C9A227)
 
 // ── Spread geometry helpers ───────────────────────────────────────────────────
 //
@@ -116,6 +130,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MushafViewerScreen(
     startPage: Int,
@@ -146,6 +161,21 @@ fun MushafViewerScreen(
 
     // Spread only: each page uses full column width (taller than viewport); scroll vertically.
     var spreadFillWidth by rememberSaveable { mutableStateOf(false) }
+
+    // Tint ayahs that belong to a mutashabihat group; tapping one opens a quick peek.
+    val groupAyahs by viewModel.mutashabihatAyahs.collectAsState()
+    var showGroupAyahs by rememberSaveable { mutableStateOf(true) }
+    var peekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
+    var peekAyahId by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(peekAyahId) {
+        val id = peekAyahId ?: return@LaunchedEffect
+        val ayah = withContext(Dispatchers.IO) { quran.ayahById(id) }
+        peekTarget = ayah?.let { QuickPeekTarget(it.id, it.surah, it.ayah, it.firstPage) }
+    }
+    val marks = remember(groupAyahs, showGroupAyahs) {
+        if (!showGroupAyahs || groupAyahs.isEmpty()) null
+        else AyahMarks(groupAyahs.associateWith { MushafGroupTint }) { peekAyahId = it }
+    }
 
     val surahName = state.pageSurahMap[currentPage].orEmpty()
 
@@ -215,7 +245,7 @@ fun MushafViewerScreen(
                 // Swiping LEFT always moves to PREV page.
                 // Swiping RIGHT always moves to NEXT page.
                 // This is achieved by forcing LTR layout and using reverseLayout = true.
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, LocalAyahMarks provides marks) {
                     HorizontalPager(
                         state                   = pagerState,
                         reverseLayout           = true, 
@@ -292,6 +322,16 @@ fun MushafViewerScreen(
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
                 }
+                IconButton(onClick = { showGroupAyahs = !showGroupAyahs }) {
+                    Icon(
+                        imageVector        = Icons.Filled.Highlight,
+                        contentDescription = stringResource(
+                            if (showGroupAyahs) R.string.mushaf_cd_hide_group_ayahs
+                            else R.string.mushaf_cd_show_group_ayahs
+                        ),
+                        tint               = if (showGroupAyahs) MushafInk else MushafInkMuted
+                    )
+                }
                 IconButton(onClick = { useSpreadLayout = !useSpreadLayout }) {
                     Icon(
                         imageVector = if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook,
@@ -323,6 +363,13 @@ fun MushafViewerScreen(
                 )
             }
         }
+    }
+
+    peekTarget?.let { target ->
+        QuickPeekBottomSheet(
+            target    = target,
+            onDismiss = { peekTarget = null; peekAyahId = null }
+        )
     }
 }
 
@@ -562,6 +609,7 @@ private fun PageImage(
     /** Spread “fill width” mode: page uses full column width; scroll to see full height. */
     fillWidthVerticalScroll: ScrollState? = null
 ) {
+    val marks = LocalAyahMarks.current
     val borderMod = if (isActive)
         Modifier.border(width = 3.dp, color = DifficultySmooth, shape = RectangleShape)
     else
@@ -584,7 +632,9 @@ private fun PageImage(
                     quran    = quran,
                     fonts    = fonts,
                     ink      = MushafInk,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    highlights = marks?.highlights.orEmpty(),
+                    onWordTap  = marks?.let { m -> { _, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(ayahId) } } }
                 )
             }
         } else {
@@ -593,7 +643,9 @@ private fun PageImage(
                 quran    = quran,
                 fonts    = fonts,
                 ink      = MushafInk,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                highlights = marks?.highlights.orEmpty(),
+                onWordTap  = marks?.let { m -> { _, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(ayahId) } } }
             )
         }
     }

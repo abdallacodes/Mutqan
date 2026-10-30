@@ -3,6 +3,9 @@ package com.example.mutqan.quran
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -17,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,9 +32,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -50,6 +56,11 @@ private sealed interface PageLoad {
  * One Mushaf page drawn from the QPC V2 layout and that page's own font.
  * Fetches the font pack on first use; shows a spinner meanwhile and a retry button if
  * the download fails.
+ *
+ * [highlights] maps a global ayah id (`QuranAyah.id`) to the colour painted behind its words.
+ * [onWordTap] receives the word id and ayah id of a tapped word and returns true if it handled
+ * the tap; a tap it does not handle (or one that misses every word) is left for parent
+ * gestures such as toggling the chrome.
  */
 @Composable
 fun MushafPageView(
@@ -57,7 +68,9 @@ fun MushafPageView(
     quran:   QuranRepository,
     fonts:   MushafFontManager,
     ink:     Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    highlights: Map<Int, Color> = emptyMap(),
+    onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)? = null
 ) {
     var attempt by remember(page) { mutableIntStateOf(0) }
 
@@ -97,13 +110,19 @@ fun MushafPageView(
                     Text(stringResource(R.string.mushaf_retry))
                 }
             }
-            is PageLoad.Ready -> PageCanvas(state, ink)
+            is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap)
         }
     }
 }
 
 @Composable
-private fun PageCanvas(ready: PageLoad.Ready, ink: Color, modifier: Modifier = Modifier) {
+private fun PageCanvas(
+    ready: PageLoad.Ready,
+    ink: Color,
+    highlights: Map<Int, Color>,
+    onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)?,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val headerTypeface = remember(context) { ResourcesCompat.getFont(context, R.font.amiri_regular) }
     val basmallah = stringResource(R.string.mushaf_basmallah)
@@ -137,10 +156,26 @@ private fun PageCanvas(ready: PageLoad.Ready, ink: Color, modifier: Modifier = M
         }
     }
 
+    val currentOnWordTap by rememberUpdatedState(onWordTap)
+    val touchSlop = LocalViewConfiguration.current.touchSlop
+
     Canvas(
         modifier = modifier
             .aspectRatio(MushafPageGeometry.PAGE_ASPECT)
             .onSizeChanged { size = it }
+            .pointerInput(geometry, onWordTap != null) {
+                if (onWordTap == null) return@pointerInput
+                val g = geometry ?: return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                    if ((up.position - down.position).getDistance() > touchSlop) return@awaitEachGesture
+                    val word = MushafPageGeometry.hitTest(g, up.position.x, up.position.y)
+                    if (word != null && word.ayahId != 0 && currentOnWordTap?.invoke(word.wordId, word.ayahId) == true) {
+                        up.consume()
+                    }
+                }
+            }
     ) {
         val g = geometry ?: return@Canvas
         val inkArgb = ink.toArgb()
@@ -152,6 +187,19 @@ private fun PageCanvas(ready: PageLoad.Ready, ink: Color, modifier: Modifier = M
         val pageBaseline = -(pagePaint.fontMetrics.ascent + pagePaint.fontMetrics.descent) / 2f
         val headerBaseline = -(headerPaint.fontMetrics.ascent + headerPaint.fontMetrics.descent) / 2f
         val margin = this.size.width * 0.045f
+
+        if (highlights.isNotEmpty()) {
+            val pad = g.textSize * 0.12f
+            for (run in MushafPageGeometry.ayahRuns(g, highlights.keys)) {
+                val color = highlights[run.ayahId] ?: continue
+                drawRoundRect(
+                    color        = color,
+                    topLeft      = Offset(run.left - pad, run.centerY - g.lineHeight * 0.46f),
+                    size         = Size(run.right - run.left + 2 * pad, g.lineHeight * 0.92f),
+                    cornerRadius = CornerRadius(g.lineHeight * 0.12f)
+                )
+            }
+        }
 
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas

@@ -342,4 +342,6 @@
     <string name="err_open_input">Couldn\'t open the selected file</string>
     <string name="err_invalid_vault_file">Not a valid vault file</string>
     <string name="err_invalid_structural_file">Not a valid subjects file</string>
+    <string name="mushaf_cd_hide_group_ayahs">Hide similar-verse highlights</string>
+    <string name="mushaf_cd_show_group_ayahs">Show similar-verse highlights</string>
 </resources>

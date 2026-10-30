@@ -79,4 +79,43 @@ class MushafPageGeometryTest {
         val g = geometry(header, ayah(2, 4))
         assertTrue(g.lines[0].words.isEmpty())
     }
+
+    // ── Ids, hit-testing and highlight runs ──────────────────────────────────
+
+    private fun ayahWithIds(number: Int, ayahIds: List<Int>) =
+        MushafLine(
+            number, MushafLineType.AYAH, false, List(ayahIds.size) { "w$it" }, null,
+            wordIds = List(ayahIds.size) { number * 100 + it }, ayahIds = ayahIds
+        )
+
+    @Test
+    fun placedWordsCarryTheirIds() {
+        val g = geometry(ayahWithIds(1, listOf(7, 7, 8)))
+        val ids = g.lines.single().words.map { it.wordId to it.ayahId }
+        assertEquals(listOf(100 to 7, 101 to 7, 102 to 8), ids)
+    }
+
+    @Test
+    fun hitTestFindsTheWordUnderThePointAndNullOutsideTheRows() {
+        val g = geometry(ayahWithIds(1, listOf(7, 8, 9)))
+        val row = g.lines.single()
+        val second = row.words[1]
+        val hit = MushafPageGeometry.hitTest(g, second.x + second.width / 2f, row.centerY)
+        assertEquals(8, hit?.ayahId)
+        assertEquals(null, MushafPageGeometry.hitTest(g, second.x, row.centerY + g.lineHeight))
+        assertEquals(null, MushafPageGeometry.hitTest(g, -500f, row.centerY))
+    }
+
+    @Test
+    fun ayahRunsMergeNeighbouringWordsOfOneAyahAndSkipOthers() {
+        val g = geometry(ayahWithIds(1, listOf(7, 7, 8, 7)))
+        val row = g.lines.single()
+        val runs = MushafPageGeometry.ayahRuns(g, setOf(7))
+        assertEquals(2, runs.size)
+        // first run: words 0 and 1 (right-most two)
+        assertEquals(row.words[1].x, runs[0].left, 0.01f)
+        assertEquals(row.words[0].x + row.words[0].width, runs[0].right, 0.01f)
+        assertEquals(row.words[3].x, runs[1].left, 0.01f)
+        assertTrue(MushafPageGeometry.ayahRuns(g, emptySet()).isEmpty())
+    }
 }

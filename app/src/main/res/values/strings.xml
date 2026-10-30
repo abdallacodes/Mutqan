@@ -342,4 +342,6 @@
     <string name="err_open_input">تعذّر فتح الملف المحدد</string>
     <string name="err_invalid_vault_file">هذا الملف ليس ملف مخزن صالحًا</string>
     <string name="err_invalid_structural_file">هذا الملف ليس ملف موضوعات صالحًا</string>
+    <string name="mushaf_cd_hide_group_ayahs">إخفاء تمييز الآيات المتشابهة</string>
+    <string name="mushaf_cd_show_group_ayahs">إظهار تمييز الآيات المتشابهة</string>
 </resources>

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -50,6 +51,12 @@ class MushafViewerViewModel(
             _pageSurahMap.value = quran.firstSurahByPage().mapValues { (_, surahId) -> SurahData.nameOf(surahId) }
         }
     }
+
+    /** Global ids of every ayah that belongs to a mutashabihat group, for highlighting on the page. */
+    val mutashabihatAyahs: StateFlow<Set<Int>> = dao.observeMembers()
+        .map { members -> members.mapTo(HashSet()) { it.verseId } }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     // ── Combined pipeline (Standard FSRS Logic) ───────────────────────────────
 

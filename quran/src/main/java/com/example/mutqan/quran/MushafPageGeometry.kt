@@ -1,7 +1,10 @@
 package com.example.mutqan.quran
 
-/** A word's glyph and the x coordinate of its left edge. */
-internal data class PlacedWord(val glyph: String, val x: Float)
+/** A word's glyph, the x coordinate of its left edge, its width, and its word and ayah ids (0 if unknown). */
+internal data class PlacedWord(val glyph: String, val x: Float, val width: Float, val wordId: Int = 0, val ayahId: Int = 0)
+
+/** A horizontal stretch of one line covered by a single ayah: [left]..[right] at row [centerY]. */
+internal data class AyahRun(val ayahId: Int, val left: Float, val right: Float, val centerY: Float)
 
 /** [centerY] is the vertical centre of the line's row; [words] is empty for header lines. */
 internal data class PlacedLine(val line: MushafLine, val centerY: Float, val words: List<PlacedWord>)
@@ -58,6 +61,41 @@ internal object MushafPageGeometry {
         return PageGeometry(textSize, lineHeight, placed)
     }
 
+    /**
+     * The word under ([x], [y]), or null. A tap in the gap between two words, or just past the
+     * end of a line, still counts for the nearest word of that row (within a third of a row).
+     */
+    fun hitTest(geometry: PageGeometry, x: Float, y: Float): PlacedWord? {
+        val row = geometry.lines.firstOrNull { it.words.isNotEmpty() && kotlin.math.abs(y - it.centerY) <= geometry.lineHeight / 2f }
+            ?: return null
+        val slack = geometry.lineHeight / 3f
+        return row.words
+            .map { it to when { x < it.x -> it.x - x; x > it.x + it.width -> x - (it.x + it.width); else -> 0f } }
+            .minByOrNull { it.second }
+            ?.takeIf { it.second <= slack }
+            ?.first
+    }
+
+    /** Stretches of each line covered by one of [ayahIds], gaps between neighbouring words included. */
+    fun ayahRuns(geometry: PageGeometry, ayahIds: Set<Int>): List<AyahRun> {
+        if (ayahIds.isEmpty()) return emptyList()
+        val runs = ArrayList<AyahRun>()
+        for (placed in geometry.lines) {
+            val words = placed.words
+            var i = 0
+            while (i < words.size) {
+                val id = words[i].ayahId
+                if (id !in ayahIds) { i++; continue }
+                var j = i
+                while (j + 1 < words.size && words[j + 1].ayahId == id) j++
+                // words run right to left, so words[i] is the right-most of the run
+                runs.add(AyahRun(id, words[j].x, words[i].x + words[i].width, placed.centerY))
+                i = j + 1
+            }
+        }
+        return runs
+    }
+
     private fun placeWords(
         line: MushafLine,
         width: Float,
@@ -78,7 +116,8 @@ internal object MushafPageGeometry {
         }
         return line.words.mapIndexed { i, glyph ->
             right -= widths[i]
-            PlacedWord(glyph, right).also { right -= gap }
+            PlacedWord(glyph, right, widths[i], line.wordIds.getOrElse(i) { 0 }, line.ayahIds.getOrElse(i) { 0 })
+                .also { right -= gap }
         }
     }
 }
