@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "9.4.1"
 appcompat = "1.7.0"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -11,7 +11,7 @@ navigationCompose = "2.8.9"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
 room = "2.8.4"
-ksp = "2.3.2"
+ksp = "2.3.6"
 coroutines = "1.9.0"
 datastore = "1.1.1"
 okhttp    = "4.12.0"
@@ -44,6 +44,7 @@ okhttp                         = { group = "com.squareup.okhttp3", name = "okhtt
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
