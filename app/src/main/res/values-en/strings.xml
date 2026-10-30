@@ -275,7 +275,7 @@
     <string name="help_vault_title">Vault Help</string>
     <string name="help_vault_desc">Organize similar verses into folders and groups to resolve confusion. You can export folders to share your work with others.</string>
     <string name="help_surahs_title">Surah List Help</string>
-    <string name="help_surahs_desc">Browse all 114 Surahs. See which Surahs have Mutashabihat groups linked to them and open any page directly in the Mushaf.</string>
+    <string name="help_surahs_desc">Tap a surah or a juz to read it in the Mushaf. Surahs you have memorised are marked, and the search takes a surah name, a surah number or a page number. The look-alikes count opens the groups of similar verses linked to that surah.</string>
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">Search Help</string>
@@ -621,4 +621,12 @@
     <string name="onboarding_slide2_where">Today tab › Edit plan</string>
     <string name="onboarding_slide3_where">Quran tab</string>
     <string name="onboarding_slide4_where">Practice tab · Insights tab</string>
+    <string name="quran_tab_surahs">Surahs</string>
+    <string name="quran_tab_juz">Juz</string>
+    <string name="quran_search_hint">Surah name, number or page</string>
+    <string name="quran_go_page">Go to page %d</string>
+    <string name="quran_surah_info">%1$d ayahs · Juz %2$d · page %3$d</string>
+    <string name="quran_memorised">Memorised</string>
+    <string name="quran_lookalikes">Look-alikes: %d</string>
+    <string name="quran_juz_info">Starts on page %1$d · %2$s</string>
 </resources>

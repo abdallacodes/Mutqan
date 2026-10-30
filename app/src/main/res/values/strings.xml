@@ -275,7 +275,7 @@
     <string name="help_vault_title">مخزن المتشابهات</string>
     <string name="help_vault_desc">هنا تجمع الآيات التي تتشابه في سمعك أو خطك، وتضيف لها وصفًا يساعدك على التمييز. يمكنك ترتيب المجموعات في مجلدات وتصديرها إن أردت مشاركة عملك.</string>
     <string name="help_surahs_title">فهرس السور</string>
-    <string name="help_surahs_desc">تصفّح السور الـ114 واطّلع على أي سورة فيها مجموعات متشابهات مرتبطة بها، وافتح الصفحة في المصحف بضغطة واحدة.</string>
+    <string name="help_surahs_desc">اضغط على سورة أو جزء لقراءته في المصحف. تظهر علامة على السور التي حفظتها، ويمكنك البحث باسم السورة أو رقمها أو رقم الصفحة. وعدد المتشابهات يفتح مجموعات الآيات المتشابهة المرتبطة بالسورة.</string>
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">البحث في الآيات</string>
@@ -621,4 +621,12 @@
     <string name="onboarding_slide2_where">تبويب اليوم ‹ تعديل الخطة</string>
     <string name="onboarding_slide3_where">تبويب القرآن</string>
     <string name="onboarding_slide4_where">تبويب تدرّب · تبويب متابعتي</string>
+    <string name="quran_tab_surahs">السور</string>
+    <string name="quran_tab_juz">الأجزاء</string>
+    <string name="quran_search_hint">اسم السورة أو رقمها أو رقم الصفحة</string>
+    <string name="quran_go_page">اذهب إلى الصفحة %d</string>
+    <string name="quran_surah_info">%1$d آية · الجزء %2$d · صفحة %3$d</string>
+    <string name="quran_memorised">محفوظة</string>
+    <string name="quran_lookalikes">المتشابهات: %d</string>
+    <string name="quran_juz_info">تبدأ في الصفحة %1$d · %2$s</string>
 </resources>
