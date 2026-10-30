@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
@@ -77,31 +78,9 @@ fun SurahDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                title = {
-                    Column {
-                        Text(
-                            text       = surahInfo?.getDisplayName()
-                                             ?: stringResource(R.string.surah_fallback_title, surahId),
-                            style      = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
-                            ),
-                            fontWeight = if (isArabic) FontWeight.SemiBold else FontWeight.Black,
-                            color      = MaterialTheme.colorScheme.onBackground,
-                            maxLines   = 1,
-                            overflow   = TextOverflow.Ellipsis
-                        )
-                    }
-                },
+            PaperHeader(
+                title = surahInfo?.getDisplayName() ?: stringResource(R.string.surah_fallback_title, surahId),
+                onBack = onBack,
                 actions = {
                     val page = mushafStartPage
                     IconButton(
@@ -114,10 +93,7 @@ fun SurahDetailScreen(
                             tint               = MaterialTheme.colorScheme.primary
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background

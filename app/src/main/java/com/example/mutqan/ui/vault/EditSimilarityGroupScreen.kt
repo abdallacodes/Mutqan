@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.dao.MemberVerseRef
@@ -137,25 +138,9 @@ fun EditSimilarityGroupScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                title = {
-                    Text(
-                        text          = if (groupId == null) stringResource(R.string.new_group_title)
-                                        else stringResource(R.string.edit_group_title),
-                        style         = MaterialTheme.typography.titleMedium,
-                        fontWeight    = FontWeight.Black,
-                        color         = MaterialTheme.colorScheme.onBackground
-                    )
-                },
+            PaperHeader(
+                title = if (groupId == null) stringResource(R.string.new_group_title) else stringResource(R.string.edit_group_title),
+                onBack = onBack,
                 actions = {
                     IconButton(
                         onClick  = { viewModel.saveGroup(); onBack() },
@@ -168,10 +153,7 @@ fun EditSimilarityGroupScreen(
                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         snackbarHost   = { SnackbarHost(snackbarHost) },

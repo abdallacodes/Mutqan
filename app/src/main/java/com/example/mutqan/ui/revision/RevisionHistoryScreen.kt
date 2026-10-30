@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.RecallOutcome
@@ -116,34 +117,10 @@ fun RevisionHistoryScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                title = {
-                    Column {
-                        Text(
-                            text          = stringResource(R.string.history_title),
-                            style         = MaterialTheme.typography.titleLarge,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text          = stringResource(R.string.history_subtitle),
-                            style         = MaterialTheme.typography.labelSmall,
-                            color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            PaperHeader(
+                title = stringResource(R.string.history_title),
+                subtitle = stringResource(R.string.history_subtitle),
+                onBack = onBack
             )
         },
         containerColor = MaterialTheme.colorScheme.background

@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.domain.SavedKind
@@ -75,20 +76,9 @@ fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.saved_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            PaperHeader(
+                title = stringResource(R.string.saved_title),
+                onBack = onBack
             )
         },
         containerColor = MaterialTheme.colorScheme.background

@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.heatmap
 
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.revision.OutcomePicker
 import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.domain.RecallOutcome
@@ -127,36 +128,10 @@ fun JuzDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint               = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                title = {
-                    Column {
-                        Text(
-                            text          = stringResource(R.string.juz_title, juzId),
-                            style         = MaterialTheme.typography.titleLarge,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text          = subtitle,
-                            style         = MaterialTheme.typography.labelSmall.copy(
-                                fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
-                            ),
-                            color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
+            PaperHeader(
+                title = stringResource(R.string.juz_title, juzId),
+                subtitle = subtitle,
+                onBack = onBack,
                 actions = {
                     com.example.mutqan.ui.components.TopBarOverflowMenu(
                         onHelpClick = { /* TODO */ },

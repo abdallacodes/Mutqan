@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.ui.components.TopBarOverflowMenu
 import com.example.mutqan.ui.theme.AmiriFontFamily
@@ -69,31 +70,15 @@ fun SurahListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text          = stringResource(R.string.surahs_title),
-                            style         = MaterialTheme.typography.titleLarge,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text          = stringResource(R.string.surahs_subtitle),
-                            style         = MaterialTheme.typography.labelSmall,
-                            color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            PaperHeader(
+                title = stringResource(R.string.surahs_title),
+                subtitle = stringResource(R.string.surahs_subtitle),
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },
                         onSettingsClick = onSettingsClick
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -117,7 +102,7 @@ fun SurahListScreen(
                     )
                     HorizontalDivider(
                         color     = MaterialTheme.colorScheme.outlineVariant,
-                        thickness = 0.5.dp
+                        thickness = 1.dp
                     )
                 }
 
@@ -160,27 +145,21 @@ private fun SurahRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text       = "%3d".format(item.info.id),
-                style      = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = FontFamily.Monospace
-                ),
-                color      = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Normal,
-                modifier   = Modifier.width(36.dp)
+                text     = "%d".format(item.info.id),
+                style    = MaterialTheme.typography.bodyMedium,
+                color    = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.width(36.dp)
             )
 
             Spacer(Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text       = item.info.getDisplayName(),
-                    style      = MaterialTheme.typography.titleSmall.copy(
-                        fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
-                    ),
-                    fontWeight = if (isArabic) FontWeight.SemiBold else FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onSurface,
-                    maxLines   = 1,
-                    overflow   = TextOverflow.Ellipsis
+                    text     = item.info.getDisplayName(),
+                    style    = MaterialTheme.typography.titleLarge,
+                    color    = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -195,7 +174,7 @@ private fun SurahRow(
                 if (item.groupCount > 0) {
                     GroupCountBadge(count = item.groupCount)
                 } else {
-                    Spacer(Modifier.size(18.dp))
+                    Spacer(Modifier.size(16.dp))
                 }
             }
         }
@@ -219,38 +198,19 @@ private fun SurahRow(
 @Composable
 private fun JuzBadge(juz: Int) {
     if (juz == 0) return
-    Surface(
-        shape  = RoundedCornerShape(4.dp),
-        color  = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Text(
-            text     = stringResource(R.string.juz_badge, juz),
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-            style    = MaterialTheme.typography.labelSmall,
-            color    = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    Text(
+        text  = stringResource(R.string.juz_badge, juz),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
 private fun GroupCountBadge(count: Int) {
-    Surface(
-        shape  = CircleShape,
-        color  = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-    ) {
-        Box(
-            modifier         = Modifier.size(22.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text       = if (count > 9) stringResource(R.string.group_count_max) else "$count",
-                style      = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Black,
-                color      = MaterialTheme.colorScheme.primary,
-                fontSize   = 9.sp
-            )
-        }
-    }
+    Text(
+        text       = if (count > 9) stringResource(R.string.group_count_max) else "$count",
+        style      = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color      = MaterialTheme.colorScheme.tertiary
+    )
 }

@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
@@ -80,40 +81,10 @@ fun GroupDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint               = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                title = {
-                    Column {
-                        Text(
-                            text          = group?.description ?: stringResource(R.string.group_detail_fallback_title),
-                            style         = MaterialTheme.typography.titleMedium,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground,
-                            maxLines      = 1,
-                            overflow      = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text          = if (isUnifiedVaultView) {
-                                stringResource(R.string.mutashabihat_breadcrumb_all)
-                            } else {
-                                stringResource(R.string.mutashabihat_breadcrumb, currentSurahName)
-                            },
-                            style         = MaterialTheme.typography.labelSmall,
-                            color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            PaperHeader(
+                title = group?.description ?: stringResource(R.string.group_detail_fallback_title),
+                subtitle = if (isUnifiedVaultView) stringResource(R.string.mutashabihat_breadcrumb_all) else stringResource(R.string.mutashabihat_breadcrumb, currentSurahName),
+                onBack = onBack
             )
         },
         containerColor = MaterialTheme.colorScheme.background

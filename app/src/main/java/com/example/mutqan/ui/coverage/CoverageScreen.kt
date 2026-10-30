@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import kotlinx.coroutines.launch
@@ -70,20 +71,9 @@ fun CoverageScreen(onDone: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onDone) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.coverage_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            PaperHeader(
+                title = stringResource(R.string.coverage_title),
+                onBack = onDone
             )
         },
         containerColor = MaterialTheme.colorScheme.background

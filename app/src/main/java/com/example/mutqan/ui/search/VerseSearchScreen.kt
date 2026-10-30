@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.quran.QuranAyah
@@ -92,22 +93,14 @@ fun VerseSearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.nav_search),
-                        fontWeight = FontWeight.Black
-                    )
-                },
+            PaperHeader(
+                title = stringResource(R.string.nav_search),
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },
                         onSettingsClick = onSettingsClick
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { innerPadding ->

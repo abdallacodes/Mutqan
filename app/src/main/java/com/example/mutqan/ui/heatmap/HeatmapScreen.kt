@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.ui.components.HelpDialog
 import com.example.mutqan.ui.components.TopBarOverflowMenu
@@ -76,22 +77,14 @@ fun HeatmapScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.brain_title),
-                        fontWeight = FontWeight.Black
-                    )
-                },
+            PaperHeader(
+                title = stringResource(R.string.brain_title),
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelp = true },
                         onSettingsClick = onSettingsClick
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { innerPadding ->

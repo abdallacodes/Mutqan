@@ -40,6 +40,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.PlanOrder
 import com.example.mutqan.domain.PlanUnit
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperHeader
 
 /** Creates or edits the revision plan: how much per day, which days are rest days, and what comes first. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -51,23 +53,7 @@ fun PlanScreen(onBack: () -> Unit) {
     val defaultName = stringResource(R.string.plan_default_name)
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.plan_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        },
+        topBar = { PaperHeader(title = stringResource(R.string.plan_title), onBack = onBack) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         if (!state.isLoaded) return@Scaffold
@@ -172,10 +158,11 @@ fun PlanScreen(onBack: () -> Unit) {
                 Switch(checked = state.paused, onCheckedChange = viewModel::setPaused)
             }
 
-            Button(
+            PaperButton(
+                text = stringResource(R.string.plan_btn_save),
                 onClick = { viewModel.save(defaultName, onBack) },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text(stringResource(R.string.plan_btn_save)) }
+            )
 
             if (state.isExisting) {
                 TextButton(

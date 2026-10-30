@@ -19,6 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.OrnamentDivider
+import com.example.mutqan.ui.components.Hairline
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -110,31 +117,15 @@ fun RevisionLogScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text          = stringResource(R.string.journal_title),
-                            style         = MaterialTheme.typography.titleLarge,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text          = stringResource(R.string.journal_subtitle),
-                            style         = MaterialTheme.typography.labelSmall,
-                            color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            PaperHeader(
+                title = stringResource(R.string.journal_title),
+                subtitle = stringResource(R.string.journal_subtitle),
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },
                         onSettingsClick = onSettingsClick
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -161,20 +152,12 @@ fun RevisionLogScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(12.dp)
-                ) {
-                    OutcomePicker(
-                        outcome = uiState.outcome,
-                        tags = uiState.mistakeTags,
-                        onOutcomeChange = viewModel::onOutcomeChange,
-                        onTagsChange = viewModel::onTagsChange
-                    )
-                }
+                OutcomePicker(
+                    outcome = uiState.outcome,
+                    tags = uiState.mistakeTags,
+                    onOutcomeChange = viewModel::onOutcomeChange,
+                    onTagsChange = viewModel::onTagsChange
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -183,64 +166,33 @@ fun RevisionLogScreen(
                     onClick            = { showDatePicker = true }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
+                PaperButton(
+                    text = stringResource(R.string.btn_log_revision),
                     onClick = viewModel::logRevision,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor   = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text(
-                        text          = stringResource(R.string.btn_log_revision),
-                        style         = MaterialTheme.typography.titleSmall,
-                        fontWeight    = FontWeight.Black,
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(28.dp))
 
+                OrnamentDivider()
                 Row(
                     modifier          = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(3.dp)
-                            .height(14.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(2.dp)
-                            )
+                    SectionLabel(
+                        text     = stringResource(R.string.recent_revisions),
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text          = stringResource(R.string.recent_revisions),
-                        style         = MaterialTheme.typography.labelMedium,
-                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight    = FontWeight.Bold,
-                        modifier      = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = onViewHistory) {
-                        Text(
-                            text          = stringResource(R.string.view_all),
-                            style         = MaterialTheme.typography.labelSmall,
-                            color         = MaterialTheme.colorScheme.primary,
-                            fontWeight    = FontWeight.Bold,
-                        )
-                    }
+                    PaperLink(text = stringResource(R.string.view_all), onClick = onViewHistory)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
                 LazyColumn(
                     modifier            = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     if (recentLogs.isEmpty()) {
                         item {
@@ -313,8 +265,8 @@ private fun DateSelectorButton(
         onClick  = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
-        shape  = RoundedCornerShape(8.dp),
+            .height(48.dp),
+        shape  = RoundedCornerShape(4.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -380,7 +332,7 @@ private fun PageRangeInputRow(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine    = true,
             colors        = fieldColors,
-            shape         = RoundedCornerShape(8.dp)
+            shape         = RoundedCornerShape(4.dp)
         )
 
         OutlinedTextField(
@@ -396,7 +348,7 @@ private fun PageRangeInputRow(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine    = true,
             colors        = fieldColors,
-            shape         = RoundedCornerShape(8.dp)
+            shape         = RoundedCornerShape(4.dp)
         )
     }
 }
@@ -408,56 +360,36 @@ private fun RevisionLogItem(log: RevisionLog) {
     val context    = LocalContext.current
     val healthClr = log.outcome.color()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(healthClr)
-        )
-
+    Column {
         Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
             Column {
                 Text(
-                    text       = formatLogDate(log.dateMillis, log.timestamp, context),
-                    style      = MaterialTheme.typography.labelSmall,
-                    color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text  = stringResource(R.string.pages_range, log.startPage, log.endPage),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text       = stringResource(R.string.pages_range, log.startPage, log.endPage),
-                    style      = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onSurface
+                    text  = formatLogDate(log.dateMillis, log.timestamp, context),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Surface(
-                shape  = RoundedCornerShape(4.dp),
-                color  = healthClr.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(modifier = Modifier.size(8.dp).background(healthClr, CircleShape))
                 Text(
-                    text       = log.outcome.localizedLabel(),
-                    modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    style      = MaterialTheme.typography.labelSmall,
-                    color      = healthClr,
-                    fontWeight = FontWeight.Bold
+                    text  = log.outcome.localizedLabel(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
+        Hairline()
     }
 }
 

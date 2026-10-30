@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
@@ -45,13 +46,9 @@ fun SimilarityTestScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.vault_test_title), fontWeight = FontWeight.Black) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+            PaperHeader(
+                title = stringResource(R.string.vault_test_title),
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = { viewModel.loadNextVerse() }) {
                         Icon(Icons.Default.Refresh, contentDescription = null)

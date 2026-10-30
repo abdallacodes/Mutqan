@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.EmptyStateCard
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,33 +145,10 @@ fun MutashabihatListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text          = currentFolderName ?: stringResource(R.string.vault_title),
-                            style         = MaterialTheme.typography.titleLarge,
-                            fontWeight    = FontWeight.Black,
-                            color         = MaterialTheme.colorScheme.onBackground,
-                            maxLines      = 1,
-                            overflow      = TextOverflow.Ellipsis
-                        )
-                        if (currentFolderName == null) {
-                            Text(
-                                text          = stringResource(R.string.vault_subtitle),
-                                style         = MaterialTheme.typography.labelSmall,
-                                color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    if (currentFolderId != null) {
-                        IconButton(onClick = { viewModel.navigateBack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        }
-                    }
-                },
+            PaperHeader(
+                title = currentFolderName ?: stringResource(R.string.vault_title),
+                subtitle = if (currentFolderName == null) stringResource(R.string.vault_subtitle) else null,
+                onBack = if (currentFolderId != null) { { viewModel.navigateBack() } } else null,
                 actions = {
                     IconButton(onClick = { showAddFolderDialog = true }) {
                         Icon(Icons.Default.CreateNewFolder, contentDescription = stringResource(R.string.cd_add_folder))
@@ -197,10 +175,7 @@ fun MutashabihatListScreen(
                             )
                         }
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         floatingActionButton = {

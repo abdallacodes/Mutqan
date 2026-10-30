@@ -2,6 +2,15 @@ package com.example.mutqan.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import com.example.mutqan.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -113,6 +122,50 @@ fun PaperLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
             ),
             color = if (soft) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
         )
+    }
+}
+
+/**
+ * A page heading: the title in display type, an optional quiet line under it, actions at the end
+ * and an ornament divider below. [onBack] adds a back arrow at the start for sub-screens.
+ */
+@Composable
+fun PaperHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    Column(modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (onBack == null) PaperSpace.Gutter else 8.dp, end = 8.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            actions()
+        }
+        OrnamentDivider(Modifier.padding(horizontal = PaperSpace.Gutter))
     }
 }
 
