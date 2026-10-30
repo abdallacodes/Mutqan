@@ -75,10 +75,15 @@ class HomeViewModel(
     ) { plans, logs, covered, saved, (day, hidden) ->
         val plan = plans.firstOrNull()
         val today = plan?.let {
-            val items = RevisionPlanner.buildItems(it.unit, covered, study.planGeometry())
-            val states = if (it.order == PlanOrder.WEAKEST_FIRST) PassageStates.compute(logs)
-            else Array(PAGES) { PassageState.NOT_ASSESSED }
-            RevisionPlanner.todayPlan(it, items, RevisionPlanner.lastRevisedDays(logs, ::offsetAt), states, day)
+            val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
+            else PassageStates.compute(logs)
+            val lastRevised = RevisionPlanner.lastRevisedDays(logs, ::offsetAt)
+            if (it.order == PlanOrder.BY_STRENGTH) {
+                RevisionPlanner.strengthToday(it, covered, lastRevised, states, day)
+            } else {
+                val items = RevisionPlanner.buildItems(it.unit, covered, study.planGeometry())
+                RevisionPlanner.todayPlan(it, items, lastRevised, states, day)
+            }
         }
         val weak = saved
             .filter { it.kind == SavedKind.WEAK && !it.isResolved && it.id !in hidden }

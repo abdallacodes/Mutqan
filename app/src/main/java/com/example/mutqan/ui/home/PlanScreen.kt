@@ -39,9 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.PlanOrder
+import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperTabs
 
 /** Creates or edits the revision plan: how much per day, which days are rest days, and what comes first. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -74,6 +76,37 @@ fun PlanScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
+            PaperTabs(
+                labels = listOf(
+                    stringResource(R.string.plan_mode_fixed),
+                    stringResource(R.string.plan_mode_strength)
+                ),
+                selectedIndex = if (state.byStrength) 1 else 0,
+                onSelect = { viewModel.setByStrength(it == 1) }
+            )
+
+            if (state.byStrength) {
+                Text(
+                    text = stringResource(R.string.plan_strength_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
+                    TierRow(
+                        tier = tier,
+                        days = state.daysOf(tier),
+                        pages = state.tierCounts[tier] ?: 0,
+                        daily = state.dailyOf(tier),
+                        onChange = { viewModel.changeTierDays(tier, it) }
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.plan_strength_total, state.dailyTotal),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            } else {
             Label(stringResource(R.string.plan_label_templates))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Template(stringResource(R.string.plan_template_juz1)) { viewModel.applyTemplate(PlanUnit.JUZ, 1) }
@@ -124,6 +157,8 @@ fun PlanScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            }
+
             Label(stringResource(R.string.plan_label_rest))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 (1..7).forEach { day ->
@@ -135,18 +170,20 @@ fun PlanScreen(onBack: () -> Unit) {
                 }
             }
 
-            Label(stringResource(R.string.plan_label_order))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PaperChip(
-                    selected = state.order == PlanOrder.ROTATION,
-                    onClick = { viewModel.setOrder(PlanOrder.ROTATION) },
-                    label = { Text(stringResource(R.string.plan_order_rotation)) }
-                )
-                PaperChip(
-                    selected = state.order == PlanOrder.WEAKEST_FIRST,
-                    onClick = { viewModel.setOrder(PlanOrder.WEAKEST_FIRST) },
-                    label = { Text(stringResource(R.string.plan_order_weakest)) }
-                )
+            if (!state.byStrength) {
+                Label(stringResource(R.string.plan_label_order))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PaperChip(
+                        selected = state.order == PlanOrder.ROTATION,
+                        onClick = { viewModel.setOrder(PlanOrder.ROTATION) },
+                        label = { Text(stringResource(R.string.plan_order_rotation)) }
+                    )
+                    PaperChip(
+                        selected = state.order == PlanOrder.WEAKEST_FIRST,
+                        onClick = { viewModel.setOrder(PlanOrder.WEAKEST_FIRST) },
+                        label = { Text(stringResource(R.string.plan_order_weakest)) }
+                    )
+                }
             }
 
             Row(
@@ -179,6 +216,47 @@ private val WEEKDAY_LABELS = listOf(
     R.string.day_mon, R.string.day_tue, R.string.day_wed, R.string.day_thu,
     R.string.day_fri, R.string.day_sat, R.string.day_sun
 )
+
+/** One strength tier: how often it comes around, with the pages in it and what that asks for per day. */
+@Composable
+private fun TierRow(tier: PlanTier, days: Int, pages: Int, daily: Int, onChange: (Int) -> Unit) {
+    val step = if (tier == PlanTier.WEAK) 1 else 5
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(
+                        when (tier) {
+                            PlanTier.WEAK -> R.string.plan_tier_weak
+                            PlanTier.FAIR -> R.string.plan_tier_fair
+                            PlanTier.STRONG -> R.string.plan_tier_strong
+                        }
+                    ),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = stringResource(R.string.plan_tier_every, days),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalIconButton(onClick = { onChange(-step) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                FilledTonalIconButton(onClick = { onChange(step) }) { Text("+", style = MaterialTheme.typography.titleLarge) }
+            }
+        }
+        Text(
+            text = if (pages == 0) stringResource(R.string.plan_tier_empty)
+            else stringResource(R.string.plan_tier_detail, pages, daily),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
 @Composable
 private fun Label(text: String) {

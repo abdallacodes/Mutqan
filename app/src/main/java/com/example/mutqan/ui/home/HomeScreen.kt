@@ -44,6 +44,8 @@ import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PlanItem
+import com.example.mutqan.domain.PlanOrder
+import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.ui.components.Hairline
@@ -60,7 +62,9 @@ import com.example.mutqan.ui.theme.AmiriFontFamily
 @Composable
 fun PlanItem.label(): String = when (unit) {
     PlanUnit.JUZ -> stringResource(R.string.plan_item_juz, number)
-    PlanUnit.PAGE -> stringResource(R.string.plan_item_page, number)
+    PlanUnit.PAGE ->
+        if (endPage > startPage) stringResource(R.string.pages_range, startPage, endPage)
+        else stringResource(R.string.plan_item_page, number)
     PlanUnit.SURAH -> SurahData.nameOf(number)
 }
 
@@ -154,6 +158,19 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            first.tier?.let { tier ->
+                                Text(
+                                    text = stringResource(
+                                        when (tier) {
+                                            PlanTier.WEAK -> R.string.home_tier_weak
+                                            PlanTier.FAIR -> R.string.home_tier_fair
+                                            PlanTier.STRONG -> R.string.home_tier_strong
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
                             Row(
                                 modifier = Modifier.padding(top = 20.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -194,7 +211,11 @@ fun HomeScreen(
                     }
                     item {
                         PaperLink(
-                            text = stringResource(R.string.home_plan_summary, plan.name, today.cycleDays),
+                            text = if (plan.order == PlanOrder.BY_STRENGTH) {
+                                stringResource(R.string.home_plan_summary_strength, plan.name, today.dailyPages)
+                            } else {
+                                stringResource(R.string.home_plan_summary, plan.name, today.cycleDays)
+                            },
                             onClick = onOpenPlan,
                             soft = true
                         )

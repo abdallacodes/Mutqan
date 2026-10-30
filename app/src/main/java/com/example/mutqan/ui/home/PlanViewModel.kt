@@ -5,8 +5,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.domain.PassageStates
 import com.example.mutqan.domain.PlanGeometry
 import com.example.mutqan.domain.PlanOrder
+import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RevisionPlan
 import com.example.mutqan.domain.RevisionPlanner
@@ -29,8 +31,26 @@ data class PlanUiState(
     val order: PlanOrder = PlanOrder.ROTATION,
     val paused: Boolean = false,
     /** Portions in the memorised coverage at the chosen unit; 0 when nothing is memorised yet. */
-    val itemCount: Int = 0
+    val itemCount: Int = 0,
+    val strongDays: Int = RevisionPlan.DEFAULT_STRONG_DAYS,
+    val fairDays: Int = RevisionPlan.DEFAULT_FAIR_DAYS,
+    val weakDays: Int = RevisionPlan.DEFAULT_WEAK_DAYS,
+    /** Memorised pages in each strength tier right now. */
+    val tierCounts: Map<PlanTier, Int> = emptyMap()
 ) {
+    val byStrength: Boolean get() = order == PlanOrder.BY_STRENGTH
+
+    fun daysOf(tier: PlanTier): Int = when (tier) {
+        PlanTier.STRONG -> strongDays
+        PlanTier.FAIR -> fairDays
+        PlanTier.WEAK -> weakDays
+    }
+
+    /** Pages a day a tier asks for. */
+    fun dailyOf(tier: PlanTier): Int = RevisionPlanner.tierQuota(tierCounts[tier] ?: 0, daysOf(tier))
+
+    val dailyTotal: Int get() = PlanTier.entries.sumOf(::dailyOf)
+
     val cycleDays: Int get() = RevisionPlanner.cycleDays(itemCount, amount)
 }
 
@@ -43,14 +63,17 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
     private var existing: RevisionPlan? = null
     private var covered: BooleanArray? = null
     private var geometry: PlanGeometry? = null
+    private var tierCounts: Map<PlanTier, Int> = emptyMap()
 
     init {
         viewModelScope.launch {
             existing = study.plans().first().firstOrNull()
             covered = study.coveredPages().first()
             geometry = study.planGeometry()
+            tierCounts = RevisionPlanner.tierPages(covered, PassageStates.compute(study.revisionLogs().first()))
+                .mapValues { it.value.size }
             val plan = existing
-            _uiState.value = if (plan == null) PlanUiState(isLoaded = true, amount = 1)
+            _uiState.value = if (plan == null) PlanUiState(isLoaded = true, amount = 1, tierCounts = tierCounts)
             else PlanUiState(
                 isLoaded = true,
                 isExisting = true,
@@ -59,7 +82,11 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
                 amount = plan.amountPerDay,
                 restDays = plan.restDays,
                 order = plan.order,
-                paused = plan.paused
+                paused = plan.paused,
+                strongDays = plan.strongDays,
+                fairDays = plan.fairDays,
+                weakDays = plan.weakDays,
+                tierCounts = tierCounts
             )
             recount()
         }
@@ -85,6 +112,19 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 
     fun setOrder(order: PlanOrder) = _uiState.update { it.copy(order = order) }
 
+    fun setByStrength(on: Boolean) = _uiState.update {
+        it.copy(order = if (on) PlanOrder.BY_STRENGTH else if (it.byStrength) PlanOrder.ROTATION else it.order)
+    }
+
+    /** Moves a tier's cycle by [delta] days, keeping weak <= fair <= strong. */
+    fun changeTierDays(tier: PlanTier, delta: Int) = _uiState.update {
+        when (tier) {
+            PlanTier.WEAK -> it.copy(weakDays = (it.weakDays + delta).coerceIn(MIN_WEAK, it.fairDays))
+            PlanTier.FAIR -> it.copy(fairDays = (it.fairDays + delta).coerceIn(it.weakDays, it.strongDays))
+            PlanTier.STRONG -> it.copy(strongDays = (it.strongDays + delta).coerceIn(it.fairDays, MAX_STRONG))
+        }
+    }
+
     fun setPaused(paused: Boolean) = _uiState.update { it.copy(paused = paused) }
 
     /** Fills the plan with a ready-made amount, e.g. 5 pages a day. */
@@ -105,7 +145,10 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
                     restDays = s.restDays,
                     order = s.order,
                     paused = s.paused,
-                    createdAt = existing?.createdAt ?: System.currentTimeMillis()
+                    createdAt = existing?.createdAt ?: System.currentTimeMillis(),
+                    strongDays = s.strongDays,
+                    fairDays = s.fairDays,
+                    weakDays = s.weakDays
                 )
             )
             onDone()
@@ -122,6 +165,8 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 
     companion object {
         private const val MAX_NAME = 40
+        private const val MIN_WEAK = 2
+        private const val MAX_STRONG = 180
 
         fun maxAmount(unit: PlanUnit): Int = when (unit) {
             PlanUnit.JUZ -> 10

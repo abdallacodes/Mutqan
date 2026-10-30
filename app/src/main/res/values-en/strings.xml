@@ -484,4 +484,18 @@
     <string name="ready_list_empty_title">No matches</string>
     <string name="ready_list_empty_body">Try another word from the phrase.</string>
     <string name="cd_ready_list">Ready list</string>
+    <string name="plan_mode_fixed">Fixed amount</string>
+    <string name="plan_mode_strength">By strength</string>
+    <string name="plan_strength_intro">Your pages are sorted by your recall history: weak ones come around often, strong ones rarely. Choose how many days one pass over each group takes.</string>
+    <string name="plan_tier_weak">Weak pages</string>
+    <string name="plan_tier_fair">Fair pages</string>
+    <string name="plan_tier_strong">Strong pages</string>
+    <string name="plan_tier_every">A pass every %d days</string>
+    <string name="plan_tier_detail">%1$d pages · about %2$d pages a day</string>
+    <string name="plan_tier_empty">No pages here right now</string>
+    <string name="plan_strength_total">Total: about %d pages a day</string>
+    <string name="home_plan_summary_strength">%1$s · about %2$d pages a day</string>
+    <string name="home_tier_weak">Weak · comes around often</string>
+    <string name="home_tier_fair">Fair</string>
+    <string name="home_tier_strong">Strong · comes around rarely</string>
 </resources>

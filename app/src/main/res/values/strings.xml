@@ -484,4 +484,18 @@
     <string name="ready_list_empty_title">لا نتائج</string>
     <string name="ready_list_empty_body">جرّب كلمة أخرى من العبارة.</string>
     <string name="cd_ready_list">القائمة الجاهزة</string>
+    <string name="plan_mode_fixed">كمية ثابتة</string>
+    <string name="plan_mode_strength">حسب القوة</string>
+    <string name="plan_strength_intro">تُصنَّف صفحاتك حسب سجل التسميع: الضعيفة تعود كثيرًا، والقوية نادرًا. اختر كم يومًا تستغرق دورة كل فئة.</string>
+    <string name="plan_tier_weak">صفحات ضعيفة</string>
+    <string name="plan_tier_fair">صفحات متوسطة</string>
+    <string name="plan_tier_strong">صفحات قوية</string>
+    <string name="plan_tier_every">دورة كل %d يومًا</string>
+    <string name="plan_tier_detail">%1$d صفحة · نحو %2$d صفحة يوميًا</string>
+    <string name="plan_tier_empty">لا صفحات هنا الآن</string>
+    <string name="plan_strength_total">المجموع: نحو %d صفحة يوميًا</string>
+    <string name="home_plan_summary_strength">%1$s · نحو %2$d صفحة يوميًا</string>
+    <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
+    <string name="home_tier_fair">متوسطة</string>
+    <string name="home_tier_strong">قوية · تعود نادرًا</string>
 </resources>

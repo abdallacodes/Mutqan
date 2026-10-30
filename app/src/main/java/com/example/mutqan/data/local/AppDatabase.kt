@@ -34,7 +34,7 @@ import com.example.mutqan.quran.QuranRepository
         SavedPassageEntity::class,
         RevisionPlanEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -159,6 +159,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Strength-based revision plans: the days one pass over each tier takes. */
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `revision_plans` ADD COLUMN `strong_days` INTEGER NOT NULL DEFAULT 40")
+                db.execSQL("ALTER TABLE `revision_plans` ADD COLUMN `fair_days` INTEGER NOT NULL DEFAULT 20")
+                db.execSQL("ALTER TABLE `revision_plans` ADD COLUMN `weak_days` INTEGER NOT NULL DEFAULT 8")
+            }
+        }
+
         /** Bookmarks and weak passages. */
         val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -182,7 +191,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()
