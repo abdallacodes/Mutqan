@@ -516,4 +516,18 @@
     <string name="recall_btn_save">Save the result</string>
     <string name="recall_saved_toast">Recall saved</string>
     <string name="home_btn_test">Test yourself</string>
+    <string name="progress_title">Your progress</string>
+    <string name="progress_subtitle">From what you recorded</string>
+    <string name="progress_section_coverage">Memorised</string>
+    <string name="progress_coverage_value">%1$d of %2$d pages</string>
+    <string name="progress_coverage_empty">Set what you have memorised and your progress will appear here.</string>
+    <string name="progress_open_coverage">Edit what you memorised</string>
+    <string name="progress_section_evidence">What your recall shows</string>
+    <string name="progress_pages">%d pages</string>
+    <string name="progress_section_consistency">Consistency</string>
+    <string name="progress_days">You revised on %1$d of the last %2$d days</string>
+    <string name="progress_section_attention">Worth a look</string>
+    <string name="progress_none_attention">No pages need attention right now. Well done.</string>
+    <string name="progress_juz_attention">Juz %1$d · %2$d pages</string>
+    <string name="home_btn_progress">Your progress</string>
 </resources>

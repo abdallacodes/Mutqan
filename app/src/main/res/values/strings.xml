@@ -516,4 +516,18 @@
     <string name="recall_btn_save">سجّل النتيجة</string>
     <string name="recall_saved_toast">سُجّل التسميع</string>
     <string name="home_btn_test">اختبر نفسك</string>
+    <string name="progress_title">تقدّمك</string>
+    <string name="progress_subtitle">بحسب ما سجّلته أنت</string>
+    <string name="progress_section_coverage">المحفوظ</string>
+    <string name="progress_coverage_value">%1$d من %2$d صفحة</string>
+    <string name="progress_coverage_empty">حدّد ما تحفظه أولًا لتظهر هنا صورة تقدّمك.</string>
+    <string name="progress_open_coverage">عدّل المحفوظ</string>
+    <string name="progress_section_evidence">ماذا يُظهر تسميعك</string>
+    <string name="progress_pages">%d صفحة</string>
+    <string name="progress_section_consistency">الانتظام</string>
+    <string name="progress_days">راجعتَ في %1$d يومًا من آخر %2$d</string>
+    <string name="progress_section_attention">مواضع تستحق نظرة</string>
+    <string name="progress_none_attention">لا صفحات تحتاج عناية الآن. أحسنت.</string>
+    <string name="progress_juz_attention">الجزء %1$d · %2$d صفحة</string>
+    <string name="home_btn_progress">تقدّمك</string>
 </resources>

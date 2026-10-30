@@ -73,6 +73,7 @@ fun PlanItem.label(): String = when (unit) {
 fun HomeScreen(
     onOpenPlan: () -> Unit,
     onOpenCoverage: () -> Unit,
+    onOpenProgress: () -> Unit,
     onTestMyself: (startPage: Int, endPage: Int) -> Unit,
     onOpenMushaf: (Int) -> Unit,
     onLogRevision: () -> Unit,
@@ -212,6 +213,7 @@ fun HomeScreen(
                         }
                     }
                     item {
+                        PaperLink(stringResource(R.string.home_btn_progress), onClick = onOpenProgress)
                         PaperLink(
                             text = if (plan.order == PlanOrder.BY_STRENGTH) {
                                 stringResource(R.string.home_plan_summary_strength, plan.name, today.dailyPages)

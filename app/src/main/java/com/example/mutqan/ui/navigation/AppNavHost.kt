@@ -83,6 +83,7 @@ import com.example.mutqan.ui.theme.ThemeViewModel
 import com.example.mutqan.ui.theme.ThemeViewModelFactory
 import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
+import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.recall.RecallExerciseScreen
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
@@ -97,6 +98,7 @@ object Routes {
     const val VAULT_LIST     = "vault_list"
     const val READY_LIST     = "ready_list"
     const val RECALL         = "recall"
+    const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
     const val HEATMAP        = "heatmap"
@@ -224,6 +226,7 @@ fun AppNavHost(
                 HomeScreen(
                     onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+                    onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
                     onTestMyself    = { start, end -> navController.navigate(Routes.recall(start, end)) },
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
                     onLogRevision   = {
@@ -316,6 +319,14 @@ fun AppNavHost(
                     startPage = start,
                     endPage = entry.arguments?.getInt("end") ?: start,
                     onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                )
+            }
+
+            composable(Routes.PROGRESS) {
+                ProgressScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenCoverage = { navController.navigate(Routes.COVERAGE) },
                     onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )
             }
