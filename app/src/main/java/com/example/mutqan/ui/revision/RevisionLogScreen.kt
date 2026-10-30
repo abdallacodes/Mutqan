@@ -94,7 +94,8 @@ import kotlin.math.roundToInt
 @Composable
 fun RevisionLogScreen(
     onViewHistory: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val viewModel: RevisionViewModel = viewModel(factory = RevisionViewModelFactory(context))
@@ -121,6 +122,7 @@ fun RevisionLogScreen(
             PaperHeader(
                 title = stringResource(R.string.journal_title),
                 subtitle = stringResource(R.string.journal_subtitle),
+                onBack = onBack,
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },

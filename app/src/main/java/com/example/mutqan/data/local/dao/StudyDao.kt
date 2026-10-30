@@ -1,5 +1,6 @@
 package com.example.mutqan.data.local.dao
 
+import com.example.mutqan.data.local.entity.ExerciseResultEntity
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Delete
@@ -252,6 +253,22 @@ abstract class StudyDao {
     @Query("DELETE FROM user_subjects")
     abstract suspend fun deleteAllUserSubjects()
 
+    // ── Exercises ──
+    @Insert
+    abstract suspend fun insertExerciseResult(result: ExerciseResultEntity)
+
+    @Query("SELECT type, COUNT(*) AS count FROM exercise_results WHERE timestamp >= :since GROUP BY type")
+    abstract fun observeExerciseCounts(since: Long): Flow<List<ExerciseCount>>
+
+    @Query("SELECT * FROM exercise_results")
+    abstract suspend fun getAllExerciseResultsSync(): List<ExerciseResultEntity>
+
+    @Query("DELETE FROM exercise_results")
+    abstract suspend fun deleteAllExerciseResults()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertExerciseResults(results: List<ExerciseResultEntity>)
+
     @Transaction
     open suspend fun clearUserData() {
         deleteAllRevisionLogs()
@@ -262,6 +279,7 @@ abstract class StudyDao {
         deleteAllCoverage()
         deleteAllSavedPassages()
         deleteAllPlans()
+        deleteAllExerciseResults()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -279,6 +297,8 @@ abstract class StudyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun insertUserSubjects(subjects: List<UserSubjectEntity>)
 }
+
+data class ExerciseCount(val type: Int, val count: Int)
 
 data class TestCandidate(
     @ColumnInfo(name = "verse_id") val verseId: Int,

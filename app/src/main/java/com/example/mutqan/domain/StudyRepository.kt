@@ -1,5 +1,6 @@
 package com.example.mutqan.domain
 
+import com.example.mutqan.data.local.entity.ExerciseResultEntity
 import android.content.Context
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.GroupMemberRef
@@ -159,6 +160,16 @@ class StudyRepository(
     /** Oldest first. */
     fun plans(): Flow<List<RevisionPlan>> =
         dao.observePlans().map { rows -> rows.map(RevisionPlan::fromEntity) }.flowOn(Dispatchers.IO)
+
+    /** Records a finished exercise round. It is kept apart from the revision logs and never changes a page's state. */
+    suspend fun addExerciseResult(type: ExerciseType, startPage: Int, endPage: Int, outcome: RecallOutcome) =
+        withContext(Dispatchers.IO) {
+            dao.insertExerciseResult(ExerciseResultEntity(type = type.code, startPage = startPage, endPage = endPage, outcome = outcome.code, timestamp = System.currentTimeMillis()))
+        }
+
+    /** How many rounds of each exercise type were done since [since] (epoch millis). */
+    fun exerciseCountsSince(since: Long): Flow<Map<ExerciseType, Int>> =
+        dao.observeExerciseCounts(since).map { rows -> rows.mapNotNull { r -> ExerciseType.fromCode(r.type)?.let { it to r.count } }.toMap() }
 
     suspend fun savePlan(plan: RevisionPlan) = withContext(Dispatchers.IO) { dao.upsertPlan(plan.toEntity()) }
 

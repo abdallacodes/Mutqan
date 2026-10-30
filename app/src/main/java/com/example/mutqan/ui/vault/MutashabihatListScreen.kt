@@ -97,7 +97,8 @@ fun MutashabihatListScreen(
     onEditGroup: (Int) -> Unit,
     onStartTest: (folderId: Int?, groupId: Int?) -> Unit,
     onOpenReadyList: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val viewModel: VaultViewModel = viewModel(factory = VaultViewModelFactory(context))
@@ -151,7 +152,7 @@ fun MutashabihatListScreen(
             PaperHeader(
                 title = currentFolderName ?: stringResource(R.string.vault_title),
                 subtitle = if (currentFolderName == null) stringResource(R.string.vault_subtitle) else null,
-                onBack = if (currentFolderId != null) { { viewModel.navigateBack() } } else null,
+                onBack = if (currentFolderId != null) { { viewModel.navigateBack() } } else onBack,
                 actions = {
                     if (currentFolderId == null) {
                         IconButton(onClick = onOpenReadyList) {

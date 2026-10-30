@@ -73,6 +73,7 @@ import kotlin.math.roundToInt
 fun HeatmapScreen(
     onJuzClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: HeatmapViewModel = viewModel(factory = HeatmapViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -82,6 +83,7 @@ fun HeatmapScreen(
         topBar = {
             PaperHeader(
                 title = stringResource(R.string.brain_title),
+                onBack = onBack,
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelp = true },

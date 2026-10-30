@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.AutoStories
@@ -33,6 +35,8 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
@@ -83,6 +87,9 @@ import com.example.mutqan.ui.theme.ThemeViewModel
 import com.example.mutqan.ui.theme.ThemeViewModelFactory
 import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
+import com.example.mutqan.ui.insights.InsightsScreen
+import com.example.mutqan.ui.practice.PageBoundariesScreen
+import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.recall.RecallExerciseScreen
 import com.example.mutqan.ui.vault.ReadyListScreen
@@ -98,6 +105,9 @@ object Routes {
     const val VAULT_LIST     = "vault_list"
     const val READY_LIST     = "ready_list"
     const val RECALL         = "recall"
+    const val PRACTICE       = "practice"
+    const val INSIGHTS       = "insights"
+    const val PAGE_BOUNDARIES = "page_boundaries"
     const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
@@ -158,7 +168,7 @@ fun AppNavHost(
     val backStack    by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
-    val topLevelRoutes = setOf(Routes.HOME, Routes.REVISION_LOG, Routes.VAULT_LIST, Routes.SURAH_LIST, Routes.VERSE_SEARCH, Routes.HEATMAP)
+    val topLevelRoutes = setOf(Routes.HOME, Routes.SURAH_LIST, Routes.PRACTICE, Routes.INSIGHTS)
     val showBottomBar  = currentRoute in topLevelRoutes
 
     // Settings bottom sheet state — shared across all top-level screens
@@ -229,13 +239,7 @@ fun AppNavHost(
                     onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
                     onTestMyself    = { start, end -> navController.navigate(Routes.recall(start, end)) },
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
-                    onLogRevision   = {
-                        navController.navigate(Routes.REVISION_LOG) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState    = true
-                        }
-                    },
+                    onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
                     onSettingsClick = { showSettingsSheet = true }
                 )
             }
@@ -247,7 +251,8 @@ fun AppNavHost(
             composable(Routes.REVISION_LOG) {
                 RevisionLogScreen(
                     onViewHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
-                    onSettingsClick = { showSettingsSheet = true }
+                    onSettingsClick = { showSettingsSheet = true },
+                    onBack          = { navController.popBackStack() }
                 )
             }
 
@@ -279,7 +284,8 @@ fun AppNavHost(
                         navController.navigate(Routes.similarityTest(folderId, groupId)) 
                     },
                     onOpenReadyList = { navController.navigate(Routes.READY_LIST) },
-                    onSettingsClick = { showSettingsSheet = true }
+                    onSettingsClick = { showSettingsSheet = true },
+                    onBack          = { navController.popBackStack() }
                 )
             }
 
@@ -287,21 +293,54 @@ fun AppNavHost(
                 SurahListScreen(
                     onSurahClick   = { id -> navController.navigate(Routes.surahDetail(id)) },
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
-                    onSettingsClick = { showSettingsSheet = true }
+                    onSettingsClick = { showSettingsSheet = true },
+                    onSearchClick   = { navController.navigate(Routes.VERSE_SEARCH) }
                 )
             }
 
             composable(Routes.VERSE_SEARCH) {
                 VerseSearchScreen(
                     onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) },
-                    onSettingsClick = { showSettingsSheet = true }
+                    onSettingsClick = { showSettingsSheet = true },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
             composable(Routes.HEATMAP) {
                 HeatmapScreen(
                     onJuzClick      = { juzId -> navController.navigate(Routes.juzDetail(juzId)) },
+                    onSettingsClick = { showSettingsSheet = true },
+                    onBack          = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.PRACTICE) {
+                PracticeScreen(
+                    onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
+                    onRecite         = { start, end -> navController.navigate(Routes.recall(start, end)) },
+                    onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
+                    onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
+                    onOpenVault      = { navController.navigate(Routes.VAULT_LIST) },
+                    onSettingsClick  = { showSettingsSheet = true }
+                )
+            }
+
+            composable(Routes.INSIGHTS) {
+                InsightsScreen(
+                    onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
+                    onOpenBrain     = { navController.navigate(Routes.HEATMAP) },
+                    onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
+                    onOpenHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
+                    onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+                    onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onSettingsClick = { showSettingsSheet = true }
+                )
+            }
+
+            composable(Routes.PAGE_BOUNDARIES) {
+                PageBoundariesScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )
             }
 
@@ -454,34 +493,22 @@ private fun MutqanBottomBar(
             unselectedIcon = Icons.Outlined.Today
         ),
         BottomNavItem(
-            route = Routes.REVISION_LOG,
-            label = stringResource(R.string.nav_journal),
-            selectedIcon = Icons.Default.EditNote,
-            unselectedIcon = Icons.Outlined.EditNote
-        ),
-        BottomNavItem(
-            route = Routes.VAULT_LIST,
-            label = stringResource(R.string.nav_vault),
-            selectedIcon = Icons.Default.CompareArrows,
-            unselectedIcon = Icons.Outlined.CompareArrows
-        ),
-        BottomNavItem(
-            route = Routes.VERSE_SEARCH,
-            label = stringResource(R.string.nav_search),
-            selectedIcon = Icons.Default.Search,
-            unselectedIcon = Icons.Outlined.Search
-        ),
-        BottomNavItem(
             route = Routes.SURAH_LIST,
-            label = stringResource(R.string.nav_surahs),
-            selectedIcon = Icons.Default.MenuBook, // Reusing icons since Article is missing
+            label = stringResource(R.string.nav_quran),
+            selectedIcon = Icons.Default.MenuBook,
             unselectedIcon = Icons.Outlined.MenuBook
         ),
         BottomNavItem(
-            route = Routes.HEATMAP,
-            label = stringResource(R.string.nav_brain),
-            selectedIcon = Icons.Default.GridView,
-            unselectedIcon = Icons.Outlined.GridView
+            route = Routes.PRACTICE,
+            label = stringResource(R.string.nav_practice),
+            selectedIcon = Icons.Default.Quiz,
+            unselectedIcon = Icons.Outlined.Quiz
+        ),
+        BottomNavItem(
+            route = Routes.INSIGHTS,
+            label = stringResource(R.string.nav_insights),
+            selectedIcon = Icons.Default.Insights,
+            unselectedIcon = Icons.Outlined.Insights
         )
     )
 

@@ -1,5 +1,6 @@
 package com.example.mutqan.domain
 
+import com.example.mutqan.data.local.entity.ExerciseResultEntity
 import android.content.Context
 import android.net.Uri
 import com.example.mutqan.R
@@ -37,6 +38,7 @@ class BackupManager(private val context: Context) {
             val coverage = dao.getAllCoverageSync()
             val saved = dao.getAllSavedPassagesSync()
             val plans = dao.getAllPlansSync()
+            val exercises = dao.getAllExerciseResultsSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
@@ -63,6 +65,17 @@ class BackupManager(private val context: Context) {
                         put(JSONObject().apply {
                             put("start_ayah_id", range.startAyahId)
                             put("end_ayah_id", range.endAyahId)
+                        })
+                    }
+                })
+                put("exercise_results", JSONArray().apply {
+                    exercises.forEach { r ->
+                        put(JSONObject().apply {
+                            put("type", r.type)
+                            put("start_page", r.startPage)
+                            put("end_page", r.endPage)
+                            put("outcome", r.outcome)
+                            put("timestamp", r.timestamp)
                         })
                     }
                 })
@@ -279,6 +292,20 @@ class BackupManager(private val context: Context) {
                 }
             }
 
+            val exercises = mutableListOf<ExerciseResultEntity>()
+            root.optJSONArray("exercise_results")?.let { array ->
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    exercises.add(ExerciseResultEntity(
+                        type = obj.getInt("type"),
+                        startPage = obj.getInt("start_page").coerceIn(1, 604),
+                        endPage = obj.getInt("end_page").coerceIn(1, 604),
+                        outcome = obj.getInt("outcome"),
+                        timestamp = obj.getLong("timestamp")
+                    ))
+                }
+            }
+
             val savedPassages = mutableListOf<SavedPassageEntity>()
             val savedArray = root.optJSONArray("saved_passages")
             if (savedArray != null) {
@@ -309,6 +336,7 @@ class BackupManager(private val context: Context) {
             dao.insertUserSubjects(subjects)
             dao.insertSavedPassages(savedPassages)
             dao.insertPlans(plans)
+            dao.insertExerciseResults(exercises)
 
             Result.success(Unit)
         } catch (e: Exception) {

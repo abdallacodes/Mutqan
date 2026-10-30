@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.surah
 
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,7 +61,8 @@ import com.example.mutqan.ui.theme.AmiriFontFamily
 fun SurahListScreen(
     onSurahClick: (Int) -> Unit,
     onOpenMushaf: (page: Int) -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: SurahListViewModel = viewModel(factory = SurahListViewModelFactory(context))
@@ -74,6 +76,9 @@ fun SurahListScreen(
                 title = stringResource(R.string.surahs_title),
                 subtitle = stringResource(R.string.surahs_subtitle),
                 actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search))
+                    }
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },
                         onSettingsClick = onSettingsClick

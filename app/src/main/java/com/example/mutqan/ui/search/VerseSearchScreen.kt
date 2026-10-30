@@ -84,6 +84,7 @@ private val YellowAccent = Color(0xFFD4A94C)
 fun VerseSearchScreen(
     onOpenMushaf: (Int) -> Unit,
     onSettingsClick: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: VerseSearchViewModel = viewModel(factory = VerseSearchViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -96,6 +97,7 @@ fun VerseSearchScreen(
         topBar = {
             PaperHeader(
                 title = stringResource(R.string.nav_search),
+                onBack = onBack,
                 actions = {
                     TopBarOverflowMenu(
                         onHelpClick = { showHelpDialog = true },

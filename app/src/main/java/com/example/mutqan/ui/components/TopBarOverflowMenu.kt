@@ -26,7 +26,7 @@ import com.example.mutqan.R
  */
 @Composable
 fun TopBarOverflowMenu(
-    onHelpClick: () -> Unit,
+    onHelpClick: (() -> Unit)?,
     onSettingsClick: () -> Unit,
     extraItems: (@Composable (dismissMenu: () -> Unit) -> Unit)? = null
 ) {
@@ -50,19 +50,21 @@ fun TopBarOverflowMenu(
             if (extraItems != null) {
                 HorizontalDivider()
             }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.help_title)) },
-                onClick = {
-                    dismissMenu()
-                    onHelpClick()
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null
-                    )
-                }
-            )
+            if (onHelpClick != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.help_title)) },
+                    onClick = {
+                        dismissMenu()
+                        onHelpClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.settings_title)) },
                 onClick = {

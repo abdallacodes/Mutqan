@@ -1,5 +1,6 @@
 package com.example.mutqan.data.local
 
+import com.example.mutqan.data.local.entity.ExerciseResultEntity
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -32,9 +33,10 @@ import com.example.mutqan.quran.QuranRepository
         UserSubjectEntity::class,
         HifzCoverageEntity::class,
         SavedPassageEntity::class,
-        RevisionPlanEntity::class
+        RevisionPlanEntity::class,
+        ExerciseResultEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -159,6 +161,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Results of practice exercises. */
+        val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE `exercise_results` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`type` INTEGER NOT NULL, `start_page` INTEGER NOT NULL, `end_page` INTEGER NOT NULL, " +
+                        "`outcome` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         /** Strength-based revision plans: the days one pass over each tier takes. */
         val MIGRATION_18_19 = object : Migration(18, 19) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -191,7 +204,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()
