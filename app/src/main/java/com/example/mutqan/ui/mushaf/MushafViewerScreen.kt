@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.mushaf
 
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.ui.saved.SavePassageSheet
 import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.SavedKind
@@ -231,6 +232,11 @@ fun MushafViewerScreen(
     }
 
     // Spread → landscape (open book); single → portrait (upright phone).
+    // Remember where the user is so Today can offer to continue from there.
+    LaunchedEffect(currentPage) {
+        UserPreferencesRepository(context.applicationContext).setLastMushafPage(currentPage)
+    }
+
     LaunchedEffect(useSpreadLayout) {
         val act = context.findActivity() ?: return@LaunchedEffect
         act.requestedOrientation = if (useSpreadLayout) {

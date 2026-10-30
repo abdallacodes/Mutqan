@@ -550,4 +550,5 @@
     <string name="delete_all_body">سيُحذف نهائيًا من هذا الجهاز: سجل المراجعة والمحفوظ والمخزن والخطط والمحفوظات. خذ نسخة احتياطية أولًا إن كنت قد تحتاجها.</string>
     <string name="delete_all_confirm">احذف كل شيء</string>
     <string name="delete_all_done">حُذفت البيانات</string>
+    <string name="home_btn_continue">تابع القراءة من الصفحة %d</string>
 </resources>

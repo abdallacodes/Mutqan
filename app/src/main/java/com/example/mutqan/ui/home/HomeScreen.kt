@@ -227,6 +227,10 @@ fun HomeScreen(
                 }
             }
 
+            state.lastPage?.let { page ->
+                item { PaperLink(stringResource(R.string.home_btn_continue, page), onClick = { onOpenMushaf(page) }) }
+            }
+
             if (state.weak.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(PaperSpace.Section))

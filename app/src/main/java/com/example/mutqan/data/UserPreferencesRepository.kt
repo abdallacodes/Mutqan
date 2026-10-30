@@ -1,5 +1,6 @@
 package com.example.mutqan.data
 
+import androidx.datastore.preferences.core.intPreferencesKey
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -12,6 +13,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_IS_FIRST_RUN      = booleanPreferencesKey("is_first_run")
         private val KEY_HEATMAP_COACHMARK = booleanPreferencesKey("heatmap_coachmark_seen")
         private val KEY_APP_LOCK          = booleanPreferencesKey("app_lock_enabled")
+        private val KEY_LAST_MUSHAF_PAGE  = intPreferencesKey("last_mushaf_page")
     }
 
     /** `true` on fresh installs; `false` after onboarding is completed. */
@@ -29,6 +31,13 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setAppLockEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_APP_LOCK] = enabled }
+    }
+
+    /** The Mushaf page the user was last reading, or null before they have read any. */
+    val lastMushafPage: Flow<Int?> = context.dataStore.data.map { prefs -> prefs[KEY_LAST_MUSHAF_PAGE] }
+
+    suspend fun setLastMushafPage(page: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_LAST_MUSHAF_PAGE] = page }
     }
 
     suspend fun completeOnboarding() {

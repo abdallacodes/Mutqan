@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.home
 
+import com.example.mutqan.data.UserPreferencesRepository
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -50,12 +51,15 @@ data class HomeUiState(
     val hasCoverage: Boolean = false,
     val plan: RevisionPlan? = null,
     val today: TodayPlan? = null,
-    val weak: List<WeakSuggestion> = emptyList()
+    val weak: List<WeakSuggestion> = emptyList(),
+    /** The Mushaf page the user last read, to offer "continue". */
+    val lastPage: Int? = null
 )
 
 class HomeViewModel(
     private val study: StudyRepository,
-    private val quran: QuranRepository
+    private val quran: QuranRepository,
+    preferences: UserPreferencesRepository
 ) : ViewModel() {
 
     private val dismissed = MutableStateFlow<Set<Int>>(emptySet())
@@ -68,11 +72,11 @@ class HomeViewModel(
         }
     }.distinctUntilChanged()
 
-    private val extras = combine(epochDay, dismissed) { day, hidden -> day to hidden }
+    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage) { day, hidden, last -> Triple(day, hidden, last) }
 
     val uiState: StateFlow<HomeUiState> = combine(
         study.plans(), study.revisionLogs(), study.coveredPages(), study.savedPassages(), extras
-    ) { plans, logs, covered, saved, (day, hidden) ->
+    ) { plans, logs, covered, saved, (day, hidden, lastPage) ->
         val plan = plans.firstOrNull()
         val today = plan?.let {
             val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
@@ -90,7 +94,7 @@ class HomeViewModel(
             .sortedWith(compareByDescending<SavedPassage> { it.priority }.thenByDescending { it.createdAt })
             .mapNotNull(::describe)
             .take(MAX_SUGGESTIONS)
-        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak)
+        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, lastPage = lastPage)
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
@@ -127,5 +131,5 @@ class HomeViewModel(
 class HomeViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(StudyRepository.create(context), QuranRepository.getInstance(context)) as T
+        HomeViewModel(StudyRepository.create(context), QuranRepository.getInstance(context), UserPreferencesRepository(context.applicationContext)) as T
 }

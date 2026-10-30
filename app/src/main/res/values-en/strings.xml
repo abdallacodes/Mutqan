@@ -550,4 +550,5 @@
     <string name="delete_all_body">This permanently deletes your revision history, memorised ranges, vault, plans and saved passages from this device. Make a backup first if you may want them.</string>
     <string name="delete_all_confirm">Delete everything</string>
     <string name="delete_all_done">All data deleted</string>
+    <string name="home_btn_continue">Continue reading from page %d</string>
 </resources>
