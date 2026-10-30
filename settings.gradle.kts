@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QMemo"
+rootProject.name = "Mutqan"
 include(":app")

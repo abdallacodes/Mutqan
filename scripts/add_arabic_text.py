@@ -24,7 +24,7 @@ API_URL = "https://api.alquran.cloud/v1/quran/quran-uthmani"
 def fetch_arabic_text() -> dict[tuple[int, int], str]:
     """Returns a mapping of (surah_id, ayah_number) -> Arabic text."""
     print(f"Fetching Quran text from {API_URL} …")
-    req = urllib.request.Request(API_URL, headers={"User-Agent": "QMemo/1.0"})
+    req = urllib.request.Request(API_URL, headers={"User-Agent": "Mutqan/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         payload = json.loads(resp.read().decode("utf-8"))
 
