@@ -3,6 +3,7 @@ package com.example.mutqan.ui.revision
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,88 +129,88 @@ fun RevisionLogScreen(
                 }
             )
         },
+        bottomBar = {
+            Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
+                Hairline()
+                PaperButton(
+                    text = stringResource(R.string.btn_log_revision),
+                    onClick = viewModel::logRevision,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                )
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
 
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp)
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
+                item {
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
+                        PageRangeInputRow(
+                            startPage     = uiState.startPage,
+                            endPage       = uiState.endPage,
+                            startError    = uiState.startPageError,
+                            endError      = uiState.endPageError,
+                            onStartChange = viewModel::onStartPageChange,
+                            onEndChange   = viewModel::onEndPageChange
+                        )
 
-                PageRangeInputRow(
-                    startPage     = uiState.startPage,
-                    endPage       = uiState.endPage,
-                    startError    = uiState.startPageError,
-                    endError      = uiState.endPageError,
-                    onStartChange = viewModel::onStartPageChange,
-                    onEndChange   = viewModel::onEndPageChange
-                )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        OutcomePicker(
+                            outcome = uiState.outcome,
+                            tags = uiState.mistakeTags,
+                            onOutcomeChange = viewModel::onOutcomeChange,
+                            onTagsChange = viewModel::onTagsChange
+                        )
 
-                OutcomePicker(
-                    outcome = uiState.outcome,
-                    tags = uiState.mistakeTags,
-                    onOutcomeChange = viewModel::onOutcomeChange,
-                    onTagsChange = viewModel::onTagsChange
-                )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        DateSelectorButton(
+                            selectedDateMillis = uiState.selectedDateMillis,
+                            onClick            = { showDatePicker = true }
+                        )
 
-                DateSelectorButton(
-                    selectedDateMillis = uiState.selectedDateMillis,
-                    onClick            = { showDatePicker = true }
-                )
+                        Spacer(modifier = Modifier.height(28.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                PaperButton(
-                    text = stringResource(R.string.btn_log_revision),
-                    onClick = viewModel::logRevision,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                OrnamentDivider()
-                Row(
-                    modifier          = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionLabel(
-                        text     = stringResource(R.string.recent_revisions),
-                        modifier = Modifier.weight(1f)
-                    )
-                    PaperLink(text = stringResource(R.string.view_all), onClick = onViewHistory)
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                LazyColumn(
-                    modifier            = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    if (recentLogs.isEmpty()) {
-                        item {
-                            EmptyStateCard(
-                                icon        = Icons.Default.EventNote,
-                                title       = stringResource(R.string.empty_history_title),
-                                description = stringResource(R.string.empty_history_body),
-                                modifier    = Modifier.padding(vertical = 16.dp)
+                        OrnamentDivider()
+                        Row(
+                            modifier          = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel(
+                                text     = stringResource(R.string.recent_revisions),
+                                modifier = Modifier.weight(1f)
                             )
+                            PaperLink(text = stringResource(R.string.view_all), onClick = onViewHistory)
                         }
-                    } else {
-                        items(recentLogs, key = { it.id }) { log ->
-                            RevisionLogItem(log)
-                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
+
+                if (recentLogs.isEmpty()) {
+                    item {
+                        EmptyStateCard(
+                            icon        = Icons.Default.EventNote,
+                            title       = stringResource(R.string.empty_history_title),
+                            description = stringResource(R.string.empty_history_body),
+                            modifier    = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+                } else {
+                    items(recentLogs, key = { it.id }) { log ->
+                        RevisionLogItem(log)
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
 
             if (showHelpDialog) {
