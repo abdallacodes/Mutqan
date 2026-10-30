@@ -248,12 +248,12 @@
     <string name="onboarding_skip">Skip intro</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_get_started">Get started</string>
-    <string name="onboarding_slide1_title">Know where you stand</string>
-    <string name="onboarding_slide1_body">Log each revision by page range and how it felt. Mutqan estimates how strong each page is in memory and updates as you go.</string>
-    <string name="onboarding_slide2_title">Untangle look‑alikes</string>
-    <string name="onboarding_slide2_body">Group verses that trip you up. The app surfaces in‑Surah and cross‑Surah clashes so you rehearse the right contrasts.</string>
-    <string name="onboarding_slide3_title">Stay ahead of slip</string>
-    <string name="onboarding_slide3_body">Your 604‑page map shows what is firm and what is fading. Nudge weak pages before they cost you in recitation.</string>
+    <string name="onboarding_slide1_title">Start with what you know</string>
+    <string name="onboarding_slide1_body">Tell the app which surahs or juz you have memorised. Your plan is built only from them, so you are never asked to revise what you have not learned.</string>
+    <string name="onboarding_slide2_title">A plan for every day</string>
+    <string name="onboarding_slide2_body">Today shows what to revise. When you finish, tap “I’ve finished revising” and say how it went. Choose a fixed amount, or let weak pages come back more often.</string>
+    <string name="onboarding_slide3_title">Read and look closer</string>
+    <string name="onboarding_slide3_body">The Quran tab opens the Mushaf page by page. Tap any verse to save it, mark it weak, or see the verses that look like it.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">Your Vault is Empty</string>
@@ -425,7 +425,6 @@
     <string name="home_no_plan_title">Create a revision plan</string>
     <string name="home_no_plan_body">Choose how much to revise each day and your rest days. You can change it any time.</string>
     <string name="home_btn_create_plan">Create a plan</string>
-    <string name="home_plan_summary">%1$s · a full cycle takes about %2$d days</string>
     <string name="home_done_title">Done today</string>
     <string name="home_due_title">Due today</string>
     <string name="home_all_done">Today\'s revision is done. Well done.</string>
@@ -451,7 +450,6 @@
     <string name="plan_template_pages5">5 pages a day</string>
     <string name="plan_template_pages10">10 pages a day</string>
     <string name="plan_label_unit">Revision unit</string>
-    <string name="plan_label_amount">Amount per day: %1$d</string>
     <string name="plan_label_rest">Rest days</string>
     <string name="plan_label_order">Order of what is due</string>
     <string name="plan_order_rotation">Longest ago first</string>
@@ -486,13 +484,11 @@
     <string name="cd_ready_list">Ready list</string>
     <string name="plan_mode_fixed">Fixed amount</string>
     <string name="plan_mode_strength">By strength</string>
-    <string name="plan_strength_intro">Your pages are sorted by your recall history: weak ones come around often, strong ones rarely. You choose how many pages a day each group gets.</string>
     <string name="plan_tier_weak">Weak pages</string>
     <string name="plan_tier_fair">Fair pages</string>
     <string name="plan_tier_strong">Strong pages</string>
     <string name="plan_tier_empty">No pages here right now</string>
     <string name="plan_strength_total">Total: %d pages a day</string>
-    <string name="home_plan_summary_strength">%1$s · about %2$d pages a day</string>
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
     <string name="home_tier_strong">Strong · comes around rarely</string>
@@ -513,7 +509,6 @@
     <string name="recall_btn_hide_cue">Hide the cue</string>
     <string name="recall_btn_save">Save the result</string>
     <string name="recall_saved_toast">Recall saved</string>
-    <string name="home_btn_test">Test yourself</string>
     <string name="progress_title">Your progress</string>
     <string name="progress_subtitle">From what you recorded</string>
     <string name="progress_section_coverage">Memorised</string>
@@ -548,7 +543,6 @@
     <string name="delete_all_body">This permanently deletes your revision history, memorised ranges, vault, plans and saved passages from this device. Make a backup first if you may want them.</string>
     <string name="delete_all_confirm">Delete everything</string>
     <string name="delete_all_done">All data deleted</string>
-    <string name="home_btn_continue">Continue reading from page %d</string>
     <string name="nav_quran">Quran</string>
     <string name="nav_practice">Practice</string>
     <string name="nav_insights">Insights</string>
@@ -598,7 +592,33 @@
     <string name="coverage_surah_picker_hint">Tap each surah you know in full</string>
     <string name="coverage_surah_search">Search a surah by name or number</string>
     <string name="coverage_surah_partly">Partly</string>
-    <string name="plan_tier_per_day">%d pages a day</string>
     <string name="plan_tier_cycle">%1$d pages in this group · a full pass about every %2$d days</string>
     <string name="plan_tier_off">%d pages in this group · left out of the plan</string>
+    <string name="home_progress_today">%1$d of %2$d done today</string>
+    <string name="home_btn_revised">I’ve finished revising</string>
+    <string name="home_later_title">Later today</string>
+    <string name="home_plan_title">Your plan</string>
+    <string name="home_plan_line_strength">About %d pages a day</string>
+    <string name="home_plan_line_fixed">A full cycle takes about %d days</string>
+    <string name="home_continue_title">Continue reading</string>
+    <string name="home_continue_page">From page %d</string>
+    <string name="home_progress_hint">Coverage, recall results and consistency</string>
+    <string name="home_log_hint">Record a revision that was not in today’s plan</string>
+    <string name="plan_step_number">Step %d</string>
+    <string name="plan_step_kind">How should the plan work?</string>
+    <string name="plan_step_amount">How much each day?</string>
+    <string name="plan_step_pause">Pause</string>
+    <string name="plan_mode_fixed_desc">The same amount every day, taken in turn from everything you have memorised.</string>
+    <string name="plan_mode_strength_desc">Weak pages come back often, strong ones rarely. You choose the pages a day for each group.</string>
+    <string name="plan_label_amount_each_day">Amount each day</string>
+    <string name="plan_rest_hint">Tap the days you do not revise.</string>
+    <string name="plan_pause_hint">Nothing is asked of you until you turn it back on.</string>
+    <string name="plan_unit_pages_a_day">pages a day</string>
+    <string name="onboarding_page_of">%1$d / %2$d</string>
+    <string name="onboarding_slide4_title">Practise, then see how you are doing</string>
+    <string name="onboarding_slide4_body">Practice has exercises such as page boundaries and reciting from memory. Insights shows what is firm and what needs another look.</string>
+    <string name="onboarding_slide1_where">Today › Set what I have memorised</string>
+    <string name="onboarding_slide2_where">Today tab › Edit plan</string>
+    <string name="onboarding_slide3_where">Quran tab</string>
+    <string name="onboarding_slide4_where">Practice tab · Insights tab</string>
 </resources>

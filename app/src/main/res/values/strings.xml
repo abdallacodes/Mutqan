@@ -248,12 +248,12 @@
     <string name="onboarding_skip">تخطّي المقدّمة</string>
     <string name="onboarding_next">التالي</string>
     <string name="onboarding_get_started">ابدأ الاستخدام</string>
-    <string name="onboarding_slide1_title">سجّل مراجعتك بثقة</string>
-    <string name="onboarding_slide1_body">دوّن كل جلسة بنطاق الصفحات وما شعرت به أثناء المراجعة. يبني التطبيق تقديرًا عمليًا لثبات كل صفحة ويحدّثه معك مع الوقت.</string>
-    <string name="onboarding_slide2_title">نظّم المتشابهات</string>
-    <string name="onboarding_slide2_body">اجمع الآيات التي تختلط عليك في مجموعات، فيُسهّل عليك التمييز بينها. يبرز لك التطبيق التداخل داخل السورة وبين السور حتى لا تفاجأ في التلاوة.</string>
-    <string name="onboarding_slide3_title">خريطة 604 صفحة بين يديك</string>
-    <string name="onboarding_slide3_body">ألوان الخريطة تعبّر عن رسوخ الحفظ: ما استقر يظهر بثقة، وما بدأ يضعف يطلب منك لفتة قبل أن يضيق الوقت.</string>
+    <string name="onboarding_slide1_title">ابدأ بما تحفظ</string>
+    <string name="onboarding_slide1_body">حدّد السور أو الأجزاء التي حفظتها. تُبنى خطتك منها وحدها، فلا يُطلب منك مراجعة ما لم تحفظه بعد.</string>
+    <string name="onboarding_slide2_title">خطة لكل يوم</string>
+    <string name="onboarding_slide2_body">تعرض لك شاشة اليوم ما تراجعه. عند الانتهاء اضغط «أنهيتُ المراجعة» وأخبر التطبيق كيف جرت. اختر كمية ثابتة، أو دع الصفحات الضعيفة تعود أكثر.</string>
+    <string name="onboarding_slide3_title">اقرأ وتأمّل</string>
+    <string name="onboarding_slide3_body">يفتح تبويب القرآن المصحف صفحةً صفحة. اضغط على أي آية لحفظها، أو وسمها ضعيفة، أو رؤية الآيات المتشابهة معها.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">المخزن فارغ</string>
@@ -425,7 +425,6 @@
     <string name="home_no_plan_title">أنشئ خطة مراجعة</string>
     <string name="home_no_plan_body">اختر مقدار ما تراجعه كل يوم وأيام الراحة. يمكنك تعديلها في أي وقت.</string>
     <string name="home_btn_create_plan">إنشاء خطة</string>
-    <string name="home_plan_summary">%1$s · دورة كاملة في نحو %2$d يومًا</string>
     <string name="home_done_title">تمّ اليوم</string>
     <string name="home_due_title">مستحق اليوم</string>
     <string name="home_all_done">أتممت مراجعة اليوم، بارك الله فيك.</string>
@@ -451,7 +450,6 @@
     <string name="plan_template_pages5">5 صفحات يوميًا</string>
     <string name="plan_template_pages10">10 صفحات يوميًا</string>
     <string name="plan_label_unit">وحدة المراجعة</string>
-    <string name="plan_label_amount">الكمية في اليوم: %1$d</string>
     <string name="plan_label_rest">أيام الراحة</string>
     <string name="plan_label_order">ترتيب المستحق</string>
     <string name="plan_order_rotation">الأقدم مراجعةً أولًا</string>
@@ -486,13 +484,11 @@
     <string name="cd_ready_list">القائمة الجاهزة</string>
     <string name="plan_mode_fixed">كمية ثابتة</string>
     <string name="plan_mode_strength">حسب القوة</string>
-    <string name="plan_strength_intro">تُصنَّف صفحاتك حسب سجل التسميع: الضعيفة تعود كثيرًا، والقوية نادرًا. اختر أنت كم صفحة في اليوم لكل فئة.</string>
     <string name="plan_tier_weak">صفحات ضعيفة</string>
     <string name="plan_tier_fair">صفحات متوسطة</string>
     <string name="plan_tier_strong">صفحات قوية</string>
     <string name="plan_tier_empty">لا صفحات هنا الآن</string>
     <string name="plan_strength_total">المجموع: %d صفحة يوميًا</string>
-    <string name="home_plan_summary_strength">%1$s · نحو %2$d صفحة يوميًا</string>
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
     <string name="home_tier_strong">قوية · تعود نادرًا</string>
@@ -513,7 +509,6 @@
     <string name="recall_btn_hide_cue">أخفِ التلميح</string>
     <string name="recall_btn_save">سجّل النتيجة</string>
     <string name="recall_saved_toast">سُجّل التسميع</string>
-    <string name="home_btn_test">اختبر نفسك</string>
     <string name="progress_title">تقدّمك</string>
     <string name="progress_subtitle">بحسب ما سجّلته أنت</string>
     <string name="progress_section_coverage">المحفوظ</string>
@@ -548,7 +543,6 @@
     <string name="delete_all_body">سيُحذف نهائيًا من هذا الجهاز: سجل المراجعة والمحفوظ والمخزن والخطط والمحفوظات. خذ نسخة احتياطية أولًا إن كنت قد تحتاجها.</string>
     <string name="delete_all_confirm">احذف كل شيء</string>
     <string name="delete_all_done">حُذفت البيانات</string>
-    <string name="home_btn_continue">تابع القراءة من الصفحة %d</string>
     <string name="nav_quran">القرآن</string>
     <string name="nav_practice">تدرّب</string>
     <string name="nav_insights">متابعتي</string>
@@ -598,7 +592,33 @@
     <string name="coverage_surah_picker_hint">اضغط على السورة التي تحفظها كاملة</string>
     <string name="coverage_surah_search">ابحث عن سورة بالاسم أو الرقم</string>
     <string name="coverage_surah_partly">جزء منها</string>
-    <string name="plan_tier_per_day">%d صفحة يوميًا</string>
     <string name="plan_tier_cycle">%1$d صفحة في هذه الفئة · دورة كاملة كل %2$d يومًا تقريبًا</string>
     <string name="plan_tier_off">%d صفحة في هذه الفئة · غير مضمَّنة في الخطة</string>
+    <string name="home_progress_today">تمّ %1$d من %2$d اليوم</string>
+    <string name="home_btn_revised">أنهيتُ المراجعة</string>
+    <string name="home_later_title">لاحقًا اليوم</string>
+    <string name="home_plan_title">خطتك</string>
+    <string name="home_plan_line_strength">نحو %d صفحة يوميًا</string>
+    <string name="home_plan_line_fixed">دورة كاملة في نحو %d يومًا</string>
+    <string name="home_continue_title">تابع القراءة</string>
+    <string name="home_continue_page">من الصفحة %d</string>
+    <string name="home_progress_hint">المحفوظ ونتائج التسميع والانتظام</string>
+    <string name="home_log_hint">سجّل مراجعة لم تكن ضمن خطة اليوم</string>
+    <string name="plan_step_number">الخطوة %d</string>
+    <string name="plan_step_kind">كيف تعمل الخطة؟</string>
+    <string name="plan_step_amount">كم في اليوم؟</string>
+    <string name="plan_step_pause">الإيقاف</string>
+    <string name="plan_mode_fixed_desc">الكمية نفسها كل يوم، تؤخذ بالتتابع من كل ما حفظت.</string>
+    <string name="plan_mode_strength_desc">الصفحات الضعيفة تعود كثيرًا والقوية نادرًا. أنت تحدد عدد الصفحات يوميًا لكل فئة.</string>
+    <string name="plan_label_amount_each_day">الكمية في اليوم</string>
+    <string name="plan_rest_hint">اضغط على الأيام التي لا تراجع فيها.</string>
+    <string name="plan_pause_hint">لن يُطلب منك شيء حتى تعيد تشغيلها.</string>
+    <string name="plan_unit_pages_a_day">صفحة يوميًا</string>
+    <string name="onboarding_page_of">%1$d / %2$d</string>
+    <string name="onboarding_slide4_title">تدرّب ثم تابع تقدّمك</string>
+    <string name="onboarding_slide4_body">في تدرّب تمارين مثل حدود الصفحات والتسميع من الذاكرة. وفي متابعتي ترى ما رسخ وما يحتاج إلى نظرة.</string>
+    <string name="onboarding_slide1_where">اليوم ‹ تحديد المحفوظ</string>
+    <string name="onboarding_slide2_where">تبويب اليوم ‹ تعديل الخطة</string>
+    <string name="onboarding_slide3_where">تبويب القرآن</string>
+    <string name="onboarding_slide4_where">تبويب تدرّب · تبويب متابعتي</string>
 </resources>

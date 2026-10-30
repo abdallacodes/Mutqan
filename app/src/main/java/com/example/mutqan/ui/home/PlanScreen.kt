@@ -5,28 +5,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
-import com.example.mutqan.ui.components.PaperChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,19 +26,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.PlanOrder
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
+import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperChip
+import com.example.mutqan.ui.components.PaperChoice
 import com.example.mutqan.ui.components.PaperHeader
-import com.example.mutqan.ui.components.PaperTabs
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.PaperStepper
+import com.example.mutqan.ui.components.SectionLabel
 
-/** Creates or edits the revision plan: how much per day, which days are rest days, and what comes first. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Creates or edits the revision plan. Four short steps in the order a person thinks about them:
+ * how the plan works, how much per day, which days to rest, and whether it is paused. The Save
+ * button and a one-line summary stay at the bottom so it is always clear what the plan asks for.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlanScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -56,6 +57,36 @@ fun PlanScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = { PaperHeader(title = stringResource(R.string.plan_title), onBack = onBack) },
+        bottomBar = {
+            if (state.isLoaded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                ) {
+                    Hairline()
+                    Column(
+                        modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = when {
+                                state.byStrength -> stringResource(R.string.plan_strength_total, state.dailyTotal)
+                                state.itemCount == 0 -> stringResource(R.string.plan_preview_empty)
+                                else -> stringResource(R.string.plan_preview, state.itemCount, state.cycleDays)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        PaperButton(
+                            text = stringResource(R.string.plan_btn_save),
+                            onClick = { viewModel.save(defaultName, onBack) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         if (!state.isLoaded) return@Scaffold
@@ -64,8 +95,8 @@ fun PlanScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = PaperSpace.Gutter, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
                 value = state.name,
@@ -76,103 +107,75 @@ fun PlanScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            PaperTabs(
-                labels = listOf(
-                    stringResource(R.string.plan_mode_fixed),
-                    stringResource(R.string.plan_mode_strength)
-                ),
-                selectedIndex = if (state.byStrength) 1 else 0,
-                onSelect = { viewModel.setByStrength(it == 1) }
+            Step(1, stringResource(R.string.plan_step_kind))
+            PaperChoice(
+                title = stringResource(R.string.plan_mode_fixed),
+                description = stringResource(R.string.plan_mode_fixed_desc),
+                selected = !state.byStrength,
+                onClick = { viewModel.setByStrength(false) }
+            )
+            PaperChoice(
+                title = stringResource(R.string.plan_mode_strength),
+                description = stringResource(R.string.plan_mode_strength_desc),
+                selected = state.byStrength,
+                onClick = { viewModel.setByStrength(true) }
             )
 
+            Step(2, stringResource(R.string.plan_step_amount))
             if (state.byStrength) {
-                Text(
-                    text = stringResource(R.string.plan_strength_intro),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
                     TierRow(
                         tier = tier,
                         perDay = state.pagesOf(tier),
                         pages = state.tierCounts[tier] ?: 0,
                         cycleDays = state.cycleOf(tier),
-                        onChange = { viewModel.changeTierPages(tier, it) }
+                        onChange = { viewModel.setTierPages(tier, it) }
                     )
+                    Hairline()
                 }
-                Text(
-                    text = stringResource(R.string.plan_strength_total, state.dailyTotal),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
             } else {
-            Label(stringResource(R.string.plan_label_templates))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Template(stringResource(R.string.plan_template_juz1)) { viewModel.applyTemplate(PlanUnit.JUZ, 1) }
-                Template(stringResource(R.string.plan_template_juz2)) { viewModel.applyTemplate(PlanUnit.JUZ, 2) }
-                Template(stringResource(R.string.plan_template_pages5)) { viewModel.applyTemplate(PlanUnit.PAGE, 5) }
-                Template(stringResource(R.string.plan_template_pages10)) { viewModel.applyTemplate(PlanUnit.PAGE, 10) }
-            }
+                Hint(stringResource(R.string.plan_label_templates))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Template(stringResource(R.string.plan_template_juz1)) { viewModel.applyTemplate(PlanUnit.JUZ, 1) }
+                    Template(stringResource(R.string.plan_template_juz2)) { viewModel.applyTemplate(PlanUnit.JUZ, 2) }
+                    Template(stringResource(R.string.plan_template_pages5)) { viewModel.applyTemplate(PlanUnit.PAGE, 5) }
+                    Template(stringResource(R.string.plan_template_pages10)) { viewModel.applyTemplate(PlanUnit.PAGE, 10) }
+                }
 
-            Label(stringResource(R.string.plan_label_unit))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlanUnit.entries.forEach { unit ->
-                    PaperChip(
-                        selected = state.unit == unit,
-                        onClick = { viewModel.setUnit(unit) },
-                        label = {
-                            Text(
-                                stringResource(
-                                    when (unit) {
-                                        PlanUnit.JUZ -> R.string.plan_unit_juz
-                                        PlanUnit.PAGE -> R.string.plan_unit_page
-                                        PlanUnit.SURAH -> R.string.plan_unit_surah
-                                    }
+                Spacer(Modifier.height(8.dp))
+                Hint(stringResource(R.string.plan_label_unit))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PlanUnit.entries.forEach { unit ->
+                        PaperChip(
+                            selected = state.unit == unit,
+                            onClick = { viewModel.setUnit(unit) },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        when (unit) {
+                                            PlanUnit.JUZ -> R.string.plan_unit_juz
+                                            PlanUnit.PAGE -> R.string.plan_unit_page
+                                            PlanUnit.SURAH -> R.string.plan_unit_surah
+                                        }
+                                    )
                                 )
-                            )
-                        }
-                    )
+                            }
+                        )
+                    }
                 }
-            }
 
-            Label(stringResource(R.string.plan_label_amount, state.amount))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FilledTonalIconButton(onClick = { viewModel.setAmount(state.amount - 1) }, enabled = state.amount > 1) {
-                    Text("−", style = MaterialTheme.typography.titleLarge)
-                }
-                Text(state.amount.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                FilledTonalIconButton(
-                    onClick = { viewModel.setAmount(state.amount + 1) },
-                    enabled = state.amount < PlanViewModel.maxAmount(state.unit)
-                ) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
-            }
+                Spacer(Modifier.height(8.dp))
+                Hint(stringResource(R.string.plan_label_amount_each_day))
+                PaperStepper(
+                    value = state.amount,
+                    onChange = viewModel::setAmount,
+                    min = 1,
+                    max = PlanViewModel.maxAmount(state.unit)
+                )
 
-            Text(
-                text = if (state.itemCount == 0) stringResource(R.string.plan_preview_empty)
-                else stringResource(R.string.plan_preview, state.itemCount, state.cycleDays),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            }
-
-            Label(stringResource(R.string.plan_label_rest))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (1..7).forEach { day ->
-                    PaperChip(
-                        selected = day in state.restDays,
-                        onClick = { viewModel.toggleRestDay(day) },
-                        label = { Text(stringResource(WEEKDAY_LABELS[day - 1])) }
-                    )
-                }
-            }
-
-            if (!state.byStrength) {
-                Label(stringResource(R.string.plan_label_order))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.height(8.dp))
+                Hint(stringResource(R.string.plan_label_order))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     PaperChip(
                         selected = state.order == PlanOrder.ROTATION,
                         onClick = { viewModel.setOrder(PlanOrder.ROTATION) },
@@ -186,25 +189,35 @@ fun PlanScreen(onBack: () -> Unit) {
                 }
             }
 
+            Step(3, stringResource(R.string.plan_label_rest))
+            Hint(stringResource(R.string.plan_rest_hint))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                (1..7).forEach { day ->
+                    PaperChip(
+                        selected = day in state.restDays,
+                        onClick = { viewModel.toggleRestDay(day) },
+                        label = { Text(stringResource(WEEKDAY_LABELS[day - 1])) }
+                    )
+                }
+            }
+
+            Step(4, stringResource(R.string.plan_step_pause))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(stringResource(R.string.plan_label_paused), style = MaterialTheme.typography.bodyLarge)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.plan_label_paused), style = MaterialTheme.typography.bodyLarge)
+                    Hint(stringResource(R.string.plan_pause_hint))
+                }
                 Switch(checked = state.paused, onCheckedChange = viewModel::setPaused)
             }
-
-            PaperButton(
-                text = stringResource(R.string.plan_btn_save),
-                onClick = { viewModel.save(defaultName, onBack) },
-                modifier = Modifier.fillMaxWidth()
-            )
 
             if (state.isExisting) {
                 TextButton(
                     onClick = { viewModel.delete(onBack) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) { Text(stringResource(R.string.plan_btn_delete), color = MaterialTheme.colorScheme.error) }
             }
         }
@@ -217,55 +230,64 @@ private val WEEKDAY_LABELS = listOf(
     R.string.day_fri, R.string.day_sat, R.string.day_sun
 )
 
-/** One strength tier: the pages a day the user picks, with how many pages are in it and how long a pass then takes. */
+/** A numbered heading that opens one part of the form. */
+@Composable
+private fun Step(number: Int, title: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
+        SectionLabel(stringResource(R.string.plan_step_number, number))
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+/**
+ * One strength tier: its name and how many pages it holds, how long one pass takes at the chosen pace,
+ * and a stepper for the pages a day it gets.
+ */
 @Composable
 private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onChange: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(
-                        when (tier) {
-                            PlanTier.WEAK -> R.string.plan_tier_weak
-                            PlanTier.FAIR -> R.string.plan_tier_fair
-                            PlanTier.STRONG -> R.string.plan_tier_strong
-                        }
-                    ),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = stringResource(R.string.plan_tier_per_day, perDay),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalIconButton(onClick = { onChange(-1) }, enabled = perDay > 0) { Text("−", style = MaterialTheme.typography.titleLarge) }
-                FilledTonalIconButton(onClick = { onChange(1) }) { Text("+", style = MaterialTheme.typography.titleLarge) }
-            }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = stringResource(
+                    when (tier) {
+                        PlanTier.WEAK -> R.string.plan_tier_weak
+                        PlanTier.FAIR -> R.string.plan_tier_fair
+                        PlanTier.STRONG -> R.string.plan_tier_strong
+                    }
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Hint(
+                when {
+                    pages == 0 -> stringResource(R.string.plan_tier_empty)
+                    perDay == 0 -> stringResource(R.string.plan_tier_off, pages)
+                    else -> stringResource(R.string.plan_tier_cycle, pages, cycleDays)
+                }
+            )
         }
-        Text(
-            text = when {
-                pages == 0 -> stringResource(R.string.plan_tier_empty)
-                perDay == 0 -> stringResource(R.string.plan_tier_off, pages)
-                else -> stringResource(R.string.plan_tier_cycle, pages, cycleDays)
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            PaperStepper(value = perDay, onChange = onChange, min = 0, max = 100)
+            Text(
+                text = stringResource(R.string.plan_unit_pages_a_day),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
 @Composable
-private fun Label(text: String) {
-    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Hint(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun Template(text: String, onClick: () -> Unit) {
-    AssistChip(onClick = onClick, label = { Text(text) })
+    PaperChip(selected = false, onClick = onClick, label = { Text(text) })
 }

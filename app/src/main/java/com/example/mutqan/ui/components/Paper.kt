@@ -1,7 +1,15 @@
 package com.example.mutqan.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -273,6 +281,116 @@ fun PaperSlider(
             }
         }
     )
+}
+
+/** A compact outlined action for rows in a list, in the action colour so it reads as something to press. */
+@Composable
+fun PaperSmallButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 40.dp),
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+}
+
+/** A hairline track with the finished part drawn over it in the action colour. */
+@Composable
+fun PaperProgress(fraction: Float, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxWidth().height(3.dp).background(MaterialTheme.colorScheme.outlineVariant)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+/** One of several exclusive options: a ring, a name and an optional sentence, with a rule under it. */
+@Composable
+fun PaperChoice(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.RadioButton, onClick = onClick)
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .border(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outline, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selected) Box(modifier = Modifier.size(12.dp).background(primary, CircleShape))
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                if (description != null) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Hairline()
+    }
+}
+
+/** A number with a square minus button before it and a plus button after it, always in that order. */
+@Composable
+fun PaperStepper(
+    value: Int,
+    onChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    min: Int = 0,
+    max: Int = Int.MAX_VALUE
+) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+            StepButton("−", stringResource(R.string.plan_btn_decrease), enabled = value > min) { onChange(value - 1) }
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(min = 52.dp)
+            )
+            StepButton("+", stringResource(R.string.plan_btn_increase), enabled = value < max) { onChange(value + 1) }
+        }
+    }
+}
+
+@Composable
+private fun StepButton(symbol: String, description: String, enabled: Boolean, onClick: () -> Unit) {
+    val color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .border(1.dp, color, RoundedCornerShape(4.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center
+    ) { Text(symbol, style = MaterialTheme.typography.titleLarge, color = color) }
 }
 
 /** Spacing used between the parts of a page. */

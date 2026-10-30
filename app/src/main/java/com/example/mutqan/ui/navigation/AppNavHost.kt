@@ -237,7 +237,6 @@ fun AppNavHost(
                     onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
                     onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
-                    onTestMyself    = { start, end -> navController.navigate(Routes.recall(start, end)) },
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
                     onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
                     onSettingsClick = { showSettingsSheet = true }

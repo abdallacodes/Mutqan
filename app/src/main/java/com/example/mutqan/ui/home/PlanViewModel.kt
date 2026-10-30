@@ -120,12 +120,13 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
         it.copy(order = if (on) PlanOrder.BY_STRENGTH else if (it.byStrength) PlanOrder.ROTATION else it.order)
     }
 
-    /** Moves the pages a day of a tier by [delta]; 0 leaves the tier out of the plan. */
-    fun changeTierPages(tier: PlanTier, delta: Int) = _uiState.update {
+    /** Sets the pages a day of a tier; 0 leaves the tier out of the plan. */
+    fun setTierPages(tier: PlanTier, pages: Int) = _uiState.update {
+        val value = pages.coerceIn(0, MAX_TIER_PAGES)
         when (tier) {
-            PlanTier.WEAK -> it.copy(weakPages = (it.weakPages + delta).coerceIn(0, MAX_TIER_PAGES))
-            PlanTier.FAIR -> it.copy(fairPages = (it.fairPages + delta).coerceIn(0, MAX_TIER_PAGES))
-            PlanTier.STRONG -> it.copy(strongPages = (it.strongPages + delta).coerceIn(0, MAX_TIER_PAGES))
+            PlanTier.WEAK -> it.copy(weakPages = value)
+            PlanTier.FAIR -> it.copy(fairPages = value)
+            PlanTier.STRONG -> it.copy(strongPages = value)
         }
     }
 
