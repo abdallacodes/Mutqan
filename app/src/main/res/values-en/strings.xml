@@ -498,4 +498,14 @@
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
     <string name="home_tier_strong">Strong · comes around rarely</string>
+    <string name="ready_tab_phrases">Shared phrases</string>
+    <string name="ready_tab_similar">Similar ayahs</string>
+    <string name="ready_list_similar_subtitle">Ready groups of similar ayahs</string>
+    <string name="ready_folder_count">Groups: %d</string>
+    <string name="ready_add_folder">Add the new groups (%d) to my vault</string>
+    <string name="ready_folder_added_toast">%d groups added to your vault</string>
+    <string name="ready_folder_all_added">Every group of this surah is in your vault</string>
+    <string name="peek_similar_title">Ayahs that resemble this one</string>
+    <string name="peek_similar_score">%d%% match</string>
+    <string name="peek_similar_more">And %d more</string>
 </resources>

@@ -418,6 +418,7 @@ fun MushafViewerScreen(
                     Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
                 }
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
+                SimilarAyahsSection(target.verseId, onOpenMushaf = null)
             }
         )
 

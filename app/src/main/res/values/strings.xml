@@ -498,4 +498,14 @@
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
     <string name="home_tier_strong">قوية · تعود نادرًا</string>
+    <string name="ready_tab_phrases">عبارات مشتركة</string>
+    <string name="ready_tab_similar">آيات متشابهة</string>
+    <string name="ready_list_similar_subtitle">مجموعات جاهزة من الآيات المتشابهة</string>
+    <string name="ready_folder_count">المجموعات: %d</string>
+    <string name="ready_add_folder">أضف المجموعات الجديدة (%d) إلى مخزني</string>
+    <string name="ready_folder_added_toast">أُضيفت %d مجموعة إلى المخزن</string>
+    <string name="ready_folder_all_added">كل مجموعات هذه السورة في مخزنك</string>
+    <string name="peek_similar_title">آيات تشبه هذه الآية</string>
+    <string name="peek_similar_score">تشابه %d٪</string>
+    <string name="peek_similar_more">وآيات أخرى: %d</string>
 </resources>
