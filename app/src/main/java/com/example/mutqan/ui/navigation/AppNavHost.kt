@@ -83,6 +83,7 @@ import com.example.mutqan.ui.theme.ThemeViewModel
 import com.example.mutqan.ui.theme.ThemeViewModelFactory
 import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
+import com.example.mutqan.ui.recall.RecallExerciseScreen
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
 
@@ -95,6 +96,7 @@ object Routes {
     const val REVISION_LOG   = "revision_log"
     const val VAULT_LIST     = "vault_list"
     const val READY_LIST     = "ready_list"
+    const val RECALL         = "recall"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
     const val HEATMAP        = "heatmap"
@@ -117,6 +119,7 @@ object Routes {
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
+    fun recall(startPage: Int, endPage: Int)     = "recall/$startPage/$endPage"
 }
 
 // ── Bottom nav items (built inside Composable to respect string resources) ────
@@ -221,6 +224,7 @@ fun AppNavHost(
                 HomeScreen(
                     onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+                    onTestMyself    = { start, end -> navController.navigate(Routes.recall(start, end)) },
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
                     onLogRevision   = {
                         navController.navigate(Routes.REVISION_LOG) {
@@ -299,6 +303,22 @@ fun AppNavHost(
             }
 
             // ── Sub-screens (bottom bar hidden) ──────────────────────
+
+            composable(
+                route     = "${Routes.RECALL}/{start}/{end}",
+                arguments = listOf(
+                    navArgument("start") { type = NavType.IntType },
+                    navArgument("end") { type = NavType.IntType }
+                )
+            ) { entry ->
+                val start = entry.arguments?.getInt("start") ?: 1
+                RecallExerciseScreen(
+                    startPage = start,
+                    endPage = entry.arguments?.getInt("end") ?: start,
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                )
+            }
 
             composable(Routes.READY_LIST) {
                 ReadyListScreen(

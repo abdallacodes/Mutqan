@@ -73,6 +73,7 @@ fun PlanItem.label(): String = when (unit) {
 fun HomeScreen(
     onOpenPlan: () -> Unit,
     onOpenCoverage: () -> Unit,
+    onTestMyself: (startPage: Int, endPage: Int) -> Unit,
     onOpenMushaf: (Int) -> Unit,
     onLogRevision: () -> Unit,
     onSettingsClick: () -> Unit
@@ -178,6 +179,7 @@ fun HomeScreen(
                             ) {
                                 PaperButton(stringResource(R.string.home_btn_log), onClick = { logging = first })
                                 PaperLink(stringResource(R.string.home_btn_open_mushaf), onClick = { onOpenMushaf(first.startPage) })
+                                PaperLink(stringResource(R.string.home_btn_test), onClick = { onTestMyself(first.startPage, first.endPage) })
                             }
                         } else {
                             val status = when {

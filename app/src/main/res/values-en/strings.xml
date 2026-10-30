@@ -508,4 +508,12 @@
     <string name="peek_similar_title">Ayahs that resemble this one</string>
     <string name="peek_similar_score">%d%% match</string>
     <string name="peek_similar_more">And %d more</string>
+    <string name="recall_title">Test yourself</string>
+    <string name="recall_prompt">Recite %s from memory, then reveal the text and compare.</string>
+    <string name="recall_btn_reveal">Reveal the text</string>
+    <string name="recall_btn_cue">Show the first word of each ayah</string>
+    <string name="recall_btn_hide_cue">Hide the cue</string>
+    <string name="recall_btn_save">Save the result</string>
+    <string name="recall_saved_toast">Recall saved</string>
+    <string name="home_btn_test">Test yourself</string>
 </resources>
