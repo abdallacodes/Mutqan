@@ -50,6 +50,7 @@ import com.example.mutqan.ui.heatmap.JuzDetailScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
 import com.example.mutqan.ui.onboarding.OnboardingScreen
 import com.example.mutqan.ui.revision.RevisionHistoryScreen
+import com.example.mutqan.ui.saved.SavedPassagesScreen
 import com.example.mutqan.ui.revision.RevisionLogScreen
 import com.example.mutqan.ui.search.VerseSearchScreen
 import com.example.mutqan.ui.surah.GroupDetailScreen
@@ -80,6 +81,7 @@ object Routes {
     const val SIMILARITY_TEST   = "similarity_test?folderId={folderId}&groupId={groupId}"
     const val MUSHAF_VIEWER     = "mushaf_viewer"
     const val COVERAGE          = "coverage"
+    const val SAVED             = "saved"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
     fun editGroupNew(folderId: Int?)             = "edit_group?groupId=-1${folderId?.let { "&folderId=$it" } ?: ""}"
@@ -137,6 +139,10 @@ fun AppNavHost(
             onOpenCoverage = {
                 showSettingsSheet = false
                 navController.navigate(Routes.COVERAGE)
+            },
+            onOpenSaved = {
+                showSettingsSheet = false
+                navController.navigate(Routes.SAVED)
             }
         )
     }
@@ -188,6 +194,13 @@ fun AppNavHost(
                 RevisionLogScreen(
                     onViewHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
                     onSettingsClick = { showSettingsSheet = true }
+                )
+            }
+
+            composable(Routes.SAVED) {
+                SavedPassagesScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )
             }
 
@@ -331,8 +344,9 @@ fun AppNavHost(
             ) { entry ->
                 val page = entry.arguments?.getInt("page") ?: 1
                 MushafViewerScreen(
-                    startPage = page,
-                    onBack    = { navController.popBackStack() }
+                    startPage   = page,
+                    onBack      = { navController.popBackStack() },
+                    onOpenSaved = { navController.navigate(Routes.SAVED) }
                 )
             }
         }

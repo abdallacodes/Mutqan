@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
@@ -28,9 +29,10 @@ import com.example.mutqan.quran.QuranRepository
         SimilarityMemberEntity::class,
         VaultFolderEntity::class,
         UserSubjectEntity::class,
-        HifzCoverageEntity::class
+        HifzCoverageEntity::class,
+        SavedPassageEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -143,6 +145,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Bookmarks and weak passages. */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE `saved_passages` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` INTEGER NOT NULL, `start_ayah_id` INTEGER NOT NULL, `end_ayah_id` INTEGER NOT NULL, " +
+                        "`word_id` INTEGER NOT NULL DEFAULT 0, `tags` INTEGER NOT NULL DEFAULT 0, " +
+                        "`priority` INTEGER NOT NULL DEFAULT 2, `note` TEXT NOT NULL DEFAULT '', " +
+                        "`created_at` INTEGER NOT NULL, `resolved_at` INTEGER NOT NULL DEFAULT 0)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_saved_passages_start_ayah_id` ON `saved_passages` (`start_ayah_id`)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: create(context, "mutqan.db").also { INSTANCE = it }
@@ -152,7 +168,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

@@ -10,6 +10,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
@@ -66,6 +67,31 @@ abstract class StudyDao {
         deleteAllCoverage()
         insertCoverage(ranges)
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Saved passages (bookmarks and weak passages)
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM saved_passages ORDER BY created_at DESC")
+    abstract fun observeSavedPassages(): Flow<List<SavedPassageEntity>>
+
+    @Query("SELECT * FROM saved_passages ORDER BY created_at DESC")
+    abstract suspend fun getAllSavedPassagesSync(): List<SavedPassageEntity>
+
+    @Query("SELECT * FROM saved_passages WHERE start_ayah_id = :ayahId AND word_id = :wordId LIMIT 1")
+    abstract suspend fun getSavedPassageAt(ayahId: Int, wordId: Int): SavedPassageEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsertSavedPassage(passage: SavedPassageEntity): Long
+
+    @Query("DELETE FROM saved_passages WHERE id = :id")
+    abstract suspend fun deleteSavedPassage(id: Int)
+
+    @Query("DELETE FROM saved_passages")
+    abstract suspend fun deleteAllSavedPassages()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertSavedPassages(passages: List<SavedPassageEntity>)
 
     // ─────────────────────────────────────────────────────────
     // Similarity Groups + Members
@@ -211,6 +237,7 @@ abstract class StudyDao {
         deleteAllFolders()
         deleteAllUserSubjects()
         deleteAllCoverage()
+        deleteAllSavedPassages()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

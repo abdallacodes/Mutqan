@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 
 /**
  * Builds a database laid out like Room version 13 (the shape installed apps have), fills it with
- * user data, then opens it through the app's migrations (13 -> 14 -> 15 -> 16) and checks that the
+ * user data, then opens it through the app's migrations (13 -> 14 -> 15 -> 16 -> 17) and checks that the
  * data survived and Room accepts the resulting schema. Uses its own file, never `mutqan.db`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -85,6 +85,13 @@ class MigrationTest {
             assertEquals(1, coverage.first().startAyahId)
             assertEquals(7, coverage.first().endAyahId)
             assertEquals(6236, coverage.last().endAyahId)
+
+            // Bookmarks and weak passages start empty, and the table works.
+            assertEquals(0, dao.getAllSavedPassagesSync().size)
+            dao.upsertSavedPassage(
+                com.example.mutqan.data.local.entity.SavedPassageEntity(kind = 1, startAyahId = 7, endAyahId = 7, createdAt = 1L)
+            )
+            assertEquals(7, dao.getSavedPassageAt(7, 0)?.startAyahId)
 
             // Everything else is kept.
             assertEquals(listOf(7, 262), dao.getAllSimilarityMembersSync().map { it.verseId }.sorted())

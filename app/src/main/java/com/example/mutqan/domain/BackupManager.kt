@@ -7,6 +7,7 @@ import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
@@ -33,6 +34,7 @@ class BackupManager(private val context: Context) {
             val folders = dao.getAllFoldersSync()
             val subjects = dao.getAllUserSubjectsSync()
             val coverage = dao.getAllCoverageSync()
+            val saved = dao.getAllSavedPassagesSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
@@ -59,6 +61,22 @@ class BackupManager(private val context: Context) {
                         put(JSONObject().apply {
                             put("start_ayah_id", range.startAyahId)
                             put("end_ayah_id", range.endAyahId)
+                        })
+                    }
+                })
+                put("saved_passages", JSONArray().apply {
+                    saved.forEach { p ->
+                        put(JSONObject().apply {
+                            put("id", p.id)
+                            put("kind", p.kind)
+                            put("start_ayah_id", p.startAyahId)
+                            put("end_ayah_id", p.endAyahId)
+                            put("word_id", p.wordId)
+                            put("tags", p.tags)
+                            put("priority", p.priority)
+                            put("note", p.note)
+                            put("created_at", p.createdAt)
+                            put("resolved_at", p.resolvedAt)
                         })
                     }
                 })
@@ -215,6 +233,26 @@ class BackupManager(private val context: Context) {
                 logs.map { it.startAyahId..it.endAyahId }
             }
 
+            val savedPassages = mutableListOf<SavedPassageEntity>()
+            val savedArray = root.optJSONArray("saved_passages")
+            if (savedArray != null) {
+                for (i in 0 until savedArray.length()) {
+                    val obj = savedArray.getJSONObject(i)
+                    savedPassages.add(SavedPassageEntity(
+                        id = obj.optInt("id", 0),
+                        kind = obj.getInt("kind"),
+                        startAyahId = obj.getInt("start_ayah_id"),
+                        endAyahId = obj.getInt("end_ayah_id"),
+                        wordId = obj.optInt("word_id", 0),
+                        tags = obj.optInt("tags", 0),
+                        priority = obj.optInt("priority", 2),
+                        note = obj.optString("note", ""),
+                        createdAt = obj.getLong("created_at"),
+                        resolvedAt = obj.optLong("resolved_at", 0L)
+                    ))
+                }
+            }
+
             // Perform DB operations
             dao.clearUserData()
             dao.insertCoverage(HifzCoverage.merge(coverageRanges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
@@ -223,6 +261,7 @@ class BackupManager(private val context: Context) {
             dao.insertSimilarityGroups(groups)
             dao.insertSimilarityMembers(members)
             dao.insertUserSubjects(subjects)
+            dao.insertSavedPassages(savedPassages)
 
             Result.success(Unit)
         } catch (e: Exception) {

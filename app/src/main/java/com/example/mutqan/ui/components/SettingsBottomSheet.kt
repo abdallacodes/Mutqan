@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -90,6 +91,7 @@ fun SettingsBottomSheet(
     onThemeChange: (ThemeKey) -> Unit,
     onDismiss: () -> Unit,
     onOpenCoverage: () -> Unit = {},
+    onOpenSaved: () -> Unit = {},
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
@@ -221,6 +223,12 @@ fun SettingsBottomSheet(
                 label = stringResource(R.string.coverage_title),
                 icon = Icons.Default.TaskAlt,
                 onClick = onOpenCoverage
+            )
+
+            DataActionRow(
+                label = stringResource(R.string.saved_title),
+                icon = Icons.Default.Bookmarks,
+                onClick = onOpenSaved
             )
 
             DownloadActionRow(

@@ -1,5 +1,11 @@
 package com.example.mutqan.ui.mushaf
 
+import com.example.mutqan.ui.saved.SavePassageSheet
+import com.example.mutqan.domain.SavedPassage
+import com.example.mutqan.domain.SavedKind
+import com.example.mutqan.data.SurahData
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Bookmarks
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -104,11 +110,17 @@ private val MushafInkMuted    = Color(0xFF6B655C)
 private val MushafSpineLine   = Color(0x145C5346)
 
 /** Ayahs to tint on every page, and what a tap on one of them does. Null = plain pages. */
-private class AyahMarks(val highlights: Map<Int, Color>, val onTap: (ayahId: Int) -> Unit)
+private class AyahMarks(
+    val highlights: Map<Int, Color>,
+    val onTap: (wordId: Int, ayahId: Int) -> Unit,
+    val onLongPress: (wordId: Int, ayahId: Int) -> Unit
+)
 
 private val LocalAyahMarks = compositionLocalOf<AyahMarks?> { null }
 
 private val MushafGroupTint = Color(0x40C9A227)
+private val MushafBookmarkTint = Color(0x403F8EDC)
+private val MushafWeakTint = Color(0x50E9897F)
 
 // ── Spread geometry helpers ───────────────────────────────────────────────────
 //
@@ -134,8 +146,9 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MushafViewerScreen(
-    startPage: Int,
-    onBack:    () -> Unit
+    startPage:   Int,
+    onBack:      () -> Unit,
+    onOpenSaved: () -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -163,21 +176,42 @@ fun MushafViewerScreen(
     // Spread only: each page uses full column width (taller than viewport); scroll vertically.
     var spreadFillWidth by rememberSaveable { mutableStateOf(false) }
 
-    // Tint ayahs that belong to a mutashabihat group; tapping one opens a quick peek.
+    // Tint ayahs that belong to a mutashabihat group or were saved; tapping a tinted ayah, or
+    // long-pressing any ayah, opens a quick peek where it can be bookmarked or marked weak.
     val groupAyahs by viewModel.mutashabihatAyahs.collectAsState()
+    val savedPassages by viewModel.savedPassages.collectAsState()
     var showGroupAyahs by rememberSaveable { mutableStateOf(true) }
     var peekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
     var peekAyahId by remember { mutableStateOf<Int?>(null) }
+    var peekWordId by remember { mutableIntStateOf(0) }
     var peekGroups by remember { mutableStateOf<List<AyahGroup>>(emptyList()) }
+    var showSaveSheet by remember { mutableStateOf(false) }
     LaunchedEffect(peekAyahId) {
         val id = peekAyahId ?: return@LaunchedEffect
         val ayah = withContext(Dispatchers.IO) { quran.ayahById(id) }
         peekGroups = viewModel.groupsOfAyah(id)
         peekTarget = ayah?.let { QuickPeekTarget(it.id, it.surah, it.ayah, it.firstPage) }
     }
-    val marks = remember(groupAyahs, showGroupAyahs) {
-        if (!showGroupAyahs || groupAyahs.isEmpty()) null
-        else AyahMarks(groupAyahs.associateWith { MushafGroupTint }) { peekAyahId = it }
+    val peekSaved = remember(savedPassages, peekAyahId, peekWordId) {
+        val id = peekAyahId
+        if (id == null) null
+        else savedPassages.firstOrNull { it.startAyahId == id && it.wordId == peekWordId }
+            ?: savedPassages.firstOrNull { it.startAyahId == id }
+    }
+    val marks = remember(groupAyahs, savedPassages, showGroupAyahs) {
+        val tints = HashMap<Int, Color>()
+        if (showGroupAyahs) {
+            groupAyahs.forEach { tints[it] = MushafGroupTint }
+            savedPassages.forEach { saved ->
+                val tint = if (saved.kind == SavedKind.WEAK && !saved.isResolved) MushafWeakTint else MushafBookmarkTint
+                for (ayah in saved.startAyahId..minOf(saved.endAyahId, saved.startAyahId + 200)) tints[ayah] = tint
+            }
+        }
+        AyahMarks(
+            highlights = tints,
+            onTap = { wordId, ayahId -> peekWordId = wordId; peekAyahId = ayahId },
+            onLongPress = { wordId, ayahId -> peekWordId = wordId; peekAyahId = ayahId }
+        )
     }
 
     val surahName = state.pageSurahMap[currentPage].orEmpty()
@@ -325,6 +359,13 @@ fun MushafViewerScreen(
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
                 }
+                IconButton(onClick = onOpenSaved) {
+                    Icon(
+                        imageVector        = Icons.Filled.Bookmarks,
+                        contentDescription = stringResource(R.string.mushaf_cd_saved),
+                        tint               = MushafInk
+                    )
+                }
                 IconButton(onClick = { showGroupAyahs = !showGroupAyahs }) {
                     Icon(
                         imageVector        = Icons.Filled.Highlight,
@@ -372,10 +413,49 @@ fun MushafViewerScreen(
         QuickPeekBottomSheet(
             target    = target,
             onDismiss = { peekTarget = null; peekAyahId = null; peekGroups = emptyList() },
-            extraContent = if (peekGroups.isEmpty()) null else {
-                { AyahGroupsSection(peekGroups) }
+            extraContent = {
+                OutlinedButton(onClick = { showSaveSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
+                }
+                if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
             }
         )
+
+        if (showSaveSheet) {
+            val ayahId = peekAyahId
+            SavePassageSheet(
+                reference = stringResource(R.string.saved_ref, SurahData.nameOf(target.surahId), target.ayahNumber),
+                initial   = peekSaved,
+                onSave    = { kind, tags, priority, note ->
+                    if (ayahId != null) {
+                        viewModel.savePassage(
+                            SavedPassage(
+                                id          = peekSaved?.id ?: 0,
+                                kind        = kind,
+                                startAyahId = peekSaved?.startAyahId ?: ayahId,
+                                endAyahId   = peekSaved?.endAyahId ?: ayahId,
+                                wordId      = peekSaved?.wordId ?: peekWordId,
+                                tags        = tags,
+                                priority    = priority,
+                                note        = note,
+                                createdAt   = peekSaved?.createdAt ?: System.currentTimeMillis(),
+                                resolvedAt  = peekSaved?.resolvedAt ?: 0L
+                            )
+                        )
+                    }
+                    showSaveSheet = false
+                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                },
+                onDelete  = peekSaved?.let { saved ->
+                    {
+                        viewModel.deleteSavedPassage(saved.id)
+                        showSaveSheet = false
+                        peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                    }
+                },
+                onDismiss = { showSaveSheet = false }
+            )
+        }
     }
 }
 
@@ -640,7 +720,8 @@ private fun PageImage(
                     ink      = MushafInk,
                     modifier = Modifier.fillMaxWidth(),
                     highlights = marks?.highlights.orEmpty(),
-                    onWordTap  = marks?.let { m -> { _, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(ayahId) } } }
+                    onWordTap  = marks?.let { m -> { wordId, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(wordId, ayahId) } } },
+                    onWordLongPress = marks?.let { m -> { wordId, ayahId -> m.onLongPress(wordId, ayahId); true } }
                 )
             }
         } else {
@@ -651,7 +732,8 @@ private fun PageImage(
                 ink      = MushafInk,
                 modifier = Modifier.fillMaxSize(),
                 highlights = marks?.highlights.orEmpty(),
-                onWordTap  = marks?.let { m -> { _, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(ayahId) } } }
+                onWordTap  = marks?.let { m -> { wordId, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(wordId, ayahId) } } },
+                onWordLongPress = marks?.let { m -> { wordId, ayahId -> m.onLongPress(wordId, ayahId); true } }
             )
         }
     }

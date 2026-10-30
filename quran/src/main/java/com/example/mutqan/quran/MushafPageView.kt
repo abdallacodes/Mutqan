@@ -6,6 +6,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.PointerInputChange
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -60,7 +62,8 @@ private sealed interface PageLoad {
  * [highlights] maps a global ayah id (`QuranAyah.id`) to the colour painted behind its words.
  * [onWordTap] receives the word id and ayah id of a tapped word and returns true if it handled
  * the tap; a tap it does not handle (or one that misses every word) is left for parent
- * gestures such as toggling the chrome.
+ * gestures such as toggling the chrome. [onWordLongPress] is the same for a press held on a
+ * word, which is never mistaken for a tap.
  */
 @Composable
 fun MushafPageView(
@@ -70,7 +73,8 @@ fun MushafPageView(
     ink:     Color,
     modifier: Modifier = Modifier,
     highlights: Map<Int, Color> = emptyMap(),
-    onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)? = null
+    onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)? = null,
+    onWordLongPress: ((wordId: Int, ayahId: Int) -> Boolean)? = null
 ) {
     var attempt by remember(page) { mutableIntStateOf(0) }
 
@@ -110,7 +114,7 @@ fun MushafPageView(
                     Text(stringResource(R.string.mushaf_retry))
                 }
             }
-            is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap)
+            is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap, onWordLongPress)
         }
     }
 }
@@ -121,6 +125,7 @@ private fun PageCanvas(
     ink: Color,
     highlights: Map<Int, Color>,
     onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)?,
+    onWordLongPress: ((wordId: Int, ayahId: Int) -> Boolean)?,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -157,22 +162,35 @@ private fun PageCanvas(
     }
 
     val currentOnWordTap by rememberUpdatedState(onWordTap)
+    val currentOnWordLongPress by rememberUpdatedState(onWordLongPress)
     val touchSlop = LocalViewConfiguration.current.touchSlop
+    val longPressTimeout = LocalViewConfiguration.current.longPressTimeoutMillis
 
     Canvas(
         modifier = modifier
             .aspectRatio(MushafPageGeometry.PAGE_ASPECT)
             .onSizeChanged { size = it }
-            .pointerInput(geometry, onWordTap != null) {
-                if (onWordTap == null) return@pointerInput
+            .pointerInput(geometry, onWordTap != null, onWordLongPress != null) {
+                if (onWordTap == null && onWordLongPress == null) return@pointerInput
                 val g = geometry ?: return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val up = waitForUpOrCancellation() ?: return@awaitEachGesture
-                    if ((up.position - down.position).getDistance() > touchSlop) return@awaitEachGesture
-                    val word = MushafPageGeometry.hitTest(g, up.position.x, up.position.y)
+                    var up: PointerInputChange? = null
+                    val released = withTimeoutOrNull(longPressTimeout) { up = waitForUpOrCancellation() }
+                    if (released == null) {
+                        // Still held after the long-press timeout (a drag or scroll would have ended the wait).
+                        val word = MushafPageGeometry.hitTest(g, down.position.x, down.position.y)
+                        if (word != null && word.ayahId != 0 && currentOnWordLongPress?.invoke(word.wordId, word.ayahId) == true) {
+                            waitForUpOrCancellation()?.consume()
+                        }
+                        return@awaitEachGesture
+                    }
+                    val release = up ?: return@awaitEachGesture
+                    if (currentOnWordTap == null) return@awaitEachGesture
+                    if ((release.position - down.position).getDistance() > touchSlop) return@awaitEachGesture
+                    val word = MushafPageGeometry.hitTest(g, release.position.x, release.position.y)
                     if (word != null && word.ayahId != 0 && currentOnWordTap?.invoke(word.wordId, word.ayahId) == true) {
-                        up.consume()
+                        release.consume()
                     }
                 }
             }

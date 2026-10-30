@@ -9,6 +9,7 @@ import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.dao.SurahMeta
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
+import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
@@ -151,6 +152,33 @@ class StudyRepository(
             )
             true
         }
+
+    // ── Saved passages (bookmarks and weak passages) ──────────────────────────
+
+    /** Newest first; entries whose ayah ids are unknown are left out. */
+    fun savedPassages(): Flow<List<SavedPassage>> =
+        dao.observeSavedPassages()
+            .map { rows -> rows.filter { it.startAyahId in index }.map(SavedPassage::fromEntity) }
+            .flowOn(Dispatchers.IO)
+
+    /** The saved passage that starts at [ayahId] (and [wordId], 0 = whole ayah), if any. */
+    suspend fun savedPassageAt(ayahId: Int, wordId: Int = 0): SavedPassage? = withContext(Dispatchers.IO) {
+        dao.getSavedPassageAt(ayahId, wordId)?.let(SavedPassage::fromEntity)
+    }
+
+    /**
+     * Saves [passage]. A passage that starts where another already does replaces it (keeping
+     * the original's creation time), so one ayah never holds two entries.
+     */
+    suspend fun savePassage(passage: SavedPassage) = withContext(Dispatchers.IO) {
+        val existing = dao.getSavedPassageAt(passage.startAyahId, passage.wordId)
+        val entity: SavedPassageEntity = passage.toEntity().let {
+            if (it.id == 0 && existing != null) it.copy(id = existing.id, createdAt = existing.createdAt) else it
+        }
+        dao.upsertSavedPassage(entity)
+    }
+
+    suspend fun deleteSavedPassage(id: Int) = withContext(Dispatchers.IO) { dao.deleteSavedPassage(id) }
 
     // ── Hifz coverage ─────────────────────────────────────────────────────────
 

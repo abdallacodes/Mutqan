@@ -9,6 +9,7 @@ import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.AyahGroup
 import com.example.mutqan.domain.MemoryEngine
+import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
@@ -60,6 +61,18 @@ class MushafViewerViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = study.groupsOfAyah(ayahId)
+
+    /** Every bookmark and weak passage, for tinting ayahs and for the save sheet. */
+    val savedPassages: StateFlow<List<SavedPassage>> = study.savedPassages()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun savePassage(passage: SavedPassage) {
+        viewModelScope.launch { study.savePassage(passage) }
+    }
+
+    fun deleteSavedPassage(id: Int) {
+        viewModelScope.launch { study.deleteSavedPassage(id) }
+    }
 
     // ── Combined pipeline (Standard FSRS Logic) ───────────────────────────────
 

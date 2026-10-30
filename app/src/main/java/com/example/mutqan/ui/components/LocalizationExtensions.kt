@@ -6,6 +6,9 @@ import com.example.mutqan.R
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.domain.RecallOutcome
+import com.example.mutqan.domain.SavedKind
+import com.example.mutqan.domain.SavedPassage
+import com.example.mutqan.domain.WeakTag
 import com.example.mutqan.ui.vault.MasterStrength
 
 /** Locale-aware display label for a group mastery strength. */
@@ -45,4 +48,28 @@ fun PassageState.localizedLabel(): String = when (this) {
     PassageState.DEVELOPING       -> stringResource(R.string.state_developing)
     PassageState.RELIABLE         -> stringResource(R.string.state_reliable)
     PassageState.STABLE_OVER_TIME -> stringResource(R.string.state_stable)
+}
+
+@Composable
+fun SavedKind.localizedLabel(): String = when (this) {
+    SavedKind.BOOKMARK -> stringResource(R.string.saved_kind_bookmark)
+    SavedKind.WEAK     -> stringResource(R.string.saved_kind_weak)
+}
+
+@Composable
+fun WeakTag.localizedLabel(): String = when (this) {
+    WeakTag.FORGETS_BEGINNING -> stringResource(R.string.weak_tag_forgets_beginning)
+    WeakTag.WEAK_TRANSITION   -> stringResource(R.string.weak_tag_transition)
+    WeakTag.SIMILAR_AYAH      -> stringResource(R.string.weak_tag_similar)
+    WeakTag.OMISSION          -> stringResource(R.string.weak_tag_omission)
+    WeakTag.HESITATION        -> stringResource(R.string.weak_tag_hesitation)
+    WeakTag.UNCERTAIN_WORDING -> stringResource(R.string.weak_tag_wording)
+}
+
+/** Label for a saved passage priority (1 low, 2 normal, 3 high). */
+@Composable
+fun priorityLabel(priority: Int): String = when (priority) {
+    SavedPassage.PRIORITY_LOW  -> stringResource(R.string.saved_priority_low)
+    SavedPassage.PRIORITY_HIGH -> stringResource(R.string.saved_priority_high)
+    else                       -> stringResource(R.string.saved_priority_normal)
 }
