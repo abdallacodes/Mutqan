@@ -11,13 +11,31 @@ enum class ExerciseType(val code: Int) {
     FIRST_TO_LAST(2),
 
     /** Given the last verse of the previous page and the first of the next, recite the page between. */
-    NEIGHBOURS(3);
+    NEIGHBOURS(3),
+
+    /** A verse with look-alikes starts; pick its true ending. */
+    QUIZ_ENDING(4),
+
+    /** Given a verse, pick how the next one begins. */
+    QUIZ_NEXT(5),
+
+    /** A verse with some words hidden; pick the missing words. */
+    QUIZ_FILL(6),
+
+    /** Consecutive verses, shuffled; put them back in order. */
+    QUIZ_ORDER(7),
+
+    /** Given a verse, name its surah and verse number. */
+    QUIZ_WHERE(8);
 
     companion object {
         fun fromCode(code: Int): ExerciseType? = entries.firstOrNull { it.code == code }
 
         /** The page-boundary exercises, which share one place in the Practice list. */
         val PAGE_BOUNDARIES: List<ExerciseType> = listOf(PAGE_EDGES, FIRST_TO_LAST, NEIGHBOURS)
+
+        /** The questions with a right answer the app can check. */
+        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE)
     }
 }
 

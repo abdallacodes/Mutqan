@@ -171,6 +171,10 @@ class StudyRepository(
     fun exerciseCountsSince(since: Long): Flow<Map<ExerciseType, Int>> =
         dao.observeExerciseCounts(since).map { rows -> rows.mapNotNull { r -> ExerciseType.fromCode(r.type)?.let { it to r.count } }.toMap() }
 
+    /** Pages where quiz questions were answered wrongly since [since] (epoch millis), most missed first. */
+    fun quizMissesSince(since: Long): Flow<List<com.example.mutqan.data.local.dao.PageMiss>> =
+        dao.observeQuizMisses(since, ExerciseType.QUIZ_ENDING.code, RecallOutcome.UNABLE.code)
+
     suspend fun savePlan(plan: RevisionPlan) = withContext(Dispatchers.IO) { dao.upsertPlan(plan.toEntity()) }
 
     suspend fun deletePlan(id: Int) = withContext(Dispatchers.IO) { dao.deletePlan(id) }

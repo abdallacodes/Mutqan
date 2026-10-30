@@ -91,7 +91,8 @@ import com.example.mutqan.ui.insights.InsightsScreen
 import com.example.mutqan.ui.practice.PageBoundariesScreen
 import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
-import com.example.mutqan.ui.recall.RecallExerciseScreen
+import com.example.mutqan.ui.practice.QuizScreen
+import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
 
@@ -104,7 +105,7 @@ object Routes {
     const val REVISION_LOG   = "revision_log"
     const val VAULT_LIST     = "vault_list"
     const val READY_LIST     = "ready_list"
-    const val RECALL         = "recall"
+    const val QUIZ           = "quiz"
     const val PRACTICE       = "practice"
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
@@ -131,7 +132,7 @@ object Routes {
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
-    fun recall(startPage: Int, endPage: Int)     = "recall/$startPage/$endPage"
+    fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
 }
 
 // ── Bottom nav items (built inside Composable to respect string resources) ────
@@ -316,7 +317,7 @@ fun AppNavHost(
             composable(Routes.PRACTICE) {
                 PracticeScreen(
                     onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
-                    onRecite         = { start, end -> navController.navigate(Routes.recall(start, end)) },
+                    onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
                     onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
                     onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
                     onOpenVault      = { navController.navigate(Routes.VAULT_LIST) },
@@ -346,16 +347,11 @@ fun AppNavHost(
             // ── Sub-screens (bottom bar hidden) ──────────────────────
 
             composable(
-                route     = "${Routes.RECALL}/{start}/{end}",
-                arguments = listOf(
-                    navArgument("start") { type = NavType.IntType },
-                    navArgument("end") { type = NavType.IntType }
-                )
+                route     = "${Routes.QUIZ}/{mode}",
+                arguments = listOf(navArgument("mode") { type = NavType.StringType })
             ) { entry ->
-                val start = entry.arguments?.getInt("start") ?: 1
-                RecallExerciseScreen(
-                    startPage = start,
-                    endPage = entry.arguments?.getInt("end") ?: start,
+                QuizScreen(
+                    mode = QuizMode.fromRoute(entry.arguments?.getString("mode")),
                     onBack = { navController.popBackStack() },
                     onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
                 )

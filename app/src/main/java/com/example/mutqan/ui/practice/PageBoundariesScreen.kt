@@ -138,6 +138,9 @@ fun PageBoundariesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
                     round.previousLast?.let { VerseBlock(stringResource(R.string.ex_previous_ends), it) }
                     round.nextFirst?.let { VerseBlock(stringResource(R.string.ex_next_starts), it) }
                 }
+
+                // The quiz types have their own screen and are never a page-boundaries variant.
+                else -> {}
             }
 
             if (!state.revealed) {

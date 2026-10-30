@@ -1,6 +1,7 @@
 package com.example.mutqan.ui.home
 
 import com.example.mutqan.data.UserPreferencesRepository
+import com.example.mutqan.data.local.dao.PageMiss
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -25,7 +26,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -44,6 +47,12 @@ data class WeakSuggestion(
     val snippet: String
 )
 
+/** A page where practice questions keep going wrong. */
+@Immutable
+data class MissedPage(val page: Int, val count: Int)
+
+private data class Extras(val day: Long, val hidden: Set<Int>, val lastPage: Int?, val misses: List<PageMiss>)
+
 @Immutable
 data class HomeUiState(
     val isLoaded: Boolean = false,
@@ -52,6 +61,8 @@ data class HomeUiState(
     val plan: RevisionPlan? = null,
     val today: TodayPlan? = null,
     val weak: List<WeakSuggestion> = emptyList(),
+    /** Pages missed at least twice in practice this week and not revised since. */
+    val missed: List<MissedPage> = emptyList(),
     /** The Mushaf page the user last read, to offer "continue". */
     val lastPage: Int? = null
 )
@@ -72,16 +83,22 @@ class HomeViewModel(
         }
     }.distinctUntilChanged()
 
-    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage) { day, hidden, last -> Triple(day, hidden, last) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val misses = epochDay.flatMapLatest { study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS) }
+
+    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage, misses) { day, hidden, last, missed ->
+        Extras(day, hidden, last, missed)
+    }
 
     val uiState: StateFlow<HomeUiState> = combine(
         study.plans(), study.revisionLogs(), study.coveredPages(), study.savedPassages(), extras
-    ) { plans, logs, covered, saved, (day, hidden, lastPage) ->
+    ) { plans, logs, covered, saved, extra ->
+        val (day, hidden, lastPage) = extra
         val plan = plans.firstOrNull()
+        val lastRevised = RevisionPlanner.lastRevisedDays(logs, ::offsetAt)
         val today = plan?.let {
             val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
             else PassageStates.compute(logs)
-            val lastRevised = RevisionPlanner.lastRevisedDays(logs, ::offsetAt)
             if (it.order == PlanOrder.BY_STRENGTH) {
                 RevisionPlanner.strengthToday(it, covered, lastRevised, states, day)
             } else {
@@ -94,7 +111,11 @@ class HomeViewModel(
             .sortedWith(compareByDescending<SavedPassage> { it.priority }.thenByDescending { it.createdAt })
             .mapNotNull(::describe)
             .take(MAX_SUGGESTIONS)
-        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, lastPage = lastPage)
+        val missed = extra.misses
+            .filter { it.count >= MISS_MIN && lastRevised.getOrElse(it.page - 1) { 0L } < Math.floorDiv(it.lastTime + offsetAt(it.lastTime), 86_400_000L) }
+            .take(MAX_SUGGESTIONS)
+            .map { MissedPage(it.page, it.count) }
+        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, missed = missed, lastPage = lastPage)
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
@@ -118,6 +139,8 @@ class HomeViewModel(
         const val MAX_SUGGESTIONS = 3
         const val SNIPPET_CHARS = 80
         const val CLOCK_TICK_MS = 60_000L
+        const val MISS_MIN = 2
+        const val MISS_WINDOW_MS = 7L * 24 * 60 * 60 * 1000
 
         fun offsetAt(time: Long): Int = TimeZone.getDefault().getOffset(time)
 

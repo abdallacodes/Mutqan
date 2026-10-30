@@ -265,6 +265,38 @@ fun HomeScreen(
                 }
             }
 
+            if (state.missed.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(PaperSpace.Section))
+                    OrnamentDivider()
+                    Spacer(Modifier.height(20.dp))
+                    SectionLabel(stringResource(R.string.home_missed_title))
+                    Spacer(Modifier.height(4.dp))
+                    Hairline()
+                }
+                items(state.missed, key = { "missed-${it.page}" }) { missed ->
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Button, onClick = { onOpenMushaf(missed.page) })
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.home_missed_line, missed.page, missed.count),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f)
+                            )
+                            PaperSmallButton(stringResource(R.string.home_btn_open), onClick = { onOpenMushaf(missed.page) })
+                        }
+                        Hairline()
+                    }
+                }
+            }
+
             if (state.hasCoverage && plan != null && today != null) {
                 item {
                     Spacer(Modifier.height(PaperSpace.Section))

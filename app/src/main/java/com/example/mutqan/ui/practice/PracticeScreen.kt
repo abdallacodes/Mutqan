@@ -33,6 +33,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.ExerciseType
+import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.ui.components.HubRow
 import com.example.mutqan.ui.components.PaperHeader
@@ -49,6 +50,11 @@ class PracticeViewModel(study: StudyRepository) : ViewModel() {
     val boundariesThisWeek: StateFlow<Int> = study.exerciseCountsSince(System.currentTimeMillis() - WEEK_MS)
         .map { counts -> ExerciseType.PAGE_BOUNDARIES.sumOf { counts[it] ?: 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    /** How many quiz questions were answered in the last seven days. */
+    val quizThisWeek: StateFlow<Int> = study.exerciseCountsSince(System.currentTimeMillis() - WEEK_MS)
+        .map { counts -> ExerciseType.QUIZ.sumOf { counts[it] ?: 0 } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 }
 
 class PracticeViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
@@ -60,7 +66,7 @@ class PracticeViewModelFactory(private val context: Context) : ViewModelProvider
 @Composable
 fun PracticeScreen(
     onOpenBoundaries: () -> Unit,
-    onRecite: (startPage: Int, endPage: Int) -> Unit,
+    onOpenQuiz: (QuizMode) -> Unit,
     onRandomVerse: () -> Unit,
     onSimilarityTest: () -> Unit,
     onOpenVault: () -> Unit,
@@ -69,17 +75,7 @@ fun PracticeScreen(
     val context = LocalContext.current
     val viewModel: PracticeViewModel = viewModel(factory = PracticeViewModelFactory(context))
     val week by viewModel.boundariesThisWeek.collectAsState()
-    var askRange by remember { mutableStateOf(false) }
-
-    if (askRange) {
-        PageRangeDialog(
-            onConfirm = { start, end ->
-                askRange = false
-                onRecite(start, end)
-            },
-            onDismiss = { askRange = false }
-        )
-    }
+    val quizWeek by viewModel.quizThisWeek.collectAsState()
 
     Scaffold(
         topBar = {
@@ -93,15 +89,41 @@ fun PracticeScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState())) {
             HubRow(
+                title = stringResource(R.string.practice_daily_title),
+                subtitle = stringResource(R.string.practice_daily_desc),
+                note = if (quizWeek > 0) stringResource(R.string.ex_this_week, quizWeek) else null,
+                onClick = { onOpenQuiz(QuizMode.DAILY) }
+            )
+            HubRow(
+                title = stringResource(R.string.ex_ending_title),
+                subtitle = stringResource(R.string.ex_ending_desc),
+                onClick = { onOpenQuiz(QuizMode.ENDING) }
+            )
+            HubRow(
+                title = stringResource(R.string.ex_next_title),
+                subtitle = stringResource(R.string.ex_next_desc),
+                onClick = { onOpenQuiz(QuizMode.NEXT) }
+            )
+            HubRow(
+                title = stringResource(R.string.ex_fill_title),
+                subtitle = stringResource(R.string.ex_fill_desc),
+                onClick = { onOpenQuiz(QuizMode.FILL) }
+            )
+            HubRow(
+                title = stringResource(R.string.ex_order_title),
+                subtitle = stringResource(R.string.ex_order_desc),
+                onClick = { onOpenQuiz(QuizMode.ORDER) }
+            )
+            HubRow(
+                title = stringResource(R.string.ex_where_title),
+                subtitle = stringResource(R.string.ex_where_desc),
+                onClick = { onOpenQuiz(QuizMode.WHERE) }
+            )
+            HubRow(
                 title = stringResource(R.string.ex_boundaries_title),
                 subtitle = stringResource(R.string.ex_boundaries_desc),
                 note = if (week > 0) stringResource(R.string.ex_this_week, week) else null,
                 onClick = onOpenBoundaries
-            )
-            HubRow(
-                title = stringResource(R.string.ex_recite_title),
-                subtitle = stringResource(R.string.ex_recite_desc),
-                onClick = { askRange = true }
             )
             HubRow(
                 title = stringResource(R.string.ex_random_title),
@@ -120,40 +142,4 @@ fun PracticeScreen(
             )
         }
     }
-}
-
-/** Two page numbers for the recite-from-memory exercise. */
-@Composable
-private fun PageRangeDialog(onConfirm: (Int, Int) -> Unit, onDismiss: () -> Unit) {
-    var start by remember { mutableStateOf("") }
-    var end by remember { mutableStateOf("") }
-    val s = start.toIntOrNull()
-    val e = (end.toIntOrNull() ?: s)
-    val valid = s != null && e != null && s in 1..604 && e in s..604
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.ex_recite_title)) },
-        text = {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = start,
-                    onValueChange = { start = it.filter(Char::isDigit).take(3) },
-                    label = { Text(stringResource(R.string.label_start_page)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = end,
-                    onValueChange = { end = it.filter(Char::isDigit).take(3) },
-                    label = { Text(stringResource(R.string.label_end_page)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = { if (valid) onConfirm(s!!, e!!) }, enabled = valid) { Text(stringResource(R.string.ex_start)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
-    )
 }

@@ -260,6 +260,14 @@ abstract class StudyDao {
     @Query("SELECT type, COUNT(*) AS count FROM exercise_results WHERE timestamp >= :since GROUP BY type")
     abstract fun observeExerciseCounts(since: Long): Flow<List<ExerciseCount>>
 
+    /** Pages whose quiz questions were answered wrongly since [since], with how often and when last. */
+    @Query(
+        "SELECT start_page AS page, COUNT(*) AS count, MAX(timestamp) AS lastTime FROM exercise_results " +
+            "WHERE timestamp >= :since AND type >= :firstQuizType AND outcome = :wrongOutcome " +
+            "GROUP BY start_page ORDER BY COUNT(*) DESC, MAX(timestamp) DESC"
+    )
+    abstract fun observeQuizMisses(since: Long, firstQuizType: Int, wrongOutcome: Int): Flow<List<PageMiss>>
+
     @Query("SELECT * FROM exercise_results")
     abstract suspend fun getAllExerciseResultsSync(): List<ExerciseResultEntity>
 
@@ -299,6 +307,9 @@ abstract class StudyDao {
 }
 
 data class ExerciseCount(val type: Int, val count: Int)
+
+/** A page where quiz questions were missed: how many times, and the time of the latest miss. */
+data class PageMiss(val page: Int, val count: Int, val lastTime: Long)
 
 data class TestCandidate(
     @ColumnInfo(name = "verse_id") val verseId: Int,
