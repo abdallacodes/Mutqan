@@ -474,4 +474,14 @@
     <string name="home_btn_open_mushaf">افتح في المصحف</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
+    <string name="ready_list_title">القائمة الجاهزة</string>
+    <string name="ready_list_subtitle">عبارات تتكرر في القرآن</string>
+    <string name="ready_list_search">ابحث في العبارات</string>
+    <string name="ready_list_verses_count">الآيات: %d</string>
+    <string name="ready_list_add">أضف إلى مخزني</string>
+    <string name="ready_list_added">في مخزنك</string>
+    <string name="ready_list_added_toast">أُضيفت المجموعة إلى المخزن</string>
+    <string name="ready_list_empty_title">لا نتائج</string>
+    <string name="ready_list_empty_body">جرّب كلمة أخرى من العبارة.</string>
+    <string name="cd_ready_list">القائمة الجاهزة</string>
 </resources>

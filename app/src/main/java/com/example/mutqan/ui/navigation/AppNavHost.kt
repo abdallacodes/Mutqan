@@ -83,6 +83,7 @@ import com.example.mutqan.ui.theme.ThemeViewModel
 import com.example.mutqan.ui.theme.ThemeViewModelFactory
 import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
+import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ object Routes {
     const val PLAN           = "plan"
     const val REVISION_LOG   = "revision_log"
     const val VAULT_LIST     = "vault_list"
+    const val READY_LIST     = "ready_list"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
     const val HEATMAP        = "heatmap"
@@ -269,6 +271,7 @@ fun AppNavHost(
                     onStartTest     = { folderId, groupId -> 
                         navController.navigate(Routes.similarityTest(folderId, groupId)) 
                     },
+                    onOpenReadyList = { navController.navigate(Routes.READY_LIST) },
                     onSettingsClick = { showSettingsSheet = true }
                 )
             }
@@ -296,6 +299,13 @@ fun AppNavHost(
             }
 
             // ── Sub-screens (bottom bar hidden) ──────────────────────
+
+            composable(Routes.READY_LIST) {
+                ReadyListScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                )
+            }
 
             composable(
                 route     = "${Routes.EDIT_GROUP}?groupId={groupId}&folderId={folderId}",

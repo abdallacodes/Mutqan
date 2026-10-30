@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -95,6 +96,7 @@ fun MutashabihatListScreen(
     onViewGroup: (groupId: Int, currentSurahId: Int) -> Unit,
     onEditGroup: (Int) -> Unit,
     onStartTest: (folderId: Int?, groupId: Int?) -> Unit,
+    onOpenReadyList: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -151,6 +153,11 @@ fun MutashabihatListScreen(
                 subtitle = if (currentFolderName == null) stringResource(R.string.vault_subtitle) else null,
                 onBack = if (currentFolderId != null) { { viewModel.navigateBack() } } else null,
                 actions = {
+                    if (currentFolderId == null) {
+                        IconButton(onClick = onOpenReadyList) {
+                            Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = stringResource(R.string.cd_ready_list))
+                        }
+                    }
                     IconButton(onClick = { showAddFolderDialog = true }) {
                         Icon(Icons.Default.CreateNewFolder, contentDescription = stringResource(R.string.cd_add_folder))
                     }

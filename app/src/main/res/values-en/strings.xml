@@ -474,4 +474,14 @@
     <string name="home_btn_open_mushaf">Open in the Mushaf</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="ready_list_title">Ready list</string>
+    <string name="ready_list_subtitle">Phrases repeated across the Quran</string>
+    <string name="ready_list_search">Search phrases</string>
+    <string name="ready_list_verses_count">Verses: %d</string>
+    <string name="ready_list_add">Add to my vault</string>
+    <string name="ready_list_added">In your vault</string>
+    <string name="ready_list_added_toast">Group added to your vault</string>
+    <string name="ready_list_empty_title">No matches</string>
+    <string name="ready_list_empty_body">Try another word from the phrase.</string>
+    <string name="cd_ready_list">Ready list</string>
 </resources>
