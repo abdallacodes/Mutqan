@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,8 @@ import com.example.mutqan.ui.revision.OutcomePicker
 import com.example.mutqan.ui.revision.OutcomePreview
 import com.example.mutqan.ui.theme.AmiriFontFamily
 
+private const val LATER_PREVIEW = 3
+
 /** The name of a plan portion in the user's language: "Juz 5", "Page 12" or the surah's name. */
 @Composable
 fun PlanItem.label(): String = when (unit) {
@@ -78,7 +81,7 @@ fun PlanItem.label(): String = when (unit) {
 }
 
 @Composable
-private fun PlanTier.hint(): String = stringResource(
+internal fun PlanTier.hint(): String = stringResource(
     when (this) {
         PlanTier.WEAK -> R.string.home_tier_weak
         PlanTier.FAIR -> R.string.home_tier_fair
@@ -103,6 +106,20 @@ fun HomeScreen(
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(context))
     val state by viewModel.uiState.collectAsState()
     var logging by remember { mutableStateOf<PlanItem?>(null) }
+    var sessionOpen by rememberSaveable { mutableStateOf(false) }
+    var laterExpanded by rememberSaveable { mutableStateOf(false) }
+    var doneExpanded by rememberSaveable { mutableStateOf(false) }
+
+    val sessionToday = state.today
+    if (sessionOpen && sessionToday != null) {
+        ReviewSession(
+            due = sessionToday.due,
+            doneCount = sessionToday.done.size,
+            onLog = { item, outcome, tags -> viewModel.log(item, outcome, tags) },
+            onOpenMushaf = onOpenMushaf,
+            onClose = { sessionOpen = false }
+        )
+    }
 
     logging?.let { item ->
         LogItemDialog(
@@ -198,11 +215,22 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.tertiary
                                 )
                             }
+                            if (today.due.size > 1) {
+                                PaperButton(
+                                    text = stringResource(R.string.home_btn_start_review, today.due.size),
+                                    onClick = { sessionOpen = true },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp)
+                                )
+                            }
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = if (today.due.size > 1) 12.dp else 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                PaperButton(
+                                if (today.due.size > 1) PaperOutlinedButton(
+                                    text = stringResource(R.string.home_btn_revised),
+                                    onClick = { logging = first },
+                                    modifier = Modifier.weight(1f)
+                                ) else PaperButton(
                                     text = stringResource(R.string.home_btn_revised),
                                     onClick = { logging = first },
                                     modifier = Modifier.weight(1f)
@@ -233,11 +261,32 @@ fun HomeScreen(
                             Spacer(Modifier.height(4.dp))
                             Hairline()
                         }
-                        items(today.due.drop(1), key = { "due-${it.unit}-${it.number}" }) { portion ->
+                        val later = today.due.drop(1)
+                        val shown = if (laterExpanded) later else later.take(LATER_PREVIEW)
+                        items(shown, key = { "due-${it.unit}-${it.number}" }) { portion ->
                             PortionRow(portion, done = false, onOpen = { onOpenMushaf(portion.startPage) }, onLog = { logging = portion })
                         }
+                        if (later.size > LATER_PREVIEW) item {
+                            PaperLink(
+                                text = if (laterExpanded) stringResource(R.string.home_show_less)
+                                else stringResource(R.string.home_later_more, later.size - LATER_PREVIEW),
+                                onClick = { laterExpanded = !laterExpanded },
+                                soft = true,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
                     }
-                    if (today.done.isNotEmpty()) {
+                    if (today.done.isNotEmpty() && !doneExpanded) {
+                        item {
+                            Spacer(Modifier.height(PaperSpace.Section))
+                            PaperLink(
+                                text = stringResource(R.string.home_done_show, today.done.size),
+                                onClick = { doneExpanded = true },
+                                soft = true
+                            )
+                        }
+                    }
+                    if (today.done.isNotEmpty() && doneExpanded) {
                         item {
                             Spacer(Modifier.height(PaperSpace.Section))
                             SectionLabel(stringResource(R.string.home_done_title))
@@ -246,6 +295,14 @@ fun HomeScreen(
                         }
                         items(today.done, key = { "done-${it.unit}-${it.number}" }) { portion ->
                             PortionRow(portion, done = true, onOpen = { onOpenMushaf(portion.startPage) }, onLog = {})
+                        }
+                        item {
+                            PaperLink(
+                                text = stringResource(R.string.home_show_less),
+                                onClick = { doneExpanded = false },
+                                soft = true,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
                         }
                     }
                 }

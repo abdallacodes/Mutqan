@@ -749,4 +749,14 @@
     <string name="mushaf_page_memorised_done">Page marked as memorised</string>
     <string name="peek_mark_memorised">Mark verse as memorised</string>
     <string name="peek_unmark_memorised">Verse memorised ✓ (remove)</string>
+    <string name="home_btn_start_review">Start review (%1$d)</string>
+    <string name="session_progress">%1$d of %2$d</string>
+    <string name="session_close">Close</string>
+    <string name="session_finish">Done</string>
+    <string name="session_how_did_it_go">How did it go?</string>
+    <string name="session_add_mistakes">Add mistakes (optional)</string>
+    <string name="session_skip">Move it to the end</string>
+    <string name="home_show_less">Hide</string>
+    <string name="home_later_more">Show %1$d more</string>
+    <string name="home_done_show">Show done today (%1$d)</string>
 </resources>

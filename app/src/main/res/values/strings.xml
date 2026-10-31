@@ -749,4 +749,14 @@
     <string name="mushaf_page_memorised_done">عُلّمت الصفحة محفوظة</string>
     <string name="peek_mark_memorised">علّم الآية محفوظة</string>
     <string name="peek_unmark_memorised">الآية محفوظة ✓ (إزالة)</string>
+    <string name="home_btn_start_review">ابدأ المراجعة (%1$d)</string>
+    <string name="session_progress">%1$d من %2$d</string>
+    <string name="session_close">إغلاق</string>
+    <string name="session_finish">تمّ</string>
+    <string name="session_how_did_it_go">كيف كانت؟</string>
+    <string name="session_add_mistakes">أضف الأخطاء (اختياري)</string>
+    <string name="session_skip">أجّلها إلى آخر القائمة</string>
+    <string name="home_show_less">إخفاء</string>
+    <string name="home_later_more">عرض الباقي (%1$d)</string>
+    <string name="home_done_show">عرض ما تمّ اليوم (%1$d)</string>
 </resources>
