@@ -331,6 +331,26 @@ fun SettingsBottomSheet(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+
+            // ── About ──────────────────────────────────────────────────────
+            Spacer(Modifier.height(20.dp))
+            SectionLabel(stringResource(R.string.settings_about))
+            Spacer(Modifier.height(8.dp))
+            val version = remember(context) {
+                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+            }
+            Text(
+                text = stringResource(R.string.settings_about_version, stringResource(R.string.app_name), version),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+            )
+            Text(
+                text = stringResource(R.string.settings_about_sources),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+            )
+            Spacer(Modifier.height(16.dp))
         }
     }
 

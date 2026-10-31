@@ -372,6 +372,15 @@
     <string name="coverage_clear">مسح الكل</string>
     <string name="coverage_juz_section">الأجزاء</string>
     <string name="coverage_ranges_section">النطاقات</string>
+    <string name="effect_title">ما سيتغير عند التسجيل</string>
+    <string name="effect_counts">%1$d ← %2$d</string>
+    <string name="effect_summary">%1$d ترتقي · %2$d تتراجع · %3$d كما هي</string>
+    <string name="effect_hold">مدة الثبات المقدّرة: %1$s ← %2$s يومًا</string>
+    <string name="effect_outside">%1$d من هذه الصفحات خارج محفوظك، فلا تُتابَع.</string>
+    <string name="effect_practice">قراءة فقط: تُسجَّل ولا تغيّر مستوى أي صفحة.</string>
+    <string name="settings_about">عن التطبيق</string>
+    <string name="settings_about_version">%1$s · الإصدار %2$s</string>
+    <string name="settings_about_sources">موارد القرآن في التطبيق (النص وتخطيط المصحف وخطوطه والتحليل الصرفي والتفسير والمواضيع والآيات المتشابهة) مصدرها مشروع QUL، أي المكتبة القرآنية الشاملة (Quranic Universal Library).</string>
     <string name="coverage_strength_hint">اختر الأجزاء التي حفظتها ومستوى كل جزء: ضعيف أو متوسط أو قوي. تبني الخطة على تقديرك في البداية، ثم تحلّ محلّه سجلات التسميع حين تُظهر حال كل صفحة فعلًا.</string>
     <string name="strength_fair">متوسط</string>
     <string name="strength_strong">قوي</string>

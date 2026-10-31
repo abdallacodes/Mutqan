@@ -372,6 +372,15 @@
     <string name="coverage_clear">Clear all</string>
     <string name="coverage_juz_section">Juz</string>
     <string name="coverage_ranges_section">Ranges</string>
+    <string name="effect_title">What logging this changes</string>
+    <string name="effect_counts">%1$d → %2$d</string>
+    <string name="effect_summary">%1$d move up · %2$d move down · %3$d unchanged</string>
+    <string name="effect_hold">Estimated hold: %1$s → %2$s days</string>
+    <string name="effect_outside">%1$d of these pages are outside what you have memorised, so they are not tracked.</string>
+    <string name="effect_practice">Reading only: it is recorded, but it does not change any page\'s strength.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_version">%1$s · version %2$s</string>
+    <string name="settings_about_sources">The Quran resources in this app (text, Mushaf layout and fonts, word morphology, tafsir, topics and similar verses) come from the QUL project, the Quranic Universal Library.</string>
     <string name="coverage_strength_hint">Pick the juz you have memorised and how well you know each: weak, fair or strong. The plan starts from your estimate, then your revision history takes over once it shows how each page really holds.</string>
     <string name="strength_fair">Fair</string>
     <string name="strength_strong">Strong</string>

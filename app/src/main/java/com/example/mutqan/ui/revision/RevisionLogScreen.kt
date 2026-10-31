@@ -102,6 +102,7 @@ fun RevisionLogScreen(
 
     val uiState    by viewModel.uiState.collectAsState()
     val recentLogs by viewModel.recentLogs.collectAsState()
+    val effect     by viewModel.effect.collectAsState()
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
@@ -172,6 +173,11 @@ fun RevisionLogScreen(
                             onOutcomeChange = viewModel::onOutcomeChange,
                             onTagsChange = viewModel::onTagsChange
                         )
+
+                        effect?.let {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            EffectCard(it)
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 

@@ -230,6 +230,13 @@ object RevisionPlanner {
         if (pageCount <= 0 || pagesPerDay <= 0) 0 else (pageCount + pagesPerDay - 1) / pagesPerDay
 
     /**
+     * The tier of a page: its recall history decides once it has a failed attempt or reliable recall; until then
+     * (unassessed, or too little to judge) it keeps the level the user gave it, fair when they gave none.
+     */
+    fun tierOf(state: PassageState, selfRated: PlanTier?): PlanTier =
+        if (state == PassageState.NOT_ASSESSED || state == PassageState.DEVELOPING) selfRated ?: PlanTier.FAIR else PlanTier.of(state)
+
+    /**
      * The covered pages in each tier (ascending), from their recall history. A page with no recall
      * evidence yet, or too little to judge (developing), goes to the tier the user gave it in [selfRated] (fair when none); once
      * it has a failed attempt or reliable recall, that decides.
@@ -244,8 +251,7 @@ object RevisionPlanner {
             for (page in 1..TOTAL_PAGES) {
                 if (!covered[page - 1]) continue
                 val state = passageStates[page - 1]
-                val tier = if (state == PassageState.NOT_ASSESSED || state == PassageState.DEVELOPING) selfRated[page] ?: PlanTier.FAIR else PlanTier.of(state)
-                tiers.getValue(tier).add(page)
+                tiers.getValue(tierOf(state, selfRated[page])).add(page)
             }
         }
         return tiers
