@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.HifzCoverage
+import com.example.mutqan.domain.PassageStates
+import com.example.mutqan.domain.RevisionLog
+import com.example.mutqan.domain.RevisionPlanner
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
@@ -32,12 +35,37 @@ data class CoverageRangeItem(
     val endAyah: Int
 )
 
-/** A juz with some memorised pages, and the level the user gave all of them (null when mixed or not given). */
+/** How many pages are weak, fair or strong right now; a page nobody has rated or revised counts as fair. */
 @Immutable
-data class JuzStrength(val juz: Int, val tier: PlanTier?)
+data class LevelMix(val weak: Int = 0, val fair: Int = 0, val strong: Int = 0) {
+    val total: Int get() = weak + fair + strong
 
-/** The level of a memorised surah's pages, when they share one. */
-data class SurahStrength(val surah: Int, val tier: PlanTier?)
+    operator fun get(tier: PlanTier): Int = when (tier) {
+        PlanTier.WEAK -> weak
+        PlanTier.FAIR -> fair
+        PlanTier.STRONG -> strong
+    }
+}
+
+/**
+ * A juz with some memorised pages. [tier] is the starting level the user gave all of them (null when they differ or
+ * none was given); [mix] is how its pages stand now. [needsChoice]: some pages have a level of their own that the
+ * others lack or differ from, so setting one level for the juz would overwrite those. [sharedPages] maps each of its
+ * pages that a neighbouring juz also has to that juz.
+ */
+@Immutable
+data class JuzStrength(
+    val juz: Int,
+    val tier: PlanTier?,
+    val mix: LevelMix = LevelMix(),
+    val pages: List<Int> = emptyList(),
+    val needsChoice: Boolean = false,
+    val sharedPages: Map<Int, Int> = emptyMap()
+)
+
+/** The same for a memorised surah. */
+@Immutable
+data class SurahStrength(val surah: Int, val tier: PlanTier?, val mix: LevelMix = LevelMix(), val needsChoice: Boolean = false)
 
 @Immutable
 data class CoverageUiState(
@@ -46,6 +74,12 @@ data class CoverageUiState(
     /** The pages the user has memorised, and the level each of them was given. */
     val memorisedPages: Set<Int> = emptySet(),
     val pageLevels: Map<Int, PlanTier> = emptyMap(),
+    /** Where each memorised page stands now: its revision history once it has any, else the starting level. */
+    val currentLevels: Map<Int, PlanTier> = emptyMap(),
+    val levelMix: LevelMix = LevelMix(),
+    /** For each memorised surah: its memorised pages, and how many of them have a level of their own. */
+    val surahPageCounts: Map<Int, Int> = emptyMap(),
+    val surahRatedCounts: Map<Int, Int> = emptyMap(),
     val ranges: List<CoverageRangeItem> = emptyList(),
     val ayahCount: Int = 0,
     val pageCount: Int = 0,
@@ -83,13 +117,14 @@ class CoverageViewModel(
         val juz: Map<Int, IntRange>,
         val surahs: Map<Int, IntRange>,
         val pages: Map<Int, List<Int>>,
-        val rated: Map<Int, PlanTier>
+        val rated: Map<Int, PlanTier>,
+        val logs: List<RevisionLog>
     )
 
-    private val inputs = combine(juzRanges, surahRanges, juzPages, study.selfRatedStrength(), ::Inputs)
+    private val inputs = combine(juzRanges, surahRanges, juzPages, study.selfRatedStrength(), study.revisionLogs(), ::Inputs)
 
     val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), inputs) { ranges, input ->
-        val (juz, surahs, pages, rated) = input
+        val (juz, surahs, pages, rated, logs) = input
         val covered = HifzCoverage.coveredPages(ranges) { index.firstPageOf(it) }
         // A juz can begin or end in the middle of a page that its neighbour shares, and a page holds one level. The
         // level shown for a juz is that of its own pages, so rating one juz does not undo the level of the next.
@@ -100,24 +135,45 @@ class CoverageViewModel(
         }.keys
         val spans = surahs.mapValues { (_, r) -> index.firstPageOf(r.first)..index.lastPageOf(r.last) }
         val sharedBySurah = spans.values.flatMap { it.toList() }.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+        val memorised = covered?.let { arr -> (1..arr.size).filter { arr[it - 1] }.toSet() }.orEmpty()
+        val states = PassageStates.compute(logs)
+        val current = memorised.associateWith { RevisionPlanner.tierOf(states[it - 1], rated[it]) }
+        fun mixOf(list: List<Int>): LevelMix {
+            val tiers = list.mapNotNull { current[it] }
+            return LevelMix(tiers.count { it == PlanTier.WEAK }, tiers.count { it == PlanTier.FAIR }, tiers.count { it == PlanTier.STRONG })
+        }
+        fun needsChoice(own: List<Int>) = own.map { rated[it] }.distinct().size > 1 && own.any { it in rated }
+        val juzOf = HashMap<Int, MutableList<Int>>()
+        for ((j, list) in pages) for (p in list) juzOf.getOrPut(p) { ArrayList() }.add(j)
         CoverageUiState(
-            memorisedPages = covered?.let { arr -> (1..arr.size).filter { arr[it - 1] }.toSet() }.orEmpty(),
+            memorisedPages = memorised,
             pageLevels = rated,
+            currentLevels = current,
+            levelMix = mixOf(memorised.toList()),
+            surahPageCounts = spans.mapValues { (_, span) -> span.count { it in memorised } },
+            surahRatedCounts = spans.mapValues { (_, span) -> span.count { it in memorised && it in rated } },
             surahStrengths = spans.entries.sortedBy { it.key }.mapNotNull { (s, span) ->
                 if (s !in fullSurahs && s !in partialSurahs) return@mapNotNull null
-                val mine = span.filter { covered?.getOrNull(it - 1) == true }
+                val mine = span.filter { it in memorised }
                 if (mine.isEmpty()) null
                 else {
                     val own = mine.filter { it !in sharedBySurah }.ifEmpty { mine }
-                    SurahStrength(s, own.map { rated[it] }.distinct().singleOrNull())
+                    SurahStrength(s, own.map { rated[it] }.distinct().singleOrNull(), mixOf(mine), needsChoice(own))
                 }
             },
             strengths = pages.entries.sortedBy { it.key }.mapNotNull { (j, list) ->
-                val mine = list.filter { covered?.getOrNull(it - 1) == true }
+                val mine = list.filter { it in memorised }
                 if (mine.isEmpty()) null
                 else {
                     val own = mine.filter { it !in shared }.ifEmpty { mine }
-                    JuzStrength(j, own.map { rated[it] }.distinct().singleOrNull())
+                    JuzStrength(
+                        juz = j,
+                        tier = own.map { rated[it] }.distinct().singleOrNull(),
+                        mix = mixOf(mine),
+                        pages = list,
+                        needsChoice = needsChoice(own),
+                        sharedPages = list.filter { it in shared }.associateWith { p -> juzOf.getValue(p).first { it != j } }
+                    )
                 }
             },
             ranges = ranges.map {
@@ -163,14 +219,18 @@ class CoverageViewModel(
      * Says how well the user knows [juz], marking it as memorised when it is not yet. Choosing the level a
      * memorised juz already has clears the level, and the juz stays memorised.
      */
-    fun rateJuz(juz: Int, tier: PlanTier) {
+    fun rateJuz(juz: Int, tier: PlanTier, onlyUnrated: Boolean = false) {
         val pages = juzPages.value[juz] ?: return
         val range = juzRanges.value[juz] ?: return
         val memorised = juz in uiState.value.fullJuz
-        val clear = memorised && uiState.value.strengths.firstOrNull { it.juz == juz }?.tier == tier
+        val clear = memorised && !onlyUnrated && uiState.value.strengths.firstOrNull { it.juz == juz }?.tier == tier
         viewModelScope.launch {
             if (!memorised) study.setCoverage(HifzCoverage.add(current(), range))
-            study.setSelfRated(pages.first()..pages.last(), if (clear) null else tier)
+            if (onlyUnrated) {
+                study.setSelfRated(pages.filter { it !in uiState.value.pageLevels }, tier)
+            } else {
+                study.setSelfRated(pages.first()..pages.last(), if (clear) null else tier)
+            }
         }
     }
 
@@ -178,13 +238,16 @@ class CoverageViewModel(
      * Says how well the user knows the memorised pages of [surah]. Choosing the level it already has clears it.
      * Surahs that share a page share that page's level.
      */
-    fun rateSurah(surah: Int, tier: PlanTier) {
+    fun rateSurah(surah: Int, tier: PlanTier, onlyUnrated: Boolean = false) {
         val range = surahRanges.value[surah] ?: return
         val memorised = uiState.value.memorisedPages
         val pages = (index.firstPageOf(range.first)..index.lastPageOf(range.last)).filter { it in memorised }
         if (pages.isEmpty()) return
-        val clear = uiState.value.surahStrengths.firstOrNull { it.surah == surah }?.tier == tier
-        viewModelScope.launch { study.setSelfRated(pages, if (clear) null else tier) }
+        val clear = !onlyUnrated && uiState.value.surahStrengths.firstOrNull { it.surah == surah }?.tier == tier
+        viewModelScope.launch {
+            if (onlyUnrated) study.setSelfRated(pages.filter { it !in uiState.value.pageLevels }, tier)
+            else study.setSelfRated(pages, if (clear) null else tier)
+        }
     }
 
     /** Sets the level of one memorised [page]; a null [tier] clears it. Pages that are not memorised are left alone. */

@@ -792,4 +792,13 @@
     <string name="coverage_page_levels">مستوى كل صفحة</string>
     <string name="coverage_page_levels_hint">اختر مستوى ثم المس الصفحات لتعيينه. الصفحات الباهتة غير محفوظة.</string>
     <string name="coverage_brush_clear">بلا مستوى</string>
+    <string name="coverage_mix_part">%1$s: %2$d</string>
+    <string name="coverage_levels_note">اللون يبيّن مستوى كل صفحة الآن. الصفحة التي لم تُقدَّر ولم تُراجَع تُحسب متوسطة.</string>
+    <string name="coverage_show_pages">عرض الصفحات</string>
+    <string name="coverage_hide_pages">إخفاء الصفحات</string>
+    <string name="coverage_shared_page">الصفحة %1$d مشتركة مع الجزء %2$d.</string>
+    <string name="coverage_choice_title">تغيير مستوى الصفحات؟</string>
+    <string name="coverage_choice_body">%1$d من %2$d صفحة لها مستوى خاص بها. ماذا تريد؟</string>
+    <string name="coverage_choice_all">كل الصفحات</string>
+    <string name="coverage_choice_unrated">الصفحات التي بلا مستوى فقط</string>
 </resources>

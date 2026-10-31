@@ -72,6 +72,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,8 @@ fun CoverageScreen(onDone: () -> Unit) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showSurahPicker by remember { mutableStateOf(false) }
     var advanced by rememberSaveable { mutableStateOf(false) }
+    var expandedJuz by rememberSaveable { mutableStateOf(emptySet<Int>()) }
+    var pending by remember { mutableStateOf<PendingRate?>(null) }
     // The level a tap on a page gives it; null clears the page's level.
     var brush by rememberSaveable { mutableStateOf<Int?>(PlanTier.FAIR.code) }
 
@@ -98,6 +101,29 @@ fun CoverageScreen(onDone: () -> Unit) {
             partial = state.partialSurahs,
             onToggle = viewModel::toggleSurah,
             onDone = { showSurahPicker = false }
+        )
+    }
+
+    pending?.let { ask ->
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(stringResource(R.string.coverage_choice_title)) },
+            text = { Text(stringResource(R.string.coverage_choice_body, ask.ownCount, ask.pageCount)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pending = null
+                    ask.apply(viewModel, false)
+                }) { Text(stringResource(R.string.coverage_choice_all)) }
+            },
+            dismissButton = {
+                Column {
+                    TextButton(onClick = {
+                        pending = null
+                        ask.apply(viewModel, true)
+                    }) { Text(stringResource(R.string.coverage_choice_unrated)) }
+                    TextButton(onClick = { pending = null }) { Text(stringResource(R.string.btn_cancel)) }
+                }
+            }
         )
     }
 
@@ -129,12 +155,26 @@ fun CoverageScreen(onDone: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Text(
-                        text = if (state.isSet) stringResource(R.string.coverage_summary, state.ayahCount, state.pageCount)
-                        else stringResource(R.string.coverage_unset_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = if (state.isSet) stringResource(R.string.coverage_summary, state.ayahCount, state.pageCount)
+                            else stringResource(R.string.coverage_unset_hint),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (state.isSet && state.levelMix.total > 0) {
+                            Text(
+                                text = mixCaption(state.levelMix),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            LevelHeatmap(state.memorisedPages, state.currentLevels)
+                            Text(
+                                text = stringResource(R.string.coverage_levels_note),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
             item {
@@ -158,7 +198,8 @@ fun CoverageScreen(onDone: () -> Unit) {
             }
             items((1..30).toList(), key = { it }) { juz ->
                 val memorised = juz in state.fullJuz
-                val tier = state.strengths.firstOrNull { it.juz == juz }?.tier
+                val row = state.strengths.firstOrNull { it.juz == juz }
+                val open = juz in expandedJuz
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -172,14 +213,44 @@ fun CoverageScreen(onDone: () -> Unit) {
                             contentDescription = null,
                             tint = if (memorised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         )
-                        Text(
-                            text = stringResource(R.string.mushaf_juz_row, juz),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
+                        Column(modifier = Modifier.padding(start = 12.dp)) {
+                            Text(
+                                text = stringResource(R.string.mushaf_juz_row, juz),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (row != null) MixLine(row.mix)
+                        }
                     }
-                    TierChips(selected = if (memorised) tier else null, onSelect = { viewModel.rateJuz(juz, it) })
+                    TierChips(
+                        selected = if (memorised) row?.tier else null,
+                        onSelect = { tier ->
+                            if (row != null && row.needsChoice) {
+                                pending = PendingRate(tier, row.pages.count { it in state.memorisedPages }, row.pages.count { it in state.pageLevels }) { vm, only ->
+                                    vm.rateJuz(juz, tier, only)
+                                }
+                            } else {
+                                viewModel.rateJuz(juz, tier)
+                            }
+                        }
+                    )
+                }
+                if (row != null) {
+                    PaperLink(
+                        text = stringResource(if (open) R.string.coverage_hide_pages else R.string.coverage_show_pages),
+                        onClick = { expandedJuz = if (open) expandedJuz - juz else expandedJuz + juz },
+                        soft = true
+                    )
+                }
+                if (open && row != null) {
+                    JuzPages(
+                        row = row,
+                        memorised = state.memorisedPages,
+                        levels = state.pageLevels,
+                        brush = brush,
+                        onBrush = { brush = it },
+                        onPage = { page -> viewModel.ratePage(page, brush?.let { PlanTier.fromCode(it) }) }
+                    )
                 }
                 Hairline()
             }
@@ -200,12 +271,23 @@ fun CoverageScreen(onDone: () -> Unit) {
                 }
                 items(state.surahStrengths, key = { "surah-${it.surah}" }) { row ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = SurahData.nameOf(row.surah),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f).padding(vertical = 10.dp)
+                        Column(modifier = Modifier.weight(1f).padding(vertical = 10.dp)) {
+                            Text(text = SurahData.nameOf(row.surah), style = MaterialTheme.typography.bodyLarge)
+                            MixLine(row.mix)
+                        }
+                        TierChips(
+                            selected = row.tier,
+                            onSelect = { tier ->
+                                if (row.needsChoice) {
+                                    val total = state.surahPageCounts[row.surah] ?: row.mix.total
+                                    pending = PendingRate(tier, total, state.surahRatedCounts[row.surah] ?: 0) { vm, only ->
+                                        vm.rateSurah(row.surah, tier, only)
+                                    }
+                                } else {
+                                    viewModel.rateSurah(row.surah, tier)
+                                }
+                            }
                         )
-                        TierChips(selected = row.tier, onSelect = { viewModel.rateSurah(row.surah, it) })
                     }
                     Hairline()
                 }
@@ -217,23 +299,7 @@ fun CoverageScreen(onDone: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                item {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        listOf(
-                            PlanTier.WEAK.code to R.string.strength_weak,
-                            PlanTier.FAIR.code to R.string.strength_fair,
-                            PlanTier.STRONG.code to R.string.strength_strong,
-                            null to R.string.coverage_brush_clear
-                        ).forEach { (code, label) ->
-                            PaperChip(
-                                selected = brush == code,
-                                onClick = { brush = code },
-                                label = { Text(stringResource(label)) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
+                item { BrushChips(brush) { brush = it } }
                 items((0 until PAGE_ROWS).toList(), key = { "pages-$it" }) { row ->
                     // Page numbers keep their left-to-right order, as on any grid of numbers.
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -395,6 +461,145 @@ private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
                 onClick = { onSelect(tier) },
                 label = { Text(stringResource(label)) },
                 modifier = Modifier.width(64.dp)
+            )
+        }
+    }
+}
+
+/** A level the user asked for on a row whose pages already differ, held while they say how to apply it. */
+private class PendingRate(
+    val tier: PlanTier,
+    val pageCount: Int,
+    val ownCount: Int,
+    val apply: (CoverageViewModel, Boolean) -> Unit
+)
+
+@Composable
+private fun PlanTier.color(): Color = when (this) {
+    PlanTier.WEAK -> DifficultyCritical
+    PlanTier.FAIR -> DifficultyStruggled
+    PlanTier.STRONG -> DifficultySmooth
+}
+
+@Composable
+private fun PlanTier.label(): String = stringResource(
+    when (this) {
+        PlanTier.WEAK -> R.string.strength_weak
+        PlanTier.FAIR -> R.string.strength_fair
+        PlanTier.STRONG -> R.string.strength_strong
+    }
+)
+
+/** "Weak: 4 · Fair: 10 · Strong: 6", leaving out the levels no page has. */
+@Composable
+private fun mixCaption(mix: LevelMix): String {
+    val parts = listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).filter { mix[it] > 0 }
+        .map { stringResource(R.string.coverage_mix_part, it.label(), mix[it]) }
+    return parts.joinToString(" · ")
+}
+
+/** A thin bar split by how many pages are weak, fair and strong, and the same in words under it. */
+@Composable
+private fun MixLine(mix: LevelMix) {
+    if (mix.total == 0) return
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(4.dp)) {
+        listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
+            if (mix[tier] > 0) Box(Modifier.weight(mix[tier].toFloat()).fillMaxHeight().background(tier.color()))
+        }
+    }
+    Text(
+        text = mixCaption(mix),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp)
+    )
+}
+
+/** All 604 pages as small squares, coloured by where each stands now; pages not memorised are only outlined. */
+@Composable
+private fun LevelHeatmap(memorised: Set<Int>, levels: Map<Int, PlanTier>) {
+    val weak = DifficultyCritical
+    val fair = DifficultyStruggled
+    val strong = DifficultySmooth
+    val faint = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    val columns = 40
+    val rows = (TOTAL_PAGES + columns - 1) / columns
+    androidx.compose.foundation.Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(columns.toFloat() / rows)
+    ) {
+        val cell = size.width / columns
+        val gap = 1.dp.toPx()
+        for (page in 1..TOTAL_PAGES) {
+            val x = ((page - 1) % columns) * cell
+            val y = ((page - 1) / columns) * cell
+            val color = if (page in memorised) when (levels[page]) {
+                PlanTier.WEAK -> weak
+                PlanTier.STRONG -> strong
+                else -> fair
+            } else faint
+            drawRect(
+                color,
+                topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                size = androidx.compose.ui.geometry.Size(cell - gap, cell - gap)
+            )
+        }
+    }
+}
+
+/** The pages of one juz: a level to paint with, the grid, and which pages a neighbouring juz shares. */
+@Composable
+private fun JuzPages(
+    row: JuzStrength,
+    memorised: Set<Int>,
+    levels: Map<Int, PlanTier>,
+    brush: Int?,
+    onBrush: (Int?) -> Unit,
+    onPage: (Int) -> Unit
+) {
+    Column(modifier = Modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.coverage_page_levels_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        BrushChips(brush, onBrush)
+        row.pages.chunked(PAGE_COLUMNS).forEach { chunk ->
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+                    chunk.forEach { page ->
+                        PageCell(page, page in memorised, levels[page], { onPage(page) }, Modifier.weight(1f))
+                    }
+                    repeat(PAGE_COLUMNS - chunk.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+        row.sharedPages.entries.take(2).forEach { (page, other) ->
+            Text(
+                text = stringResource(R.string.coverage_shared_page, page, other),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Weak, fair, strong and "no level": what a tap on a page sets. */
+@Composable
+private fun BrushChips(brush: Int?, onBrush: (Int?) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        listOf(
+            PlanTier.WEAK.code to R.string.strength_weak,
+            PlanTier.FAIR.code to R.string.strength_fair,
+            PlanTier.STRONG.code to R.string.strength_strong,
+            null to R.string.coverage_brush_clear
+        ).forEach { (code, label) ->
+            PaperChip(
+                selected = brush == code,
+                onClick = { onBrush(code) },
+                label = { Text(stringResource(label)) },
+                modifier = Modifier.weight(1f)
             )
         }
     }

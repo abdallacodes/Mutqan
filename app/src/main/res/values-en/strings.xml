@@ -792,4 +792,13 @@
     <string name="coverage_page_levels">Level of each page</string>
     <string name="coverage_page_levels_hint">Pick a level, then tap pages to set it. Faded pages are not memorised.</string>
     <string name="coverage_brush_clear">No level</string>
+    <string name="coverage_mix_part">%1$s: %2$d</string>
+    <string name="coverage_levels_note">Colour shows where each page stands now. A page nobody has rated or revised counts as fair.</string>
+    <string name="coverage_show_pages">Show pages</string>
+    <string name="coverage_hide_pages">Hide pages</string>
+    <string name="coverage_shared_page">Page %1$d is shared with juz %2$d.</string>
+    <string name="coverage_choice_title">Change the level of these pages?</string>
+    <string name="coverage_choice_body">%1$d of these %2$d pages already have a level of their own. What should happen?</string>
+    <string name="coverage_choice_all">All pages</string>
+    <string name="coverage_choice_unrated">Only pages without a level</string>
 </resources>
