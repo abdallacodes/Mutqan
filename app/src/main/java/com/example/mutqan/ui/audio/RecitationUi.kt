@@ -25,6 +25,22 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import android.text.format.Formatter
+import com.example.mutqan.domain.audio.RecitationDownloads
+import com.example.mutqan.ui.theme.AmiriFontFamily
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
@@ -111,11 +127,20 @@ fun RecitationBar(
 ) {
     val context = LocalContext.current
     val player = remember(context) { RecitationPlayer.get(context) }
-    val reciterId by remember(context) { UserPreferencesRepository(context.applicationContext).reciterId }.collectAsState(initial = "")
+    val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
+    val reciterId by prefs.reciterId.collectAsState(initial = "")
+    val repeat by prefs.recitationRepeat.collectAsState(initial = 1)
+    val speed by prefs.recitationSpeedPercent.collectAsState(initial = 100)
+    val details = buildString {
+        append(stringResource(Reciter.fromId(reciterId).nameRes))
+        if (speed != 100) append(" · ").append(speedLabel(speed))
+        if (repeat > 1) append(" · ").append(stringResource(R.string.audio_times, repeat))
+    }
+    Column(modifier = modifier.fillMaxWidth().background(background)) {
+    if (state.buffering) LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = muted, trackColor = Color.Transparent)
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .background(background)
             .padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -137,7 +162,7 @@ fun RecitationBar(
                 )
             }
             Text(
-                text = stringResource(Reciter.fromId(reciterId).nameRes),
+                text = if (state.yourTurn) stringResource(R.string.audio_your_turn) else details,
                 style = MaterialTheme.typography.labelSmall,
                 color = muted,
                 maxLines = 1,
@@ -166,9 +191,15 @@ fun RecitationBar(
             }
         }
     }
+    }
 }
 
+/** "1.25×" for a speed given in percent. */
+private fun speedLabel(percent: Int) = "${percent / 100f}×".replace(".0×", "×")
+
 private val REPEATS = listOf(1, 2, 3, 5, 10)
+private val SAY_AFTER = listOf(0, 100, 150, 200)
+private val SLEEP = listOf(0, 15, 30, 60, RecitationPlayer.SLEEP_AT_SURAH_END)
 private val SPEEDS = listOf(75, 100, 125, 150)
 
 /** Reciter, how many times each verse plays, speed, and how far a recitation goes. */
@@ -184,6 +215,13 @@ fun RecitationSheet(onDismiss: () -> Unit) {
     val speed by prefs.recitationSpeedPercent.collectAsState(initial = 100)
     val loop by prefs.recitationLoop.collectAsState(initial = false)
     val toSurahEnd by prefs.recitationToSurahEnd.collectAsState(initial = false)
+    val runRepeat by prefs.recitationRunRepeat.collectAsState(initial = 1)
+    val sayAfter by prefs.recitationSayAfterPercent.collectAsState(initial = 0)
+    val playback by controller.player.state.collectAsState()
+    val downloads = remember(context) { RecitationDownloads.get(context) }
+    val downloadState by downloads.state.collectAsState()
+    val kept = downloadState.sizes.values.sum()
+    var confirmDeleteAll by remember { mutableStateOf(false) }
 
     /** Saves a setting that needs the run to be rebuilt, and carries on from the verse sounding now. */
     fun change(save: suspend () -> Unit) {
@@ -206,6 +244,8 @@ fun RecitationSheet(onDismiss: () -> Unit) {
                 .padding(bottom = 32.dp)
         ) {
             Text(stringResource(R.string.audio_sheet_title), style = MaterialTheme.typography.titleMedium)
+
+            if (playback.active) NowPlaying(playback, controller.player)
 
             SheetLabel(stringResource(R.string.audio_reciter))
             Reciter.entries.forEach { option ->
@@ -232,6 +272,36 @@ fun RecitationSheet(onDismiss: () -> Unit) {
                 }
             }
 
+            SheetLabel(stringResource(R.string.audio_passage_repeat))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                REPEATS.forEach { times ->
+                    PaperChip(
+                        selected = times == runRepeat,
+                        onClick = { change { prefs.setRecitationRunRepeat(times) } },
+                        label = { Text(stringResource(R.string.audio_times, times)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            SheetLabel(stringResource(R.string.audio_say_after))
+            Text(
+                text = stringResource(R.string.audio_say_after_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Row(modifier = Modifier.fillMaxWidth()) {
+                SAY_AFTER.forEach { percent ->
+                    PaperChip(
+                        selected = percent == sayAfter,
+                        onClick = { change { prefs.setRecitationSayAfterPercent(percent) } },
+                        label = { Text(if (percent == 0) stringResource(R.string.audio_off) else speedLabel(percent)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
             SheetLabel(stringResource(R.string.audio_speed))
             Row(modifier = Modifier.fillMaxWidth()) {
                 SPEEDS.forEach { percent ->
@@ -243,7 +313,7 @@ fun RecitationSheet(onDismiss: () -> Unit) {
                                 controller.player.setSpeed(percent)
                             }
                         },
-                        label = { Text("${percent / 100f}×".replace(".0×", "×")) },
+                        label = { Text(speedLabel(percent)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -251,8 +321,131 @@ fun RecitationSheet(onDismiss: () -> Unit) {
 
             ToggleRow(stringResource(R.string.audio_loop), loop) { on -> change { prefs.setRecitationLoop(on) } }
             ToggleRow(stringResource(R.string.audio_to_surah_end), toSurahEnd) { on -> change { prefs.setRecitationToSurahEnd(on) } }
+
+            if (playback.active) {
+                SheetLabel(stringResource(R.string.audio_sleep))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    SLEEP.forEach { option ->
+                        PaperChip(
+                            selected = option == playback.sleep,
+                            onClick = { controller.player.setSleep(option) },
+                            label = {
+                                Text(
+                                    when {
+                                        option == 0 -> stringResource(R.string.audio_off)
+                                        option > 0 -> stringResource(R.string.audio_sleep_minutes, option)
+                                        else -> stringResource(R.string.audio_sleep_surah)
+                                    },
+                                    maxLines = 1
+                                )
+                            },
+                            modifier = Modifier.weight(if (option < 0) 2f else 1f)
+                        )
+                    }
+                }
+            }
+
+            if (kept > 0) {
+                SheetLabel(stringResource(R.string.audio_downloads))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.audio_downloads_size, Formatter.formatShortFileSize(context, kept)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { confirmDeleteAll = true }) { Text(stringResource(R.string.audio_downloads_delete_all)) }
+                }
+            }
         }
     }
+
+    if (confirmDeleteAll) {
+        DeleteAllDownloadsDialog(
+            size = Formatter.formatShortFileSize(context, kept),
+            onConfirm = { downloads.deleteAll(); confirmDeleteAll = false },
+            onDismiss = { confirmDeleteAll = false }
+        )
+    }
+}
+
+/** The verse sounding: its text, where in it the recitation is (drag to move), and the transport controls. */
+@Composable
+private fun NowPlaying(state: RecitationPlayer.State, player: RecitationPlayer) {
+    val context = LocalContext.current
+    val quran = remember(context) { QuranRepository.getInstance(context) }
+    val text by produceState("", state.ayahId) {
+        val id = state.ayahId
+        value = if (id == null) "" else withContext(Dispatchers.IO) { quran.ayahById(id)?.text.orEmpty() }
+    }
+    var position by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    LaunchedEffect(state.ayahId) {
+        while (true) {
+            position = player.positionMs()
+            duration = player.durationMs()
+            delay(250)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = nowPlayingLabel(state.ayahId),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.tertiary
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = AmiriFontFamily, fontSize = 24.sp, lineHeight = 44.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+        )
+        if (state.yourTurn) {
+            Text(
+                text = stringResource(R.string.audio_your_turn),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Slider(
+                value = (dragging ?: position.toFloat()).coerceIn(0f, duration.coerceAtLeast(1L).toFloat()),
+                onValueChange = { dragging = it },
+                onValueChangeFinished = {
+                    dragging?.let { player.seekTo(it.toLong()) }
+                    dragging = null
+                },
+                valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
+                enabled = duration > 0
+            )
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                Text(clock(dragging?.toLong() ?: position), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                Text(clock(duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = player::previous) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.audio_previous))
+                }
+                IconButton(onClick = player::togglePause) {
+                    Icon(
+                        if (state.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(if (state.playing) R.string.audio_pause else R.string.audio_play),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                IconButton(onClick = player::next) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.audio_next))
+                }
+            }
+        }
+    }
+}
+
+private fun clock(ms: Long): String {
+    val seconds = (ms / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(seconds / 60, seconds % 60)
 }
 
 @Composable

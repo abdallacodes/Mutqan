@@ -12,18 +12,29 @@ class RecitationController private constructor(context: Context) {
     private val quran by lazy { QuranRepository.getInstance(app) }
 
     val player = RecitationPlayer.get(app)
+    private val downloads = RecitationDownloads.get(app)
 
     /** The last verse of the run now playing, to carry on to when settings change. */
     private var runEnd = 0
 
-    private class Settings(val reciter: Reciter, val repeat: Int, val loop: Boolean, val toSurahEnd: Boolean, val speed: Int)
+    private class Settings(
+        val reciter: Reciter,
+        val repeat: Int,
+        val loop: Boolean,
+        val toSurahEnd: Boolean,
+        val speed: Int,
+        val runRepeat: Int,
+        val sayAfter: Int
+    )
 
     private suspend fun settings() = Settings(
         reciter = Reciter.fromId(prefs.reciterId.first()),
         repeat = prefs.recitationRepeat.first(),
         loop = prefs.recitationLoop.first(),
         toSurahEnd = prefs.recitationToSurahEnd.first(),
-        speed = prefs.recitationSpeedPercent.first()
+        speed = prefs.recitationSpeedPercent.first(),
+        runRepeat = prefs.recitationRunRepeat.first(),
+        sayAfter = prefs.recitationSayAfterPercent.first()
     )
 
     /** Plays from verse [ayahId] to the end of [page], or of the surah when the reader chose that. */
@@ -31,6 +42,32 @@ class RecitationController private constructor(context: Context) {
         val s = settings()
         val index = quran.ayahIndex
         start(RecitationRange.from(ayahId, page, s.toSurahEnd, TOTAL_AYAHS, index::surahOf, index::firstPageOf), s)
+    }
+
+    /** Carries on from the verse the last recitation reached; false when there was none to carry on from. */
+    suspend fun resume(): Boolean {
+        val id = prefs.lastRecitationAyah.first()
+        val index = quran.ayahIndex
+        if (id !in index) return false
+        playFrom(id, index.firstPageOf(id))
+        return true
+    }
+
+    /** Plays the verses of [pages] one page after another, as today's review asks for them. */
+    suspend fun playPages(pages: Collection<Int>) {
+        val s = settings()
+        val index = quran.ayahIndex
+        val wanted = pages.toSortedSet()
+        val ids = (1..TOTAL_AYAHS).filter { it in index && index.firstPageOf(it) in wanted }
+        start(ids, s, whole = false)
+    }
+
+    /** Downloads, for the chosen reciter, every surah that has a verse beginning on [pages]. */
+    suspend fun downloadPages(pages: Collection<Int>) {
+        val index = quran.ayahIndex
+        val wanted = pages.toSet()
+        val surahs = (1..TOTAL_AYAHS).filter { it in index && index.firstPageOf(it) in wanted }.map(index::surahOf).toSet()
+        downloads.downloadAll(settings().reciter, surahs)
     }
 
     /** Plays the whole of [surah]. */
@@ -49,10 +86,11 @@ class RecitationController private constructor(context: Context) {
         start((id..runEnd).toList(), settings())
     }
 
-    private fun start(ids: List<Int>, s: Settings) {
+    /** [whole] is false for a set of verses that is not one stretch, which settings changes cannot carry on from. */
+    private fun start(ids: List<Int>, s: Settings, whole: Boolean = true) {
         if (ids.isEmpty()) return
-        runEnd = ids.last()
-        player.play(s.reciter, ids, s.repeat, s.loop, s.speed)
+        runEnd = if (whole) ids.last() else 0
+        player.play(s.reciter, ids, s.repeat, s.loop, s.speed, s.runRepeat, s.sayAfter)
     }
 
     companion object {

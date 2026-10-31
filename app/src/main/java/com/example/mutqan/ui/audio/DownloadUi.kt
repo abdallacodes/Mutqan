@@ -26,12 +26,12 @@ sealed interface DownloadStatus {
 
 /** Download, cancel and (once downloaded) delete, in one button that shows which of them it would do. */
 @Composable
-fun DownloadButton(status: DownloadStatus, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun DownloadButton(status: DownloadStatus, onClick: () -> Unit, modifier: Modifier = Modifier, description: String? = null) {
     IconButton(onClick = onClick, modifier = modifier) {
         when (status) {
             DownloadStatus.None -> Icon(
                 Icons.Default.Download,
-                contentDescription = stringResource(R.string.audio_download),
+                contentDescription = description ?: stringResource(R.string.audio_download),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             is DownloadStatus.Downloading -> CircularProgressIndicator(
@@ -47,6 +47,21 @@ fun DownloadButton(status: DownloadStatus, onClick: () -> Unit, modifier: Modifi
             )
         }
     }
+}
+
+@Composable
+fun DeleteAllDownloadsDialog(size: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.audio_delete_all_title)) },
+        text = { Text(stringResource(R.string.audio_delete_all_body, size)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.audio_delete_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    )
 }
 
 @Composable

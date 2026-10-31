@@ -31,6 +31,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.mutqan.domain.audio.RecitationController
+import com.example.mutqan.ui.audio.rememberAskForNotifications
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -108,6 +112,9 @@ fun HomeScreen(
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(context))
     val state by viewModel.uiState.collectAsState()
     var logging by remember { mutableStateOf<PlanItem?>(null) }
+    val recitation = remember(context) { RecitationController.get(context) }
+    val askForNotifications = rememberAskForNotifications()
+    val scope = rememberCoroutineScope()
     var sessionOpen by rememberSaveable { mutableStateOf(false) }
     var laterExpanded by rememberSaveable { mutableStateOf(false) }
     var doneExpanded by rememberSaveable { mutableStateOf(false) }
@@ -241,6 +248,25 @@ fun HomeScreen(
                                     text = stringResource(R.string.home_btn_open_mushaf),
                                     onClick = { onOpenMushaf(first.startPage) },
                                     modifier = Modifier.weight(1f)
+                                )
+                            }
+                            val reviewPages = today.due.flatMap { it.startPage..it.endPage }
+                            Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PaperLink(
+                                    text = stringResource(R.string.audio_listen_review),
+                                    onClick = {
+                                        askForNotifications()
+                                        scope.launch { recitation.playPages(reviewPages) }
+                                    },
+                                    soft = true
+                                )
+                                PaperLink(
+                                    text = stringResource(R.string.audio_download_review),
+                                    onClick = {
+                                        askForNotifications()
+                                        scope.launch { recitation.downloadPages(reviewPages) }
+                                    },
+                                    soft = true
                                 )
                             }
                         } else {

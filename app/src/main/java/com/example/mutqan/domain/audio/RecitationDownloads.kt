@@ -46,6 +46,8 @@ class RecitationDownloads private constructor(context: Context) {
         val downloading: Map<String, Progress> = emptyMap(),
         /** Surahs kept in full, by [key]. */
         val downloaded: Set<String> = emptySet(),
+        /** Bytes each kept surah takes on the device, by [key]. */
+        val sizes: Map<String, Long> = emptyMap(),
         /** Set when a download stopped short; cleared by [clearFailure]. */
         val failed: Boolean = false
     )
@@ -57,8 +59,27 @@ class RecitationDownloads private constructor(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<String, Job>()
 
+    /** One limit on files in flight, however many surahs are being fetched. */
+    private val gate = Semaphore(PARALLEL)
+
     private val _state = MutableStateFlow(State(downloaded = scanDownloaded()))
     val state: StateFlow<State> = _state
+
+    init {
+        scope.launch { refreshSizes() }
+    }
+
+    /** Measures what the kept surahs take, file by file. */
+    private fun refreshSizes() {
+        val sizes = HashMap<String, Long>()
+        for (reciter in Reciter.entries) {
+            root(reciter).listFiles { f -> f.name.endsWith(".mp3") }?.forEach { f ->
+                val surah = f.name.take(3).toIntOrNull() ?: return@forEach
+                sizes.merge(key(reciter, surah), f.length(), Long::plus)
+            }
+        }
+        _state.update { it.copy(sizes = sizes.filterKeys { k -> k in it.downloaded }) }
+    }
 
     private fun root(reciter: Reciter) = File(app.filesDir, "recitation/${reciter.id}")
 
@@ -97,6 +118,9 @@ class RecitationDownloads private constructor(context: Context) {
     fun download(reciter: Reciter, surah: Int) {
         val key = key(reciter, surah)
         if (jobs.containsKey(key) || key in _state.value.downloaded) return
+        // Shown at once, so the notification service that starts below finds a download to report.
+        setProgress(key, Progress(0, 1))
+        RecitationDownloadService.start(app)
         jobs[key] = scope.launch {
             try {
                 root(reciter).mkdirs()
@@ -104,7 +128,6 @@ class RecitationDownloads private constructor(context: Context) {
                 if (files.isEmpty()) throw IOException("nothing to download")
                 val done = AtomicInteger(files.count { it.second.isFile })
                 setProgress(key, Progress(done.get(), files.size))
-                val gate = Semaphore(PARALLEL)
                 coroutineScope {
                     files.filterNot { it.second.isFile }.map { (url, file) ->
                         async {
@@ -115,6 +138,7 @@ class RecitationDownloads private constructor(context: Context) {
                 }
                 marker(reciter, surah).writeText("")
                 _state.update { it.copy(downloading = it.downloading - key, downloaded = it.downloaded + key) }
+                refreshSizes()
             } catch (e: CancellationException) {
                 _state.update { it.copy(downloading = it.downloading - key) }
                 throw e
@@ -141,6 +165,25 @@ class RecitationDownloads private constructor(context: Context) {
                 File(file.parentFile, file.name + ".part").delete()
             }
             _state.update { it.copy(downloading = it.downloading - key, downloaded = it.downloaded - key) }
+            refreshSizes()
+        }
+    }
+
+    /** Downloads each of [surahs] that is not kept yet. */
+    fun downloadAll(reciter: Reciter, surahs: Collection<Int>) {
+        surahs.forEach { download(reciter, it) }
+    }
+
+    fun cancelAll(reciter: Reciter, surahs: Collection<Int>) {
+        surahs.forEach { cancel(reciter, it) }
+    }
+
+    /** Removes every downloaded recitation, of every reciter. */
+    fun deleteAll() {
+        scope.launch {
+            jobs.values.forEach { it.cancelAndJoinQuietly() }
+            File(app.filesDir, "recitation").deleteRecursively()
+            _state.update { it.copy(downloading = emptyMap(), downloaded = emptySet(), sizes = emptyMap()) }
         }
     }
 

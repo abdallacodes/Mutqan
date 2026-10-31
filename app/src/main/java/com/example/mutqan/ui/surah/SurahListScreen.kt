@@ -22,7 +22,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.rememberCoroutineScope
+import android.text.format.Formatter
 import android.widget.Toast
+import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.ui.components.PaperChip
+import com.example.mutqan.ui.audio.nowPlayingLabel
 import androidx.compose.runtime.LaunchedEffect
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.audio.RecitationController
@@ -98,6 +102,15 @@ fun SurahListScreen(
     val reciterId by remember(context) { UserPreferencesRepository(context.applicationContext).reciterId }.collectAsState(initial = "")
     val reciter = Reciter.fromId(reciterId)
     var deleting by remember { mutableStateOf<Int?>(null) }
+    var onlyDownloaded by rememberSaveable { mutableStateOf(false) }
+    val lastAyah by remember(context) { UserPreferencesRepository(context.applicationContext).lastRecitationAyah }.collectAsState(initial = 0)
+    // The surahs each juz touches, to download a juz as the surahs it is made of.
+    val juzSurahs = remember(context) {
+        val index = QuranRepository.getInstance(context).ayahIndex
+        val out = HashMap<Int, MutableSet<Int>>()
+        for (id in 1..6236) if (id in index) out.getOrPut(index.juzOf(id)) { LinkedHashSet() } += index.surahOf(id)
+        out
+    }
     val downloadFailed = stringResource(R.string.audio_download_failed)
     LaunchedEffect(downloadState.failed) {
         if (downloadState.failed) {
@@ -123,13 +136,15 @@ fun SurahListScreen(
         if (m == null || query.isBlank() || query.trim().toIntOrNull() != null) emptyList()
         else m.findRoots(query).take(3).map { it to m.infoOfRoot(it) }
     }
-    val shown = remember(surahs, needle) {
-        if (needle.isEmpty()) surahs
-        else surahs.filter { item ->
-            item.info.id.toString() == needle ||
-                ArabicNormalization.normalizeForSearch(item.info.nameArabic).contains(needle) ||
-                item.info.nameEnglish.contains(query.trim(), ignoreCase = true)
-        }
+    val shown = remember(surahs, needle, onlyDownloaded, downloadState.downloaded, reciter) {
+        surahs
+            .filter { !onlyDownloaded || RecitationDownloads.key(reciter, it.info.id) in downloadState.downloaded }
+            .filter { item ->
+                needle.isEmpty() ||
+                    item.info.id.toString() == needle ||
+                    ArabicNormalization.normalizeForSearch(item.info.nameArabic).contains(needle) ||
+                    item.info.nameEnglish.contains(query.trim(), ignoreCase = true)
+            }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -151,6 +166,19 @@ fun SurahListScreen(
                         title = stringResource(R.string.home_continue_title),
                         subtitle = stringResource(R.string.home_continue_page, last),
                         onClick = { onOpenMushaf(last) }
+                    )
+                }
+            }
+
+            if (!playback.active && lastAyah > 0) {
+                item {
+                    HubRow(
+                        title = stringResource(R.string.audio_continue),
+                        subtitle = nowPlayingLabel(lastAyah),
+                        onClick = {
+                            askForNotifications()
+                            scope.launch { recitation.resume() }
+                        }
                     )
                 }
             }
@@ -178,6 +206,16 @@ fun SurahListScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
                     )
                 }
+                item {
+                    Row(modifier = Modifier.padding(horizontal = PaperSpace.Gutter)) {
+                        PaperChip(
+                            selected = onlyDownloaded,
+                            onClick = { onlyDownloaded = !onlyDownloaded },
+                            label = { Text(stringResource(R.string.audio_downloaded_only)) },
+                            modifier = Modifier.width(120.dp)
+                        )
+                    }
+                }
                 items(roots, key = { "root-${it.first}" }) { (root, info) ->
                     HubRow(
                         title = stringResource(R.string.root_row_title, morphology!!.rootSpaced(root)),
@@ -203,7 +241,11 @@ fun SurahListScreen(
                             downloadState.downloading[key]?.let { DownloadStatus.Downloading(it.fraction) }
                                 ?: if (key in downloadState.downloaded) DownloadStatus.Done else DownloadStatus.None
                         },
+                        sizeText = downloadState.sizes[RecitationDownloads.key(reciter, item.info.id)]
+                            ?.takeIf { RecitationDownloads.key(reciter, item.info.id) in downloadState.downloaded }
+                            ?.let { Formatter.formatShortFileSize(context, it) },
                         onDownload = {
+                            askForNotifications()
                             val surah = item.info.id
                             val key = RecitationDownloads.key(reciter, surah)
                             when {
@@ -235,7 +277,27 @@ fun SurahListScreen(
                 )
             } else {
                 items(juz, key = { it.juz }) { entry ->
-                    JuzRow(entry, onClick = { onOpenMushaf(entry.startPage) })
+                    val surahsOfJuz = juzSurahs[entry.juz].orEmpty()
+                    val keys = surahsOfJuz.map { RecitationDownloads.key(reciter, it) }
+                    val running = keys.mapNotNull { downloadState.downloading[it] }
+                    val status = when {
+                        running.isNotEmpty() -> DownloadStatus.Downloading(running.map { it.fraction }.average().toFloat())
+                        keys.isNotEmpty() && keys.all { it in downloadState.downloaded } -> DownloadStatus.Done
+                        else -> DownloadStatus.None
+                    }
+                    JuzRow(
+                        entry,
+                        onClick = { onOpenMushaf(entry.startPage) },
+                        download = status,
+                        onDownload = {
+                            askForNotifications()
+                            when (status) {
+                                is DownloadStatus.Downloading -> downloads.cancelAll(reciter, surahsOfJuz)
+                                DownloadStatus.None -> downloads.downloadAll(reciter, surahsOfJuz)
+                                DownloadStatus.Done -> {}
+                            }
+                        }
+                    )
                 }
             }
 
@@ -268,6 +330,7 @@ private fun SurahRow(
     onClick: () -> Unit,
     onOpenGroups: () -> Unit,
     download: DownloadStatus,
+    sizeText: String?,
     onDownload: () -> Unit,
     playing: Boolean,
     onPlay: () -> Unit
@@ -297,7 +360,8 @@ private fun SurahRow(
                 )
                 if (item.verseCount > 0) {
                     Text(
-                        text = stringResource(R.string.quran_surah_info, item.verseCount, item.startJuz, item.startPage),
+                        text = stringResource(R.string.quran_surah_info, item.verseCount, item.startJuz, item.startPage) +
+                            (sizeText?.let { " · $it" } ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -343,7 +407,7 @@ private fun SurahRow(
 }
 
 @Composable
-private fun JuzRow(entry: JuzListItem, onClick: () -> Unit) {
+private fun JuzRow(entry: JuzListItem, onClick: () -> Unit, download: DownloadStatus, onDownload: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -364,6 +428,7 @@ private fun JuzRow(entry: JuzListItem, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            DownloadButton(status = download, onClick = onDownload, description = stringResource(R.string.audio_download_juz))
         }
         Hairline()
     }

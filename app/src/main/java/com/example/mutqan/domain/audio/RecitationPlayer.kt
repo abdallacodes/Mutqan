@@ -3,6 +3,8 @@ package com.example.mutqan.domain.audio
 import android.content.Context
 import android.net.Uri
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -23,7 +25,12 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.example.mutqan.data.SurahData
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.quran.QuranRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okhttp3.OkHttpClient
@@ -46,7 +53,13 @@ class RecitationPlayer private constructor(context: Context) {
         /** The id of the verse sounding now. */
         val ayahId: Int? = null,
         /** Set when the audio could not be loaded; cleared by [clearFailure]. */
-        val failed: Boolean = false
+        val failed: Boolean = false,
+        /** True while the sound is loading and nothing can be heard yet. */
+        val buffering: Boolean = false,
+        /** True while the recitation waits for the reader to say the verse just heard. */
+        val yourTurn: Boolean = false,
+        /** The sleep timer: 0 is off, a positive number is minutes, [SLEEP_AT_SURAH_END] stops at the end of the surah. */
+        val sleep: Int = 0
     )
 
     private val app = context.applicationContext
@@ -66,10 +79,43 @@ class RecitationPlayer private constructor(context: Context) {
     private val prefetcher = Executors.newSingleThreadExecutor()
     private var prefetching: Future<*>? = null
 
+    private val main = Handler(Looper.getMainLooper())
+    private val prefs = UserPreferencesRepository(app)
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Percent of a verse's length to wait for the reader after it; 0 for no waiting. */
+    private var sayAfterPercent = 0
+    private val endTurn = Runnable { resumeFromTurn() }
+    private val sleepNow = Runnable { stop() }
+    private var sleepSurah: Int? = null
+
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            mediaItem?.mediaId?.toIntOrNull()?.let { id -> _state.value = _state.value.copy(ayahId = id) }
+            mediaItem?.mediaId?.toIntOrNull()?.let { id ->
+                val stopAt = sleepSurah
+                if (stopAt != null && id in quran.ayahIndex && quran.ayahIndex.surahOf(id) != stopAt) {
+                    stop()
+                    return
+                }
+                _state.value = _state.value.copy(ayahId = id)
+                background.launch { prefs.setLastRecitationAyah(id) }
+            }
             prefetchAhead(exo.currentMediaItemIndex)
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            if (reason != Player.DISCONTINUITY_REASON_AUTO_TRANSITION || sayAfterPercent <= 0) return
+            // The verse just heard gets a pause as long as it took, for the reader to say it.
+            val heardMs = oldPosition.positionMs / exo.playbackParameters.speed
+            val waitMs = (heardMs * sayAfterPercent / 100).toLong().coerceAtLeast(MIN_TURN_MS)
+            exo.pause()
+            _state.value = _state.value.copy(yourTurn = true)
+            main.removeCallbacks(endTurn)
+            main.postDelayed(endTurn, waitMs)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -77,7 +123,11 @@ class RecitationPlayer private constructor(context: Context) {
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) stop()
+            if (playbackState == Player.STATE_ENDED) {
+                stop()
+            } else {
+                _state.value = _state.value.copy(buffering = playbackState == Player.STATE_BUFFERING)
+            }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -149,7 +199,15 @@ class RecitationPlayer private constructor(context: Context) {
      * Plays [ayahIds] in order with [reciter], each [repeat] times; with [loop] the run starts over when it ends.
      * Verses the reciter has no sound for are left out.
      */
-    fun play(reciter: Reciter, ayahIds: List<Int>, repeat: Int, loop: Boolean, speedPercent: Int) {
+    fun play(
+        reciter: Reciter,
+        ayahIds: List<Int>,
+        repeat: Int,
+        loop: Boolean,
+        speedPercent: Int,
+        runRepeat: Int = 1,
+        sayAfterPercent: Int = 0
+    ) {
         val index = quran.ayahIndex
         val reciterName = app.getString(reciter.nameRes)
         val items = ArrayList<MediaItem>()
@@ -183,6 +241,17 @@ class RecitationPlayer private constructor(context: Context) {
         }
         if (items.isEmpty()) return
 
+        // The passage through again, as many times as asked, within a playlist of sensible size.
+        val passes = runRepeat.coerceIn(1, MAX_PASSES).coerceAtMost((MAX_ITEMS / items.size).coerceAtLeast(1))
+        if (passes > 1) {
+            val one = items.toList()
+            val oneWho = who.toList()
+            val oneFiles = files.toList()
+            repeat(passes - 1) { items += one; who += oneWho; files += oneFiles }
+        }
+        endTurnQuietly()
+        this.sayAfterPercent = sayAfterPercent
+
         owners = who
         urls = files
         try {
@@ -192,7 +261,7 @@ class RecitationPlayer private constructor(context: Context) {
             exo.setPlaybackSpeed(speedPercent / 100f)
             exo.prepare()
             exo.play()
-            _state.value = State(active = true, playing = true, ayahId = who.first())
+            _state.value = State(active = true, playing = true, ayahId = who.first(), sleep = _state.value.sleep)
             prefetchAhead(0)
         } catch (e: Exception) {
             stop()
@@ -204,9 +273,49 @@ class RecitationPlayer private constructor(context: Context) {
         exo.setPlaybackSpeed(percent / 100f)
     }
 
+    /** Carries on once the reader's turn to say the verse is over. */
+    private fun resumeFromTurn() {
+        main.removeCallbacks(endTurn)
+        if (!_state.value.yourTurn) return
+        _state.value = _state.value.copy(yourTurn = false)
+        startService()
+        exo.play()
+    }
+
+    private fun endTurnQuietly() {
+        main.removeCallbacks(endTurn)
+        if (_state.value.yourTurn) _state.value = _state.value.copy(yourTurn = false)
+    }
+
+    /** Stops after [minutes] minutes, or at the end of the surah now sounding ([SLEEP_AT_SURAH_END]); 0 turns it off. */
+    fun setSleep(minutes: Int) {
+        main.removeCallbacks(sleepNow)
+        sleepSurah = null
+        if (!_state.value.active) return
+        when {
+            minutes > 0 -> main.postDelayed(sleepNow, minutes * 60_000L)
+            minutes == SLEEP_AT_SURAH_END -> {
+                val id = _state.value.ayahId
+                if (id != null && id in quran.ayahIndex) sleepSurah = quran.ayahIndex.surahOf(id)
+            }
+        }
+        _state.value = _state.value.copy(sleep = minutes)
+    }
+
+    /** Where in the sounding verse the recitation is, and how long the verse is, in milliseconds. */
+    fun positionMs(): Long = exo.currentPosition.coerceAtLeast(0L)
+
+    fun durationMs(): Long = exo.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+
+    fun seekTo(positionMs: Long) {
+        if (_state.value.active) exo.seekTo(positionMs.coerceAtLeast(0L))
+    }
+
     fun togglePause() {
         if (!_state.value.active) return
-        if (exo.isPlaying) {
+        if (_state.value.yourTurn) {
+            resumeFromTurn()
+        } else if (exo.isPlaying) {
             exo.pause()
         } else {
             startService()
@@ -223,6 +332,7 @@ class RecitationPlayer private constructor(context: Context) {
 
     fun next() {
         if (!_state.value.active || owners.isEmpty()) return
+        resumeFromTurn()
         val current = exo.currentMediaItemIndex
         var i = current + 1
         while (i < owners.size && owners[i] == owners[current]) i++
@@ -236,11 +346,15 @@ class RecitationPlayer private constructor(context: Context) {
     /** Back to the start of this verse, or, when it has only just begun, to the verse before. */
     fun previous() {
         if (!_state.value.active || owners.isEmpty()) return
+        resumeFromTurn()
         val first = firstItemOf(exo.currentMediaItemIndex)
         if (exo.currentPosition > RESTART_AFTER_MS || first == 0) exo.seekTo(first, 0L) else exo.seekTo(firstItemOf(first - 1), 0L)
     }
 
     fun stop() {
+        main.removeCallbacks(endTurn)
+        main.removeCallbacks(sleepNow)
+        sleepSurah = null
         prefetching?.cancel(true)
         exo.stop()
         exo.clearMediaItems()
@@ -272,6 +386,12 @@ class RecitationPlayer private constructor(context: Context) {
         private const val RESTART_AFTER_MS = 2_000L
         private const val PRELOAD_US = 20_000_000L
         private const val PREFETCH_AHEAD = 4
+        private const val MIN_TURN_MS = 1_500L
+        private const val MAX_PASSES = 20
+        private const val MAX_ITEMS = 6_000
+
+        /** Value of [State.sleep] for "stop at the end of this surah". */
+        const val SLEEP_AT_SURAH_END = -1
 
         @Volatile
         private var instance: RecitationPlayer? = null

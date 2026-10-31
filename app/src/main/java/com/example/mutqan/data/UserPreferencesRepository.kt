@@ -28,6 +28,9 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
         private val KEY_RECITE_SURAH      = booleanPreferencesKey("recitation_to_surah_end")
         private val KEY_RECITE_SPEED      = intPreferencesKey("recitation_speed_percent")
+        private val KEY_RECITE_RUN        = intPreferencesKey("recitation_run_repeat")
+        private val KEY_RECITE_AFTER      = intPreferencesKey("recitation_say_after_percent")
+        private val KEY_RECITE_LAST       = intPreferencesKey("recitation_last_ayah")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -109,6 +112,30 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     /** Playback speed in percent (100 = normal). */
+    /** How many times the whole passage plays through before the recitation ends (1 = once). */
+    val recitationRunRepeat: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_RUN] ?: 1 }
+
+    suspend fun setRecitationRunRepeat(times: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_RUN] = times.coerceIn(1, 20) }
+    }
+
+    /**
+     * Recite-after-me: after each verse the recitation waits for this share of the verse's length (in percent) for
+     * the reader to say it; 0 means it does not wait.
+     */
+    val recitationSayAfterPercent: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_AFTER] ?: 0 }
+
+    suspend fun setRecitationSayAfterPercent(percent: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_AFTER] = percent.coerceIn(0, 300) }
+    }
+
+    /** The verse (global id) the last recitation had reached; 0 when there has been none. */
+    val lastRecitationAyah: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_LAST] ?: 0 }
+
+    suspend fun setLastRecitationAyah(id: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_LAST] = id }
+    }
+
     val recitationSpeedPercent: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_SPEED] ?: 100 }
 
     suspend fun setRecitationSpeedPercent(percent: Int) {

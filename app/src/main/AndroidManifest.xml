@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -35,6 +36,12 @@
             android:name=".domain.audio.RecitationService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Keeps a recitation download going, with a progress notification, when the app is closed. -->
+        <service
+            android:name=".domain.audio.RecitationDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Keeps the in-app language on Android 12 and older. -->
         <service
