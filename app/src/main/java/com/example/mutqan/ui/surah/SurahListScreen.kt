@@ -46,6 +46,10 @@ import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.TopBarOverflowMenu
+import com.example.mutqan.ui.topics.TopicsViewModel
+import com.example.mutqan.ui.topics.TopicsViewModelFactory
+import com.example.mutqan.ui.topics.rememberTopicLanguage
+import com.example.mutqan.ui.topics.topicsTab
 
 /**
  * The Quran tab: a way into the Mushaf. Tapping a surah or a juz opens it to read; the list says which
@@ -58,7 +62,8 @@ fun SurahListScreen(
     onOpenMushaf: (page: Int) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
-    onOpenRoot: (Int) -> Unit = {}
+    onOpenRoot: (Int) -> Unit = {},
+    onOpenTopic: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: SurahListViewModel = viewModel(factory = SurahListViewModelFactory(context))
@@ -70,6 +75,11 @@ fun SurahListScreen(
     var showHelpDialog by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
+    var topicQuery by rememberSaveable { mutableStateOf("") }
+    val topicsViewModel: TopicsViewModel = viewModel(factory = TopicsViewModelFactory(context))
+    val topicIndex by topicsViewModel.index.collectAsState()
+    val topicsShowAll by topicsViewModel.showAll.collectAsState()
+    val topicLanguage = rememberTopicLanguage(topicsShowAll)
 
     val needle = ArabicNormalization.normalizeForSearch(query.trim())
     val page = query.trim().toIntOrNull()?.takeIf { it in 1..604 }
@@ -113,7 +123,11 @@ fun SurahListScreen(
 
             item {
                 PaperTabs(
-                    labels = listOf(stringResource(R.string.quran_tab_surahs), stringResource(R.string.quran_tab_juz)),
+                    labels = listOf(
+                        stringResource(R.string.quran_tab_surahs),
+                        stringResource(R.string.quran_tab_juz),
+                        stringResource(R.string.quran_tab_topics)
+                    ),
                     selectedIndex = tab,
                     onSelect = { tab = it },
                     modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 4.dp)
@@ -153,6 +167,16 @@ fun SurahListScreen(
                         onOpenGroups = { onSurahClick(item.info.id) }
                     )
                 }
+            } else if (tab == 2) {
+                topicsTab(
+                    index = topicIndex,
+                    language = topicLanguage,
+                    query = topicQuery,
+                    onQueryChange = { topicQuery = it },
+                    showAll = topicsShowAll,
+                    onShowAllChange = topicsViewModel::setShowAll,
+                    onOpenTopic = onOpenTopic
+                )
             } else {
                 items(juz, key = { it.juz }) { entry ->
                     JuzRow(entry, onClick = { onOpenMushaf(entry.startPage) })

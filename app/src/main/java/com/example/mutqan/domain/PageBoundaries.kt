@@ -26,7 +26,10 @@ enum class ExerciseType(val code: Int) {
     QUIZ_ORDER(7),
 
     /** Given a verse, name its surah and verse number. */
-    QUIZ_WHERE(8);
+    QUIZ_WHERE(8),
+
+    /** Given a verse, pick the topic it belongs to. */
+    QUIZ_TOPIC(9);
 
     companion object {
         fun fromCode(code: Int): ExerciseType? = entries.firstOrNull { it.code == code }
@@ -35,7 +38,7 @@ enum class ExerciseType(val code: Int) {
         val PAGE_BOUNDARIES: List<ExerciseType> = listOf(PAGE_EDGES, FIRST_TO_LAST, NEIGHBOURS)
 
         /** The questions with a right answer the app can check. */
-        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE)
+        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE, QUIZ_TOPIC)
     }
 }
 

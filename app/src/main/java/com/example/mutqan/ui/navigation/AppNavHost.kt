@@ -93,6 +93,7 @@ import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.practice.QuizScreen
 import com.example.mutqan.ui.root.RootScreen
+import com.example.mutqan.ui.topics.TopicScreen
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
@@ -108,6 +109,7 @@ object Routes {
     const val READY_LIST     = "ready_list"
     const val QUIZ           = "quiz"
     const val ROOT           = "root"
+    const val TOPIC          = "topic"
     const val PRACTICE       = "practice"
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
@@ -134,6 +136,7 @@ object Routes {
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
+    fun topic(topicId: Int)                      = "topic/$topicId"
     fun root(rootId: Int)                        = "root/$rootId"
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
 }
@@ -298,7 +301,8 @@ fun AppNavHost(
                     onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
                     onSettingsClick = { showSettingsSheet = true },
                     onSearchClick   = { navController.navigate(Routes.VERSE_SEARCH) },
-                    onOpenRoot      = { root -> navController.navigate(Routes.root(root)) }
+                    onOpenRoot      = { root -> navController.navigate(Routes.root(root)) },
+                    onOpenTopic     = { topic -> navController.navigate(Routes.topic(topic)) }
                 )
             }
 
@@ -349,6 +353,18 @@ fun AppNavHost(
             }
 
             // ── Sub-screens (bottom bar hidden) ──────────────────────
+
+            composable(
+                route     = "${Routes.TOPIC}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.IntType })
+            ) { entry ->
+                TopicScreen(
+                    topicId = entry.arguments?.getInt("id") ?: 0,
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) }
+                )
+            }
 
             composable(
                 route     = "${Routes.ROOT}/{id}",
@@ -482,7 +498,8 @@ fun AppNavHost(
                     startPage   = page,
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
-                    onOpenRoot  = { root -> navController.navigate(Routes.root(root)) }
+                    onOpenRoot  = { root -> navController.navigate(Routes.root(root)) },
+                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) }
                 )
             }
         }

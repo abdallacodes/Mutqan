@@ -57,8 +57,8 @@ class PageBoundariesTest {
 
     @Test
     fun `exercise codes are stable`() {
-        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8), ExerciseType.entries.map { it.code })
-        assertEquals(listOf(4, 5, 6, 7, 8), ExerciseType.QUIZ.map { it.code })
+        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8, 9), ExerciseType.entries.map { it.code })
+        assertEquals(listOf(4, 5, 6, 7, 8, 9), ExerciseType.QUIZ.map { it.code })
         assertEquals(ExerciseType.NEIGHBOURS, ExerciseType.fromCode(3))
         assertNull(ExerciseType.fromCode(99))
     }

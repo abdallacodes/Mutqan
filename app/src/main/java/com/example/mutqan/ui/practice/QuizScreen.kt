@@ -72,6 +72,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             QuizMode.FILL -> R.string.ex_fill_title
             QuizMode.ORDER -> R.string.ex_order_title
             QuizMode.WHERE -> R.string.ex_where_title
+            QuizMode.TOPIC -> R.string.ex_topic_title
             QuizMode.DAILY -> R.string.practice_daily_title
         }
     )
@@ -213,6 +214,7 @@ private fun instruction(type: ExerciseType): String = stringResource(
         ExerciseType.QUIZ_NEXT -> R.string.quiz_q_next
         ExerciseType.QUIZ_FILL -> R.string.quiz_q_fill
         ExerciseType.QUIZ_ORDER -> R.string.quiz_q_order
+        ExerciseType.QUIZ_TOPIC -> R.string.quiz_q_topic
         else -> R.string.quiz_q_where_surah
     }
 )
@@ -231,13 +233,17 @@ private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> U
             i == state.pickedOption -> OptionState.WRONG
             else -> OptionState.DIMMED
         }
-        QuizOption(option, optionState, enabled = !state.answered, onClick = { onPick(i) })
+        QuizOption(option, optionState, enabled = !state.answered, onClick = { onPick(i) }, verse = q.optionsAreVerses)
     }
     if (state.answered) {
         OrnamentDivider()
         SectionLabel(stringResource(R.string.quiz_answer_was))
         Text(refLabel(q.revealRef), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         VerseText(q.revealed, size = 26)
+        q.note?.let {
+            SectionLabel(stringResource(R.string.quiz_topics_of_verse))
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+        }
     }
 }
 

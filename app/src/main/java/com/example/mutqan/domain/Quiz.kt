@@ -27,7 +27,11 @@ data class ChoiceQuestion(
     val correct: Int,
     val revealed: String,
     val revealRef: QuizRef,
-    val showRef: Boolean
+    val showRef: Boolean,
+    /** True when the options are Quran text (shown in the Mushaf's type); false for plain labels such as topics. */
+    val optionsAreVerses: Boolean = true,
+    /** A line shown with the answer, e.g. the topics of the verse. */
+    val note: String? = null
 ) : QuizQuestion
 
 /** Put [shuffled] back in order by tapping them; [correctOrder] lists indices into [shuffled] in the true order. */
@@ -56,6 +60,7 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
     FILL("fill", ExerciseType.QUIZ_FILL),
     ORDER("order", ExerciseType.QUIZ_ORDER),
     WHERE("where", ExerciseType.QUIZ_WHERE),
+    TOPIC("topic", ExerciseType.QUIZ_TOPIC),
     DAILY("daily", null);
 
     companion object {
@@ -135,7 +140,9 @@ class QuizEngine(
     private val quran: QuranRepository,
     private val similar: SimilarData,
     private val random: Random = Random.Default,
-    private val morphology: Morphology? = null
+    private val morphology: Morphology? = null,
+    private val topics: TopicIndex? = null,
+    private val topicLanguage: TopicLanguage? = null
 ) {
 
     fun build(type: ExerciseType, ayahId: Int, hard: Boolean): QuizQuestion? = when (type) {
@@ -144,6 +151,7 @@ class QuizEngine(
         ExerciseType.QUIZ_FILL -> fill(ayahId, hard)
         ExerciseType.QUIZ_ORDER -> order(ayahId)
         ExerciseType.QUIZ_WHERE -> where(ayahId)
+        ExerciseType.QUIZ_TOPIC -> topic(ayahId)
         else -> null
     }
 
@@ -156,7 +164,7 @@ class QuizEngine(
 
     private fun finish(
         type: ExerciseType, subject: QuranAyah, prompt: String, correct: String, distractors: List<String>,
-        revealed: QuranAyah, showRef: Boolean
+        revealed: QuranAyah, showRef: Boolean, optionsAreVerses: Boolean = true, note: String? = null
     ): ChoiceQuestion? {
         val options = QuizText.options(correct, distractors, 4)
         if (options.size < 2) return null
@@ -169,7 +177,9 @@ class QuizEngine(
             correct = shuffled.indexOf(correct),
             revealed = wordsOf(revealed).joinToString(" "),
             revealRef = ref(revealed),
-            showRef = showRef
+            showRef = showRef,
+            optionsAreVerses = optionsAreVerses,
+            note = note
         )
     }
 
@@ -276,6 +286,37 @@ class QuizEngine(
         return ofLemma + ofRoot
     }
 
+    /**
+     * Which topic is this verse about? The right answer is one of its topics (not a very broad one); the wrong
+     * ones are sibling topics first, which is what makes it hard, then others the verse is not listed under.
+     */
+    private fun topic(id: Int): QuizQuestion? {
+        val index = topics ?: return null
+        val language = topicLanguage ?: return null
+        val x = quran.ayahById(id) ?: return null
+        val words = wordsOf(x)
+        if (words.size < 4) return null
+
+        val ofVerse = index.topicsOf(id)
+        val correct = ofVerse.filter { language.visible(it) && it.verses.size in TOPIC_MIN_VERSES..TOPIC_MAX_VERSES }
+            .randomOrNull(random) ?: return null
+        val own = ofVerse.map { it.id }.toSet()
+
+        fun usable(t: Topic) = t.id !in own && language.visible(t) && t.verses.size in TOPIC_MIN_VERSES..TOPIC_MAX_VERSES
+        val siblings = listOf(correct.thematicParent, correct.ontologyParent, correct.parent)
+            .filter { it != -1 }.flatMap(index::childrenOf).filter(::usable).shuffled(random)
+        val others = index.topics.shuffled(random).asSequence().filter(::usable).take(20).toList()
+
+        return finish(
+            ExerciseType.QUIZ_TOPIC, x,
+            if (words.size > TOPIC_WORDS) words.take(TOPIC_WORDS).joinToString(" ") + " …" else words.joinToString(" "),
+            language.title(correct),
+            (siblings + others).map(language::title),
+            x, showRef = false, optionsAreVerses = false,
+            note = ofVerse.filter { language.visible(it) }.take(TOPIC_NOTE).joinToString(" · ") { language.title(it) }.ifEmpty { null }
+        )
+    }
+
     /** Four consecutive verses of one surah, shuffled. */
     private fun order(id: Int): QuizQuestion? {
         val first = quran.ayahById(id) ?: return null
@@ -338,5 +379,9 @@ class QuizEngine(
         const val IDENTICAL_SCORE = 95
         const val MORPH_TRIES = 12
         const val MORPH_MAX = 4
+        const val TOPIC_MIN_VERSES = 3
+        const val TOPIC_MAX_VERSES = 150
+        const val TOPIC_WORDS = 30
+        const val TOPIC_NOTE = 4
     }
 }

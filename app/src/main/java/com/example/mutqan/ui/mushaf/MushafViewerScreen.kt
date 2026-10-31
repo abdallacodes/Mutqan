@@ -94,6 +94,7 @@ import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
 import com.example.mutqan.ui.root.VerseRoots
+import com.example.mutqan.ui.topics.VerseTopics
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
@@ -151,7 +152,8 @@ fun MushafViewerScreen(
     startPage:   Int,
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
-    onOpenRoot:  (Int) -> Unit = {}
+    onOpenRoot:  (Int) -> Unit = {},
+    onOpenTopic: (Int) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -430,6 +432,10 @@ fun MushafViewerScreen(
                 VerseRoots(target.surahId, target.ayahNumber) { root ->
                     peekTarget = null; peekAyahId = null; peekGroups = emptyList()
                     onOpenRoot(root)
+                }
+                VerseTopics(target.verseId) { topic ->
+                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                    onOpenTopic(topic)
                 }
             }
         )

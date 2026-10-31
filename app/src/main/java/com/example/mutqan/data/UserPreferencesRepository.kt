@@ -14,6 +14,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_HEATMAP_COACHMARK = booleanPreferencesKey("heatmap_coachmark_seen")
         private val KEY_APP_LOCK          = booleanPreferencesKey("app_lock_enabled")
         private val KEY_LAST_MUSHAF_PAGE  = intPreferencesKey("last_mushaf_page")
+        private val KEY_TOPICS_SHOW_ALL   = booleanPreferencesKey("topics_show_all")
     }
 
     /** `true` on fresh installs; `false` after onboarding is completed. */
@@ -38,6 +39,13 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setLastMushafPage(page: Int) {
         context.dataStore.edit { prefs -> prefs[KEY_LAST_MUSHAF_PAGE] = page }
+    }
+
+    /** Whether the Arabic interface also lists topics that QUL names only in English. */
+    val topicsShowAll: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_TOPICS_SHOW_ALL] ?: false }
+
+    suspend fun setTopicsShowAll(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_TOPICS_SHOW_ALL] = on }
     }
 
     suspend fun completeOnboarding() {

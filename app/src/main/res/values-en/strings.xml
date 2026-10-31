@@ -671,4 +671,22 @@
     <string name="root_forms">Forms</string>
     <string name="root_all_forms">All</string>
     <string name="peek_roots_title">Words and roots</string>
+    <string name="quran_tab_topics">Topics</string>
+    <string name="topics_search_hint">Search a topic</string>
+    <string name="topics_show_all">Also show topics that have no Arabic name</string>
+    <string name="topics_none">No topics with that name</string>
+    <string name="topics_themes">Themes</string>
+    <string name="topics_concepts">Concepts</string>
+    <string name="topics_popular">Most mentioned</string>
+    <string name="topic_verses">%d verses</string>
+    <string name="topic_subtopics">Subtopics</string>
+    <string name="topic_related">Related topics</string>
+    <string name="topic_verses_header">Verses (%d)</string>
+    <string name="topic_memorised_of">You have memorised %1$d of %2$d</string>
+    <string name="topic_only_memorised">Only what I have memorised</string>
+    <string name="peek_topics_title">Topics of this verse</string>
+    <string name="ex_topic_title">Which topic is this verse about?</string>
+    <string name="ex_topic_desc">See a verse, pick the topic it belongs to</string>
+    <string name="quiz_q_topic">Which topic does this verse belong to?</string>
+    <string name="quiz_topics_of_verse">Topics of this verse</string>
 </resources>

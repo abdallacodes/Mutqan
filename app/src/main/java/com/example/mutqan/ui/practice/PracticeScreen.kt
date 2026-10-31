@@ -120,6 +120,11 @@ fun PracticeScreen(
                 onClick = { onOpenQuiz(QuizMode.WHERE) }
             )
             HubRow(
+                title = stringResource(R.string.ex_topic_title),
+                subtitle = stringResource(R.string.ex_topic_desc),
+                onClick = { onOpenQuiz(QuizMode.TOPIC) }
+            )
+            HubRow(
                 title = stringResource(R.string.ex_boundaries_title),
                 subtitle = stringResource(R.string.ex_boundaries_desc),
                 note = if (week > 0) stringResource(R.string.ex_this_week, week) else null,
