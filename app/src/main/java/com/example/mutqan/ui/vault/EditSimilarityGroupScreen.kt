@@ -123,12 +123,16 @@ fun EditSimilarityGroupScreen(
     val showSearchResults = uiState.textSearchQuery.length >= 2
 
     val addResult = uiState.addVerseResult
+    val noVerse = stringResource(R.string.snackbar_no_verse)
+    val alreadyMember = stringResource(R.string.snackbar_already_member)
+    val descRequired = stringResource(R.string.snackbar_desc_required)
+    val verseAdded = stringResource(R.string.snackbar_verse_added)
     LaunchedEffect(addResult) {
         val msg = when (addResult) {
-            is AddVerseResult.InvalidRef          -> context.getString(R.string.snackbar_no_verse)
-            is AddVerseResult.AlreadyMember       -> context.getString(R.string.snackbar_already_member)
-            is AddVerseResult.DescriptionRequired -> context.getString(R.string.snackbar_desc_required)
-            is AddVerseResult.Added               -> "Verse added"
+            is AddVerseResult.InvalidRef          -> noVerse
+            is AddVerseResult.AlreadyMember       -> alreadyMember
+            is AddVerseResult.DescriptionRequired -> descRequired
+            is AddVerseResult.Added               -> verseAdded
             else -> null
         }
         if (msg != null) {

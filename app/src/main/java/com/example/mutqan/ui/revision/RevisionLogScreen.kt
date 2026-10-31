@@ -404,7 +404,8 @@ private fun RevisionLogItem(log: RevisionLog) {
 
 // ── Date formatting helpers ───────────────────────────────────────────────────
 
-private val utcSdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
+// Made per use so a change of language shows at once.
+private fun utcSdf() = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
     it.timeZone = TimeZone.getTimeZone("UTC")
 }
 
@@ -418,7 +419,7 @@ private fun formatDateMillisDisplay(millis: Long, context: Context): String {
 private fun formatLogDate(dateMillis: Long, fallbackTimestamp: Long, context: Context): String {
     val millis = if (dateMillis > 0L) dateMillis else fallbackTimestamp
     return if (dateMillis > 0L) {
-        utcSdf.format(Date(millis))
+        utcSdf().format(Date(millis))
     } else {
         formatRelativeTime(fallbackTimestamp, context)
     }

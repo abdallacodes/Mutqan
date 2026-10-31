@@ -232,6 +232,8 @@ fun MushafViewerScreen(
     val readingTheme = MushafTheme.fromName(themeName)
     val colors = readingTheme.colors(appIsDark)
     val coroutineScope = rememberCoroutineScope()
+    val pageMemorisedDone = stringResource(R.string.mushaf_page_memorised_done)
+    val revisedSaved = stringResource(R.string.mushaf_revised_saved)
 
     var showJump by remember { mutableStateOf(false) }
     var showRevised by remember { mutableStateOf(false) }
@@ -554,7 +556,7 @@ fun MushafViewerScreen(
                                 menuOpen = false
                                 coroutineScope.launch {
                                     viewModel.versesOfPage(currentPage)?.let { viewModel.setMemorised(it, true) }
-                                    Toast.makeText(context, context.getString(R.string.mushaf_page_memorised_done), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, pageMemorisedDone, Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -619,7 +621,7 @@ fun MushafViewerScreen(
             onSave = { outcome, tags ->
                 viewModel.logPageRevision(currentPage, outcome, tags)
                 showRevised = false
-                Toast.makeText(context, context.getString(R.string.mushaf_revised_saved), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, revisedSaved, Toast.LENGTH_SHORT).show()
             },
             onDismiss = { showRevised = false }
         )

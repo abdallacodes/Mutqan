@@ -547,13 +547,14 @@ private fun HistoryDatePickerDialog(
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
-private val historyUtcSdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
+// Made per use so a change of language shows at once.
+private fun historyUtcSdf() = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
     it.timeZone = TimeZone.getTimeZone("UTC")
 }
 
 private fun historyDateLabel(dateMillis: Long, fallbackTimestamp: Long): String {
     val millis = if (dateMillis > 0L) dateMillis else fallbackTimestamp
-    return historyUtcSdf.format(Date(millis))
+    return historyUtcSdf().format(Date(millis))
 }
 
 private fun historyDateDisplay(millis: Long, context: android.content.Context): String {

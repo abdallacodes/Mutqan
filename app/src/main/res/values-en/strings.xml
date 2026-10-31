@@ -5,11 +5,7 @@
     <string name="app_name">Mutqan</string>
 
     <!-- Bottom navigation labels -->
-    <string name="nav_journal">Journal</string>
-    <string name="nav_vault">Vault</string>
-    <string name="nav_surahs">Surahs</string>
     <string name="nav_search">Search</string>
-    <string name="nav_brain">Brain</string>
 
     <!-- Settings sheet -->
     <string name="settings">Settings</string>
@@ -26,8 +22,6 @@
     <string name="btn_restore">RESTORE DATA</string>
     <string name="backup_success">Backup exported successfully</string>
     <string name="restore_success">Data restored successfully</string>
-    <string name="backup_error">Failed to export backup</string>
-    <string name="restore_error">Failed to restore data</string>
 
     <!-- Theme names -->
     <string name="theme_auto">Auto</string>
@@ -55,7 +49,6 @@
     <string name="placeholder_end_page">604</string>
     <string name="error_page_range">Enter 1\u2013604</string>
     <string name="error_end_before_start">Must be \u2265 start</string>
-    <string name="no_revisions_hint">No revisions logged yet.\nLog your first session above.</string>
     <string name="select_date">Select Date</string>
     <string name="pages_range">Pages %1$d\u2013%2$d</string>
     <string name="just_now">Just now</string>
@@ -81,11 +74,8 @@
     <string name="cd_add_group">Add group</string>
     <string name="cd_view_group">View group</string>
     <string name="cd_edit_group">Edit group</string>
-    <string name="cd_delete_group">Delete group</string>
     <string name="verses_singular">%d verse</string>
     <string name="verses_plural">%d verses</string>
-    <string name="vault_empty_title">THE VAULT IS EMPTY</string>
-    <string name="vault_empty_body">Tap + to create your first\nMutashabihat group or folder.</string>
     <string name="label_folders">FOLDERS</string>
     <string name="label_uncategorized">UNCATEGORIZED</string>
     <string name="cd_add_folder">Add folder</string>
@@ -102,8 +92,6 @@
     <string name="label_root_folder">Vault (Home)</string>
     <string name="msg_move_success">Moved successfully</string>
     <string name="msg_export_success">Vault exported successfully</string>
-    <string name="msg_import_success">Vault imported successfully</string>
-    <string name="msg_import_error">Import failed</string>
 
     <!-- ── Edit Group Screen ───────────────────────────────────────────────── -->
     <string name="new_group_title">NEW GROUP</string>
@@ -115,9 +103,6 @@
     <string name="section_link_verse">LINK A VERSE</string>
     <string name="linked_verses_header">LINKED VERSES  (%d)</string>
     <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
-    <string name="btn_saved">SAVED</string>
-    <string name="btn_save_group">SAVE GROUP</string>
-    <string name="btn_done">Done</string>
     <string name="cd_save_group">Save group</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_delete_verse">Delete verse</string>
@@ -131,14 +116,13 @@
     <string name="placeholder_search_arabic">Type Arabic words to search…</string>
     <string name="label_surah">Surah</string>
     <string name="label_ayah">Ayah</string>
-    <string name="placeholder_surah_range">1\u2013114</string>
     <string name="placeholder_ayah_range">1\u2013\u2026</string>
     <string name="error_invalid_ref">Invalid Surah/Ayah</string>
     <string name="snackbar_no_verse">No verse found for that Surah/Ayah.</string>
     <string name="snackbar_already_member">That verse is already in this group.</string>
+    <string name="snackbar_verse_added">Verse added.</string>
     <string name="snackbar_desc_required">Enter a description before adding verses.</string>
     <string name="label_page">Page %d</string>
-    <string name="cd_remove_verse">Remove verse</string>
     <string name="group_notes_detail_label">Memorization notes</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
@@ -148,35 +132,21 @@
 
     <!-- ── Heatmap / Brain Screen ──────────────────────────────────────────── -->
     <string name="brain_title">THE BRAIN</string>
-    <string name="brain_subtitle">30 Juz  \u00b7  Memory Decay Dashboard</string>
     <string name="help_brain_title">How The Brain Works</string>
-    <string name="help_brain_desc">The Brain is your intelligent memorization assistant. It uses a scientific model (FSRS) to predict how well you remember every page.\n\n\u25cf <b>Stability (Colors)</b>: Green means the page is solid in your memory. Yellow/Red means it is fading and needs revision soon.\n\n\u25cf <b>Symmetry</b>: The app rewards you more if you revise a page right before you forget it. Revising too early provides a smaller boost to long-term memory.\n\n\u25cf <b>Forecast Slider</b>: Move the slider at the top to travel through time! See which pages will turn red in 7, 14, or 30 days if you don\'t revise them.\n\n\u25cf <b>Semantic Interference</b>: If you struggle with a verse in the Vault (Mutashabihat), the app automatically lowers the stability of similar verses elsewhere, as they are likely confusion points.\n\n\u25cf <b>Revision Debt</b>: The number of pages that have fallen below 50% stability.\n\n\u25cf <b>Recovery Goal</b>: The number of pages you need to revise daily to turn your entire Brain green within a month.</string>
+    <string name="help_brain_desc">The Brain is your intelligent memorization assistant. It uses a scientific model (FSRS) to predict how well you remember every page.\n\n\u25cf <b>Stability (Colors)</b>: Green means the page is solid in your memory. Yellow/Red means it is fading and needs revision soon.\n\n\u25cf <b>Symmetry</b>: The app rewards you more if you revise a page right before you forget it. Revising too early provides a smaller boost to long-term memory.\n\n\u25cf <b>Forecast Slider</b>: Move the slider at the top to travel through time! See which pages will turn red in 7, 14, or 30 days if you don\'t revise them.\n\n\u25cf <b>Semantic Interference</b>: If you struggle with a verse in the Vault (Mutashabihat), the app automatically lowers the stability of similar verses elsewhere, as they are likely confusion points.\n\n\u25cf <b>Revision Debt</b>: The number of pages that have fallen below 50%% stability.\n\n\u25cf <b>Recovery Goal</b>: The number of pages you need to revise daily to turn your entire Brain green within a month.</string>
     <string name="stat_revision_debt">REVISION DEBT</string>
     <string name="stat_debt_sublabel">pages below 50%%</string>
     <string name="stat_stability_index">STABILITY INDEX</string>
     <string name="stat_forecast_label">FORECAST</string>
     <string name="stat_forecast_days">%d days</string>
-    <string name="stat_growth_rate">DEBT GROWTH</string>
-    <string name="stat_growth_rate_val">%.1f p/day</string>
-    <string name="stat_recovery_target">RECOVERY GOAL</string>
-    <string name="stat_recovery_target_val">%d pages/day</string>
     <string name="stat_pages_tracked">%d pages tracked</string>
-    <string name="stat_critical_label">CRITICAL</string>
-    <string name="stat_critical_sublabel">score &lt; 25%%</string>
     <string name="legend_fresh">Fresh (\u2265 70%%)</string>
     <string name="legend_fading">Fading (40\u201370%%)</string>
     <string name="legend_critical">Critical (&lt; 40%%)</string>
     <string name="legend_untracked">Untracked</string>
     <string name="juz_label">JUZ</string>
-    <string name="juz_meta_overall_health">Health: %d%%</string>
-    <string name="juz_meta_overall_health_untracked">Health: Untracked</string>
     <string name="juz_meta_overall_health_short">%d%%</string>
-    <string name="juz_meta_overall_health_untracked_short">—</string>
     <string name="juz_meta_overall_health_label">Overall health</string>
-    <string name="juz_meta_tracked_suffix">tracked</string>
-    <string name="juz_meta_tracked">Tracked: %d</string>
-    <string name="juz_meta_untracked">%d untracked</string>
-    <string name="juz_meta_coverage">Coverage: %d%%</string>
     <string name="pages_short_suffix">p</string>
     <string name="untracked_dash">\u2014</string>
 
@@ -191,20 +161,13 @@
     <string name="count_fading">%d fading</string>
     <string name="dialog_page_title">PAGE %d</string>
 
-    <string name="label_manual_quality">Memorization quality</string>
-    <string name="label_starting_quality">Starting memorization quality</string>
 
     <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
-    <string name="surahs_title">SURAHS</string>
     <string name="surahs_subtitle">114 Surahs  \u00b7  30 Juz  \u00b7  604 Pages</string>
-    <string name="juz_badge">Juz %d</string>
-    <string name="group_count_max">9+</string>
 
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
     <string name="linked_groups_header">LINKED GROUPS</string>
     <string name="linked_groups_hint">Tap a group to view full details</string>
-    <string name="section_in_this_surah">IN THIS SURAH</string>
-    <string name="section_other_surahs">OTHER SURAHS</string>
     <string name="group_meta_total_verses">%d verses</string>
     <string name="group_meta_in_surah">In this Surah: %d</string>
     <string name="group_meta_other_surahs">Other Surahs: %d</string>
@@ -266,8 +229,6 @@
     <string name="hint_group_ready">Group ready to save!</string>
 
     <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
-    <string name="coachmark_heatmap_body">Tap any Juz to manage individual pages and update their stability.</string>
-    <string name="coachmark_got_it">Got it</string>
 
     <!-- Help Dialogs -->
     <string name="help_journal_title">Journal Help</string>
@@ -313,10 +274,8 @@
     <!-- Structural Mode -->
     <string name="mode_memory_health">Memory Health</string>
     <string name="mode_structural_flow">Structural Flow</string>
-    <string name="quarter_hizb_header">Hizb %1$d : Quarter %2$d</string>
     <string name="add_subject">Add Subject</string>
     <string name="edit_subjects">Edit Subjects</string>
-    <string name="no_subjects_hint">No subjects added yet</string>
     <string name="delete_subject_confirmation">Are you sure you want to delete this subject?</string>
 
     <!-- Messages previously hard-coded in code -->
@@ -514,13 +473,7 @@
     <string name="peek_similar_title">Ayahs that resemble this one</string>
     <string name="peek_similar_score">%d%% match</string>
     <string name="peek_similar_more">And %d more</string>
-    <string name="recall_title">Test yourself</string>
-    <string name="recall_prompt">Recite %s from memory, then reveal the text and compare.</string>
     <string name="recall_btn_reveal">Reveal the text</string>
-    <string name="recall_btn_cue">Show the first word of each ayah</string>
-    <string name="recall_btn_hide_cue">Hide the cue</string>
-    <string name="recall_btn_save">Save the result</string>
-    <string name="recall_saved_toast">Recall saved</string>
     <string name="progress_title">Your progress</string>
     <string name="progress_subtitle">From what you recorded</string>
     <string name="progress_section_coverage">Memorised</string>
@@ -696,8 +649,6 @@
     <string name="topic_memorised_of">You have memorised %1$d of %2$d</string>
     <string name="topic_only_memorised">Only what I have memorised</string>
     <string name="peek_topics_title">Topics of this verse</string>
-    <string name="ex_topic_title">Which topic is this verse about?</string>
-    <string name="ex_topic_desc">See a verse, pick the topic it belongs to</string>
     <string name="quiz_q_topic">Which topic does this verse belong to?</string>
     <string name="quiz_topics_of_verse">Topics of this verse</string>
     <string name="account_title">Account</string>

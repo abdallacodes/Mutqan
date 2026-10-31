@@ -2,6 +2,7 @@ package com.example.mutqan.ui.components
 
 import android.app.Activity
 import android.content.Context
+import android.annotation.SuppressLint
 import android.content.ContextWrapper
 import android.text.format.DateUtils
 import android.widget.Toast
@@ -44,6 +45,8 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
  * Sign in with Google and keep this device in step with the account's cloud copy. Shown only in builds that
  * have a Firebase project (see [CloudSync.isConfigured]); the caller decides where it goes in the sheet.
  */
+// The failure text is read when a sign-in fails, long after composition, so a language change in between is not a concern.
+@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 fun AccountSection() {
     val context = LocalContext.current
