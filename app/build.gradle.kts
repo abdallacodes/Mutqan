@@ -24,14 +24,14 @@ android {
 
     // Release signing: the key is used only when KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD
     // are set in the environment and a keystore is found, first of: $KEYSTORE_FILE,
-    // app/keystore/release.keystore, ~/.android/mutqan-release.keystore. Nothing secret lives in
+    // app/keystore/release.keystore, ~/code/secrets/mutqan/mutqan-release.keystore. Nothing secret lives in
     // the repository. Otherwise the release build is signed with the debug key, so
     // `assembleRelease` still yields an installable APK locally.
     fun env(name: String) = System.getenv(name)?.takeIf { it.isNotBlank() }
     val releaseKeystore = listOfNotNull(
         env("KEYSTORE_FILE")?.let { file(it) },
         file("keystore/release.keystore"),
-        file(System.getProperty("user.home") + "/.android/mutqan-release.keystore"),
+        file(System.getProperty("user.home") + "/code/secrets/mutqan/mutqan-release.keystore"),
     ).firstOrNull { it.exists() }.takeIf {
         env("KEYSTORE_PASSWORD") != null && env("KEY_ALIAS") != null && env("KEY_PASSWORD") != null
     }
