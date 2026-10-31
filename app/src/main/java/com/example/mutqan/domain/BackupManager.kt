@@ -28,8 +28,8 @@ class BackupManager(private val context: Context) {
     private val quran = QuranRepository.getInstance(context)
     private val index by lazy { quran.ayahIndex }
 
-    suspend fun exportData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
+    /** Everything the user has made, as the JSON that backups and cloud sync both carry. */
+    suspend fun buildSnapshot(): JSONObject {
             val logs = dao.getAllRevisionLogsSync()
             val groups = dao.getAllSimilarityGroupsSync()
             val members = dao.getAllSimilarityMembersSync()
@@ -152,6 +152,12 @@ class BackupManager(private val context: Context) {
                     }
                 })
             }
+            return root
+    }
+
+    suspend fun exportData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val root = buildSnapshot()
 
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 val text = root.toString(2)
@@ -164,18 +170,8 @@ class BackupManager(private val context: Context) {
         }
     }
 
-    suspend fun importData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val fileText = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
-            } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_input)))
-            val jsonString = when {
-                !BackupCrypto.isEncrypted(fileText) -> fileText
-                password.isNullOrEmpty() -> return@withContext Result.failure(PasswordRequiredException())
-                else -> BackupCrypto.decrypt(fileText, password)
-            }
-
-            val root = JSONObject(jsonString)
+    /** Replaces everything the user has made with the contents of [root], a snapshot from [buildSnapshot] or a backup file. */
+    suspend fun restoreSnapshot(root: JSONObject) {
             
             val logs = mutableListOf<RevisionLogEntity>()
             val logsArray = root.optJSONArray("revision_logs")
@@ -337,6 +333,20 @@ class BackupManager(private val context: Context) {
             dao.insertSavedPassages(savedPassages)
             dao.insertPlans(plans)
             dao.insertExerciseResults(exercises)
+    }
+
+    suspend fun importData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val fileText = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
+            } ?: return@withContext Result.failure(Exception(context.getString(R.string.err_open_input)))
+            val jsonString = when {
+                !BackupCrypto.isEncrypted(fileText) -> fileText
+                password.isNullOrEmpty() -> return@withContext Result.failure(PasswordRequiredException())
+                else -> BackupCrypto.decrypt(fileText, password)
+            }
+
+            restoreSnapshot(JSONObject(jsonString))
 
             Result.success(Unit)
         } catch (e: Exception) {

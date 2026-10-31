@@ -689,4 +689,18 @@
     <string name="ex_topic_desc">See a verse, pick the topic it belongs to</string>
     <string name="quiz_q_topic">Which topic does this verse belong to?</string>
     <string name="quiz_topics_of_verse">Topics of this verse</string>
+    <string name="account_title">Account</string>
+    <string name="account_intro">Sign in with Google to keep your revision and memorisation the same on all your devices. Signing in combines the data on this device with the account copy.</string>
+    <string name="account_sign_in">Sign in with Google</string>
+    <string name="account_sign_in_failed">Sign-in failed: %1$s</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="sync_now">Sync now</string>
+    <string name="sync_running">Syncing…</string>
+    <string name="sync_last">Last synced: %1$s</string>
+    <string name="sync_never">Not synced yet</string>
+    <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="sync_delete_cloud">Delete cloud copy</string>
+    <string name="sync_delete_title">Delete the cloud copy?</string>
+    <string name="sync_delete_body">Only your account copy in the cloud is deleted. The data on this device stays, and is uploaded again at the next sync.</string>
+    <string name="sync_delete_confirm">Delete</string>
 </resources>

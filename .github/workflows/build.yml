@@ -29,6 +29,9 @@
 # Keep release.keystore somewhere safe and out of the repository (*.keystore is
 # git-ignored): losing it means future updates cannot be installed over old ones.
 # Without the secrets the APK is still built, but signed with the debug key.
+#
+# Accounts and sync (optional): add a repository secret GOOGLE_SERVICES_JSON holding the whole
+# content of the Firebase project's google-services.json (see firebase/README.md).
 # ==============================================================================
 
 name: Build & Test Mutqan
@@ -63,6 +66,15 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: 'gradle'
+
+      - name: Add Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          # Optional: without the secret the app still builds, but accounts and sync are hidden.
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          fi
 
       - name: Setup Keystore
         env:

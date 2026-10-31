@@ -72,3 +72,6 @@ $RECYCLE.BIN/
 
 # ── Cursor IDE ───────────────────────────────────────────────
 .cursor/
+
+# Firebase client config for accounts and sync (per developer / CI secret)
+google-services.json

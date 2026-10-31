@@ -689,4 +689,18 @@
     <string name="ex_topic_desc">ترى آية، فاختر الموضوع الذي تنتمي إليه</string>
     <string name="quiz_q_topic">إلى أي موضوع تنتمي هذه الآية؟</string>
     <string name="quiz_topics_of_verse">مواضيع هذه الآية</string>
+    <string name="account_title">الحساب</string>
+    <string name="account_intro">سجّل الدخول بحساب Google لتبقى مراجعتك ومحفوظك متطابقين على كل أجهزتك. عند الدخول تُدمج بيانات هذا الجهاز مع نسخة الحساب.</string>
+    <string name="account_sign_in">تسجيل الدخول بحساب Google</string>
+    <string name="account_sign_in_failed">تعذّر تسجيل الدخول: %1$s</string>
+    <string name="account_sign_out">تسجيل الخروج</string>
+    <string name="sync_now">مزامنة الآن</string>
+    <string name="sync_running">جارٍ المزامنة…</string>
+    <string name="sync_last">آخر مزامنة: %1$s</string>
+    <string name="sync_never">لم تتم المزامنة بعد</string>
+    <string name="sync_failed">تعذّرت المزامنة: %1$s</string>
+    <string name="sync_delete_cloud">حذف النسخة السحابية</string>
+    <string name="sync_delete_title">حذف النسخة السحابية؟</string>
+    <string name="sync_delete_body">تُحذف نسخة حسابك من السحابة فقط. تبقى بياناتك على هذا الجهاز، وستُرفع من جديد عند المزامنة التالية.</string>
+    <string name="sync_delete_confirm">احذف</string>
 </resources>

@@ -3,11 +3,13 @@ package com.example.mutqan
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.example.mutqan.domain.sync.CloudSync
 
 class MutqanApp : Application() {
     override fun onCreate() {
         super.onCreate()
         applyDefaultLanguage()
+        CloudSync.get(this).takeIf { it.isConfigured }?.syncInBackground()
     }
 
     /**

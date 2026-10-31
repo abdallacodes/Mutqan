@@ -216,6 +216,16 @@ fun SettingsBottomSheet(
             )
             Spacer(Modifier.height(20.dp))
 
+            // ── Account ────────────────────────────────────────────────────
+            if (remember { com.example.mutqan.domain.sync.CloudSync.get(context).isConfigured }) {
+                AccountSection()
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 20.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 0.5.dp
+                )
+            }
+
             // ── Backup section ─────────────────────────────────────────────
             SectionLabel(stringResource(R.string.settings_data_management))
             Spacer(Modifier.height(8.dp))
@@ -390,7 +400,7 @@ private fun PasswordDialog(
 // ── Section label ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun SectionLabel(text: String) {
+internal fun SectionLabel(text: String) {
     Text(
         text          = text,
         style         = MaterialTheme.typography.labelSmall,
@@ -488,7 +498,7 @@ private fun DownloadActionRow(
 }
 
 @Composable
-private fun DataActionRow(
+internal fun DataActionRow(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit
