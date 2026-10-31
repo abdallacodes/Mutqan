@@ -131,16 +131,19 @@ class CoverageViewModel(
         }
     }
 
-    /** Says how well the user knows [juz]; choosing the level it already has clears it. */
+    /**
+     * Says how well the user knows [juz], marking it as memorised when it is not yet. Choosing the level a
+     * memorised juz already has clears the level, and the juz stays memorised.
+     */
     fun rateJuz(juz: Int, tier: PlanTier) {
         val pages = juzPages.value[juz] ?: return
-        val clear = uiState.value.strengths.firstOrNull { it.juz == juz }?.tier == tier
-        viewModelScope.launch { study.setSelfRated(pages.first()..pages.last(), if (clear) null else tier) }
-    }
-
-    /** Gives every juz the same level, as a starting point to adjust. */
-    fun rateAll(tier: PlanTier) {
-        viewModelScope.launch { study.setSelfRated(1..604, tier) }
+        val range = juzRanges.value[juz] ?: return
+        val memorised = juz in uiState.value.fullJuz
+        val clear = memorised && uiState.value.strengths.firstOrNull { it.juz == juz }?.tier == tier
+        viewModelScope.launch {
+            if (!memorised) study.setCoverage(HifzCoverage.add(current(), range))
+            study.setSelfRated(pages.first()..pages.last(), if (clear) null else tier)
+        }
     }
 
     fun setWholeQuran() {

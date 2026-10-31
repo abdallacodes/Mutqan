@@ -134,45 +134,38 @@ fun CoverageScreen(onDone: () -> Unit) {
             }
             item { SectionTitle(stringResource(R.string.coverage_juz_section)) }
             item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    (1..30).forEach { juz ->
-                        PaperChip(
-                            selected = juz in state.fullJuz,
-                            onClick = { viewModel.toggleJuz(juz) },
-                            label = { Text(juz.toString()) }
-                        )
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.coverage_strength_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            if (state.strengths.isNotEmpty()) {
-                item { SectionTitle(stringResource(R.string.coverage_strength_section)) }
-                item {
-                    Text(
-                        text = stringResource(R.string.coverage_strength_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(R.string.coverage_strength_all),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.width(72.dp)
+            items((1..30).toList(), key = { it }) { juz ->
+                val memorised = juz in state.fullJuz
+                val tier = state.strengths.firstOrNull { it.juz == juz }?.tier
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(role = Role.Checkbox) { viewModel.toggleJuz(juz) }
+                            .padding(vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (memorised) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (memorised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         )
-                        TierChips(selected = null, onSelect = viewModel::rateAll)
-                    }
-                }
-                items(state.strengths, key = { it.juz }) { row ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = stringResource(R.string.mushaf_juz_row, row.juz),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.width(72.dp)
+                            text = stringResource(R.string.mushaf_juz_row, juz),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 12.dp)
                         )
-                        TierChips(selected = row.tier, onSelect = { viewModel.rateJuz(row.juz, it) })
                     }
+                    TierChips(selected = if (memorised) tier else null, onSelect = { viewModel.rateJuz(juz, it) })
                 }
+                Hairline()
             }
             item { SectionTitle(stringResource(R.string.coverage_ranges_section)) }
             if (state.ranges.isEmpty()) {
@@ -299,16 +292,21 @@ private fun SurahPickerDialog(
     }
 }
 
-/** Weak, fair and strong side by side; [selected] is the level all of the row's pages have, if they share one. */
+/** Weak, fair and strong side by side; [selected] is the level the row's pages have, if they share one. */
 @Composable
 private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf(
             PlanTier.WEAK to R.string.strength_weak,
             PlanTier.FAIR to R.string.strength_fair,
             PlanTier.STRONG to R.string.strength_strong
         ).forEach { (tier, label) ->
-            PaperChip(selected = selected == tier, onClick = { onSelect(tier) }, label = { Text(stringResource(label)) })
+            PaperChip(
+                selected = selected == tier,
+                onClick = { onSelect(tier) },
+                label = { Text(stringResource(label)) },
+                modifier = Modifier.width(64.dp)
+            )
         }
     }
 }

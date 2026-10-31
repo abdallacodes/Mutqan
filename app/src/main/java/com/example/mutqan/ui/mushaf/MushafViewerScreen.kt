@@ -943,7 +943,7 @@ private fun PageImage(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(fillWidthVerticalScroll)
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 10.dp)
             ) {
                 MushafPageView(
                     page     = page,

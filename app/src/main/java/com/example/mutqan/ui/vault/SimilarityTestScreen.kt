@@ -71,8 +71,8 @@ fun SimilarityTestScreen(
                     )
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     listOf(
                         TestType.RECALL to R.string.test_type_recall,
@@ -82,7 +82,8 @@ fun SimilarityTestScreen(
                         PaperChip(
                             selected = type == option,
                             onClick = { viewModel.chooseType(option) },
-                            label = { Text(stringResource(label)) }
+                            label = { Text(stringResource(label)) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }

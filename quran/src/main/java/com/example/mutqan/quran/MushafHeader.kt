@@ -3,7 +3,7 @@ package com.example.mutqan.quran
 /** What a page says in its running head: the surah it opens with and the juz it is in. */
 internal data class MushafHead(val surah: String, val juz: Int)
 
-internal const val HEAD_RULE_OFFSET = 0.55f
+internal const val HEAD_RULE_OFFSET = 0.42f
 
 /** The words of a printed Mushaf's head and foot, which are Arabic whatever the app's language. */
 internal object MushafHeader {

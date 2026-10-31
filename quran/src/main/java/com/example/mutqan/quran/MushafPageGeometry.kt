@@ -32,7 +32,7 @@ internal object MushafPageGeometry {
     const val MEASURE_SIZE = 100f
 
     /** Heights of the head and foot bands, in rows of text. */
-    const val HEAD_ROWS = 0.9f
+    const val HEAD_ROWS = 1.3f
     const val FOOT_ROWS = 0.8f
     private const val TOTAL_ROWS = LINES_PER_PAGE + HEAD_ROWS + FOOT_ROWS
 
@@ -72,7 +72,7 @@ internal object MushafPageGeometry {
         }
         return PageGeometry(
             textSize, lineHeight, placed,
-            headY = HEAD_ROWS * lineHeight / 2f,
+            headY = HEAD_ROWS * lineHeight * 0.48f,
             footY = height - FOOT_ROWS * lineHeight / 2f
         )
     }
