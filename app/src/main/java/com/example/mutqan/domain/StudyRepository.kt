@@ -9,6 +9,7 @@ import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.dao.SurahMeta
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
+import com.example.mutqan.data.local.entity.PageStrengthEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
@@ -228,6 +229,17 @@ class StudyRepository(
 
     suspend fun setCoverage(ranges: List<IntRange>) = withContext(Dispatchers.IO) {
         dao.replaceCoverage(HifzCoverage.merge(ranges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
+    }
+
+    /** How well the user says they know pages, by page number; pages they have not rated are absent. */
+    fun selfRatedStrength(): Flow<Map<Int, PlanTier>> =
+        dao.observePageStrength().map { rows -> rows.mapNotNull { r -> PlanTier.fromCode(r.level)?.let { r.page to it } }.toMap() }
+            .flowOn(Dispatchers.IO)
+
+    /** Sets how well the user knows [pages]; a null [tier] clears their rating. */
+    suspend fun setSelfRated(pages: IntRange, tier: PlanTier?) = withContext(Dispatchers.IO) {
+        dao.deletePageStrength(pages.first, pages.last)
+        if (tier != null) dao.insertPageStrength(pages.map { PageStrengthEntity(it, tier.code) })
     }
 
     /** Which pages (index 0 = page 1) the user has memorised; null means no restriction. */

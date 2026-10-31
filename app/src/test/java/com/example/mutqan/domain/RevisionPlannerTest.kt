@@ -177,6 +177,22 @@ class RevisionPlannerTest {
     }
 
     @Test
+    fun `a page the user rated starts in that tier until its history says otherwise`() {
+        val states = statesOf(weak = 21..25, strong = 26..30)
+        states[30] = PassageState.DEVELOPING
+        val rated = (1..40).associateWith { PlanTier.STRONG } + (11..20).associateWith { PlanTier.WEAK }
+        val tiers = RevisionPlanner.tierPages(covered(1..45), states, rated)
+        // Rated pages keep their level while unassessed or still developing.
+        assertEquals((11..20).toList(), tiers.getValue(PlanTier.WEAK).filter { it in 11..20 })
+        assertTrue(31 in tiers.getValue(PlanTier.STRONG))
+        // A failed attempt moves a strong-rated page to weak, and reliable recall decides too.
+        assertTrue((21..25).all { it in tiers.getValue(PlanTier.WEAK) })
+        assertTrue((26..30).all { it in tiers.getValue(PlanTier.STRONG) })
+        // No rating and no history is fair.
+        assertTrue((41..45).all { it in tiers.getValue(PlanTier.FAIR) })
+    }
+
+    @Test
     fun `uncovered pages belong to no tier`() {
         assertTrue(RevisionPlanner.tierPages(null, statesOf()).values.all { it.isEmpty() })
         assertTrue(RevisionPlanner.tierPages(covered(1..5), statesOf(weak = 100..110)).getValue(PlanTier.WEAK).isEmpty())

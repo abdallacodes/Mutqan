@@ -7,6 +7,7 @@ import com.example.mutqan.R
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
+import com.example.mutqan.data.local.entity.PageStrengthEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
@@ -39,6 +40,7 @@ class BackupManager(private val context: Context) {
             val saved = dao.getAllSavedPassagesSync()
             val plans = dao.getAllPlansSync()
             val exercises = dao.getAllExerciseResultsSync()
+            val strengths = dao.getAllPageStrengthSync()
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
@@ -67,6 +69,9 @@ class BackupManager(private val context: Context) {
                             put("end_ayah_id", range.endAyahId)
                         })
                     }
+                })
+                put("page_strength", JSONArray().apply {
+                    strengths.forEach { r -> put(JSONObject().apply { put("page", r.page); put("level", r.level) }) }
                 })
                 put("exercise_results", JSONArray().apply {
                     exercises.forEach { r ->
@@ -302,6 +307,15 @@ class BackupManager(private val context: Context) {
                 }
             }
 
+            val strengths = mutableListOf<PageStrengthEntity>()
+            root.optJSONArray("page_strength")?.let { array ->
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    val page = obj.getInt("page")
+                    if (page in 1..604) strengths.add(PageStrengthEntity(page, obj.getInt("level")))
+                }
+            }
+
             val savedPassages = mutableListOf<SavedPassageEntity>()
             val savedArray = root.optJSONArray("saved_passages")
             if (savedArray != null) {
@@ -333,6 +347,7 @@ class BackupManager(private val context: Context) {
             dao.insertSavedPassages(savedPassages)
             dao.insertPlans(plans)
             dao.insertExerciseResults(exercises)
+            dao.insertPageStrength(strengths)
     }
 
     suspend fun importData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {

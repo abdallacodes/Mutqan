@@ -274,16 +274,21 @@ private fun PageCanvas(
             }
         }
 
+        // The surah title sits between two double rules, like the heading band of a printed mushaf.
         for (placed in g.lines) {
             if (placed.line.type != MushafLineType.SURAH_NAME) continue
-            val inset = g.lineHeight * 0.1f
-            drawRoundRect(
-                color        = ink.copy(alpha = 0.7f),
-                topLeft      = Offset(margin, placed.centerY - g.lineHeight / 2f + inset),
-                size         = Size(this.size.width - 2 * margin, g.lineHeight - 2 * inset),
-                cornerRadius = CornerRadius(g.lineHeight * 0.12f),
-                style        = Stroke(width = 2.dp.toPx())
-            )
+            val top = placed.centerY - g.lineHeight * 0.36f
+            val bottom = placed.centerY + g.lineHeight * 0.36f
+            val gap = 3.dp.toPx()
+            val strong = ink.copy(alpha = 0.55f)
+            val soft = ink.copy(alpha = 0.3f)
+            for ((y, outward) in listOf(top to -1f, bottom to 1f)) {
+                drawLine(strong, Offset(margin, y), Offset(this.size.width - margin, y), strokeWidth = 1.5.dp.toPx())
+                drawLine(
+                    soft, Offset(margin, y - outward * gap), Offset(this.size.width - margin, y - outward * gap),
+                    strokeWidth = 0.75.dp.toPx()
+                )
+            }
         }
     }
 }

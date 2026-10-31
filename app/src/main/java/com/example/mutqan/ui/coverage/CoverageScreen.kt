@@ -63,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
+import com.example.mutqan.domain.PlanTier
 import kotlinx.coroutines.launch
 
 /** Where the user says which parts of the Quran they have memorised. */
@@ -140,6 +141,36 @@ fun CoverageScreen(onDone: () -> Unit) {
                             onClick = { viewModel.toggleJuz(juz) },
                             label = { Text(juz.toString()) }
                         )
+                    }
+                }
+            }
+            if (state.strengths.isNotEmpty()) {
+                item { SectionTitle(stringResource(R.string.coverage_strength_section)) }
+                item {
+                    Text(
+                        text = stringResource(R.string.coverage_strength_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.coverage_strength_all),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.width(72.dp)
+                        )
+                        TierChips(selected = null, onSelect = viewModel::rateAll)
+                    }
+                }
+                items(state.strengths, key = { it.juz }) { row ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.mushaf_juz_row, row.juz),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.width(72.dp)
+                        )
+                        TierChips(selected = row.tier, onSelect = { viewModel.rateJuz(row.juz, it) })
                     }
                 }
             }
@@ -264,6 +295,20 @@ private fun SurahPickerDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
                 )
             }
+        }
+    }
+}
+
+/** Weak, fair and strong side by side; [selected] is the level all of the row's pages have, if they share one. */
+@Composable
+private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(
+            PlanTier.WEAK to R.string.strength_weak,
+            PlanTier.FAIR to R.string.strength_fair,
+            PlanTier.STRONG to R.string.strength_strong
+        ).forEach { (tier, label) ->
+            PaperChip(selected = selected == tier, onClick = { onSelect(tier) }, label = { Text(stringResource(label)) })
         }
     }
 }

@@ -211,7 +211,7 @@ fun MushafViewerScreen(
     var useSpreadLayout by rememberSaveable { mutableStateOf(false) }
 
     // Spread only: each page uses full column width (taller than viewport); scroll vertically.
-    var spreadFillWidth by rememberSaveable { mutableStateOf(false) }
+    var spreadFillWidth by rememberSaveable { mutableStateOf(true) }
 
     // Tint ayahs that belong to a mutashabihat group or were saved; tapping a tinted ayah, or
     // long-pressing any ayah, opens a quick peek where it can be bookmarked or marked weak.
@@ -324,7 +324,6 @@ fun MushafViewerScreen(
             useSpreadLayout -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
-        if (!useSpreadLayout) spreadFillWidth = false
     }
 
     // Reading: the screen stays on, and the system bars go away until the page is tapped for the bar.
@@ -500,11 +499,13 @@ fun MushafViewerScreen(
                         tint               = if (coverOn) MaterialTheme.colorScheme.primary else MushafInk
                     )
                 }
-                IconButton(onClick = onOpenSaved) {
+                IconButton(onClick = { useSpreadLayout = !useSpreadLayout }) {
                     Icon(
-                        imageVector        = Icons.Filled.Bookmarks,
-                        contentDescription = stringResource(R.string.mushaf_cd_saved),
-                        tint               = MushafInk
+                        imageVector        = if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook,
+                        contentDescription = stringResource(
+                            if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
+                        ),
+                        tint               = if (useSpreadLayout) MaterialTheme.colorScheme.primary else MushafInk
                     )
                 }
                 Box {
@@ -526,13 +527,9 @@ fun MushafViewerScreen(
                             onClick = { showGroupAyahs = !showGroupAyahs; menuOpen = false }
                         )
                         DropdownMenuItem(
-                            text = {
-                                Text(stringResource(
-                                    if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
-                                ))
-                            },
-                            leadingIcon = { Icon(if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook, null) },
-                            onClick = { useSpreadLayout = !useSpreadLayout; menuOpen = false }
+                            text = { Text(stringResource(R.string.mushaf_cd_saved)) },
+                            leadingIcon = { Icon(Icons.Filled.Bookmarks, null) },
+                            onClick = { menuOpen = false; onOpenSaved() }
                         )
                         if (useSpreadLayout) {
                             DropdownMenuItem(
@@ -946,6 +943,7 @@ private fun PageImage(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(fillWidthVerticalScroll)
+                    .padding(horizontal = 8.dp, vertical = 20.dp)
             ) {
                 MushafPageView(
                     page     = page,

@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.domain.PassageStates
+import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanOrder
 import com.example.mutqan.domain.PlanItem
 import com.example.mutqan.domain.RecallOutcome
@@ -51,7 +52,13 @@ data class WeakSuggestion(
 @Immutable
 data class MissedPage(val page: Int, val count: Int)
 
-private data class Extras(val day: Long, val hidden: Set<Int>, val lastPage: Int?, val misses: List<PageMiss>)
+private data class Extras(
+    val day: Long,
+    val hidden: Set<Int>,
+    val lastPage: Int?,
+    val misses: List<PageMiss>,
+    val selfRated: Map<Int, PlanTier>
+)
 
 @Immutable
 data class HomeUiState(
@@ -86,8 +93,8 @@ class HomeViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val misses = epochDay.flatMapLatest { study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS) }
 
-    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage, misses) { day, hidden, last, missed ->
-        Extras(day, hidden, last, missed)
+    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage, misses, study.selfRatedStrength()) { day, hidden, last, missed, rated ->
+        Extras(day, hidden, last, missed, rated)
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -100,7 +107,7 @@ class HomeViewModel(
             val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
             else PassageStates.compute(logs)
             if (it.order == PlanOrder.BY_STRENGTH) {
-                RevisionPlanner.strengthToday(it, covered, lastRevised, states, day)
+                RevisionPlanner.strengthToday(it, covered, lastRevised, states, day, extra.selfRated)
             } else {
                 val items = RevisionPlanner.buildItems(it.unit, covered, study.planGeometry())
                 RevisionPlanner.todayPlan(it, items, lastRevised, states, day)

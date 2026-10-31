@@ -74,7 +74,7 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
             existing = study.plans().first().firstOrNull()
             covered = study.coveredPages().first()
             geometry = study.planGeometry()
-            tierCounts = RevisionPlanner.tierPages(covered, PassageStates.compute(study.revisionLogs().first()))
+            tierCounts = RevisionPlanner.tierPages(covered, PassageStates.compute(study.revisionLogs().first()), study.selfRatedStrength().first())
                 .mapValues { it.value.size }
             val plan = existing
             _uiState.value = if (plan == null) PlanUiState(isLoaded = true, amount = 1, tierCounts = tierCounts)

@@ -33,10 +33,12 @@ enum class PlanOrder(val code: Int) {
 }
 
 /** How well a page holds, from its recall history. Weak pages come around often, strong ones rarely. */
-enum class PlanTier {
-    STRONG, FAIR, WEAK;
+enum class PlanTier(val code: Int) {
+    STRONG(3), FAIR(2), WEAK(1);
 
     companion object {
+        fun fromCode(code: Int): PlanTier? = entries.firstOrNull { it.code == code }
+
         fun of(state: PassageState): PlanTier = when (state) {
             PassageState.NEEDS_ATTENTION -> WEAK
             PassageState.NOT_ASSESSED, PassageState.DEVELOPING -> FAIR
@@ -227,12 +229,23 @@ object RevisionPlanner {
     fun tierCycleDays(pageCount: Int, pagesPerDay: Int): Int =
         if (pageCount <= 0 || pagesPerDay <= 0) 0 else (pageCount + pagesPerDay - 1) / pagesPerDay
 
-    /** The covered pages in each tier (ascending), from their recall history. */
-    fun tierPages(covered: BooleanArray?, passageStates: Array<PassageState>): Map<PlanTier, List<Int>> {
+    /**
+     * The covered pages in each tier (ascending), from their recall history. A page with no recall
+     * evidence yet, or too little to judge (developing), goes to the tier the user gave it in [selfRated] (fair when none); once
+     * it has a failed attempt or reliable recall, that decides.
+     */
+    fun tierPages(
+        covered: BooleanArray?,
+        passageStates: Array<PassageState>,
+        selfRated: Map<Int, PlanTier> = emptyMap()
+    ): Map<PlanTier, List<Int>> {
         val tiers = PlanTier.entries.associateWith { ArrayList<Int>() }
         if (covered != null) {
             for (page in 1..TOTAL_PAGES) {
-                if (covered[page - 1]) tiers.getValue(PlanTier.of(passageStates[page - 1])).add(page)
+                if (!covered[page - 1]) continue
+                val state = passageStates[page - 1]
+                val tier = if (state == PassageState.NOT_ASSESSED || state == PassageState.DEVELOPING) selfRated[page] ?: PlanTier.FAIR else PlanTier.of(state)
+                tiers.getValue(tier).add(page)
             }
         }
         return tiers
@@ -249,10 +262,11 @@ object RevisionPlanner {
         covered: BooleanArray?,
         pageLastRevised: LongArray,
         passageStates: Array<PassageState>,
-        today: Long
+        today: Long,
+        selfRated: Map<Int, PlanTier> = emptyMap()
     ): TodayPlan {
         val restDay = isoWeekday(today) in plan.restDays
-        val tiers = tierPages(covered, passageStates)
+        val tiers = tierPages(covered, passageStates, selfRated)
         val due = ArrayList<PlanItem>()
         val done = ArrayList<PlanItem>()
         var daily = 0

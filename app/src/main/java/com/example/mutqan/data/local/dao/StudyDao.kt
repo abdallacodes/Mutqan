@@ -10,6 +10,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
+import com.example.mutqan.data.local.entity.PageStrengthEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
@@ -69,6 +70,25 @@ abstract class StudyDao {
         deleteAllCoverage()
         insertCoverage(ranges)
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Self-rated page strength
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM page_strength")
+    abstract fun observePageStrength(): Flow<List<PageStrengthEntity>>
+
+    @Query("SELECT * FROM page_strength ORDER BY page")
+    abstract suspend fun getAllPageStrengthSync(): List<PageStrengthEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertPageStrength(rows: List<PageStrengthEntity>)
+
+    @Query("DELETE FROM page_strength WHERE page BETWEEN :from AND :to")
+    abstract suspend fun deletePageStrength(from: Int, to: Int)
+
+    @Query("DELETE FROM page_strength")
+    abstract suspend fun deleteAllPageStrength()
 
     // ─────────────────────────────────────────────────────────
     // Revision plans
@@ -288,6 +308,7 @@ abstract class StudyDao {
         deleteAllSavedPassages()
         deleteAllPlans()
         deleteAllExerciseResults()
+        deleteAllPageStrength()
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

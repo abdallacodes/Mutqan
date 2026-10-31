@@ -372,6 +372,11 @@
     <string name="coverage_clear">Clear all</string>
     <string name="coverage_juz_section">Juz</string>
     <string name="coverage_ranges_section">Ranges</string>
+    <string name="coverage_strength_section">How well you know it</string>
+    <string name="coverage_strength_hint">Your own estimate. The plan starts from it, then your revision history takes over once it shows how each page really holds.</string>
+    <string name="coverage_strength_all">All</string>
+    <string name="strength_fair">Fair</string>
+    <string name="strength_strong">Strong</string>
     <string name="coverage_add_range">Add a range</string>
     <string name="coverage_by_surah">Surahs</string>
     <string name="coverage_by_page">Pages</string>

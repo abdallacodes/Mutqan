@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.HifzCoverage
+import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +32,13 @@ data class CoverageRangeItem(
     val endAyah: Int
 )
 
+/** A juz with some memorised pages, and the level the user gave all of them (null when mixed or not given). */
+@Immutable
+data class JuzStrength(val juz: Int, val tier: PlanTier?)
+
 @Immutable
 data class CoverageUiState(
+    val strengths: List<JuzStrength> = emptyList(),
     val ranges: List<CoverageRangeItem> = emptyList(),
     val ayahCount: Int = 0,
     val pageCount: Int = 0,
@@ -52,9 +58,11 @@ class CoverageViewModel(
     private val index by lazy { quran.ayahIndex }
     private val juzRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
     private val surahRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
+    private val juzPages = MutableStateFlow<Map<Int, List<Int>>>(emptyMap())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
+            juzPages.value = quran.pagesByJuz()
             juzRanges.value = (1..30).mapNotNull { juz -> quran.ayahIdRangeOfJuz(juz)?.let { juz to it } }.toMap()
             surahRanges.value = (1..114).mapNotNull { s ->
                 val first = quran.ayah(s, 1)?.id
@@ -64,8 +72,24 @@ class CoverageViewModel(
         }
     }
 
-    val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), juzRanges, surahRanges) { ranges, juz, surahs ->
+    private data class Inputs(
+        val juz: Map<Int, IntRange>,
+        val surahs: Map<Int, IntRange>,
+        val pages: Map<Int, List<Int>>,
+        val rated: Map<Int, PlanTier>
+    )
+
+    private val inputs = combine(juzRanges, surahRanges, juzPages, study.selfRatedStrength(), ::Inputs)
+
+    val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), inputs) { ranges, input ->
+        val (juz, surahs, pages, rated) = input
+        val covered = HifzCoverage.coveredPages(ranges) { index.firstPageOf(it) }
         CoverageUiState(
+            strengths = pages.entries.sortedBy { it.key }.mapNotNull { (j, list) ->
+                val mine = list.filter { covered?.getOrNull(it - 1) == true }
+                if (mine.isEmpty()) null
+                else JuzStrength(j, mine.map { rated[it] }.distinct().singleOrNull())
+            },
             ranges = ranges.map {
                 CoverageRangeItem(it, index.surahOf(it.first), index.ayahOf(it.first), index.surahOf(it.last), index.ayahOf(it.last))
             },
@@ -105,6 +129,18 @@ class CoverageViewModel(
                 else HifzCoverage.add(ranges, range)
             )
         }
+    }
+
+    /** Says how well the user knows [juz]; choosing the level it already has clears it. */
+    fun rateJuz(juz: Int, tier: PlanTier) {
+        val pages = juzPages.value[juz] ?: return
+        val clear = uiState.value.strengths.firstOrNull { it.juz == juz }?.tier == tier
+        viewModelScope.launch { study.setSelfRated(pages.first()..pages.last(), if (clear) null else tier) }
+    }
+
+    /** Gives every juz the same level, as a starting point to adjust. */
+    fun rateAll(tier: PlanTier) {
+        viewModelScope.launch { study.setSelfRated(1..604, tier) }
     }
 
     fun setWholeQuran() {

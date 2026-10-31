@@ -28,7 +28,7 @@ object SnapshotMerge {
         if (VAULT.all { local.optJSONArray(it)?.length().orEmpty() == 0 }) {
             for (k in VAULT) remote.optJSONArray(k)?.let { out.put(k, it) }
         }
-        for (k in listOf("revision_plans", "saved_passages", "user_subjects")) {
+        for (k in listOf("revision_plans", "saved_passages", "user_subjects", "page_strength")) {
             if (local.optJSONArray(k)?.length().orEmpty() == 0) remote.optJSONArray(k)?.let { out.put(k, it) }
         }
         return out
