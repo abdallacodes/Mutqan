@@ -23,6 +23,11 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_TAFSIR_SOURCE     = intPreferencesKey("tafsir_source")
         private val KEY_MUSHAF_THEME      = stringPreferencesKey("mushaf_theme")
         private val KEY_MUSHAF_ROTATE     = booleanPreferencesKey("mushaf_rotate")
+        private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
+        private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
+        private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
+        private val KEY_RECITE_SURAH      = booleanPreferencesKey("recitation_to_surah_end")
+        private val KEY_RECITE_SPEED      = intPreferencesKey("recitation_speed_percent")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -73,6 +78,41 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafRotate(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_ROTATE] = on }
+    }
+
+    /** The reciter the reader chose (see Reciter); empty until they choose. */
+    val reciterId: Flow<String> = context.dataStore.data.map { prefs -> prefs[KEY_RECITER] ?: "" }
+
+    suspend fun setReciterId(id: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITER] = id }
+    }
+
+    /** How many times each verse is played before the next. */
+    val recitationRepeat: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_REPEAT] ?: 1 }
+
+    suspend fun setRecitationRepeat(times: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_REPEAT] = times.coerceIn(1, 20) }
+    }
+
+    /** Whether the range starts over when it ends. */
+    val recitationLoop: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_LOOP] ?: false }
+
+    suspend fun setRecitationLoop(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_LOOP] = on }
+    }
+
+    /** Whether playing goes on to the end of the surah instead of stopping at the end of the page. */
+    val recitationToSurahEnd: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_SURAH] ?: false }
+
+    suspend fun setRecitationToSurahEnd(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_SURAH] = on }
+    }
+
+    /** Playback speed in percent (100 = normal). */
+    val recitationSpeedPercent: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_RECITE_SPEED] ?: 100 }
+
+    suspend fun setRecitationSpeedPercent(percent: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_RECITE_SPEED] = percent.coerceIn(50, 200) }
     }
 
     /** The id of the tafsir the reader chose last (see TafsirSource); Saadi until they choose. */

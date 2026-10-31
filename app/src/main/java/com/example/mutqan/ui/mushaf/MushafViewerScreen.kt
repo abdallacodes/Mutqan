@@ -68,6 +68,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Tune
+import com.example.mutqan.domain.audio.RecitationController
+import com.example.mutqan.ui.audio.RecitationBar
+import com.example.mutqan.ui.audio.RecitationSheet
+import com.example.mutqan.ui.audio.rememberAskForNotifications
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.CircularProgressIndicator
@@ -152,6 +158,7 @@ private val LocalAyahMarks = compositionLocalOf<AyahMarks?> { null }
 /** Pages that hold a bookmark or a weak passage, with the colour of the ribbon drawn on them. */
 private val LocalPageRibbons = compositionLocalOf<Map<Int, Color>> { emptyMap() }
 private val MushafSelectionTint = Color(0x6027A3A0)
+private val MushafPlayingTint = Color(0x66E58A2B)
 
 private val MushafGroupTint = Color(0x40C9A227)
 private val MushafBookmarkTint = Color(0x403F8EDC)
@@ -232,6 +239,16 @@ fun MushafViewerScreen(
     val readingTheme = MushafTheme.fromName(themeName)
     val colors = readingTheme.colors(appIsDark)
     val coroutineScope = rememberCoroutineScope()
+
+    // Recitation: it plays on whatever the screen does; here the verse sounding is tinted and the page follows it.
+    val recitation = remember(context) { RecitationController.get(context) }
+    val playback by recitation.player.state.collectAsState()
+    val askForNotifications = rememberAskForNotifications()
+    var showRecitationSheet by remember { mutableStateOf(false) }
+    fun listenFrom(ayahId: Int, page: Int) {
+        askForNotifications()
+        coroutineScope.launch { recitation.playFrom(ayahId, page) }
+    }
     val pageMemorisedDone = stringResource(R.string.mushaf_page_memorised_done)
     val revisedSaved = stringResource(R.string.mushaf_revised_saved)
 
@@ -277,7 +294,7 @@ fun MushafViewerScreen(
         }
         byPage
     }
-    val marks = remember(groupAyahs, savedPassages, showGroupAyahs, peekAyahId, coverOn, revealed, quarterStarts) {
+    val marks = remember(groupAyahs, savedPassages, showGroupAyahs, peekAyahId, coverOn, revealed, quarterStarts, playback.ayahId) {
         val tints = HashMap<Int, Color>()
         if (showGroupAyahs) {
             groupAyahs.forEach { tints[it] = MushafGroupTint }
@@ -286,6 +303,7 @@ fun MushafViewerScreen(
                 for (ayah in saved.startAyahId..minOf(saved.endAyahId, saved.startAyahId + 200)) tints[ayah] = tint
             }
         }
+        playback.ayahId?.let { tints[it] = MushafPlayingTint }
         peekAyahId?.let { tints[it] = MushafSelectionTint }
         AyahMarks(
             highlights = tints,
@@ -295,6 +313,16 @@ fun MushafViewerScreen(
             onReveal = { ayahId -> revealed = if (ayahId in revealed) revealed - ayahId else revealed + ayahId },
             quarterStarts = quarterStarts
         )
+    }
+
+    // Turn to the verse being recited when it is not on the page (or two pages) in view.
+    LaunchedEffect(playback.ayahId) {
+        val id = playback.ayahId ?: return@LaunchedEffect
+        val index = quran.ayahIndex
+        if (id !in index) return@LaunchedEffect
+        val page = index.firstPageOf(id)
+        val inView = if (useSpreadLayout) (page - 1) / 2 == (currentPage - 1) / 2 else page == currentPage
+        if (!inView) jumpTarget = page
     }
 
     val surahName = state.pageSurahMap[currentPage].orEmpty()
@@ -520,6 +548,22 @@ fun MushafViewerScreen(
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
+                            text = { Text(stringResource(R.string.audio_listen_page)) },
+                            leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
+                            onClick = {
+                                menuOpen = false
+                                coroutineScope.launch {
+                                    val first = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.id }
+                                    if (first != null) listenFrom(first, currentPage)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.audio_sheet_title)) },
+                            leadingIcon = { Icon(Icons.Filled.Tune, null) },
+                            onClick = { menuOpen = false; showRecitationSheet = true }
+                        )
+                        DropdownMenuItem(
                             text = {
                                 Text(stringResource(
                                     if (showGroupAyahs) R.string.mushaf_cd_hide_group_ayahs else R.string.mushaf_cd_show_group_ayahs
@@ -600,7 +644,23 @@ fun MushafViewerScreen(
                 TextButton(onClick = { coverOn = false; revealed = emptySet() }) { Text(stringResource(R.string.mushaf_cd_uncover)) }
             }
         }
+
+        if (playback.active) {
+            RecitationBar(
+                state = playback,
+                onOpenSettings = { showRecitationSheet = true },
+                background = MushafHeaderScrim,
+                ink = MushafInk,
+                muted = MushafInkMuted,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = if (coverOn) 48.dp else 0.dp)
+                    .navigationBarsPadding()
+            )
+        }
     }
+
+    if (showRecitationSheet) RecitationSheet(onDismiss = { showRecitationSheet = false })
 
     if (showJump) {
         MushafJumpSheet(
@@ -632,6 +692,13 @@ fun MushafViewerScreen(
             target    = target,
             onDismiss = { peekTarget = null; peekAyahId = null; peekGroups = emptyList() },
             extraContent = {
+                OutlinedButton(
+                    onClick = {
+                        peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                        listenFrom(target.verseId, target.pageNumber)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(R.string.audio_listen_from_here)) }
                 OutlinedButton(onClick = { showSaveSheet = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
                 }

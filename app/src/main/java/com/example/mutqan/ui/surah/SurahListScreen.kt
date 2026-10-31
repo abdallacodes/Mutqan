@@ -19,6 +19,13 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.mutqan.domain.audio.RecitationController
+import com.example.mutqan.ui.audio.playingSurah
+import com.example.mutqan.ui.audio.rememberAskForNotifications
+import kotlinx.coroutines.launch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -71,6 +78,12 @@ fun SurahListScreen(
     val juz by viewModel.juz.collectAsState()
     val lastPage by viewModel.lastPage.collectAsState()
     val morphology by viewModel.morphology.collectAsState()
+
+    val recitation = remember(context) { RecitationController.get(context) }
+    val playback by recitation.player.state.collectAsState()
+    val reciting = playingSurah(playback)
+    val askForNotifications = rememberAskForNotifications()
+    val scope = rememberCoroutineScope()
 
     var showHelpDialog by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -164,7 +177,16 @@ fun SurahListScreen(
                     SurahRow(
                         item = item,
                         onClick = { if (item.startPage > 0) onOpenMushaf(item.startPage) },
-                        onOpenGroups = { onSurahClick(item.info.id) }
+                        onOpenGroups = { onSurahClick(item.info.id) },
+                        playing = reciting == item.info.id && playback.playing,
+                        onPlay = {
+                            if (reciting == item.info.id) {
+                                recitation.player.togglePause()
+                            } else {
+                                askForNotifications()
+                                scope.launch { recitation.playSurah(item.info.id) }
+                            }
+                        }
                     )
                 }
             } else if (tab == 2) {
@@ -198,7 +220,7 @@ fun SurahListScreen(
 
 /** A surah as a line: the line opens it in the Mushaf; the look-alikes count, when there is one, opens its groups. */
 @Composable
-private fun SurahRow(item: SurahListItem, onClick: () -> Unit, onOpenGroups: () -> Unit) {
+private fun SurahRow(item: SurahListItem, onClick: () -> Unit, onOpenGroups: () -> Unit, playing: Boolean, onPlay: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -229,6 +251,13 @@ private fun SurahRow(item: SurahListItem, onClick: () -> Unit, onOpenGroups: () 
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            IconButton(onClick = onPlay) {
+                Icon(
+                    imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = stringResource(if (playing) R.string.audio_pause else R.string.audio_play_surah),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
             Column(horizontalAlignment = Alignment.End) {
                 when (item.memorised) {

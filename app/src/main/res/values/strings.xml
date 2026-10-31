@@ -764,4 +764,25 @@
     <string name="first_sync_other_account">بيانات هذا الجهاز كانت مرتبطة بحساب آخر.</string>
     <string name="first_sync_merge">ادمج الاثنين</string>
     <string name="first_sync_replace">استبدل بيانات الجهاز ببيانات الحساب</string>
+    <string name="reciter_husary">محمود خليل الحصري</string>
+    <string name="reciter_minshawi">محمد صدّيق المنشاوي</string>
+    <string name="reciter_shatri">أبو بكر الشاطري</string>
+    <string name="reciter_ali_jaber">علي جابر</string>
+    <string name="audio_settings">إعدادات التلاوة</string>
+    <string name="audio_previous">الآية السابقة</string>
+    <string name="audio_next">الآية التالية</string>
+    <string name="audio_play">تشغيل</string>
+    <string name="audio_pause">إيقاف مؤقت</string>
+    <string name="audio_stop">إيقاف التلاوة</string>
+    <string name="audio_sheet_title">التلاوة</string>
+    <string name="audio_reciter">القارئ</string>
+    <string name="audio_repeat_each">تكرار كل آية</string>
+    <string name="audio_times">%1$d×</string>
+    <string name="audio_speed">السرعة</string>
+    <string name="audio_loop">أعد المقطع عند نهايته</string>
+    <string name="audio_to_surah_end">تابع حتى نهاية السورة</string>
+    <string name="audio_listen_page">الاستماع إلى هذه الصفحة</string>
+    <string name="audio_listen_from_here">الاستماع من هذه الآية</string>
+    <string name="audio_play_surah">استمع إلى السورة</string>
+    <string name="audio_failed">تعذّر تشغيل الصوت. تأكّد من الاتصال بالإنترنت.</string>
 </resources>

@@ -764,4 +764,25 @@
     <string name="first_sync_other_account">The data on this device was linked to a different account.</string>
     <string name="first_sync_merge">Merge both</string>
     <string name="first_sync_replace">Replace this device with the account\'s data</string>
+    <string name="reciter_husary">Mahmoud Khalil al-Husary</string>
+    <string name="reciter_minshawi">Muhammad Siddiq al-Minshawi</string>
+    <string name="reciter_shatri">Abu Bakr al-Shatri</string>
+    <string name="reciter_ali_jaber">Ali Jaber</string>
+    <string name="audio_settings">Recitation settings</string>
+    <string name="audio_previous">Previous verse</string>
+    <string name="audio_next">Next verse</string>
+    <string name="audio_play">Play</string>
+    <string name="audio_pause">Pause</string>
+    <string name="audio_stop">Stop the recitation</string>
+    <string name="audio_sheet_title">Recitation</string>
+    <string name="audio_reciter">Reciter</string>
+    <string name="audio_repeat_each">Repeat each verse</string>
+    <string name="audio_times">%1$d×</string>
+    <string name="audio_speed">Speed</string>
+    <string name="audio_loop">Start over when it ends</string>
+    <string name="audio_to_surah_end">Keep going to the end of the surah</string>
+    <string name="audio_listen_page">Listen to this page</string>
+    <string name="audio_listen_from_here">Listen from this verse</string>
+    <string name="audio_play_surah">Listen to this surah</string>
+    <string name="audio_failed">The audio could not be played. Check your internet connection.</string>
 </resources>

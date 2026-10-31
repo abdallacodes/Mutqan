@@ -84,11 +84,17 @@ class CoverageViewModel(
     val uiState: StateFlow<CoverageUiState> = combine(study.coverage(), inputs) { ranges, input ->
         val (juz, surahs, pages, rated) = input
         val covered = HifzCoverage.coveredPages(ranges) { index.firstPageOf(it) }
+        // A juz can begin or end in the middle of a page that its neighbour shares, and a page holds one level. The
+        // level shown for a juz is that of its own pages, so rating one juz does not undo the level of the next.
+        val shared = pages.values.flatten().groupingBy { it }.eachCount().filterValues { it > 1 }.keys
         CoverageUiState(
             strengths = pages.entries.sortedBy { it.key }.mapNotNull { (j, list) ->
                 val mine = list.filter { covered?.getOrNull(it - 1) == true }
                 if (mine.isEmpty()) null
-                else JuzStrength(j, mine.map { rated[it] }.distinct().singleOrNull())
+                else {
+                    val own = mine.filter { it !in shared }.ifEmpty { mine }
+                    JuzStrength(j, own.map { rated[it] }.distinct().singleOrNull())
+                }
             },
             ranges = ranges.map {
                 CoverageRangeItem(it, index.surahOf(it.first), index.ayahOf(it.first), index.surahOf(it.last), index.ayahOf(it.last))

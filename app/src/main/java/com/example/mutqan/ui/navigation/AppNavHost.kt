@@ -58,7 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.example.mutqan.domain.audio.RecitationPlayer
+import com.example.mutqan.ui.audio.RecitationBar
+import com.example.mutqan.ui.audio.RecitationSheet
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -183,6 +188,20 @@ fun AppNavHost(
     val topLevelRoutes = setOf(Routes.HOME, Routes.SURAH_LIST, Routes.PRACTICE, Routes.INSIGHTS)
     val showBottomBar  = currentRoute in topLevelRoutes
 
+    // A recitation plays whatever the screen; its controls sit above the bottom bar (the Mushaf has its own).
+    val appContext = LocalContext.current
+    val recitationPlayer = remember(appContext) { RecitationPlayer.get(appContext) }
+    val playback by recitationPlayer.state.collectAsState()
+    var showRecitationSheet by remember { mutableStateOf(false) }
+    if (showRecitationSheet) RecitationSheet(onDismiss = { showRecitationSheet = false })
+    val audioFailed = stringResource(R.string.audio_failed)
+    LaunchedEffect(playback.failed) {
+        if (playback.failed) {
+            Toast.makeText(appContext, audioFailed, Toast.LENGTH_LONG).show()
+            recitationPlayer.clearFailure()
+        }
+    }
+
     // Settings bottom sheet state — shared across all top-level screens
     var showSettingsSheet by remember { mutableStateOf(false) }
     if (showSettingsSheet) {
@@ -209,6 +228,10 @@ fun AppNavHost(
         modifier       = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
+            Column {
+            if (playback.active && currentRoute?.startsWith(Routes.MUSHAF_VIEWER) != true) {
+                RecitationBar(state = playback, onOpenSettings = { showRecitationSheet = true })
+            }
             if (showBottomBar) {
                 MutqanBottomBar(
                     currentRoute  = currentRoute,
@@ -222,6 +245,7 @@ fun AppNavHost(
                         }
                     }
                 )
+            }
             }
         }
     ) { innerPadding ->
