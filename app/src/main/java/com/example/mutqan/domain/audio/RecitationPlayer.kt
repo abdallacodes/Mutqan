@@ -3,7 +3,6 @@ package com.example.mutqan.domain.audio
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.OptIn
-import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
@@ -141,13 +140,18 @@ class RecitationPlayer private constructor(context: Context) {
         if (items.isEmpty()) return
 
         owners = who
-        startService()
-        exo.setMediaItems(items)
-        exo.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
-        exo.setPlaybackSpeed(speedPercent / 100f)
-        exo.prepare()
-        exo.play()
-        _state.value = State(active = true, playing = true, ayahId = who.first())
+        try {
+            startService()
+            exo.setMediaItems(items)
+            exo.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+            exo.setPlaybackSpeed(speedPercent / 100f)
+            exo.prepare()
+            exo.play()
+            _state.value = State(active = true, playing = true, ayahId = who.first())
+        } catch (e: Exception) {
+            stop()
+            _state.value = _state.value.copy(failed = true)
+        }
     }
 
     fun setSpeed(percent: Int) {
@@ -202,10 +206,14 @@ class RecitationPlayer private constructor(context: Context) {
         _state.value = _state.value.copy(failed = false)
     }
 
-    /** Starts the service that keeps playing, and shows the notification, once the app is out of sight. */
+    /**
+     * Starts the service that keeps playing, and shows the notification, once the app is out of sight. It is started
+     * plainly, not as a foreground service: the service moves itself to the foreground when sound starts, and a
+     * foreground start it does not answer in time takes the whole app down.
+     */
     private fun startService() {
         try {
-            ContextCompat.startForegroundService(app, Intent(app, RecitationService::class.java))
+            app.startService(Intent(app, RecitationService::class.java))
         } catch (_: Exception) {
             // Playback still works in the foreground; only the background notification is lost.
         }
