@@ -59,6 +59,26 @@ class TopicIndex(val topics: List<Topic>) {
 
     fun childrenOf(id: Int): List<Topic> = children[id].orEmpty()
 
+    private val withDescendants = HashMap<Int, IntArray>()
+
+    /**
+     * The verses of [topic] and of every topic under it, in reading order. The big topics (Doctrine, Stories) have no
+     * verses of their own, only through their children, so this is what a topic's verse count and list are made of.
+     */
+    @Synchronized
+    fun versesOf(topic: Topic): IntArray = withDescendants.getOrPut(topic.id) {
+        val seen = HashSet<Int>()
+        val verses = java.util.TreeSet<Int>()
+        val queue = ArrayDeque<Topic>().apply { add(topic) }
+        while (queue.isNotEmpty()) {
+            val t = queue.removeFirst()
+            if (!seen.add(t.id)) continue
+            for (v in t.verses) verses.add(v)
+            queue.addAll(childrenOf(t.id))
+        }
+        verses.toIntArray()
+    }
+
     /** The tops of the thematic tree (Doctrine, Stories, The Unseen). */
     val themeRoots: List<Topic> by lazy {
         topics.filter { t -> t.thematicParent == -1 && topics.any { it.thematicParent == t.id } }
@@ -85,16 +105,16 @@ class TopicIndex(val topics: List<Topic>) {
         if (q.isEmpty()) return emptyList()
         val arabic = ArabicNormalization.normalizeForSearch(q)
         return topics
-            .filter { language.visible(it) && it.verses.isNotEmpty() }
+            .filter { language.visible(it) && versesOf(it).isNotEmpty() }
             .filter { it.name.contains(q, ignoreCase = true) || (arabic.isNotEmpty() && it.normalizedArabic.contains(arabic)) }
-            .sortedByDescending { it.verses.size }
+            .sortedByDescending { versesOf(it).size }
             .take(limit)
     }
 
     /** The most mentioned topics that can be listed. */
     fun popular(language: TopicLanguage, limit: Int): List<Topic> =
-        topics.filter { language.visible(it) && it.verses.isNotEmpty() && it.id !in rootIds }
-            .sortedByDescending { it.verses.size }
+        topics.filter { language.visible(it) && versesOf(it).isNotEmpty() && it.id !in rootIds }
+            .sortedByDescending { versesOf(it).size }
             .take(limit)
 
     private val rootIds: Set<Int> by lazy { (themeRoots + conceptRoots).map { it.id }.toSet() }

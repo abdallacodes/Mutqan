@@ -107,8 +107,8 @@ fun rememberTopicLanguage(showAll: Boolean): TopicLanguage {
 }
 
 @Composable
-private fun TopicRow(topic: Topic, language: TopicLanguage, onClick: () -> Unit) {
-    val count = stringResource(R.string.topic_verses, topic.verses.size)
+private fun TopicRow(topic: Topic, language: TopicLanguage, verseCount: Int, onClick: () -> Unit) {
+    val count = stringResource(R.string.topic_verses, verseCount)
     val second = language.secondary(topic)
     HubRow(
         title = language.title(topic),
@@ -165,7 +165,7 @@ fun LazyListScope.topicsTab(
                 )
             }
         }
-        items(found, key = { "found-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+        items(found, key = { "found-${it.id}" }) { TopicRow(it, language, index.versesOf(it).size) { onOpenTopic(it.id) } }
         return
     }
 
@@ -174,11 +174,11 @@ fun LazyListScope.topicsTab(
     val popular = index.popular(language, limit = 15)
 
     item { GroupLabel(stringResource(R.string.topics_themes)) }
-    items(themes, key = { "theme-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+    items(themes, key = { "theme-${it.id}" }) { TopicRow(it, language, index.versesOf(it).size) { onOpenTopic(it.id) } }
     item { GroupLabel(stringResource(R.string.topics_concepts)) }
-    items(concepts, key = { "concept-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+    items(concepts, key = { "concept-${it.id}" }) { TopicRow(it, language, index.versesOf(it).size) { onOpenTopic(it.id) } }
     item { GroupLabel(stringResource(R.string.topics_popular)) }
-    items(popular, key = { "popular-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+    items(popular, key = { "popular-${it.id}" }) { TopicRow(it, language, index.versesOf(it).size) { onOpenTopic(it.id) } }
 }
 
 @Composable
@@ -215,13 +215,14 @@ fun TopicScreen(topicId: Int, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit, o
         if (index == null || topic == null) return@Scaffold
         val idx = index!!
         val children = remember(topic, language) {
-            idx.childrenOf(topic.id).filter { language.visible(it) && (it.verses.isNotEmpty() || idx.childrenOf(it.id).isNotEmpty()) }
-                .sortedByDescending { it.verses.size }
+            idx.childrenOf(topic.id).filter { language.visible(it) && idx.versesOf(it).isNotEmpty() }
+                .sortedByDescending { idx.versesOf(it).size }
         }
-        val related = remember(topic, language) { topic.related.toList().mapNotNull { idx[it] }.filter { language.visible(it) && it.verses.isNotEmpty() }.take(8) }
-        val memorised = remember(topic, ranges) { topic.verses.count { HifzCoverage.containsAll(ranges, it..it) } }
-        val verses = remember(topic, ranges, memorisedOnly) {
-            if (memorisedOnly) topic.verses.filter { HifzCoverage.containsAll(ranges, it..it) } else topic.verses.toList()
+        val related = remember(topic, language) { topic.related.toList().mapNotNull { idx[it] }.filter { language.visible(it) && idx.versesOf(it).isNotEmpty() }.take(8) }
+        val allVerses = remember(topic) { idx.versesOf(topic) }
+        val memorised = remember(allVerses, ranges) { allVerses.count { HifzCoverage.containsAll(ranges, it..it) } }
+        val verses = remember(allVerses, ranges, memorisedOnly) {
+            if (memorisedOnly) allVerses.filter { HifzCoverage.containsAll(ranges, it..it) } else allVerses.toList()
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -237,19 +238,19 @@ fun TopicScreen(topicId: Int, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit, o
             }
             if (children.isNotEmpty()) {
                 item { GroupLabel(stringResource(R.string.topic_subtopics)) }
-                items(children, key = { "child-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+                items(children, key = { "child-${it.id}" }) { TopicRow(it, language, idx.versesOf(it).size) { onOpenTopic(it.id) } }
             }
             if (related.isNotEmpty()) {
                 item { GroupLabel(stringResource(R.string.topic_related)) }
-                items(related, key = { "related-${it.id}" }) { TopicRow(it, language) { onOpenTopic(it.id) } }
+                items(related, key = { "related-${it.id}" }) { TopicRow(it, language, idx.versesOf(it).size) { onOpenTopic(it.id) } }
             }
-            if (topic.verses.isNotEmpty()) {
+            if (allVerses.isNotEmpty()) {
                 item {
                     Column(modifier = Modifier.padding(start = PaperSpace.Gutter, end = PaperSpace.Gutter, top = 20.dp, bottom = 4.dp)) {
-                        SectionLabel(stringResource(R.string.topic_verses_header, topic.verses.size))
+                        SectionLabel(stringResource(R.string.topic_verses_header, allVerses.size))
                         if (ranges.isNotEmpty()) {
                             Text(
-                                text = stringResource(R.string.topic_memorised_of, memorised, topic.verses.size),
+                                text = stringResource(R.string.topic_memorised_of, memorised, allVerses.size),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )

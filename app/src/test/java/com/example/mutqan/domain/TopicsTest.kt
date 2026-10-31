@@ -68,6 +68,18 @@ class TopicsTest {
 
     @Test
     fun `popular topics leave out the roots and the empty ones`() {
-        assertEquals(listOf(6, 2, 3, 5), index.popular(english, 10).map { it.id })
+        assertEquals(listOf(3, 6, 2, 5), index.popular(english, 10).map { it.id })
+    }
+
+    @Test
+    fun `a topic counts the verses of everything under it, each once, in reading order`() {
+        assertEquals(listOf(5, 6, 7, 8, 9, 10, 11, 12), index.versesOf(index[1]!!).toList())
+        assertEquals(listOf(6, 8, 9, 10, 11, 12), index.versesOf(index[3]!!).toList())
+        assertEquals(listOf(7), index.versesOf(index[4]!!).toList())
+    }
+
+    @Test
+    fun `a topic with no verses of its own is still found when its children have some`() {
+        assertEquals(listOf(1), index.search("Stories", english, 5).map { it.id })
     }
 }
