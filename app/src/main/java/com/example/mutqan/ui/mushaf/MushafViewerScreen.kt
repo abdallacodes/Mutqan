@@ -7,6 +7,29 @@ import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.data.SurahData
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.filled.Bookmarks
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.launch
+import com.example.mutqan.quran.PageCover
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -87,6 +110,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.AyahGroup
+import com.example.mutqan.domain.HifzCoverage
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.quran.MushafFontManager
 import com.example.mutqan.quran.MushafPageView
@@ -104,21 +128,30 @@ private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
 private const val TOTAL_SPREADS = 302
 
-/** Warm reading background — clearly off-white, easy on the eyes */
-private val MushafParchment   = Color(0xFFE8E0D2)
-private val MushafHeaderScrim = Color(0xE8E8E0D2)
-private val MushafInk         = Color(0xFF353028)
-private val MushafInkMuted    = Color(0xFF6B655C)
-private val MushafSpineLine   = Color(0x145C5346)
+// The page colours follow the reading theme (see MushafTheme), so night reading gets a dark page.
+private val MushafParchment: Color   @Composable get() = LocalMushafColors.current.bg
+private val MushafHeaderScrim: Color @Composable get() = LocalMushafColors.current.scrim
+private val MushafInk: Color         @Composable get() = LocalMushafColors.current.ink
+private val MushafInkMuted: Color    @Composable get() = LocalMushafColors.current.muted
+private val MushafSpineLine: Color   @Composable get() = LocalMushafColors.current.spine
 
 /** Ayahs to tint on every page, and what a tap on one of them does. Null = plain pages. */
 private class AyahMarks(
     val highlights: Map<Int, Color>,
     val onTap: (wordId: Int, ayahId: Int) -> Unit,
-    val onLongPress: (wordId: Int, ayahId: Int) -> Unit
+    val onLongPress: (wordId: Int, ayahId: Int) -> Unit,
+    /** The ayahs revealed while the text is covered for reciting; null when it is not covered. */
+    val cover: Set<Int>? = null,
+    val onReveal: (ayahId: Int) -> Unit = {},
+    /** Ids of the words that open a hizb quarter. */
+    val quarterStarts: Set<Int> = emptySet()
 )
 
 private val LocalAyahMarks = compositionLocalOf<AyahMarks?> { null }
+
+/** Pages that hold a bookmark or a weak passage, with the colour of the ribbon drawn on them. */
+private val LocalPageRibbons = compositionLocalOf<Map<Int, Color>> { emptyMap() }
+private val MushafSelectionTint = Color(0x6027A3A0)
 
 private val MushafGroupTint = Color(0x40C9A227)
 private val MushafBookmarkTint = Color(0x403F8EDC)
@@ -166,7 +199,7 @@ fun MushafViewerScreen(
 
     // The page the user specifically navigated to — used to draw the green border.
     // Fixed for the lifetime of this screen; does not change on swipe.
-    val activePage = startPage.coerceIn(1, TOTAL_PAGES)
+    var activePage by remember { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
 
     // Chrome hidden by default so pages use the full display; tap toggles.
     var showHeader  by remember { mutableStateOf(false) }
@@ -190,6 +223,35 @@ fun MushafViewerScreen(
     var peekWordId by remember { mutableIntStateOf(0) }
     var peekGroups by remember { mutableStateOf<List<AyahGroup>>(emptyList()) }
     var showSaveSheet by remember { mutableStateOf(false) }
+
+    // Reading theme, orientation and the other per-reader choices.
+    val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
+    val themeName by prefs.mushafTheme.collectAsState(initial = "")
+    val rotateWithDevice by prefs.mushafRotate.collectAsState(initial = false)
+    val appIsDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val readingTheme = MushafTheme.fromName(themeName)
+    val colors = readingTheme.colors(appIsDark)
+    val coroutineScope = rememberCoroutineScope()
+
+    var showJump by remember { mutableStateOf(false) }
+    var showRevised by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var jumpTarget by remember { mutableStateOf<Int?>(null) }
+
+    // Cover mode: the text is hidden for reciting from memory, and a tap reveals one verse.
+    var coverOn by rememberSaveable { mutableStateOf(false) }
+    var revealed by remember { mutableStateOf(emptySet<Int>()) }
+
+    val memorised by viewModel.coverage.collectAsState()
+    val pageInfo by produceState<Pair<Int, Int>?>(null, currentPage) {
+        value = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.let { it.juz to it.hizb } }
+    }
+    val quarterStarts by produceState(emptySet<Int>()) {
+        value = withContext(Dispatchers.IO) {
+            (1..30).flatMap { quran.rubs(it) }.mapNotNull { quran.ayahById(it.startAyahId)?.firstWordId }.toSet()
+        }
+    }
+
     LaunchedEffect(peekAyahId) {
         val id = peekAyahId ?: return@LaunchedEffect
         val ayah = withContext(Dispatchers.IO) { quran.ayahById(id) }
@@ -202,7 +264,18 @@ fun MushafViewerScreen(
         else savedPassages.firstOrNull { it.startAyahId == id && it.wordId == peekWordId }
             ?: savedPassages.firstOrNull { it.startAyahId == id }
     }
-    val marks = remember(groupAyahs, savedPassages, showGroupAyahs) {
+    val ribbons = remember(savedPassages, quran) {
+        val index = quran.ayahIndex
+        val byPage = HashMap<Int, Color>()
+        for (saved in savedPassages) {
+            if (saved.startAyahId !in index) continue
+            val page = index.firstPageOf(saved.startAyahId)
+            val weak = saved.kind == SavedKind.WEAK && !saved.isResolved
+            if (weak || page !in byPage) byPage[page] = if (weak) MushafWeakTint.copy(alpha = 0.95f) else MushafBookmarkTint.copy(alpha = 0.95f)
+        }
+        byPage
+    }
+    val marks = remember(groupAyahs, savedPassages, showGroupAyahs, peekAyahId, coverOn, revealed, quarterStarts) {
         val tints = HashMap<Int, Color>()
         if (showGroupAyahs) {
             groupAyahs.forEach { tints[it] = MushafGroupTint }
@@ -211,10 +284,14 @@ fun MushafViewerScreen(
                 for (ayah in saved.startAyahId..minOf(saved.endAyahId, saved.startAyahId + 200)) tints[ayah] = tint
             }
         }
+        peekAyahId?.let { tints[it] = MushafSelectionTint }
         AyahMarks(
             highlights = tints,
             onTap = { wordId, ayahId -> peekWordId = wordId; peekAyahId = ayahId },
-            onLongPress = { wordId, ayahId -> peekWordId = wordId; peekAyahId = ayahId }
+            onLongPress = { wordId, ayahId -> peekWordId = wordId; peekAyahId = ayahId },
+            cover = if (coverOn) revealed else null,
+            onReveal = { ayahId -> revealed = if (ayahId in revealed) revealed - ayahId else revealed + ayahId },
+            quarterStarts = quarterStarts
         )
     }
 
@@ -240,14 +317,36 @@ fun MushafViewerScreen(
         UserPreferencesRepository(context.applicationContext).setLastMushafPage(currentPage)
     }
 
-    LaunchedEffect(useSpreadLayout) {
+    LaunchedEffect(useSpreadLayout, rotateWithDevice) {
         val act = context.findActivity() ?: return@LaunchedEffect
-        act.requestedOrientation = if (useSpreadLayout) {
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        act.requestedOrientation = when {
+            rotateWithDevice -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            useSpreadLayout -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         if (!useSpreadLayout) spreadFillWidth = false
+    }
+
+    // Reading: the screen stays on, and the system bars go away until the page is tapped for the bar.
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+    val window = context.findActivity()?.window
+    DisposableEffect(window, showHeader, colors.dark) {
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        controller?.isAppearanceLightStatusBars = !colors.dark
+        if (showHeader) {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller?.hide(WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose { }
+    }
+    DisposableEffect(window) {
+        onDispose { window?.let { WindowCompat.getInsetsController(it, view).show(WindowInsetsCompat.Type.systemBars()) } }
     }
 
     DisposableEffect(Unit) {
@@ -258,6 +357,7 @@ fun MushafViewerScreen(
     }
 
     // ── Root: full-bleed pager + floating chrome (no permanent top bar eating height)
+    CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -276,6 +376,12 @@ fun MushafViewerScreen(
                     initialPage = initialIndex,
                     pageCount   = { pageCount }
                 )
+
+                LaunchedEffect(jumpTarget) {
+                    val target = jumpTarget ?: return@LaunchedEffect
+                    pagerState.scrollToPage(if (useSpreadLayout) (target - 1) / 2 else target - 1)
+                    jumpTarget = null
+                }
 
                 LaunchedEffect(pagerState.currentPage) {
                     val n = pagerState.currentPage
@@ -340,6 +446,8 @@ fun MushafViewerScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
         ) {
+            val juzHizb = pageInfo?.let { stringResource(R.string.mushaf_juz_hizb, it.first, it.second) }
+            val pageLine = listOfNotNull(juzHizb, pageBarLabel).joinToString(" · ")
             Row(
                 modifier          = Modifier
                     .fillMaxWidth()
@@ -355,18 +463,42 @@ fun MushafViewerScreen(
                         tint               = MushafInk
                     )
                 }
-                if (surahName.isNotEmpty()) {
+                // The name and place of the page; tapping it opens the jump sheet.
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(role = Role.Button) { showJump = true }
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                ) {
                     Text(
-                        text       = surahName,
+                        text       = surahName.ifEmpty { pageBarLabel },
                         style      = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color      = MushafInk,
                         maxLines   = 1,
-                        overflow   = TextOverflow.Ellipsis,
-                        modifier   = Modifier.weight(1f)
+                        overflow   = TextOverflow.Ellipsis
                     )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text     = pageLine,
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = MushafInkMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = { showRevised = true }) {
+                    Icon(
+                        imageVector        = Icons.Filled.TaskAlt,
+                        contentDescription = stringResource(R.string.mushaf_cd_revised),
+                        tint               = MushafInk
+                    )
+                }
+                IconButton(onClick = { coverOn = !coverOn; revealed = emptySet(); showHeader = false }) {
+                    Icon(
+                        imageVector        = if (coverOn) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = stringResource(if (coverOn) R.string.mushaf_cd_uncover else R.string.mushaf_cd_cover),
+                        tint               = if (coverOn) MaterialTheme.colorScheme.primary else MushafInk
+                    )
                 }
                 IconButton(onClick = onOpenSaved) {
                     Icon(
@@ -375,47 +507,125 @@ fun MushafViewerScreen(
                         tint               = MushafInk
                     )
                 }
-                IconButton(onClick = { showGroupAyahs = !showGroupAyahs }) {
-                    Icon(
-                        imageVector        = Icons.Filled.Highlight,
-                        contentDescription = stringResource(
-                            if (showGroupAyahs) R.string.mushaf_cd_hide_group_ayahs
-                            else R.string.mushaf_cd_show_group_ayahs
-                        ),
-                        tint               = if (showGroupAyahs) MushafInk else MushafInkMuted
-                    )
-                }
-                IconButton(onClick = { useSpreadLayout = !useSpreadLayout }) {
-                    Icon(
-                        imageVector = if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook,
-                        contentDescription = stringResource(
-                            if (useSpreadLayout) R.string.mushaf_cd_switch_one_page
-                            else R.string.mushaf_cd_switch_two_page
-                        ),
-                        tint        = MushafInk
-                    )
-                }
-                if (useSpreadLayout) {
-                    IconButton(onClick = { spreadFillWidth = !spreadFillWidth }) {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
                         Icon(
-                            imageVector = if (spreadFillWidth) Icons.Filled.FitScreen else Icons.Filled.OpenInFull,
-                            contentDescription = stringResource(
-                                if (spreadFillWidth) R.string.mushaf_cd_spread_fit_page
-                                else R.string.mushaf_cd_spread_fill_width
-                            ),
-                            tint = MushafInk
+                            imageVector        = Icons.Filled.MoreVert,
+                            contentDescription = stringResource(R.string.mushaf_cd_menu),
+                            tint               = MushafInk
                         )
                     }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(stringResource(
+                                    if (showGroupAyahs) R.string.mushaf_cd_hide_group_ayahs else R.string.mushaf_cd_show_group_ayahs
+                                ))
+                            },
+                            leadingIcon = { Icon(Icons.Filled.Highlight, null) },
+                            onClick = { showGroupAyahs = !showGroupAyahs; menuOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(stringResource(
+                                    if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
+                                ))
+                            },
+                            leadingIcon = { Icon(if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook, null) },
+                            onClick = { useSpreadLayout = !useSpreadLayout; menuOpen = false }
+                        )
+                        if (useSpreadLayout) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(
+                                        if (spreadFillWidth) R.string.mushaf_cd_spread_fit_page else R.string.mushaf_cd_spread_fill_width
+                                    ))
+                                },
+                                leadingIcon = { Icon(if (spreadFillWidth) Icons.Filled.FitScreen else Icons.Filled.OpenInFull, null) },
+                                onClick = { spreadFillWidth = !spreadFillWidth; menuOpen = false }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.mushaf_rotate)) },
+                            leadingIcon = { if (rotateWithDevice) Icon(Icons.Filled.Check, null) },
+                            onClick = { coroutineScope.launch { prefs.setMushafRotate(!rotateWithDevice) }; menuOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.mushaf_mark_page_memorised)) },
+                            leadingIcon = { Icon(Icons.Filled.TaskAlt, null) },
+                            onClick = {
+                                menuOpen = false
+                                coroutineScope.launch {
+                                    viewModel.versesOfPage(currentPage)?.let { viewModel.setMemorised(it, true) }
+                                    Toast.makeText(context, context.getString(R.string.mushaf_page_memorised_done), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                        HorizontalDivider()
+                        Text(
+                            text = stringResource(R.string.mushaf_page_colours),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                        MushafTheme.entries.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(option.labelRes)) },
+                                leadingIcon = { if (option == readingTheme) Icon(Icons.Filled.Check, null) },
+                                onClick = { coroutineScope.launch { prefs.setMushafTheme(option.name) }; menuOpen = false }
+                            )
+                        }
+                    }
                 }
-                Text(
-                    text       = pageBarLabel,
-                    style      = MaterialTheme.typography.labelMedium,
-                    color      = MushafInkMuted,
-                    fontFamily = FontFamily.Monospace,
-                    modifier   = Modifier.padding(end = 8.dp)
-                )
             }
         }
+
+        // While the text is covered a bar stays at the bottom: what to do, and the way out.
+        if (coverOn) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(MushafHeaderScrim)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.mushaf_cover_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MushafInkMuted,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { revealed = emptySet() }) { Text(stringResource(R.string.mushaf_cover_again)) }
+                TextButton(onClick = { coverOn = false; revealed = emptySet() }) { Text(stringResource(R.string.mushaf_cd_uncover)) }
+            }
+        }
+    }
+
+    if (showJump) {
+        MushafJumpSheet(
+            quran = quran,
+            currentPage = currentPage,
+            onGo = { page ->
+                showJump = false
+                activePage = page
+                jumpTarget = page
+            },
+            onDismiss = { showJump = false }
+        )
+    }
+
+    if (showRevised) {
+        MushafRevisedSheet(
+            page = currentPage,
+            onSave = { outcome, tags ->
+                viewModel.logPageRevision(currentPage, outcome, tags)
+                showRevised = false
+                Toast.makeText(context, context.getString(R.string.mushaf_revised_saved), Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showRevised = false }
+        )
     }
 
     peekTarget?.let { target ->
@@ -426,6 +636,11 @@ fun MushafViewerScreen(
                 OutlinedButton(onClick = { showSaveSheet = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
                 }
+                val isMemorised = HifzCoverage.contains(memorised, target.verseId)
+                OutlinedButton(
+                    onClick = { viewModel.setMemorised(target.verseId..target.verseId, !isMemorised) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(if (isMemorised) R.string.peek_unmark_memorised else R.string.peek_mark_memorised)) }
                 OutlinedButton(
                     onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) },
                     modifier = Modifier.fillMaxWidth()
@@ -474,6 +689,7 @@ fun MushafViewerScreen(
                 onDismiss = { showSaveSheet = false }
             )
         }
+    }
     }
 }
 
@@ -738,8 +954,10 @@ private fun PageImage(
                     ink      = MushafInk,
                     modifier = Modifier.fillMaxWidth(),
                     highlights = marks?.highlights.orEmpty(),
-                    onWordTap  = marks?.let { m -> { wordId, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(wordId, ayahId) } } },
-                    onWordLongPress = marks?.let { m -> { wordId, ayahId -> m.onLongPress(wordId, ayahId); true } }
+                    onWordTap  = marks?.let { m -> { wordId, ayahId -> wordTap(m, wordId, ayahId) } },
+                    onWordLongPress = marks?.let { m -> { wordId, ayahId -> wordLongPress(m, wordId, ayahId) } },
+                    cover = marks?.cover?.let { PageCover(it) },
+                    quarterStarts = marks?.quarterStarts.orEmpty()
                 )
             }
         } else {
@@ -750,11 +968,37 @@ private fun PageImage(
                 ink      = MushafInk,
                 modifier = Modifier.fillMaxSize(),
                 highlights = marks?.highlights.orEmpty(),
-                onWordTap  = marks?.let { m -> { wordId, ayahId -> (ayahId in m.highlights).also { if (it) m.onTap(wordId, ayahId) } } },
-                onWordLongPress = marks?.let { m -> { wordId, ayahId -> m.onLongPress(wordId, ayahId); true } }
+                onWordTap  = marks?.let { m -> { wordId, ayahId -> wordTap(m, wordId, ayahId) } },
+                onWordLongPress = marks?.let { m -> { wordId, ayahId -> wordLongPress(m, wordId, ayahId) } },
+                cover = marks?.cover?.let { PageCover(it) },
+                quarterStarts = marks?.quarterStarts.orEmpty()
+            )
+        }
+        LocalPageRibbons.current[page]?.let { ribbon ->
+            Icon(
+                imageVector = Icons.Filled.Bookmark,
+                contentDescription = null,
+                tint = ribbon,
+                modifier = Modifier.align(Alignment.TopEnd).padding(end = 14.dp).size(22.dp)
             )
         }
     }
+}
+
+/** A tap on a word: reveals its verse while the text is covered, otherwise opens the sheet of a marked verse. */
+private fun wordTap(marks: AyahMarks, wordId: Int, ayahId: Int): Boolean {
+    if (marks.cover != null) {
+        marks.onReveal(ayahId)
+        return true
+    }
+    return (ayahId in marks.highlights).also { if (it) marks.onTap(wordId, ayahId) }
+}
+
+/** A press held on a word opens the verse sheet, except while the text is covered (the sheet would show the verse). */
+private fun wordLongPress(marks: AyahMarks, wordId: Int, ayahId: Int): Boolean {
+    if (marks.cover != null) return false
+    marks.onLongPress(wordId, ayahId)
+    return true
 }
 
 // ── Stability dot ─────────────────────────────────────────────────────────────

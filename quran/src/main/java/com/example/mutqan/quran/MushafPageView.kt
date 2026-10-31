@@ -48,6 +48,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Covers the words of a page for reciting from memory: every ayah is drawn as grey bars in place of its words
+ * unless its id (`QuranAyah.id`) is in [revealedAyahs].
+ */
+class PageCover(val revealedAyahs: Set<Int>) {
+    fun hides(ayahId: Int) = ayahId != 0 && ayahId !in revealedAyahs
+}
+
 private sealed interface PageLoad {
     data object Loading : PageLoad
     data class Ready(val data: MushafPageData, val typeface: Typeface) : PageLoad
@@ -64,6 +72,8 @@ private sealed interface PageLoad {
  * the tap; a tap it does not handle (or one that misses every word) is left for parent
  * gestures such as toggling the chrome. [onWordLongPress] is the same for a press held on a
  * word, which is never mistaken for a tap.
+ * [cover], when given, hides the words of every ayah not in its revealed set. [quarterStarts] are the ids of the
+ * words (`QuranWord.id`) that open a hizb quarter; each gets a ۞ in the right margin.
  */
 @Composable
 fun MushafPageView(
@@ -74,7 +84,9 @@ fun MushafPageView(
     modifier: Modifier = Modifier,
     highlights: Map<Int, Color> = emptyMap(),
     onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)? = null,
-    onWordLongPress: ((wordId: Int, ayahId: Int) -> Boolean)? = null
+    onWordLongPress: ((wordId: Int, ayahId: Int) -> Boolean)? = null,
+    cover: PageCover? = null,
+    quarterStarts: Set<Int> = emptySet()
 ) {
     var attempt by remember(page) { mutableIntStateOf(0) }
 
@@ -114,7 +126,7 @@ fun MushafPageView(
                     Text(stringResource(R.string.mushaf_retry))
                 }
             }
-            is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap, onWordLongPress)
+            is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap, onWordLongPress, cover, quarterStarts)
         }
     }
 }
@@ -126,6 +138,8 @@ private fun PageCanvas(
     highlights: Map<Int, Color>,
     onWordTap: ((wordId: Int, ayahId: Int) -> Boolean)?,
     onWordLongPress: ((wordId: Int, ayahId: Int) -> Boolean)?,
+    cover: PageCover?,
+    quarterStarts: Set<Int>,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -225,7 +239,12 @@ private fun PageCanvas(
                 when (placed.line.type) {
                     MushafLineType.AYAH ->
                         for (word in placed.words) {
-                            native.drawText(word.glyph, word.x, placed.centerY + pageBaseline, pagePaint)
+                            if (cover?.hides(word.ayahId) != true) {
+                                native.drawText(word.glyph, word.x, placed.centerY + pageBaseline, pagePaint)
+                            }
+                            if (word.wordId in quarterStarts) {
+                                native.drawText("۞", this.size.width - margin / 2f, placed.centerY + headerBaseline, headerPaint)
+                            }
                         }
                     MushafLineType.SURAH_NAME -> {
                         val name = placed.line.surahNameArabic.orEmpty()
@@ -236,6 +255,21 @@ private fun PageCanvas(
                     }
                     MushafLineType.BASMALLAH ->
                         native.drawText(basmallah, this.size.width / 2f, placed.centerY + headerBaseline, headerPaint)
+                }
+            }
+        }
+
+        if (cover != null) {
+            val bar = ink.copy(alpha = 0.16f)
+            for (placed in g.lines) {
+                for (word in placed.words) {
+                    if (!cover.hides(word.ayahId)) continue
+                    drawRoundRect(
+                        color        = bar,
+                        topLeft      = Offset(word.x, placed.centerY - g.lineHeight * 0.17f),
+                        size         = Size(word.width, g.lineHeight * 0.34f),
+                        cornerRadius = CornerRadius(g.lineHeight * 0.1f)
+                    )
                 }
             }
         }

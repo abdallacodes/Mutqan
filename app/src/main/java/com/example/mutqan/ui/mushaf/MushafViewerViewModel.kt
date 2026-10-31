@@ -8,6 +8,12 @@ import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.AyahGroup
+import com.example.mutqan.domain.HifzCoverage
+import com.example.mutqan.domain.MistakeTag
+import com.example.mutqan.domain.RecallOutcome
+import com.example.mutqan.ui.revision.startOfTodayUtcMillis
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.PageStability
@@ -61,6 +67,26 @@ class MushafViewerViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = study.groupsOfAyah(ayahId)
+
+    /** What the user has memorised, as merged ayah-id ranges. */
+    val coverage: StateFlow<List<IntRange>> = study.coverage()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Marks the verses [range] as memorised, or as not memorised. */
+    fun setMemorised(range: IntRange, memorised: Boolean) {
+        viewModelScope.launch {
+            val now = study.coverage().first()
+            study.setCoverage(if (memorised) HifzCoverage.add(now, range) else HifzCoverage.remove(now, range))
+        }
+    }
+
+    /** The verse ids of [page], for marking a whole page. */
+    suspend fun versesOfPage(page: Int): IntRange? = withContext(Dispatchers.IO) { quran.ayahIdRangeOfPages(page, page) }
+
+    /** Records that [page] was revised with the given outcome, dated today. */
+    fun logPageRevision(page: Int, outcome: RecallOutcome, tags: Set<MistakeTag>) {
+        viewModelScope.launch { study.addRevision(page, page, outcome, tags, startOfTodayUtcMillis()) }
+    }
 
     /** Every bookmark and weak passage, for tinting ayahs and for the save sheet. */
     val savedPassages: StateFlow<List<SavedPassage>> = study.savedPassages()
