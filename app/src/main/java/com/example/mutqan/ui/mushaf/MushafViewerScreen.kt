@@ -153,7 +153,8 @@ fun MushafViewerScreen(
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
     onOpenRoot:  (Int) -> Unit = {},
-    onOpenTopic: (Int) -> Unit = {}
+    onOpenTopic: (Int) -> Unit = {},
+    onOpenTafsir: (Int) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -427,6 +428,10 @@ fun MushafViewerScreen(
                 OutlinedButton(onClick = { showSaveSheet = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
                 }
+                OutlinedButton(
+                    onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(R.string.tafsir_open)) }
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
                 VerseRoots(target.surahId, target.ayahNumber) { root ->

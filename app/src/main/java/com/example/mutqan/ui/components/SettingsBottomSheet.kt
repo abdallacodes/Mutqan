@@ -23,6 +23,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -149,8 +153,10 @@ fun SettingsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
+                .navigationBarsPadding()
         ) {
 
             // ── Sheet title ──────────────────────────────────────────────────
@@ -195,7 +201,7 @@ fun SettingsBottomSheet(
             SectionLabel(stringResource(R.string.settings_language))
             Spacer(Modifier.height(8.dp))
 
-            val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "ar"
+            val currentLang = LocalConfiguration.current.locales[0].language
             LanguageSettingsRow(
                 displayName = stringResource(R.string.lang_english),
                 tag         = "en",

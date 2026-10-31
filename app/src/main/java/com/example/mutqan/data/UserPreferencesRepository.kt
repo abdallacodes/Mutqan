@@ -20,6 +20,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_APP_LOCK          = booleanPreferencesKey("app_lock_enabled")
         private val KEY_LAST_MUSHAF_PAGE  = intPreferencesKey("last_mushaf_page")
         private val KEY_TOPICS_SHOW_ALL   = booleanPreferencesKey("topics_show_all")
+        private val KEY_TAFSIR_SOURCE     = intPreferencesKey("tafsir_source")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -56,6 +57,13 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setTopicsShowAll(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_TOPICS_SHOW_ALL] = on }
+    }
+
+    /** The id of the tafsir the reader chose last (see TafsirSource); Saadi until they choose. */
+    val tafsirSource: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_TAFSIR_SOURCE] ?: 1 }
+
+    suspend fun setTafsirSource(id: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_TAFSIR_SOURCE] = id }
     }
 
     /** When the last cloud sync finished, in millis, or null if there has been none. */

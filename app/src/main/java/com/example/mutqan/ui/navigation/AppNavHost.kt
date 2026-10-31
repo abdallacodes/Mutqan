@@ -93,6 +93,7 @@ import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.practice.QuizScreen
 import com.example.mutqan.ui.root.RootScreen
+import com.example.mutqan.ui.tafsir.TafsirScreen
 import com.example.mutqan.ui.topics.TopicScreen
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.ui.vault.ReadyListScreen
@@ -110,6 +111,7 @@ object Routes {
     const val QUIZ           = "quiz"
     const val ROOT           = "root"
     const val TOPIC          = "topic"
+    const val TAFSIR         = "tafsir"
     const val PRACTICE       = "practice"
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
@@ -138,6 +140,7 @@ object Routes {
     fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
     fun topic(topicId: Int)                      = "topic/$topicId"
     fun root(rootId: Int)                        = "root/$rootId"
+    fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
 }
 
@@ -367,6 +370,16 @@ fun AppNavHost(
             }
 
             composable(
+                route     = "${Routes.TAFSIR}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.IntType })
+            ) { entry ->
+                TafsirScreen(
+                    startAyahId = entry.arguments?.getInt("id") ?: 1,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
                 route     = "${Routes.ROOT}/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.IntType })
             ) { entry ->
@@ -499,7 +512,8 @@ fun AppNavHost(
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
                     onOpenRoot  = { root -> navController.navigate(Routes.root(root)) },
-                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) }
+                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) },
+                    onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) }
                 )
             }
         }

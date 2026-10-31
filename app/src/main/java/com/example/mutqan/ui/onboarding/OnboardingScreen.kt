@@ -40,6 +40,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.os.LocaleListCompat
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
@@ -112,7 +113,8 @@ fun OnboardingScreen(onComplete: () -> Unit) {
 
 @Composable
 private fun LanguageStep(onLanguageSelected: (String) -> Unit, onNext: () -> Unit) {
-    val currentLang = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "ar"
+    // The language the screen is actually shown in, not the stored choice, so the two cannot disagree.
+    val currentLang = LocalConfiguration.current.locales[0].language
     val isEnglish = currentLang == "en"
 
     Column(

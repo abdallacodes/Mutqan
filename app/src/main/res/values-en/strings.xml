@@ -703,4 +703,18 @@
     <string name="sync_delete_title">Delete the cloud copy?</string>
     <string name="sync_delete_body">Only your account copy in the cloud is deleted. The data on this device stays, and is uploaded again at the next sync.</string>
     <string name="sync_delete_confirm">Delete</string>
+    <string name="tafsir_title">Tafsir</string>
+    <string name="tafsir_open">Tafsir of this verse</string>
+    <string name="tafsir_saadi">Al-Saadi</string>
+    <string name="tafsir_saadi_note">Taysir al-Karim al-Rahman by Sheikh Abd al-Rahman al-Saadi: a full commentary in clear language.</string>
+    <string name="tafsir_mukhtasar">Al-Mukhtasar</string>
+    <string name="tafsir_mukhtasar_note">Al-Mukhtasar fi Tafsir al-Quran al-Karim: the meaning of the verse in a few words.</string>
+    <string name="tafsir_aysar">Aysar al-Tafasir</string>
+    <string name="tafsir_aysar_note">By Abu Bakr al-Jazairi: word meanings, the meaning of the verse and its lessons.</string>
+    <string name="tafsir_irab">I’rab</string>
+    <string name="tafsir_irab_note">Al-I’rab al-Muyassar: the grammatical analysis of each word in the verse.</string>
+    <string name="tafsir_none">This book has no commentary on this verse.</string>
+    <string name="tafsir_covers">Explains verses %1$d – %2$d</string>
+    <string name="tafsir_previous">Previous verse</string>
+    <string name="tafsir_next">Next verse</string>
 </resources>

@@ -703,4 +703,18 @@
     <string name="sync_delete_title">حذف النسخة السحابية؟</string>
     <string name="sync_delete_body">تُحذف نسخة حسابك من السحابة فقط. تبقى بياناتك على هذا الجهاز، وستُرفع من جديد عند المزامنة التالية.</string>
     <string name="sync_delete_confirm">احذف</string>
+    <string name="tafsir_title">التفسير</string>
+    <string name="tafsir_open">تفسير الآية</string>
+    <string name="tafsir_saadi">السعدي</string>
+    <string name="tafsir_saadi_note">تيسير الكريم الرحمن للشيخ عبد الرحمن السعدي: تفسير مفصّل بعبارة واضحة.</string>
+    <string name="tafsir_mukhtasar">المختصر</string>
+    <string name="tafsir_mukhtasar_note">المختصر في تفسير القرآن الكريم: معنى الآية في عبارة موجزة.</string>
+    <string name="tafsir_aysar">أيسر التفاسير</string>
+    <string name="tafsir_aysar_note">لأبي بكر الجزائري: شرح الكلمات ومعنى الآية وما تهدي إليه.</string>
+    <string name="tafsir_irab">الإعراب</string>
+    <string name="tafsir_irab_note">الإعراب الميسّر: إعراب كل كلمة في الآية.</string>
+    <string name="tafsir_none">لا يوجد في هذا الكتاب كلام على هذه الآية.</string>
+    <string name="tafsir_covers">شرح الآيات %1$d – %2$d</string>
+    <string name="tafsir_previous">الآية السابقة</string>
+    <string name="tafsir_next">الآية التالية</string>
 </resources>

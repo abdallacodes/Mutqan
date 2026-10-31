@@ -13,19 +13,14 @@ class MutqanApp : Application() {
     }
 
     /**
-     * Arabic is the app's default language whatever the device language is. Runs once; after that
-     * the language is whatever the user picked (kept by AppCompat's per-app locale store).
+     * Arabic is the app's default language whatever the device language is. An empty per-app language list means
+     * the user has not chosen one (a choice, even English, is stored), so Arabic is applied; this is checked on every
+     * start because some Android versions can lose the stored list.
      */
     private fun applyDefaultLanguage() {
-        val prefs = getSharedPreferences("locale_defaults", MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_APPLIED, false)) return
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
         }
-        prefs.edit().putBoolean(KEY_APPLIED, true).apply()
     }
 
-    private companion object {
-        const val KEY_APPLIED = "arabic_default_applied"
-    }
 }
