@@ -22,7 +22,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.rememberCoroutineScope
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.audio.RecitationController
+import com.example.mutqan.domain.audio.RecitationDownloads
+import com.example.mutqan.domain.audio.Reciter
+import com.example.mutqan.ui.audio.DeleteDownloadDialog
+import com.example.mutqan.ui.audio.DownloadButton
+import com.example.mutqan.ui.audio.DownloadStatus
 import com.example.mutqan.ui.audio.playingSurah
 import com.example.mutqan.ui.audio.rememberAskForNotifications
 import kotlinx.coroutines.launch
@@ -84,6 +92,19 @@ fun SurahListScreen(
     val reciting = playingSurah(playback)
     val askForNotifications = rememberAskForNotifications()
     val scope = rememberCoroutineScope()
+
+    val downloads = remember(context) { RecitationDownloads.get(context) }
+    val downloadState by downloads.state.collectAsState()
+    val reciterId by remember(context) { UserPreferencesRepository(context.applicationContext).reciterId }.collectAsState(initial = "")
+    val reciter = Reciter.fromId(reciterId)
+    var deleting by remember { mutableStateOf<Int?>(null) }
+    val downloadFailed = stringResource(R.string.audio_download_failed)
+    LaunchedEffect(downloadState.failed) {
+        if (downloadState.failed) {
+            Toast.makeText(context, downloadFailed, Toast.LENGTH_LONG).show()
+            downloads.clearFailure()
+        }
+    }
 
     var showHelpDialog by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -178,6 +199,19 @@ fun SurahListScreen(
                         item = item,
                         onClick = { if (item.startPage > 0) onOpenMushaf(item.startPage) },
                         onOpenGroups = { onSurahClick(item.info.id) },
+                        download = RecitationDownloads.key(reciter, item.info.id).let { key ->
+                            downloadState.downloading[key]?.let { DownloadStatus.Downloading(it.fraction) }
+                                ?: if (key in downloadState.downloaded) DownloadStatus.Done else DownloadStatus.None
+                        },
+                        onDownload = {
+                            val surah = item.info.id
+                            val key = RecitationDownloads.key(reciter, surah)
+                            when {
+                                key in downloadState.downloading -> downloads.cancel(reciter, surah)
+                                key in downloadState.downloaded -> deleting = surah
+                                else -> downloads.download(reciter, surah)
+                            }
+                        },
                         playing = reciting == item.info.id && playback.playing,
                         onPlay = {
                             if (reciting == item.info.id) {
@@ -209,6 +243,15 @@ fun SurahListScreen(
         }
     }
 
+    deleting?.let { surah ->
+        DeleteDownloadDialog(
+            surahName = SurahData.nameOf(surah),
+            reciterName = stringResource(reciter.nameRes),
+            onConfirm = { downloads.delete(reciter, surah); deleting = null },
+            onDismiss = { deleting = null }
+        )
+    }
+
     if (showHelpDialog) {
         com.example.mutqan.ui.components.HelpDialog(
             title = stringResource(R.string.help_surahs_title),
@@ -220,7 +263,15 @@ fun SurahListScreen(
 
 /** A surah as a line: the line opens it in the Mushaf; the look-alikes count, when there is one, opens its groups. */
 @Composable
-private fun SurahRow(item: SurahListItem, onClick: () -> Unit, onOpenGroups: () -> Unit, playing: Boolean, onPlay: () -> Unit) {
+private fun SurahRow(
+    item: SurahListItem,
+    onClick: () -> Unit,
+    onOpenGroups: () -> Unit,
+    download: DownloadStatus,
+    onDownload: () -> Unit,
+    playing: Boolean,
+    onPlay: () -> Unit
+) {
     Column {
         Row(
             modifier = Modifier
@@ -259,6 +310,7 @@ private fun SurahRow(item: SurahListItem, onClick: () -> Unit, onOpenGroups: () 
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+            DownloadButton(status = download, onClick = onDownload)
             Column(horizontalAlignment = Alignment.End) {
                 when (item.memorised) {
                     SurahMemorised.FULL -> Icon(

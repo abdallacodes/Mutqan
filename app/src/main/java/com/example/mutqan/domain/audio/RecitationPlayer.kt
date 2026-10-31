@@ -52,6 +52,7 @@ class RecitationPlayer private constructor(context: Context) {
     private val app = context.applicationContext
     private val sources = RecitationSources(app)
     private val quran by lazy { QuranRepository.getInstance(app) }
+    private val downloads = RecitationDownloads.get(app)
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
@@ -85,18 +86,18 @@ class RecitationPlayer private constructor(context: Context) {
         }
     }
 
-    /** Reads through the on-device cache, and from the network (one shared connection pool) for what is not in it. */
+    /** Reads web addresses through the on-device cache, and from the network (one shared connection pool) for what is not in it. */
     private val cacheSource: CacheDataSource.Factory by lazy {
-        val upstream = DefaultDataSource.Factory(app, OkHttpDataSource.Factory(OkHttpClient()))
         CacheDataSource.Factory()
             .setCache(cache(app))
-            .setUpstreamDataSourceFactory(upstream)
+            .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(OkHttpClient()))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     private val exo: ExoPlayer by lazy {
         ExoPlayer.Builder(app)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(cacheSource))
+            // Downloaded files are read from storage as they are; only web addresses go through the cache.
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(app, cacheSource)))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(),
                 true
@@ -159,8 +160,9 @@ class RecitationPlayer private constructor(context: Context) {
             val surah = index.surahOf(id)
             val ayah = index.ayahOf(id)
             val clip = sources.clip(reciter, surah, ayah) ?: continue
+            val local = downloads.fileFor(reciter, surah, ayah)
             val builder = MediaItem.Builder()
-                .setUri(clip.url)
+                .setUri(local?.let { Uri.fromFile(it) } ?: Uri.parse(clip.url))
                 .setMediaId(id.toString())
                 .setMediaMetadata(
                     MediaMetadata.Builder()
@@ -177,7 +179,7 @@ class RecitationPlayer private constructor(context: Context) {
                 )
             }
             val item = builder.build()
-            repeat(repeat.coerceAtLeast(1)) { items += item; who += id; files += if (clip.endMs < 0) clip.url else null }
+            repeat(repeat.coerceAtLeast(1)) { items += item; who += id; files += if (clip.endMs < 0 && local == null) clip.url else null }
         }
         if (items.isEmpty()) return
 

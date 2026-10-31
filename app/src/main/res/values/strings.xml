@@ -784,6 +784,13 @@
     <string name="audio_listen_page">الاستماع إلى هذه الصفحة</string>
     <string name="audio_listen_from_here">الاستماع من هذه الآية</string>
     <string name="audio_play_surah">استمع إلى السورة</string>
+    <string name="audio_download">تنزيل السورة للاستماع دون اتصال</string>
+    <string name="audio_downloading">جارٍ التنزيل… اضغط للإلغاء</string>
+    <string name="audio_downloaded">السورة محفوظة للاستماع دون اتصال</string>
+    <string name="audio_delete_title">حذف التلاوة المحمّلة؟</string>
+    <string name="audio_delete_body">ستُحذف سورة %1$s بصوت %2$s من الجهاز. يمكنك تنزيلها مرة أخرى متى شئت.</string>
+    <string name="audio_delete_confirm">حذف</string>
+    <string name="audio_download_failed">تعذّر إكمال التنزيل. تأكّد من الاتصال بالإنترنت ثم أعد المحاولة.</string>
     <string name="audio_failed">تعذّر تشغيل الصوت. تأكّد من الاتصال بالإنترنت.</string>
     <string name="coverage_advanced_show">تحكّم متقدّم: مستوى كل سورة وكل صفحة</string>
     <string name="coverage_advanced_hide">إخفاء التحكّم المتقدّم</string>
