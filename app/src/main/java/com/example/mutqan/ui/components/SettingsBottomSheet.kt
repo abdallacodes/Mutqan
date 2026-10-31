@@ -96,6 +96,7 @@ fun SettingsBottomSheet(
     onDismiss: () -> Unit,
     onOpenCoverage: () -> Unit = {},
     onOpenSaved: () -> Unit = {},
+    onOpenHowItWorks: () -> Unit = {},
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
@@ -343,6 +344,12 @@ fun SettingsBottomSheet(
                 text = stringResource(R.string.settings_about_version, stringResource(R.string.app_name), version),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+            )
+            Text(
+                text = stringResource(R.string.how_link),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth().clickable { onOpenHowItWorks() }.padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.settings_about_sources),

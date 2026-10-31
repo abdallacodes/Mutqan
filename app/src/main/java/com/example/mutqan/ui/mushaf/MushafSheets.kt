@@ -37,6 +37,7 @@ import com.example.mutqan.ui.components.HubRow
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.revision.OutcomePicker
+import com.example.mutqan.ui.revision.OutcomePreview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -135,7 +136,8 @@ fun MushafRevisedSheet(page: Int, onSave: (RecallOutcome, Set<MistakeTag>) -> Un
                 outcome = outcome,
                 tags = tags,
                 onOutcomeChange = { outcome = it },
-                onTagsChange = { tags = it }
+                onTagsChange = { tags = it },
+                preview = OutcomePreview(page..page)
             )
             PaperButton(
                 text = stringResource(R.string.btn_save),

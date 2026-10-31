@@ -64,6 +64,7 @@ import com.example.mutqan.ui.components.PaperSmallButton
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.revision.OutcomePicker
+import com.example.mutqan.ui.revision.OutcomePreview
 import com.example.mutqan.ui.theme.AmiriFontFamily
 
 /** The name of a plan portion in the user's language: "Juz 5", "Page 12" or the surah's name. */
@@ -463,7 +464,8 @@ private fun LogItemDialog(item: PlanItem, onConfirm: (RecallOutcome, Set<Mistake
                 outcome = outcome,
                 tags = tags,
                 onOutcomeChange = { outcome = it },
-                onTagsChange = { tags = it }
+                onTagsChange = { tags = it },
+                preview = OutcomePreview(item.startPage..item.endPage)
             )
         },
         confirmButton = { TextButton(onClick = { onConfirm(outcome, tags) }) { Text(stringResource(R.string.home_btn_log)) } },

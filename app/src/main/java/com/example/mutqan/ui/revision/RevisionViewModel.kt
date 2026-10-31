@@ -4,18 +4,13 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.domain.LogEffect
-import com.example.mutqan.domain.LogEffects
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionLog
 import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -63,31 +58,6 @@ class RevisionViewModel(private val study: StudyRepository) : ViewModel() {
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
-
-    /** What logging the form as it stands would change for its pages; null until the page range is valid. */
-    val effect: StateFlow<LogEffect?> = combine(
-        _uiState, study.revisionLogs(), study.coveredPages(), study.selfRatedStrength()
-    ) { state, logs, covered, rated ->
-        val start = state.startPage.toIntOrNull()
-        val end = state.endPage.toIntOrNull()
-        if (start == null || end == null || start !in 1..604 || end !in start..604) null
-        else LogEffects.preview(
-            logs,
-            RevisionLog(
-                startPage = start,
-                endPage = end,
-                timestamp = System.currentTimeMillis(),
-                manualStability = state.outcome.quality,
-                dateMillis = state.selectedDateMillis,
-                outcome = state.outcome,
-                mistakeTags = if (state.outcome.isRecallAttempt) state.mistakeTags else emptySet()
-            ),
-            covered,
-            rated
-        )
-    }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun onStartPageChange(value: String) {
         _uiState.update {

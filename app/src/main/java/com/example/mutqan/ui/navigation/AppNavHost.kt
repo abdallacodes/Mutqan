@@ -72,6 +72,7 @@ import com.example.mutqan.ui.components.SettingsBottomSheet
 import com.example.mutqan.ui.coverage.CoverageScreen
 import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
+import com.example.mutqan.ui.help.HowItWorksScreen
 import com.example.mutqan.ui.home.HomeScreen
 import com.example.mutqan.ui.home.PlanScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
@@ -129,6 +130,7 @@ object Routes {
     const val SIMILARITY_TEST   = "similarity_test?folderId={folderId}&groupId={groupId}"
     const val MUSHAF_VIEWER     = "mushaf_viewer"
     const val COVERAGE          = "coverage"
+    const val HOW_IT_WORKS      = "how_it_works"
     const val SAVED             = "saved"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
@@ -191,6 +193,10 @@ fun AppNavHost(
             onOpenCoverage = {
                 showSettingsSheet = false
                 navController.navigate(Routes.COVERAGE)
+            },
+            onOpenHowItWorks = {
+                showSettingsSheet = false
+                navController.navigate(Routes.HOW_IT_WORKS)
             },
             onOpenSaved = {
                 showSettingsSheet = false
@@ -261,8 +267,13 @@ fun AppNavHost(
                 RevisionLogScreen(
                     onViewHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
                     onSettingsClick = { showSettingsSheet = true },
-                    onBack          = { navController.popBackStack() }
+                    onBack          = { navController.popBackStack() },
+                    onOpenHowItWorks = { navController.navigate(Routes.HOW_IT_WORKS) }
                 )
+            }
+
+            composable(Routes.HOW_IT_WORKS) {
+                HowItWorksScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Routes.SAVED) {

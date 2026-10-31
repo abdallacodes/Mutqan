@@ -23,6 +23,31 @@ data class LogEffect(
 
 object LogEffects {
 
+    /** The effect of logging each outcome for pages [startPage]..[endPage] on [dateMillis] (0: today). */
+    fun previewAll(
+        logs: List<RevisionLog>,
+        startPage: Int,
+        endPage: Int,
+        dateMillis: Long,
+        now: Long,
+        covered: BooleanArray?,
+        selfRated: Map<Int, PlanTier>
+    ): Map<RecallOutcome, LogEffect> = RecallOutcome.entries.associateWith { outcome ->
+        preview(
+            logs,
+            RevisionLog(
+                startPage = startPage,
+                endPage = endPage,
+                timestamp = now,
+                manualStability = outcome.quality,
+                dateMillis = dateMillis,
+                outcome = outcome
+            ),
+            covered,
+            selfRated
+        )
+    }
+
     /**
      * The effect of adding [added] to [logs]. [covered] is what the user has memorised (null: everything), and
      * [selfRated] the levels they gave pages before any history.

@@ -95,14 +95,14 @@ import kotlin.math.roundToInt
 fun RevisionLogScreen(
     onViewHistory: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    onOpenHowItWorks: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val viewModel: RevisionViewModel = viewModel(factory = RevisionViewModelFactory(context))
 
     val uiState    by viewModel.uiState.collectAsState()
     val recentLogs by viewModel.recentLogs.collectAsState()
-    val effect     by viewModel.effect.collectAsState()
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
@@ -171,13 +171,13 @@ fun RevisionLogScreen(
                             outcome = uiState.outcome,
                             tags = uiState.mistakeTags,
                             onOutcomeChange = viewModel::onOutcomeChange,
-                            onTagsChange = viewModel::onTagsChange
+                            onTagsChange = viewModel::onTagsChange,
+                            preview = OutcomePreview(
+                                pages = validRange(uiState.startPage, uiState.endPage),
+                                dateMillis = uiState.selectedDateMillis
+                            ),
+                            onOpenHowItWorks = onOpenHowItWorks
                         )
-
-                        effect?.let {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            EffectCard(it)
-                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -230,6 +230,13 @@ fun RevisionLogScreen(
             }
         }
     }
+}
+
+/** The pages typed in the two fields as a range, or null until both are valid. */
+private fun validRange(start: String, end: String): IntRange? {
+    val a = start.toIntOrNull()
+    val b = end.toIntOrNull()
+    return if (a != null && b != null && a in 1..604 && b in a..604) a..b else null
 }
 
 // ── Date picker dialog ────────────────────────────────────────────────────────

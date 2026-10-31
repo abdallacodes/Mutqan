@@ -96,3 +96,35 @@ private fun days(value: Float?): String = when {
     value < 10f -> String.format(Locale.getDefault(), "%.1f", value)
     else -> String.format(Locale.getDefault(), "%d", value.toInt())
 }
+
+@Composable
+private fun PlanTier.label(): String = stringResource(
+    when (this) {
+        PlanTier.WEAK -> R.string.strength_weak
+        PlanTier.FAIR -> R.string.strength_fair
+        PlanTier.STRONG -> R.string.strength_strong
+    }
+)
+
+/** One line, and its colour, saying what logging this outcome would do: the level change of a page, or how many pages move. */
+@Composable
+fun LogEffect.caption(): Pair<String, Color> {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    return when {
+        practiceOnly -> stringResource(R.string.effect_cap_practice) to muted
+        tracked == 0 -> stringResource(R.string.effect_cap_outside) to muted
+        tracked == 1 -> {
+            val from = before.entries.first { it.value > 0 }.key
+            val to = after.entries.first { it.value > 0 }.key
+            when {
+                to.code > from.code -> stringResource(R.string.effect_single, from.label(), to.label()) to DifficultySmooth
+                to.code < from.code -> stringResource(R.string.effect_single, from.label(), to.label()) to DifficultyCritical
+                else -> stringResource(R.string.effect_cap_stays, from.label()) to muted
+            }
+        }
+        up > 0 && down > 0 -> (stringResource(R.string.effect_cap_up, up) + " · " + stringResource(R.string.effect_cap_down, down)) to muted
+        up > 0 -> stringResource(R.string.effect_cap_up, up) to DifficultySmooth
+        down > 0 -> stringResource(R.string.effect_cap_down, down) to DifficultyCritical
+        else -> stringResource(R.string.effect_cap_same) to muted
+    }
+}

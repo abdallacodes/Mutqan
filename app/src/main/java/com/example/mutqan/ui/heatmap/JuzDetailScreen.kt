@@ -2,6 +2,7 @@ package com.example.mutqan.ui.heatmap
 
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.revision.OutcomePicker
+import com.example.mutqan.ui.revision.OutcomePreview
 import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.MistakeTag
@@ -518,7 +519,8 @@ private fun QuickStatusDialog(
                         outcome = outcome,
                         tags = tags,
                         onOutcomeChange = { outcome = it },
-                        onTagsChange = { tags = it }
+                        onTagsChange = { tags = it },
+                        preview = OutcomePreview(selection.page..selection.page)
                     )
 
                     Spacer(Modifier.height(12.dp))
