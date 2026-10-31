@@ -87,9 +87,6 @@ fun OutcomePicker(
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
-        effects?.get(outcome)?.let { EffectCard(it, modifier = Modifier.padding(top = 12.dp)) }
-        if (onOpenHowItWorks != null) PaperLink(stringResource(R.string.how_link), onClick = onOpenHowItWorks, soft = true)
-
         if (!outcome.isRecallAttempt) {
             Text(
                 text = stringResource(R.string.outcome_practice_hint),
@@ -114,6 +111,8 @@ fun OutcomePicker(
                 }
             }
         }
+        effects?.get(outcome)?.let { EffectCard(it, modifier = Modifier.padding(top = 12.dp)) }
+        if (onOpenHowItWorks != null) PaperLink(stringResource(R.string.how_link), onClick = onOpenHowItWorks, soft = true)
     }
 }
 

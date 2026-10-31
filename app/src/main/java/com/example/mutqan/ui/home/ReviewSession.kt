@@ -153,17 +153,9 @@ fun ReviewSession(
                         modifier = Modifier.padding(top = 28.dp, bottom = 4.dp)
                     )
                     Hairline()
-                    RecallOutcome.entries.forEach { option ->
-                        OutcomeButton(
-                            label = option.localizedLabel(),
-                            caption = effects?.get(option)?.caption(),
-                            onClick = { onLog(current, option, if (option.isRecallAttempt) tags else emptySet()) }
-                        )
-                    }
-
                     if (showTags) {
                         FlowRow(
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(vertical = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             MistakeTag.entries.forEach { tag ->
@@ -174,19 +166,30 @@ fun ReviewSession(
                                 )
                             }
                         }
+                        Hairline()
                     } else {
                         PaperLink(
                             text = stringResource(R.string.session_add_mistakes),
                             onClick = { showTags = true },
                             soft = true,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        Hairline()
+                    }
+                    RecallOutcome.entries.forEach { option ->
+                        OutcomeButton(
+                            label = option.localizedLabel(),
+                            caption = effects?.get(option)?.caption(),
+                            onClick = { onLog(current, option, if (option.isRecallAttempt) tags else emptySet()) }
                         )
                     }
+
                     if (due.size > 1) {
                         PaperLink(
                             text = stringResource(R.string.session_skip),
                             onClick = { skipped = skipped.filter { it != current.startPage } + current.startPage },
-                            soft = true
+                            soft = true,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }

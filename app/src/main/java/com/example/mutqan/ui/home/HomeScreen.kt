@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
@@ -517,13 +519,15 @@ private fun LogItemDialog(item: PlanItem, onConfirm: (RecallOutcome, Set<Mistake
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_log_dialog_title, item.label())) },
         text = {
-            OutcomePicker(
-                outcome = outcome,
-                tags = tags,
-                onOutcomeChange = { outcome = it },
-                onTagsChange = { tags = it },
-                preview = OutcomePreview(item.startPage..item.endPage)
-            )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutcomePicker(
+                    outcome = outcome,
+                    tags = tags,
+                    onOutcomeChange = { outcome = it },
+                    onTagsChange = { tags = it },
+                    preview = OutcomePreview(item.startPage..item.endPage)
+                )
+            }
         },
         confirmButton = { TextButton(onClick = { onConfirm(outcome, tags) }) { Text(stringResource(R.string.home_btn_log)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }

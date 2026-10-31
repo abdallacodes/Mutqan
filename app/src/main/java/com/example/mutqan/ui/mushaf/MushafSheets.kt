@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.mushaf
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -126,7 +128,13 @@ fun MushafRevisedSheet(page: Int, onSave: (RecallOutcome, Set<MistakeTag>) -> Un
     var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
             Text(
                 text = stringResource(R.string.mushaf_revised_title, page),
                 style = MaterialTheme.typography.titleMedium,
