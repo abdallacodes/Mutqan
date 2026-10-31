@@ -562,7 +562,7 @@
     <string name="ex_random_title">آية عشوائية</string>
     <string name="ex_random_desc">آية من جزء أو سورة أو صفحات تختارها لتكمل منها</string>
     <string name="ex_similarity_title">اختبار المتشابهات</string>
-    <string name="ex_similarity_desc">آية من مخزنك فتحدّد مكانها</string>
+    <string name="ex_similarity_desc">آية من مخزنك أو من المجموعات الجاهزة، وتحدّد مكانها</string>
     <string name="ex_vault_desc">مجموعاتك من الآيات المتشابهة والقوائم الجاهزة</string>
     <string name="ex_variant_page">من الصفحة</string>
     <string name="ex_variant_start">من البداية</string>
@@ -717,4 +717,7 @@
     <string name="tafsir_covers">شرح الآيات %1$d – %2$d</string>
     <string name="tafsir_previous">الآية السابقة</string>
     <string name="tafsir_next">الآية التالية</string>
+    <string name="test_source_mine">مجموعاتي</string>
+    <string name="test_source_ready">المتشابهات الجاهزة</string>
+    <string name="test_similar_title">الآيات المشابهة، والكلمات المشتركة مميّزة</string>
 </resources>

@@ -22,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
@@ -43,18 +45,28 @@ fun SimilarityTestScreen(
         factory = SimilarityTestViewModelFactory(context, groupId, folderId)
     )
     val uiState by viewModel.uiState.collectAsState()
+    val source by viewModel.source.collectAsState()
 
     Scaffold(
         topBar = {
-            PaperHeader(
-                title = stringResource(R.string.vault_test_title),
-                onBack = onBack,
-                actions = {
-                    IconButton(onClick = { viewModel.loadNextVerse() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
+            Column {
+                PaperHeader(
+                    title = stringResource(R.string.vault_test_title),
+                    onBack = onBack,
+                    actions = {
+                        IconButton(onClick = { viewModel.loadNextVerse() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                        }
                     }
+                )
+                if (viewModel.canChooseSource) {
+                    PaperTabs(
+                        labels = listOf(stringResource(R.string.test_source_mine), stringResource(R.string.test_source_ready)),
+                        selectedIndex = source.ordinal,
+                        onSelect = { viewModel.chooseSource(TestSource.entries[it]) }
+                    )
                 }
-            )
+            }
         }
     ) { innerPadding ->
         Box(
@@ -149,8 +161,10 @@ private fun QuizContent(
         Spacer(Modifier.height(12.dp))
 
         // 2. Ayah Text
+        val shared = MaterialTheme.colorScheme.primary
+        val revealedText = if (state.isRevealed && state.words.isNotEmpty()) sharedWords(state.words, state.shared, shared) else null
         Text(
-            text = if (state.isRevealed) cleanText else snippet,
+            text = revealedText ?: androidx.compose.ui.text.AnnotatedString(if (state.isRevealed) cleanText else snippet),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontFamily = AmiriFontFamily,
                 fontSize = 28.sp,
@@ -164,7 +178,7 @@ private fun QuizContent(
         Spacer(Modifier.height(12.dp))
 
         // 3. Group Info
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (state.source == TestSource.MINE) Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = stringResource(R.string.label_part_of_group),
                 style = MaterialTheme.typography.labelSmall,
@@ -181,7 +195,30 @@ private fun QuizContent(
             )
         }
 
-        // 4. Actions
+        // 4. The lookalikes, for ready-made groups
+        if (state.isRevealed && state.similar.isNotEmpty()) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.test_similar_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                state.similar.forEach { other ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(other.reference, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                        Text(
+                            text = sharedWords(other.words, other.shared, shared),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 38.sp, textDirection = TextDirection.Rtl
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
+
+        // 5. Actions
         if (!state.isRevealed) {
             Button(
                 onClick = onReveal,
@@ -204,3 +241,16 @@ private fun QuizContent(
         }
     }
 }
+
+/** [words] as one line, the ones at the 1-based positions in [shared] set in [color] and bold. */
+private fun sharedWords(words: List<String>, shared: Set<Int>, color: Color): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        words.forEachIndexed { i, word ->
+            if (i > 0) append(" ")
+            if (i + 1 in shared) {
+                withStyle(androidx.compose.ui.text.SpanStyle(color = color, fontWeight = FontWeight.Bold)) { append(word) }
+            } else {
+                append(word)
+            }
+        }
+    }

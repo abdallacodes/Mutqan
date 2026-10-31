@@ -95,6 +95,11 @@ fun PracticeScreen(
                 onClick = { onOpenQuiz(QuizMode.DAILY) }
             )
             HubRow(
+                title = stringResource(R.string.ex_similarity_title),
+                subtitle = stringResource(R.string.ex_similarity_desc),
+                onClick = onSimilarityTest
+            )
+            HubRow(
                 title = stringResource(R.string.ex_ending_title),
                 subtitle = stringResource(R.string.ex_ending_desc),
                 onClick = { onOpenQuiz(QuizMode.ENDING) }
@@ -134,11 +139,6 @@ fun PracticeScreen(
                 title = stringResource(R.string.ex_random_title),
                 subtitle = stringResource(R.string.ex_random_desc),
                 onClick = onRandomVerse
-            )
-            HubRow(
-                title = stringResource(R.string.ex_similarity_title),
-                subtitle = stringResource(R.string.ex_similarity_desc),
-                onClick = onSimilarityTest
             )
             HubRow(
                 title = stringResource(R.string.vault_title),
