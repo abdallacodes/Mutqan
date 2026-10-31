@@ -1,6 +1,7 @@
 package com.example.mutqan.domain.audio
 
 import android.content.Context
+import android.net.Uri
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -13,17 +14,22 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import okhttp3.OkHttpClient
 import java.io.File
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * Plays a run of verses one after another, each as many times as asked, and says which one is sounding. Used from the
@@ -53,9 +59,16 @@ class RecitationPlayer private constructor(context: Context) {
     /** The verse behind each item of the playlist: a verse repeated three times takes three items. */
     private var owners: List<Int> = emptyList()
 
+    /** The file behind each item of the playlist, or null for an item that is a part of a longer file. */
+    private var urls: List<String?> = emptyList()
+
+    private val prefetcher = Executors.newSingleThreadExecutor()
+    private var prefetching: Future<*>? = null
+
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.mediaId?.toIntOrNull()?.let { id -> _state.value = _state.value.copy(ayahId = id) }
+            prefetchAhead(exo.currentMediaItemIndex)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -72,14 +85,18 @@ class RecitationPlayer private constructor(context: Context) {
         }
     }
 
-    private val exo: ExoPlayer by lazy {
-        val upstream = DefaultDataSource.Factory(app, DefaultHttpDataSource.Factory().setConnectTimeoutMs(15_000).setReadTimeoutMs(15_000))
-        val cached = CacheDataSource.Factory()
+    /** Reads through the on-device cache, and from the network (one shared connection pool) for what is not in it. */
+    private val cacheSource: CacheDataSource.Factory by lazy {
+        val upstream = DefaultDataSource.Factory(app, OkHttpDataSource.Factory(OkHttpClient()))
+        CacheDataSource.Factory()
             .setCache(cache(app))
             .setUpstreamDataSourceFactory(upstream)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    private val exo: ExoPlayer by lazy {
         ExoPlayer.Builder(app)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(cached))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(cacheSource))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(),
                 true
@@ -87,7 +104,31 @@ class RecitationPlayer private constructor(context: Context) {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-            .also { it.addListener(listener) }
+            .also {
+                it.addListener(listener)
+                // Have the next verse loaded before the one sounding ends, so there is no wait between them.
+                it.preloadConfiguration = ExoPlayer.PreloadConfiguration(PRELOAD_US)
+            }
+    }
+
+    /**
+     * Downloads the verses coming up into the cache, a few at a time ahead of the one sounding, so the player finds
+     * them on the device rather than waiting on the network between verses.
+     */
+    private fun prefetchAhead(current: Int) {
+        prefetching?.cancel(true)
+        val ahead = urls.drop(current + 1).filterNotNull().distinct().take(PREFETCH_AHEAD)
+        if (ahead.isEmpty()) return
+        prefetching = prefetcher.submit {
+            for (url in ahead) {
+                if (Thread.currentThread().isInterrupted) return@submit
+                try {
+                    CacheWriter(cacheSource.createDataSource(), DataSpec(Uri.parse(url)), null, null).cache()
+                } catch (_: Exception) {
+                    // The player will fetch it itself when its turn comes.
+                }
+            }
+        }
     }
 
     /**
@@ -112,6 +153,7 @@ class RecitationPlayer private constructor(context: Context) {
         val reciterName = app.getString(reciter.nameRes)
         val items = ArrayList<MediaItem>()
         val who = ArrayList<Int>()
+        val files = ArrayList<String?>()
         for (id in ayahIds) {
             if (id !in index) continue
             val surah = index.surahOf(id)
@@ -135,11 +177,12 @@ class RecitationPlayer private constructor(context: Context) {
                 )
             }
             val item = builder.build()
-            repeat(repeat.coerceAtLeast(1)) { items += item; who += id }
+            repeat(repeat.coerceAtLeast(1)) { items += item; who += id; files += if (clip.endMs < 0) clip.url else null }
         }
         if (items.isEmpty()) return
 
         owners = who
+        urls = files
         try {
             startService()
             exo.setMediaItems(items)
@@ -148,6 +191,7 @@ class RecitationPlayer private constructor(context: Context) {
             exo.prepare()
             exo.play()
             _state.value = State(active = true, playing = true, ayahId = who.first())
+            prefetchAhead(0)
         } catch (e: Exception) {
             stop()
             _state.value = _state.value.copy(failed = true)
@@ -195,9 +239,11 @@ class RecitationPlayer private constructor(context: Context) {
     }
 
     fun stop() {
+        prefetching?.cancel(true)
         exo.stop()
         exo.clearMediaItems()
         owners = emptyList()
+        urls = emptyList()
         _state.value = State(failed = _state.value.failed)
         app.stopService(Intent(app, RecitationService::class.java))
     }
@@ -222,6 +268,8 @@ class RecitationPlayer private constructor(context: Context) {
     companion object {
         private const val CACHE_BYTES = 300L * 1024 * 1024
         private const val RESTART_AFTER_MS = 2_000L
+        private const val PRELOAD_US = 20_000_000L
+        private const val PREFETCH_AHEAD = 4
 
         @Volatile
         private var instance: RecitationPlayer? = null

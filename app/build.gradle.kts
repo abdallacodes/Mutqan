@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.datasource.okhttp)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
