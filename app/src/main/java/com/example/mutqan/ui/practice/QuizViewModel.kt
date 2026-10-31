@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.ChoiceQuestion
 import com.example.mutqan.domain.ExerciseType
+import com.example.mutqan.domain.MorphologyLibrary
 import com.example.mutqan.domain.OrderQuestion
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.domain.PassageStates
@@ -96,7 +97,7 @@ class QuizViewModel(
                 if (!memorised) 0
                 else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
             }
-            engine = QuizEngine(quran, SimilarLibrary.load(appContext), random)
+            engine = QuizEngine(quran, SimilarLibrary.load(appContext), random, MorphologyLibrary.load(appContext))
             loadNext()
         }
     }

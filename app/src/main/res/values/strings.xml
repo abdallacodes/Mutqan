@@ -666,4 +666,9 @@
     <string name="quiz_open_page">افتح الصفحة %d</string>
     <string name="home_missed_title">أخطأت فيها في التدريب</string>
     <string name="home_missed_line">الصفحة %1$d · أخطأت %2$d مرات هذا الأسبوع</string>
+    <string name="root_summary">%1$d كلمة في %2$d آية</string>
+    <string name="root_row_title">الجذر: %s</string>
+    <string name="root_forms">الصيغ</string>
+    <string name="root_all_forms">الكل</string>
+    <string name="peek_roots_title">كلمات الآية وجذورها</string>
 </resources>

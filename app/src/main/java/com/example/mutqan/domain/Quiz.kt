@@ -134,7 +134,8 @@ object QuizText {
 class QuizEngine(
     private val quran: QuranRepository,
     private val similar: SimilarData,
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val morphology: Morphology? = null
 ) {
 
     fun build(type: ExerciseType, ayahId: Int, hard: Boolean): QuizQuestion? = when (type) {
@@ -237,9 +238,42 @@ class QuizEngine(
             val other = quran.ayahById(id + random.nextInt(-30, 31))
             if (other != null && other.id != id) distractors += spansNear(wordsOf(other))
         }
+        // Words of the same lemma or root in another form are the hardest wrong choices; the harder level
+        // leads with them, the normal one slips in one among the look-alike spans.
+        val variants = morphVariants(x, words, start, length)
+        val ordered = if (hard) variants + distractors else variants.take(1) + distractors + variants.drop(1)
         return finish(
-            ExerciseType.QUIZ_FILL, x, QuizText.blanked(words, start, length, FILL_WINDOW), correct, distractors, x, showRef = true
+            ExerciseType.QUIZ_FILL, x, QuizText.blanked(words, start, length, FILL_WINDOW), correct, ordered, x, showRef = true
         )
+    }
+
+    /**
+     * Copies of the hidden span in which one word is swapped for another form of its lemma, then of its root,
+     * taken from elsewhere in the Quran. Empty without morphology data.
+     */
+    private fun morphVariants(x: QuranAyah, words: List<String>, start: Int, length: Int): List<String> {
+        val m = morphology ?: return emptyList()
+        val here = m.wordsOfAyah(x.surah, x.ayah).associateBy { it.position }
+        val ofLemma = arrayListOf<String>()
+        val ofRoot = arrayListOf<String>()
+
+        fun swap(index: Int, places: List<WordLocation>, into: MutableList<String>) {
+            for (p in places.filter { !(it.surah == x.surah && it.ayah == x.ayah) }.shuffled(random).take(MORPH_TRIES)) {
+                if (into.size >= MORPH_MAX) return
+                val alt = quran.wordsOfAyah(p.surah, p.ayah).getOrNull(p.position - 1)?.takeIf { !it.isEnd }?.hafs ?: continue
+                if (QuizText.normalize(alt) == QuizText.normalize(words[index])) continue
+                val span = words.subList(start, start + length).toMutableList()
+                span[index - start] = alt
+                into += span.joinToString(" ")
+            }
+        }
+
+        for (index in start until start + length) {
+            val word = here[index + 1] ?: continue
+            if (word.lemma >= 0) swap(index, m.occurrencesOfLemma(word.lemma), ofLemma)
+            if (word.root >= 0) swap(index, m.occurrencesOfRoot(word.root), ofRoot)
+        }
+        return ofLemma + ofRoot
     }
 
     /** Four consecutive verses of one surah, shuffled. */
@@ -302,5 +336,7 @@ class QuizEngine(
         const val ORDER_COUNT = 4
         const val WHERE_WORDS = 22
         const val IDENTICAL_SCORE = 95
+        const val MORPH_TRIES = 12
+        const val MORPH_MAX = 4
     }
 }

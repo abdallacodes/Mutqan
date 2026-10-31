@@ -93,6 +93,7 @@ import com.example.mutqan.quran.MushafPageView
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
+import com.example.mutqan.ui.root.VerseRoots
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
@@ -149,7 +150,8 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 fun MushafViewerScreen(
     startPage:   Int,
     onBack:      () -> Unit,
-    onOpenSaved: () -> Unit = {}
+    onOpenSaved: () -> Unit = {},
+    onOpenRoot:  (Int) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -425,6 +427,10 @@ fun MushafViewerScreen(
                 }
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
+                VerseRoots(target.surahId, target.ayahNumber) { root ->
+                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                    onOpenRoot(root)
+                }
             }
         )
 

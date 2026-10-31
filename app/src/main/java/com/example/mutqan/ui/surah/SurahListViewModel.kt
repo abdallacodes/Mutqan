@@ -9,6 +9,8 @@ import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.SurahInfo
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.HifzCoverage
+import com.example.mutqan.domain.Morphology
+import com.example.mutqan.domain.MorphologyLibrary
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -41,8 +43,13 @@ data class JuzListItem(val juz: Int, val startPage: Int, val firstSurah: Int)
 class SurahListViewModel(
     study: StudyRepository,
     private val quran: QuranRepository,
-    preferences: UserPreferencesRepository
+    preferences: UserPreferencesRepository,
+    private val appContext: Context
 ) : ViewModel() {
+
+    /** Roots and lemmas, once loaded; the search field uses them to offer a root when the text is one. */
+    private val _morphology = MutableStateFlow<Morphology?>(null)
+    val morphology: StateFlow<Morphology?> = _morphology
 
     private val surahRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
 
@@ -50,6 +57,7 @@ class SurahListViewModel(
     val juz: StateFlow<List<JuzListItem>> = _juz
 
     init {
+        viewModelScope.launch { _morphology.value = MorphologyLibrary.load(appContext) }
         viewModelScope.launch(Dispatchers.Default) {
             surahRanges.value = (1..114).mapNotNull { s ->
                 val first = quran.ayah(s, 1)?.id
@@ -107,6 +115,7 @@ class SurahListViewModelFactory(private val context: Context) : ViewModelProvide
         SurahListViewModel(
             StudyRepository.create(context),
             QuranRepository.getInstance(context),
-            UserPreferencesRepository(context.applicationContext)
+            UserPreferencesRepository(context.applicationContext),
+            context.applicationContext
         ) as T
 }

@@ -57,13 +57,15 @@ fun SurahListScreen(
     onSurahClick: (Int) -> Unit,
     onOpenMushaf: (page: Int) -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {}
+    onSearchClick: () -> Unit = {},
+    onOpenRoot: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: SurahListViewModel = viewModel(factory = SurahListViewModelFactory(context))
     val surahs by viewModel.surahs.collectAsState()
     val juz by viewModel.juz.collectAsState()
     val lastPage by viewModel.lastPage.collectAsState()
+    val morphology by viewModel.morphology.collectAsState()
 
     var showHelpDialog by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -71,6 +73,12 @@ fun SurahListScreen(
 
     val needle = ArabicNormalization.normalizeForSearch(query.trim())
     val page = query.trim().toIntOrNull()?.takeIf { it in 1..604 }
+    // Typing the letters of a root (2 to 4 letters) offers that root as well as any surah.
+    val roots = remember(morphology, query) {
+        val m = morphology
+        if (m == null || query.isBlank() || query.trim().toIntOrNull() != null) emptyList()
+        else m.findRoots(query).take(3).map { it to m.infoOfRoot(it) }
+    }
     val shown = remember(surahs, needle) {
         if (needle.isEmpty()) surahs
         else surahs.filter { item ->
@@ -120,6 +128,13 @@ fun SurahListScreen(
                         singleLine = true,
                         placeholder = { Text(stringResource(R.string.quran_search_hint)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
+                    )
+                }
+                items(roots, key = { "root-${it.first}" }) { (root, info) ->
+                    HubRow(
+                        title = stringResource(R.string.root_row_title, morphology!!.rootSpaced(root)),
+                        subtitle = stringResource(R.string.root_summary, info.words, info.verses),
+                        onClick = { onOpenRoot(root) }
                     )
                 }
                 if (page != null) {
