@@ -58,7 +58,7 @@ class PageCover(val revealedAyahs: Set<Int>) {
 
 private sealed interface PageLoad {
     data object Loading : PageLoad
-    data class Ready(val data: MushafPageData, val typeface: Typeface) : PageLoad
+    data class Ready(val data: MushafPageData, val typeface: Typeface, val head: MushafHead) : PageLoad
     data object Failed : PageLoad
 }
 
@@ -96,7 +96,9 @@ fun MushafPageView(
             withContext(Dispatchers.IO) {
                 val data = quran.page(page)
                 val typeface = if (fonts.ensure(page)) fonts.typeface(page) else null
-                if (typeface != null) PageLoad.Ready(data, typeface) else PageLoad.Failed
+                val first = quran.ayahsOnPage(page).firstOrNull()
+                val head = MushafHead(first?.let { quran.surah(it.surah)?.nameArabic }.orEmpty(), first?.juz ?: 0)
+                if (typeface != null) PageLoad.Ready(data, typeface, head) else PageLoad.Failed
             }
         } catch (e: CancellationException) {
             throw e
@@ -148,6 +150,9 @@ private fun PageCanvas(
 
     val pagePaint = remember(ready.typeface) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = ready.typeface }
+    }
+    val railPaint = remember(headerTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = headerTypeface }
     }
     val headerPaint = remember(headerTypeface) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -219,6 +224,26 @@ private fun PageCanvas(
         val pageBaseline = -(pagePaint.fontMetrics.ascent + pagePaint.fontMetrics.descent) / 2f
         val headerBaseline = -(headerPaint.fontMetrics.ascent + headerPaint.fontMetrics.descent) / 2f
         val margin = this.size.width * 0.045f
+
+        // The running head and foot of a printed page: juz on the right, surah on the left, the page number below.
+        railPaint.color = ink.copy(alpha = 0.8f).toArgb()
+        railPaint.textSize = g.lineHeight * 0.4f
+        val railBaseline = -(railPaint.fontMetrics.ascent + railPaint.fontMetrics.descent) / 2f
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            if (ready.head.juz > 0) {
+                railPaint.textAlign = Paint.Align.RIGHT
+                native.drawText(MushafHeader.juzTitle(ready.head.juz), this.size.width - margin, g.headY + railBaseline, railPaint)
+            }
+            if (ready.head.surah.isNotEmpty()) {
+                railPaint.textAlign = Paint.Align.LEFT
+                native.drawText(context.getString(R.string.mushaf_surah_title, ready.head.surah), margin, g.headY + railBaseline, railPaint)
+            }
+            railPaint.textAlign = Paint.Align.CENTER
+            native.drawText(MushafHeader.digits(ready.data.page), this.size.width / 2f, g.footY + railBaseline, railPaint)
+        }
+        val ruleY = g.headY + g.lineHeight * HEAD_RULE_OFFSET
+        drawLine(ink.copy(alpha = 0.3f), Offset(margin, ruleY), Offset(this.size.width - margin, ruleY), strokeWidth = 1.dp.toPx())
 
         if (highlights.isNotEmpty()) {
             val pad = g.textSize * 0.12f

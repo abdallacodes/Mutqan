@@ -9,10 +9,17 @@ internal data class AyahRun(val ayahId: Int, val left: Float, val right: Float, 
 /** [centerY] is the vertical centre of the line's row; [words] is empty for header lines. */
 internal data class PlacedLine(val line: MushafLine, val centerY: Float, val words: List<PlacedWord>)
 
-internal data class PageGeometry(val textSize: Float, val lineHeight: Float, val lines: List<PlacedLine>)
+/** [headY] and [footY] are the vertical centres of the running head (juz, surah) and the foot (page number). */
+internal data class PageGeometry(
+    val textSize: Float,
+    val lineHeight: Float,
+    val lines: List<PlacedLine>,
+    val headY: Float = 0f,
+    val footY: Float = 0f
+)
 
 /**
- * Lays out a QPC V2 Mushaf page: 15 equal rows, text size chosen so the widest line exactly
+ * Lays out a QPC V2 Mushaf page: 15 equal rows between a head band (juz and surah) and a foot band (page number), text size chosen so the widest line exactly
  * fills the page width, justified lines stretched by widening the gaps between words, and
  * centred lines (surah starts, the two opening pages) kept at their natural width.
  *
@@ -24,8 +31,13 @@ internal object MushafPageGeometry {
     const val LINES_PER_PAGE = 15
     const val MEASURE_SIZE = 100f
 
-    /** Width / height of a laid-out page, used to size the canvas. */
-    const val PAGE_ASPECT = 900f / 1400f
+    /** Heights of the head and foot bands, in rows of text. */
+    const val HEAD_ROWS = 0.9f
+    const val FOOT_ROWS = 0.8f
+    private const val TOTAL_ROWS = LINES_PER_PAGE + HEAD_ROWS + FOOT_ROWS
+
+    /** Width / height of a laid-out page, used to size the canvas; the rows keep the proportions they had without the bands. */
+    const val PAGE_ASPECT = 900f / (1400f * TOTAL_ROWS / LINES_PER_PAGE)
 
     private const val MARGIN_FRACTION = 0.045f
     private const val ROW_FILL = 0.95f
@@ -39,7 +51,7 @@ internal object MushafPageGeometry {
     ): PageGeometry {
         val margin = width * MARGIN_FRACTION
         val available = width - 2 * margin
-        val lineHeight = height / LINES_PER_PAGE
+        val lineHeight = height / TOTAL_ROWS
 
         val ayahLines = page.lines.filter { it.type == MushafLineType.AYAH }
         val naturalWidths = ayahLines.associateWith { line ->
@@ -52,13 +64,17 @@ internal object MushafPageGeometry {
         val scale = textSize / MEASURE_SIZE
 
         // Short pages (1 and 2) keep the same row height and sit in the vertical middle.
-        val top = (height - lineHeight * page.lines.size).coerceAtLeast(0f) / 2f
+        val top = HEAD_ROWS * lineHeight + (lineHeight * (LINES_PER_PAGE - page.lines.size)).coerceAtLeast(0f) / 2f
 
         val placed = page.lines.map { line ->
             val centerY = top + (line.number - 1) * lineHeight + lineHeight / 2f
             PlacedLine(line, centerY, if (line.type == MushafLineType.AYAH) placeWords(line, width, margin, scale, advanceAtMeasureSize, spaceAtMeasureSize) else emptyList())
         }
-        return PageGeometry(textSize, lineHeight, placed)
+        return PageGeometry(
+            textSize, lineHeight, placed,
+            headY = HEAD_ROWS * lineHeight / 2f,
+            footY = height - FOOT_ROWS * lineHeight / 2f
+        )
     }
 
     /**

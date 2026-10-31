@@ -41,7 +41,8 @@ class MushafPageGeometryTest {
     @Test
     fun rowHeightCapsTextSizeWhenPageIsShort() {
         val g = geometry(ayah(1, 3), height = 300f)
-        assertEquals(300f / 15 * 0.95f, g.textSize, 0.01f)
+        val rows = MushafPageGeometry.LINES_PER_PAGE + MushafPageGeometry.HEAD_ROWS + MushafPageGeometry.FOOT_ROWS
+        assertEquals(300f / rows * 0.95f, g.textSize, 0.01f)
     }
 
     @Test
@@ -67,8 +68,9 @@ class MushafPageGeometryTest {
     @Test
     fun shortPageIsCentredVerticallyOnTheFifteenRowGrid() {
         val g = geometry(ayah(1, 5), ayah(2, 5), height = 1500f)
-        val rowHeight = 100f
-        val top = (1500f - 2 * rowHeight) / 2f
+        val rows = MushafPageGeometry.LINES_PER_PAGE + MushafPageGeometry.HEAD_ROWS + MushafPageGeometry.FOOT_ROWS
+        val rowHeight = 1500f / rows
+        val top = MushafPageGeometry.HEAD_ROWS * rowHeight + (15 - 2) * rowHeight / 2f
         assertEquals(top + rowHeight / 2f, g.lines[0].centerY, 0.01f)
         assertEquals(top + rowHeight * 1.5f, g.lines[1].centerY, 0.01f)
     }
