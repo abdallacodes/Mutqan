@@ -21,3 +21,20 @@ enum class ThemeKey {
         }
     }
 }
+
+/**
+ * The colours the app uses, apart from light or dark ([ThemeKey]). Each palette has a light and a dark version.
+ * [PAPER] is the original: cream and green, parchment and gold.
+ */
+enum class Palette {
+    PAPER,
+    LAPIS,
+    DUNE,
+    OLIVE,
+    PLUM,
+    GRAPHITE;
+
+    companion object {
+        fun fromString(name: String?): Palette = entries.firstOrNull { it.name == name } ?: PAPER
+    }
+}

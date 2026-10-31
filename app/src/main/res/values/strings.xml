@@ -670,7 +670,6 @@
     <string name="root_row_title">الجذر: %s</string>
     <string name="root_forms">الصيغ</string>
     <string name="root_all_forms">الكل</string>
-    <string name="peek_roots_title">كلمات الآية وجذورها</string>
     <string name="quran_tab_topics">المواضيع</string>
     <string name="topics_search_hint">ابحث عن موضوع</string>
     <string name="topics_show_all">أظهر أيضًا المواضيع التي ليس لها اسم عربي</string>
@@ -720,4 +719,11 @@
     <string name="test_source_mine">مجموعاتي</string>
     <string name="test_source_ready">المتشابهات الجاهزة</string>
     <string name="test_similar_title">الآيات المشابهة، والكلمات المشتركة مميّزة</string>
+    <string name="settings_palette">الألوان</string>
+    <string name="palette_paper">ورق</string>
+    <string name="palette_lapis">لازورد</string>
+    <string name="palette_dune">رمل</string>
+    <string name="palette_olive">زيتوني</string>
+    <string name="palette_plum">برقوق</string>
+    <string name="palette_graphite">فحم</string>
 </resources>

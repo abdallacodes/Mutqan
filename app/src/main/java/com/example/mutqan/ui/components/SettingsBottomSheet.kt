@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.mutqan.ui.theme.ThemeViewModel
+import com.example.mutqan.ui.theme.ThemeViewModelFactory
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -189,6 +192,19 @@ fun SettingsBottomSheet(
                     )
                 }
             }
+
+            // Colours: the choice recolours this sheet at once, so it stays open.
+            val themeViewModel: ThemeViewModel = viewModel(factory = ThemeViewModelFactory(context))
+            val palette by themeViewModel.palette.collectAsState()
+            val darkNow = when (currentTheme) {
+                ThemeKey.AUTO -> isSystemInDarkTheme()
+                ThemeKey.LIGHT -> false
+                ThemeKey.DARK -> true
+            }
+            Spacer(Modifier.height(20.dp))
+            SectionLabel(stringResource(R.string.settings_palette))
+            Spacer(Modifier.height(12.dp))
+            PalettePicker(selected = palette, dark = darkNow, onSelect = themeViewModel::setPalette)
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider(

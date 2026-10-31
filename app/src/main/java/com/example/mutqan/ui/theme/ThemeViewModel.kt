@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.mutqan.data.Palette
 import com.example.mutqan.data.ThemeKey
 import com.example.mutqan.data.ThemePreferences
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +25,13 @@ class ThemeViewModel(private val prefs: ThemePreferences) : ViewModel() {
             started        = SharingStarted.Eagerly,
             initialValue   = ThemeKey.AUTO
         )
+
+    val palette: StateFlow<Palette> = prefs.palette
+        .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = Palette.PAPER)
+
+    fun setPalette(palette: Palette) {
+        viewModelScope.launch { prefs.setPalette(palette) }
+    }
 
     fun setTheme(key: ThemeKey) {
         viewModelScope.launch { prefs.setTheme(key) }

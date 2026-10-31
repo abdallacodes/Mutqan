@@ -511,7 +511,6 @@ fun AppNavHost(
                     startPage   = page,
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
-                    onOpenRoot  = { root -> navController.navigate(Routes.root(root)) },
                     onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) },
                     onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) }
                 )

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import com.example.mutqan.data.Palette
 import com.example.mutqan.data.ThemeKey
 
 // ── Paper: one theme in two versions ──────────────────────────────────────────
@@ -85,6 +86,7 @@ private val paperShapes = Shapes(
 @Composable
 fun MutqanTheme(
     themeKey: ThemeKey = ThemeKey.AUTO,
+    palette: Palette = Palette.PAPER,
     content: @Composable () -> Unit
 ) {
     val dark = when (themeKey) {
@@ -95,7 +97,7 @@ fun MutqanTheme(
     val arabic = LocalConfiguration.current.locales[0].language == "ar"
 
     MaterialTheme(
-        colorScheme = if (dark) paperDarkScheme else paperLightScheme,
+        colorScheme = paletteColors(palette, dark)?.toScheme(dark) ?: if (dark) paperDarkScheme else paperLightScheme,
         typography  = paperTypography(arabic),
         shapes      = paperShapes,
         content     = content

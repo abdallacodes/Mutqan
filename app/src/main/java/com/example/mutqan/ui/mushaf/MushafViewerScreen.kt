@@ -93,7 +93,6 @@ import com.example.mutqan.quran.MushafPageView
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
-import com.example.mutqan.ui.root.VerseRoots
 import com.example.mutqan.ui.topics.VerseTopics
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
@@ -152,7 +151,6 @@ fun MushafViewerScreen(
     startPage:   Int,
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
-    onOpenRoot:  (Int) -> Unit = {},
     onOpenTopic: (Int) -> Unit = {},
     onOpenTafsir: (Int) -> Unit = {}
 ) {
@@ -434,10 +432,6 @@ fun MushafViewerScreen(
                 ) { Text(stringResource(R.string.tafsir_open)) }
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
-                VerseRoots(target.surahId, target.ayahNumber) { root ->
-                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
-                    onOpenRoot(root)
-                }
                 VerseTopics(target.verseId) { topic ->
                     peekTarget = null; peekAyahId = null; peekGroups = emptyList()
                     onOpenTopic(topic)

@@ -55,9 +55,10 @@ class MainActivity : AppCompatActivity() {
             val themeViewModel: ThemeViewModel =
                 viewModel(factory = ThemeViewModelFactory(this))
             val themeKey by themeViewModel.themeKey.collectAsState()
+            val palette by themeViewModel.palette.collectAsState()
             val lockEnabled: Boolean? by preferences.appLockEnabled.collectAsState(initial = null)
 
-            MutqanTheme(themeKey = themeKey) {
+            MutqanTheme(themeKey = themeKey, palette = palette) {
                 when {
                     lockEnabled == null -> Spacer(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                     lockEnabled == true && locked -> LockScreen(onUnlock = ::askForDeviceCredential)
