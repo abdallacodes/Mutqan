@@ -785,4 +785,11 @@
     <string name="audio_listen_from_here">Listen from this verse</string>
     <string name="audio_play_surah">Listen to this surah</string>
     <string name="audio_failed">The audio could not be played. Check your internet connection.</string>
+    <string name="coverage_advanced_show">Advanced: set levels by surah and by page</string>
+    <string name="coverage_advanced_hide">Hide advanced control</string>
+    <string name="coverage_surah_levels">Level of each surah</string>
+    <string name="coverage_surah_levels_hint">The surahs you have memorised. Surahs that share a page share its level.</string>
+    <string name="coverage_page_levels">Level of each page</string>
+    <string name="coverage_page_levels_hint">Pick a level, then tap pages to set it. Faded pages are not memorised.</string>
+    <string name="coverage_brush_clear">No level</string>
 </resources>

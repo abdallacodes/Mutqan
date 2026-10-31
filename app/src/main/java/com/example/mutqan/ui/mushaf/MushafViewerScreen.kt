@@ -71,6 +71,7 @@ import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Tune
 import com.example.mutqan.domain.audio.RecitationController
+import com.example.mutqan.quran.PaperLoading
 import com.example.mutqan.ui.audio.RecitationBar
 import com.example.mutqan.ui.audio.RecitationSheet
 import com.example.mutqan.ui.audio.rememberAskForNotifications
@@ -394,7 +395,7 @@ fun MushafViewerScreen(
     ) {
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MushafInk)
+                PaperLoading(color = MushafInk, delayMillis = 0)
             }
         } else {
             key(useSpreadLayout) {

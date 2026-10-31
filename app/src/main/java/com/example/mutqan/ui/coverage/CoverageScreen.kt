@@ -64,6 +64,19 @@ import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.domain.PlanTier
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.theme.DifficultyCritical
+import com.example.mutqan.ui.theme.DifficultySmooth
+import com.example.mutqan.ui.theme.DifficultyStruggled
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
 
 /** Where the user says which parts of the Quran they have memorised. */
@@ -75,6 +88,9 @@ fun CoverageScreen(onDone: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSurahPicker by remember { mutableStateOf(false) }
+    var advanced by rememberSaveable { mutableStateOf(false) }
+    // The level a tap on a page gives it; null clears the page's level.
+    var brush by rememberSaveable { mutableStateOf<Int?>(PlanTier.FAIR.code) }
 
     if (showSurahPicker) {
         SurahPickerDialog(
@@ -166,6 +182,79 @@ fun CoverageScreen(onDone: () -> Unit) {
                     TierChips(selected = if (memorised) tier else null, onSelect = { viewModel.rateJuz(juz, it) })
                 }
                 Hairline()
+            }
+            item {
+                PaperLink(
+                    text = stringResource(if (advanced) R.string.coverage_advanced_hide else R.string.coverage_advanced_show),
+                    onClick = { advanced = !advanced }
+                )
+            }
+            if (advanced) {
+                item { SectionTitle(stringResource(R.string.coverage_surah_levels)) }
+                item {
+                    Text(
+                        text = stringResource(R.string.coverage_surah_levels_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                items(state.surahStrengths, key = { "surah-${it.surah}" }) { row ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = SurahData.nameOf(row.surah),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f).padding(vertical = 10.dp)
+                        )
+                        TierChips(selected = row.tier, onSelect = { viewModel.rateSurah(row.surah, it) })
+                    }
+                    Hairline()
+                }
+                item { SectionTitle(stringResource(R.string.coverage_page_levels)) }
+                item {
+                    Text(
+                        text = stringResource(R.string.coverage_page_levels_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        listOf(
+                            PlanTier.WEAK.code to R.string.strength_weak,
+                            PlanTier.FAIR.code to R.string.strength_fair,
+                            PlanTier.STRONG.code to R.string.strength_strong,
+                            null to R.string.coverage_brush_clear
+                        ).forEach { (code, label) ->
+                            PaperChip(
+                                selected = brush == code,
+                                onClick = { brush = code },
+                                label = { Text(stringResource(label)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+                items((0 until PAGE_ROWS).toList(), key = { "pages-$it" }) { row ->
+                    // Page numbers keep their left-to-right order, as on any grid of numbers.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+                            for (column in 0 until PAGE_COLUMNS) {
+                                val page = row * PAGE_COLUMNS + column + 1
+                                if (page > TOTAL_PAGES) {
+                                    Spacer(Modifier.weight(1f))
+                                } else {
+                                    PageCell(
+                                        page = page,
+                                        memorised = page in state.memorisedPages,
+                                        tier = state.pageLevels[page],
+                                        onClick = { viewModel.ratePage(page, brush?.let { PlanTier.fromCode(it) }) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
             item { SectionTitle(stringResource(R.string.coverage_ranges_section)) }
             if (state.ranges.isEmpty()) {
@@ -308,6 +397,40 @@ private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
                 modifier = Modifier.width(64.dp)
             )
         }
+    }
+}
+
+private const val TOTAL_PAGES = 604
+private const val PAGE_COLUMNS = 10
+private const val PAGE_ROWS = (TOTAL_PAGES + PAGE_COLUMNS - 1) / PAGE_COLUMNS
+
+/** One page of the grid: coloured by its level, faded when it is not memorised. */
+@Composable
+private fun PageCell(page: Int, memorised: Boolean, tier: PlanTier?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val fill = when {
+        !memorised -> Color.Transparent
+        tier == PlanTier.WEAK -> DifficultyCritical
+        tier == PlanTier.FAIR -> DifficultyStruggled
+        tier == PlanTier.STRONG -> DifficultySmooth
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .aspectRatio(1f)
+            .background(fill)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (memorised) 0.6f else 0.25f))
+            .clickable(enabled = memorised, role = Role.Button, onClick = onClick)
+    ) {
+        Text(
+            text = "$page",
+            style = MaterialTheme.typography.labelSmall,
+            color = when {
+                !memorised -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                tier != null -> Color.White
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
     }
 }
 

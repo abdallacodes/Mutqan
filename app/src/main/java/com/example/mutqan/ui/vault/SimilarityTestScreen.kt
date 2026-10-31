@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.quran.PaperLoading
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperChip
 import com.example.mutqan.ui.components.PaperHeader
@@ -97,7 +98,7 @@ fun SimilarityTestScreen(
             contentAlignment = Alignment.Center
         ) {
             when (val state = uiState) {
-                is TestUiState.Loading -> CircularProgressIndicator()
+                is TestUiState.Loading -> PaperLoading(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 is TestUiState.Empty -> {
                     Text(
                         text = stringResource(R.string.test_empty_scope),

@@ -785,4 +785,11 @@
     <string name="audio_listen_from_here">الاستماع من هذه الآية</string>
     <string name="audio_play_surah">استمع إلى السورة</string>
     <string name="audio_failed">تعذّر تشغيل الصوت. تأكّد من الاتصال بالإنترنت.</string>
+    <string name="coverage_advanced_show">تحكّم متقدّم: مستوى كل سورة وكل صفحة</string>
+    <string name="coverage_advanced_hide">إخفاء التحكّم المتقدّم</string>
+    <string name="coverage_surah_levels">مستوى كل سورة</string>
+    <string name="coverage_surah_levels_hint">تظهر هنا السور التي حفظتَها. السور التي تشترك في صفحة واحدة تشترك في مستواها.</string>
+    <string name="coverage_page_levels">مستوى كل صفحة</string>
+    <string name="coverage_page_levels_hint">اختر مستوى ثم المس الصفحات لتعيينه. الصفحات الباهتة غير محفوظة.</string>
+    <string name="coverage_brush_clear">بلا مستوى</string>
 </resources>

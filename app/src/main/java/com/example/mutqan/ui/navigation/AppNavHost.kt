@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.example.mutqan.domain.audio.RecitationPlayer
 import com.example.mutqan.ui.audio.RecitationBar
@@ -224,9 +226,13 @@ fun AppNavHost(
         )
     }
 
+    // The Mushaf draws edge to edge under the system bars. If it took their insets as padding, every tap that shows
+    // or hides them would resize the page under the reader's eyes.
+    val inMushaf = currentRoute?.startsWith(Routes.MUSHAF_VIEWER) == true
     Scaffold(
         modifier       = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = if (inMushaf) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         bottomBar = {
             Column {
             if (playback.active && currentRoute?.startsWith(Routes.MUSHAF_VIEWER) != true) {

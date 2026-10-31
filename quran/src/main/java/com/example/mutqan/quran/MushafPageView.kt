@@ -109,23 +109,25 @@ fun MushafPageView(
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         when (val state = load) {
-            PageLoad.Loading -> CircularProgressIndicator(
-                modifier    = Modifier.size(48.dp),
-                color       = MaterialTheme.colorScheme.primary,
-                strokeWidth = 3.dp
-            )
-            PageLoad.Failed -> Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier            = Modifier.padding(24.dp)
-            ) {
-                Text(
-                    text      = stringResource(R.string.mushaf_font_failed),
-                    color     = ink,
-                    textAlign = TextAlign.Center,
-                    style     = MaterialTheme.typography.bodyMedium
-                )
-                TextButton(onClick = { attempt++ }) {
-                    Text(stringResource(R.string.mushaf_retry))
+            // Both stand in for the page at its own shape, so a page that is still loading takes the room it will
+            // take once drawn. Without that, a page in a scrolling column is a sliver that jumps to full height.
+            PageLoad.Loading -> Box(Modifier.aspectRatio(MushafPageGeometry.PAGE_ASPECT), contentAlignment = Alignment.Center) {
+                PaperLoading(color = ink)
+            }
+            PageLoad.Failed -> Box(Modifier.aspectRatio(MushafPageGeometry.PAGE_ASPECT), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier            = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text      = stringResource(R.string.mushaf_font_failed),
+                        color     = ink,
+                        textAlign = TextAlign.Center,
+                        style     = MaterialTheme.typography.bodyMedium
+                    )
+                    TextButton(onClick = { attempt++ }) {
+                        Text(stringResource(R.string.mushaf_retry))
+                    }
                 }
             }
             is PageLoad.Ready -> PageCanvas(state, ink, highlights, onWordTap, onWordLongPress, cover, quarterStarts)

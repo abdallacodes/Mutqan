@@ -21,7 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.mutqan.quran.PaperLoading
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -97,7 +97,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             val q = state.question
             when {
                 state.loading -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    PaperLoading(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 state.finished -> Summary(state, onAgain = viewModel::restart, onBack = onBack, onOpenMushaf = onOpenMushaf)
                 q == null -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

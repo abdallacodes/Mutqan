@@ -243,6 +243,19 @@ class StudyRepository(
         if (tier != null) dao.insertPageStrength(pages.map { PageStrengthEntity(it, tier.code) })
     }
 
+    /** Sets how well the user knows each of [pages] (any pages, not only neighbouring ones); a null [tier] clears them. */
+    suspend fun setSelfRated(pages: Collection<Int>, tier: PlanTier?) {
+        var run: IntRange? = null
+        for (page in pages.sorted()) {
+            val current = run
+            run = if (current != null && page == current.last + 1) current.first..page else {
+                if (current != null) setSelfRated(current, tier)
+                page..page
+            }
+        }
+        run?.let { setSelfRated(it, tier) }
+    }
+
     /** Which pages (index 0 = page 1) the user has memorised; null means no restriction. */
     fun coveredPages(): Flow<BooleanArray?> =
         coverage().map { ranges -> HifzCoverage.coveredPages(ranges.filter { it.first in index && it.last in index }) { index.firstPageOf(it) } }
