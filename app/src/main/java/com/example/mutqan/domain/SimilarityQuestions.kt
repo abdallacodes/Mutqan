@@ -13,6 +13,7 @@ object SimilarityQuestions {
 
     private const val MAX_OPTIONS = 4
     private const val LEAD_WORDS = 8
+    private const val MIN_SHARED = 2
     private const val MIN_CONTINUATION = 2
     private const val MAX_CONTINUATION = 8
 
@@ -24,28 +25,53 @@ object SimilarityQuestions {
     }
 
     /**
-     * The shared opening of [words] and its closest lookalike, shown as the lead; the options are how each
-     * verse that shares that whole opening goes on. Null when no lookalike shares an opening, or the endings
-     * cannot be told apart.
+     * The longest stretch [words] shares with a lookalike, anywhere in the verse (at least two words, with
+     * something after it). It is shown as the lead, up to its end; the options are how each lookalike that has
+     * the same stretch goes on. Null when no lookalike shares one, or the endings cannot be told apart.
      */
     fun finish(words: List<String>, others: List<List<String>>, random: Random): ChoiceSet? {
-        val shared = others.map { commonPrefix(words, it) }
-        val prefix = shared.maxOrNull()?.takeIf { it in 1 until words.size } ?: return null
-        val rivals = others.filterIndexed { i, o -> shared[i] == prefix && o.size > prefix }
+        val norm = words.map(QuizText::normalize)
+        var bestLength = 0
+        var bestEnd = 0
+        for (other in others) {
+            val o = other.map(QuizText::normalize)
+            // Length of the common run ending at (i, j), kept one row at a time.
+            var previous = IntArray(o.size + 1)
+            for (i in 1..norm.size) {
+                val current = IntArray(o.size + 1)
+                for (j in 1..o.size) {
+                    if (norm[i - 1] == o[j - 1]) {
+                        current[j] = previous[j - 1] + 1
+                        if (i < norm.size && current[j] > bestLength) { bestLength = current[j]; bestEnd = i }
+                    }
+                }
+                previous = current
+            }
+        }
+        if (bestLength < MIN_SHARED) return null
+        val run = norm.subList(bestEnd - bestLength, bestEnd)
+
+        // What follows the same stretch in each lookalike that has it.
+        val rivals = others.mapNotNull { other ->
+            val o = other.map(QuizText::normalize)
+            val at = (0..o.size - bestLength).firstOrNull { k -> o.subList(k, k + bestLength) == run } ?: return@mapNotNull null
+            other.drop(at + bestLength).takeIf { it.isNotEmpty() }
+        }
         if (rivals.isEmpty()) return null
+        val own = words.drop(bestEnd)
 
         for (length in MIN_CONTINUATION..MAX_CONTINUATION) {
-            fun cut(w: List<String>) = w.drop(prefix).take(length).joinToString(" ")
-            val correct = cut(words)
+            fun cut(w: List<String>) = w.take(length).joinToString(" ")
+            val correct = cut(own)
             val texts = linkedMapOf(QuizText.normalize(correct) to correct)
             rivals.forEach { r -> if (texts.size < MAX_OPTIONS) texts.putIfAbsent(QuizText.normalize(cut(r)), cut(r)) }
             val clear = rivals.all { QuizText.normalize(cut(it)) != QuizText.normalize(correct) }
             if (!clear && length < MAX_CONTINUATION) continue
             if (texts.size < 2) return null
-            val options = texts.values.toList().map { it + if (words.size - prefix > length) " …" else "" }
+            val options = texts.values.toList().map { it + if (own.size > length) " …" else "" }
             val shuffled = options.shuffled(random)
             return ChoiceSet(
-                lead = QuizText.tail(words.take(prefix), LEAD_WORDS) + " …",
+                lead = QuizText.tail(words.take(bestEnd), LEAD_WORDS) + " …",
                 options = shuffled,
                 correct = shuffled.indexOf(options.first())
             )

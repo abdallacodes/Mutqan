@@ -39,7 +39,18 @@ class SimilarityQuestionsTest {
     }
 
     @Test
-    fun `finish needs a lookalike that shares an opening`() {
+    fun `finish works on a stretch shared in the middle of the verse`() {
+        val verse = w("alpha beta gamma delta red sky")
+        val other = w("zeta gamma delta blue sea")
+        val set = SimilarityQuestions.finish(verse, listOf(other), Random(6))!!
+        assertTrue(set.lead.contains("delta"))
+        assertEquals(2, set.options.size)
+        assertTrue(set.options[set.correct].startsWith("red"))
+        assertTrue(set.options.any { it.startsWith("blue") })
+    }
+
+    @Test
+    fun `finish needs a lookalike that shares a stretch`() {
         assertNull(SimilarityQuestions.finish(w("a b c"), listOf(w("x y z")), Random(3)))
         assertNull(SimilarityQuestions.finish(w("a b c"), emptyList(), Random(3)))
     }

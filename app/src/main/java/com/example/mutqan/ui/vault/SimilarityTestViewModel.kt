@@ -87,6 +87,10 @@ class SimilarityTestViewModel(
     private val recentGroups = ArrayDeque<Int>()
     private val random = Random.Default
 
+    private companion object {
+        const val MAX_TRIES = 25
+    }
+
     init {
         loadNextVerse(fallbackToReady = true)
     }
@@ -122,7 +126,15 @@ class SimilarityTestViewModel(
                     }
                     return@launch
                 }
-                _uiState.update { question(pick, _source.value, _type.value) }
+                // A verse that does not suit the chosen type is skipped for another, so "finish it" is not quietly
+                // turned into a recall question; only when none suits (a group with a single verse) does it recall.
+                var built = question(pick, _source.value, _type.value)
+                var tries = 0
+                while (built == null && tries++ < MAX_TRIES) {
+                    val next = pickVerse(_source.value) ?: break
+                    built = question(next, _source.value, _type.value)
+                }
+                _uiState.update { built ?: recallOf(pick, _source.value) }
             } catch (e: Exception) {
                 _uiState.update { TestUiState.Error(UiText(R.string.error_unknown)) }
             }
@@ -169,8 +181,8 @@ class SimilarityTestViewModel(
 
     private fun reference(a: QuranAyah) = SurahData.nameOf(a.surah) + " · " + a.ayah
 
-    /** The question for [pick] of the chosen [type]; a type that does not suit the verse falls back to recalling it. */
-    private fun question(pick: Pick, source: TestSource, type: TestType): TestUiState.Question {
+    /** The question for [pick] of the chosen [type], or null when that type does not suit the verse. */
+    private fun question(pick: Pick, source: TestSource, type: TestType): TestUiState.Question? {
         val quran = QuranRepository.getInstance(context)
         val words = wordsOf(quran, pick.verse)
         val otherWords = pick.others.map { it to wordsOf(quran, it.ayah) }
@@ -187,9 +199,11 @@ class SimilarityTestViewModel(
             TestType.WHICH -> SimilarityQuestions.which(
                 words, reference(pick.verse), otherWords.map { (o, w) -> reference(o.ayah) to w }, random
             )
-        } ?: return base
+        } ?: return if (type == TestType.RECALL) base else null
         return base.copy(type = type, lead = set.lead, options = set.options, correct = set.correct)
     }
+
+    private fun recallOf(pick: Pick, source: TestSource): TestUiState.Question = question(pick, source, TestType.RECALL)!!
 
     fun reveal() {
         _uiState.update { state ->
