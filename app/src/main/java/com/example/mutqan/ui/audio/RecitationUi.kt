@@ -17,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -205,7 +207,7 @@ private val SPEEDS = listOf(75, 100, 125, 150)
 /** Reciter, how many times each verse plays, speed, and how far a recitation goes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecitationSheet(onDismiss: () -> Unit) {
+fun RecitationSheet(onDismiss: () -> Unit, onOpenStorage: (() -> Unit)? = null) {
     val context = LocalContext.current
     val controller = remember(context) { RecitationController.get(context) }
     val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
@@ -218,10 +220,9 @@ fun RecitationSheet(onDismiss: () -> Unit) {
     val runRepeat by prefs.recitationRunRepeat.collectAsState(initial = 1)
     val sayAfter by prefs.recitationSayAfterPercent.collectAsState(initial = 0)
     val playback by controller.player.state.collectAsState()
-    val downloads = remember(context) { RecitationDownloads.get(context) }
-    val downloadState by downloads.state.collectAsState()
+    val downloadState by remember(context) { RecitationDownloads.get(context) }.state.collectAsState()
     val kept = downloadState.sizes.values.sum()
-    var confirmDeleteAll by remember { mutableStateOf(false) }
+    var reciterOpen by remember { mutableStateOf(false) }
 
     /** Saves a setting that needs the run to be rebuilt, and carries on from the verse sounding now. */
     fun change(save: suspend () -> Unit) {
@@ -248,15 +249,35 @@ fun RecitationSheet(onDismiss: () -> Unit) {
             if (playback.active) NowPlaying(playback, controller.player)
 
             SheetLabel(stringResource(R.string.audio_reciter))
-            Reciter.entries.forEach { option ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(role = Role.RadioButton) { change { prefs.setReciterId(option.id) } }
-                ) {
-                    RadioButton(selected = option == reciter, onClick = null, modifier = Modifier.padding(end = 12.dp, top = 12.dp, bottom = 12.dp))
-                    Text(stringResource(option.nameRes), style = MaterialTheme.typography.bodyLarge)
+            // Only the chosen reciter shows until the list is opened.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Button) { reciterOpen = !reciterOpen }
+                    .padding(vertical = 10.dp)
+            ) {
+                Text(stringResource(reciter.nameRes), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Icon(
+                    if (reciterOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (reciterOpen) {
+                Reciter.entries.forEach { option ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(role = Role.RadioButton) {
+                                reciterOpen = false
+                                change { prefs.setReciterId(option.id) }
+                            }
+                    ) {
+                        RadioButton(selected = option == reciter, onClick = null, modifier = Modifier.padding(end = 12.dp, top = 12.dp, bottom = 12.dp))
+                        Text(stringResource(option.nameRes), style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
 
@@ -345,26 +366,25 @@ fun RecitationSheet(onDismiss: () -> Unit) {
                 }
             }
 
-            if (kept > 0) {
+            if (kept > 0 && onOpenStorage != null) {
                 SheetLabel(stringResource(R.string.audio_downloads))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onOpenStorage).padding(vertical = 8.dp)
+                ) {
                     Text(
                         text = stringResource(R.string.audio_downloads_size, Formatter.formatShortFileSize(context, kept)),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = { confirmDeleteAll = true }) { Text(stringResource(R.string.audio_downloads_delete_all)) }
+                    Text(
+                        text = stringResource(R.string.audio_storage_manage),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
-    }
-
-    if (confirmDeleteAll) {
-        DeleteAllDownloadsDialog(
-            size = Formatter.formatShortFileSize(context, kept),
-            onConfirm = { downloads.deleteAll(); confirmDeleteAll = false },
-            onDismiss = { confirmDeleteAll = false }
-        )
     }
 }
 

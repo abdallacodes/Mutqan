@@ -132,12 +132,18 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
     }
 }
 
+/** What the reader is asked to do: the first thing to read on the page, so it is set large. */
+@Composable
+private fun QuestionText(text: String) {
+    Text(text, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+}
+
 @Composable
 private fun refLabel(ref: QuizRef): String = stringResource(R.string.quiz_ref, SurahData.nameOf(ref.surah), ref.ayah)
 
 /** A verse (or part of one) in the Mushaf's type. */
 @Composable
-private fun VerseText(text: String, size: Int = 28, muted: Boolean = false) {
+private fun VerseText(text: String, size: Int = 30, muted: Boolean = false) {
     Text(
         text = text,
         fontFamily = AmiriFontFamily,
@@ -189,7 +195,7 @@ private fun QuizOption(
         }
         Box(modifier = Modifier.weight(1f)) {
             if (verse) {
-                VerseText(text, size = 24, muted = state == OptionState.DIMMED)
+                VerseText(text, size = 26, muted = state == OptionState.DIMMED)
             } else {
                 Text(
                     text = text,
@@ -220,7 +226,7 @@ private fun instruction(type: ExerciseType): String = stringResource(
 
 @Composable
 private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> Unit) {
-    SectionLabel(instruction(q.type))
+    QuestionText(instruction(q.type))
     if (q.showRef) {
         Text(refLabel(q.subject), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     }
@@ -238,7 +244,7 @@ private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> U
         OrnamentDivider()
         SectionLabel(stringResource(R.string.quiz_answer_was))
         Text(refLabel(q.revealRef), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        VerseText(q.revealed, size = 26)
+        VerseText(q.revealed, size = 28)
         q.note?.let {
             SectionLabel(stringResource(R.string.quiz_topics_of_verse))
             Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
@@ -248,7 +254,7 @@ private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> U
 
 @Composable
 private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit, onClear: () -> Unit) {
-    SectionLabel(instruction(q.type))
+    QuestionText(instruction(q.type))
     Text(
         text = stringResource(R.string.quiz_in_surah, SurahData.nameOf(q.subject.surah)),
         style = MaterialTheme.typography.titleMedium,
@@ -277,14 +283,14 @@ private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit
         SectionLabel(stringResource(R.string.quiz_right_order))
         q.correctOrder.forEachIndexed { k, shuffledIndex ->
             Text("${q.ayahNumbers[k]}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
-            VerseText(q.shuffled[shuffledIndex], size = 24)
+            VerseText(q.shuffled[shuffledIndex], size = 26)
         }
     }
 }
 
 @Composable
 private fun WhereBody(q: WhereQuestion, state: QuizUiState, onSurah: (Int) -> Unit, onAyah: (Int) -> Unit) {
-    SectionLabel(stringResource(if (state.stage == 0) R.string.quiz_q_where_surah else R.string.quiz_q_where_ayah))
+    QuestionText(stringResource(if (state.stage == 0) R.string.quiz_q_where_surah else R.string.quiz_q_where_ayah))
     VerseText(q.text)
     if (state.stage == 1 || state.pickedAyah != null) {
         Text(

@@ -178,6 +178,25 @@ class RecitationDownloads private constructor(context: Context) {
         surahs.forEach { cancel(reciter, it) }
     }
 
+    /** Removes every downloaded surah of [reciter]. */
+    fun deleteReciter(reciter: Reciter) {
+        scope.launch {
+            val prefix = "${reciter.id}:"
+            jobs.filterKeys { it.startsWith(prefix) }.forEach { (key, job) ->
+                jobs.remove(key)
+                job.cancelAndJoinQuietly()
+            }
+            root(reciter).deleteRecursively()
+            _state.update {
+                it.copy(
+                    downloading = it.downloading.filterKeys { k -> !k.startsWith(prefix) },
+                    downloaded = it.downloaded.filterNot { k -> k.startsWith(prefix) }.toSet(),
+                    sizes = it.sizes.filterKeys { k -> !k.startsWith(prefix) }
+                )
+            }
+        }
+    }
+
     /** Removes every downloaded recitation, of every reciter. */
     fun deleteAll() {
         scope.launch {

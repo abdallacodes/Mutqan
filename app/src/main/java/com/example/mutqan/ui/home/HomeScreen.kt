@@ -30,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.mutqan.domain.audio.RecitationController
@@ -99,6 +101,7 @@ internal fun PlanTier.hint(): String = stringResource(
  * Today: what the revision plan asks for, how far along the day is, weak passages worth a look,
  * and the plan itself with a clear way to change it. A page, not a stack of cards.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     onOpenPlan: () -> Unit,
@@ -251,7 +254,7 @@ fun HomeScreen(
                                 )
                             }
                             val reviewPages = today.due.flatMap { it.startPage..it.endPage }
-                            Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 PaperLink(
                                     text = stringResource(R.string.audio_listen_review),
                                     onClick = {

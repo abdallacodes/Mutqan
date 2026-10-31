@@ -44,12 +44,12 @@ fun paperTypography(arabic: Boolean): Typography {
         headlineSmall = display(24, 34),
         titleLarge = display(24, 36),
         titleMedium = display(20, 32),
-        titleSmall = body(15, 22, 24, FontWeight.Medium),
-        bodyLarge = body(16, 24, 28),
-        bodyMedium = body(14, 22, 24),
-        bodySmall = body(12, 18, 20),
-        labelLarge = body(14, 20, 22, FontWeight.Medium),
-        labelMedium = body(12, 16, 18, FontWeight.Medium),
-        labelSmall = body(11, 16, 17, FontWeight.Medium)
+        titleSmall = body(16, 23, 26, FontWeight.Medium),
+        bodyLarge = body(17, 25, 30),
+        bodyMedium = body(15, 23, 26),
+        bodySmall = body(13, 19, 22),
+        labelLarge = body(15, 21, 24, FontWeight.Medium),
+        labelMedium = body(13, 17, 20, FontWeight.Medium),
+        labelSmall = body(12, 16, 19, FontWeight.Medium)
     )
 }

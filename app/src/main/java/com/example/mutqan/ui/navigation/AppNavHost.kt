@@ -80,6 +80,7 @@ import com.example.mutqan.ui.coverage.CoverageScreen
 import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
 import com.example.mutqan.ui.help.HowItWorksScreen
+import com.example.mutqan.ui.audio.AudioStorageScreen
 import com.example.mutqan.ui.home.HomeScreen
 import com.example.mutqan.ui.home.PlanScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
@@ -138,6 +139,7 @@ object Routes {
     const val MUSHAF_VIEWER     = "mushaf_viewer"
     const val COVERAGE          = "coverage"
     const val HOW_IT_WORKS      = "how_it_works"
+    const val AUDIO_STORAGE     = "audio_storage"
     const val SAVED             = "saved"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
@@ -195,7 +197,13 @@ fun AppNavHost(
     val recitationPlayer = remember(appContext) { RecitationPlayer.get(appContext) }
     val playback by recitationPlayer.state.collectAsState()
     var showRecitationSheet by remember { mutableStateOf(false) }
-    if (showRecitationSheet) RecitationSheet(onDismiss = { showRecitationSheet = false })
+    if (showRecitationSheet) RecitationSheet(
+        onDismiss = { showRecitationSheet = false },
+        onOpenStorage = {
+            showRecitationSheet = false
+            navController.navigate(Routes.AUDIO_STORAGE)
+        }
+    )
     val audioFailed = stringResource(R.string.audio_failed)
     LaunchedEffect(playback.failed) {
         if (playback.failed) {
@@ -218,6 +226,10 @@ fun AppNavHost(
             onOpenHowItWorks = {
                 showSettingsSheet = false
                 navController.navigate(Routes.HOW_IT_WORKS)
+            },
+            onOpenAudioStorage = {
+                showSettingsSheet = false
+                navController.navigate(Routes.AUDIO_STORAGE)
             },
             onOpenSaved = {
                 showSettingsSheet = false
@@ -306,6 +318,10 @@ fun AppNavHost(
                 HowItWorksScreen(onBack = { navController.popBackStack() })
             }
 
+            composable(Routes.AUDIO_STORAGE) {
+                AudioStorageScreen(onBack = { navController.popBackStack() })
+            }
+
             composable(Routes.SAVED) {
                 SavedPassagesScreen(
                     onBack = { navController.popBackStack() },
@@ -346,7 +362,8 @@ fun AppNavHost(
                     onSettingsClick = { showSettingsSheet = true },
                     onSearchClick   = { navController.navigate(Routes.VERSE_SEARCH) },
                     onOpenRoot      = { root -> navController.navigate(Routes.root(root)) },
-                    onOpenTopic     = { topic -> navController.navigate(Routes.topic(topic)) }
+                    onOpenTopic     = { topic -> navController.navigate(Routes.topic(topic)) },
+                    onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
                 )
             }
 
@@ -553,7 +570,8 @@ fun AppNavHost(
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
                     onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) },
-                    onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) }
+                    onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) },
+                    onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
                 )
             }
         }

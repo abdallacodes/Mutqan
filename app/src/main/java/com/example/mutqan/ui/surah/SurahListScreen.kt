@@ -26,11 +26,13 @@ import android.text.format.Formatter
 import android.widget.Toast
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.PaperChip
+import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.audio.nowPlayingLabel
 import androidx.compose.runtime.LaunchedEffect
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.audio.RecitationController
 import com.example.mutqan.domain.audio.RecitationDownloads
+import com.example.mutqan.domain.audio.RecitationSizes
 import com.example.mutqan.domain.audio.Reciter
 import com.example.mutqan.ui.audio.DeleteDownloadDialog
 import com.example.mutqan.ui.audio.DownloadButton
@@ -82,7 +84,8 @@ fun SurahListScreen(
     onSettingsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onOpenRoot: (Int) -> Unit = {},
-    onOpenTopic: (Int) -> Unit = {}
+    onOpenTopic: (Int) -> Unit = {},
+    onOpenAudioStorage: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: SurahListViewModel = viewModel(factory = SurahListViewModelFactory(context))
@@ -99,6 +102,7 @@ fun SurahListScreen(
 
     val downloads = remember(context) { RecitationDownloads.get(context) }
     val downloadState by downloads.state.collectAsState()
+    val knownSizes = remember(context) { RecitationSizes.get(context) }
     val reciterId by remember(context) { UserPreferencesRepository(context.applicationContext).reciterId }.collectAsState(initial = "")
     val reciter = Reciter.fromId(reciterId)
     var deleting by remember { mutableStateOf<Int?>(null) }
@@ -207,13 +211,24 @@ fun SurahListScreen(
                     )
                 }
                 item {
-                    Row(modifier = Modifier.padding(horizontal = PaperSpace.Gutter)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)
+                    ) {
                         PaperChip(
                             selected = onlyDownloaded,
                             onClick = { onlyDownloaded = !onlyDownloaded },
                             label = { Text(stringResource(R.string.audio_downloaded_only)) },
                             modifier = Modifier.width(120.dp)
                         )
+                        if (downloadState.sizes.isNotEmpty()) {
+                            PaperLink(
+                                text = Formatter.formatShortFileSize(context, downloadState.sizes.values.sum()) + " ›",
+                                onClick = onOpenAudioStorage,
+                                soft = true
+                            )
+                        }
                     }
                 }
                 items(roots, key = { "root-${it.first}" }) { (root, info) ->
@@ -241,9 +256,12 @@ fun SurahListScreen(
                             downloadState.downloading[key]?.let { DownloadStatus.Downloading(it.fraction) }
                                 ?: if (key in downloadState.downloaded) DownloadStatus.Done else DownloadStatus.None
                         },
-                        sizeText = downloadState.sizes[RecitationDownloads.key(reciter, item.info.id)]
-                            ?.takeIf { RecitationDownloads.key(reciter, item.info.id) in downloadState.downloaded }
-                            ?.let { Formatter.formatShortFileSize(context, it) },
+                        // What is on the device when downloaded, otherwise what it would take.
+                        sizeText = RecitationDownloads.key(reciter, item.info.id).let { key ->
+                            (downloadState.sizes[key]?.takeIf { key in downloadState.downloaded }
+                                ?: knownSizes.bytesOf(reciter, item.info.id))
+                                ?.let { Formatter.formatShortFileSize(context, it) }
+                        },
                         onDownload = {
                             askForNotifications()
                             val surah = item.info.id
@@ -285,8 +303,10 @@ fun SurahListScreen(
                         keys.isNotEmpty() && keys.all { it in downloadState.downloaded } -> DownloadStatus.Done
                         else -> DownloadStatus.None
                     }
+                    val juzBytes = surahsOfJuz.sumOf { knownSizes.bytesOf(reciter, it) ?: 0L }
                     JuzRow(
                         entry,
+                        sizeText = juzBytes.takeIf { it > 0 }?.let { Formatter.formatShortFileSize(context, it) },
                         onClick = { onOpenMushaf(entry.startPage) },
                         download = status,
                         onDownload = {
@@ -360,11 +380,54 @@ private fun SurahRow(
                 )
                 if (item.verseCount > 0) {
                     Text(
-                        text = stringResource(R.string.quran_surah_info, item.verseCount, item.startJuz, item.startPage) +
-                            (sizeText?.let { " · $it" } ?: ""),
+                        text = stringResource(R.string.quran_surah_info, item.verseCount, item.startJuz, item.startPage),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                // What is not plain information about the surah sits on a line of its own, only when there is something.
+                val hasTags = sizeText != null || item.memorised != SurahMemorised.NONE || item.groupCount > 0
+                if (hasTags) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        sizeText?.let {
+                            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        when (item.memorised) {
+                            SurahMemorised.FULL -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = " " + stringResource(R.string.quran_memorised),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            SurahMemorised.PARTLY -> Text(
+                                text = stringResource(R.string.coverage_surah_partly),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            SurahMemorised.NONE -> {}
+                        }
+                        if (item.groupCount > 0) {
+                            Text(
+                                text = stringResource(R.string.quran_lookalikes, item.groupCount),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable(role = Role.Button, onClick = onOpenGroups)
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
             }
             IconButton(onClick = onPlay) {
@@ -375,39 +438,13 @@ private fun SurahRow(
                 )
             }
             DownloadButton(status = download, onClick = onDownload)
-            Column(horizontalAlignment = Alignment.End) {
-                when (item.memorised) {
-                    SurahMemorised.FULL -> Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.quran_memorised),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    SurahMemorised.PARTLY -> Text(
-                        text = stringResource(R.string.coverage_surah_partly),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                    SurahMemorised.NONE -> {}
-                }
-                if (item.groupCount > 0) {
-                    Text(
-                        text = stringResource(R.string.quran_lookalikes, item.groupCount),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clickable(role = Role.Button, onClick = onOpenGroups)
-                            .padding(top = 4.dp, bottom = 4.dp, start = 8.dp)
-                    )
-                }
-            }
         }
         Hairline()
     }
 }
 
 @Composable
-private fun JuzRow(entry: JuzListItem, onClick: () -> Unit, download: DownloadStatus, onDownload: () -> Unit) {
+private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, download: DownloadStatus, onDownload: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -423,7 +460,8 @@ private fun JuzRow(entry: JuzListItem, onClick: () -> Unit, download: DownloadSt
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = stringResource(R.string.quran_juz_info, entry.startPage, SurahData.nameOf(entry.firstSurah)),
+                    text = stringResource(R.string.quran_juz_info, entry.startPage, SurahData.nameOf(entry.firstSurah)) +
+                        (sizeText?.let { " · $it" } ?: ""),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

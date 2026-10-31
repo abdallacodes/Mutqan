@@ -120,7 +120,7 @@ fun PageBoundariesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
             // ── The question ──
             when (state.variant) {
                 ExerciseType.PAGE_EDGES -> {
-                    SectionLabel(stringResource(R.string.ex_ask_edges))
+                    Text(stringResource(R.string.ex_ask_edges), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
                     Text(
                         text = stringResource(R.string.dialog_page_title, round.page),
                         style = MaterialTheme.typography.displayLarge,
@@ -129,12 +129,12 @@ fun PageBoundariesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
                 }
 
                 ExerciseType.FIRST_TO_LAST -> {
-                    SectionLabel(stringResource(R.string.ex_ask_last))
+                    Text(stringResource(R.string.ex_ask_last), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
                     VerseBlock(stringResource(R.string.ex_first_verse), round.first)
                 }
 
                 ExerciseType.NEIGHBOURS -> {
-                    SectionLabel(stringResource(R.string.ex_ask_between))
+                    Text(stringResource(R.string.ex_ask_between), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
                     round.previousLast?.let { VerseBlock(stringResource(R.string.ex_previous_ends), it) }
                     round.nextFirst?.let { VerseBlock(stringResource(R.string.ex_next_starts), it) }
                 }
@@ -157,7 +157,7 @@ fun PageBoundariesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
                 VerseBlock(stringResource(R.string.ex_last_verse), round.last)
                 PaperLink(stringResource(R.string.home_btn_open_mushaf), onClick = { onOpenMushaf(round.page) })
 
-                SectionLabel(stringResource(R.string.ex_how_did_it_go))
+                Text(stringResource(R.string.ex_how_did_it_go), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
                 PaperButton(
                     text = stringResource(R.string.ex_knew),
                     onClick = { viewModel.finish(RecallOutcome.INDEPENDENT) },

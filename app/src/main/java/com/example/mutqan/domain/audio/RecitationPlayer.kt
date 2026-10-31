@@ -396,6 +396,21 @@ class RecitationPlayer private constructor(context: Context) {
         @Volatile
         private var cache: SimpleCache? = null
 
+        /** What the streaming cache holds now, in bytes. */
+        fun cacheBytes(context: Context): Long = cache(context.applicationContext).cacheSpace
+
+        /** Empties the streaming cache. Downloaded surahs are not in it and stay. */
+        fun clearCache(context: Context) {
+            val c = cache(context.applicationContext)
+            for (key in c.keys.toList()) {
+                try {
+                    c.removeResource(key)
+                } catch (_: Exception) {
+                    // In use right now; it will go with the next clearing.
+                }
+            }
+        }
+
         fun get(context: Context): RecitationPlayer =
             instance ?: synchronized(this) { instance ?: RecitationPlayer(context).also { instance = it } }
 

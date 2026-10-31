@@ -50,11 +50,11 @@ fun DownloadButton(status: DownloadStatus, onClick: () -> Unit, modifier: Modifi
 }
 
 @Composable
-fun DeleteAllDownloadsDialog(size: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmDialog(title: String, body: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.audio_delete_all_title)) },
-        text = { Text(stringResource(R.string.audio_delete_all_body, size)) },
+        title = { Text(title) },
+        text = { Text(body) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(stringResource(R.string.audio_delete_confirm)) }
         },

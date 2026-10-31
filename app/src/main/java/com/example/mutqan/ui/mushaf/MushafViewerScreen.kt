@@ -193,7 +193,8 @@ fun MushafViewerScreen(
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
     onOpenTopic: (Int) -> Unit = {},
-    onOpenTafsir: (Int) -> Unit = {}
+    onOpenTafsir: (Int) -> Unit = {},
+    onOpenAudioStorage: () -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -661,7 +662,10 @@ fun MushafViewerScreen(
         }
     }
 
-    if (showRecitationSheet) RecitationSheet(onDismiss = { showRecitationSheet = false })
+    if (showRecitationSheet) RecitationSheet(
+        onDismiss = { showRecitationSheet = false },
+        onOpenStorage = { showRecitationSheet = false; onOpenAudioStorage() }
+    )
 
     if (showJump) {
         MushafJumpSheet(
