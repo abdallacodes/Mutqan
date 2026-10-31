@@ -253,7 +253,7 @@ fun AppNavHost(
                     onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
                     onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
-                    onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onOpenMushaf    = { page -> navController.openMushaf(page) },
                     onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
                     onSettingsClick = { showSettingsSheet = true }
                 )
@@ -279,7 +279,7 @@ fun AppNavHost(
             composable(Routes.SAVED) {
                 SavedPassagesScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -312,7 +312,7 @@ fun AppNavHost(
             composable(Routes.SURAH_LIST) {
                 SurahListScreen(
                     onSurahClick   = { id -> navController.navigate(Routes.surahDetail(id)) },
-                    onOpenMushaf    = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onOpenMushaf    = { page -> navController.openMushaf(page) },
                     onSettingsClick = { showSettingsSheet = true },
                     onSearchClick   = { navController.navigate(Routes.VERSE_SEARCH) },
                     onOpenRoot      = { root -> navController.navigate(Routes.root(root)) },
@@ -322,7 +322,7 @@ fun AppNavHost(
 
             composable(Routes.VERSE_SEARCH) {
                 VerseSearchScreen(
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onOpenMushaf = { page -> navController.openMushaf(page) },
                     onSettingsClick = { showSettingsSheet = true },
                     onBack = { navController.popBackStack() }
                 )
@@ -362,7 +362,7 @@ fun AppNavHost(
             composable(Routes.PAGE_BOUNDARIES) {
                 PageBoundariesScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -375,7 +375,7 @@ fun AppNavHost(
                 TopicScreen(
                     topicId = entry.arguments?.getInt("id") ?: 0,
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) },
+                    onOpenMushaf = { page -> navController.openMushaf(page) },
                     onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) }
                 )
             }
@@ -397,7 +397,7 @@ fun AppNavHost(
                 RootScreen(
                     rootId = entry.arguments?.getInt("id") ?: 0,
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -408,7 +408,7 @@ fun AppNavHost(
                 QuizScreen(
                     mode = QuizMode.fromRoute(entry.arguments?.getString("mode")),
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -416,14 +416,14 @@ fun AppNavHost(
                 ProgressScreen(
                     onBack = { navController.popBackStack() },
                     onOpenCoverage = { navController.navigate(Routes.COVERAGE) },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
             composable(Routes.READY_LIST) {
                 ReadyListScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -446,7 +446,7 @@ fun AppNavHost(
                     groupId = if (rawId == -1) null else rawId,
                     folderId = if (folderId == -1) null else folderId,
                     onBack  = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -480,7 +480,7 @@ fun AppNavHost(
                     onGroupClick  = { groupId ->
                         navController.navigate(Routes.groupDetail(groupId, surahId))
                     },
-                    onOpenMushaf  = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf  = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -497,7 +497,7 @@ fun AppNavHost(
                     groupId        = groupId,
                     currentSurahId = surahId,
                     onBack         = { navController.popBackStack() },
-                    onOpenMushaf   = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onOpenMushaf   = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -509,7 +509,7 @@ fun AppNavHost(
                 JuzDetailScreen(
                     juzId        = juzId,
                     onBack       = { navController.popBackStack() },
-                    onPageOpen   = { page -> navController.navigate(Routes.mushafViewer(page)) }
+                    onPageOpen   = { page -> navController.openMushaf(page) }
                 )
             }
 
@@ -528,6 +528,11 @@ fun AppNavHost(
             }
         }
     }
+}
+
+/** Opens the Mushaf at [page]. A second tap while it is already open replaces it instead of stacking another one, which Back would then land on. */
+private fun NavHostController.openMushaf(page: Int) {
+    navigate(Routes.mushafViewer(page)) { launchSingleTop = true }
 }
 
 // ── Bottom bar composable ─────────────────────────────────────────────────────
