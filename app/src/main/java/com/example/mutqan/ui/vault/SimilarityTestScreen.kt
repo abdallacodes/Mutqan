@@ -25,7 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperChip
 import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.domain.TestType
 import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
@@ -46,6 +49,7 @@ fun SimilarityTestScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     val source by viewModel.source.collectAsState()
+    val type by viewModel.type.collectAsState()
 
     Scaffold(
         topBar = {
@@ -66,6 +70,22 @@ fun SimilarityTestScreen(
                         onSelect = { viewModel.chooseSource(TestSource.entries[it]) }
                     )
                 }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    listOf(
+                        TestType.RECALL to R.string.test_type_recall,
+                        TestType.FINISH to R.string.test_type_finish,
+                        TestType.WHICH to R.string.test_type_which
+                    ).forEach { (option, label) ->
+                        PaperChip(
+                            selected = type == option,
+                            onClick = { viewModel.chooseType(option) },
+                            label = { Text(stringResource(label)) }
+                        )
+                    }
+                }
             }
         }
     ) { innerPadding ->
@@ -85,6 +105,23 @@ fun SimilarityTestScreen(
                         modifier = Modifier.padding(32.dp)
                     )
                 }
+                is TestUiState.NoGroups -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.test_empty_mine),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                        PaperButton(
+                            text = stringResource(R.string.test_use_ready),
+                            onClick = { viewModel.chooseSource(TestSource.READY) }
+                        )
+                    }
+                }
                 is TestUiState.Error -> {
                     Text(
                         text = state.message.asString(LocalContext.current),
@@ -97,6 +134,7 @@ fun SimilarityTestScreen(
                     QuizContent(
                         state = state,
                         onReveal = viewModel::reveal,
+                        onPick = viewModel::pick,
                         onNext = viewModel::loadNextVerse,
                         onGroupClick = { onNavigateToGroup(state.result.groupId) }
                     )
@@ -111,9 +149,11 @@ fun SimilarityTestScreen(
 private fun QuizContent(
     state: TestUiState.Question,
     onReveal: () -> Unit,
+    onPick: (Int) -> Unit,
     onNext: () -> Unit,
     onGroupClick: () -> Unit
 ) {
+    val isChoice = state.type != TestType.RECALL
     val result = state.result
     val verse = result.verse
     val surahName = SurahData.nameOf(verse.surah)
@@ -129,8 +169,8 @@ private fun QuizContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 1. Meta Info
-        Card(
+        // 1. Meta Info (the reference is the answer when asking which verse it is)
+        if (!(state.type == TestType.WHICH && !state.isRevealed)) Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -164,7 +204,14 @@ private fun QuizContent(
         val shared = MaterialTheme.colorScheme.primary
         val revealedText = if (state.isRevealed && state.words.isNotEmpty()) sharedWords(state.words, state.shared, shared) else null
         Text(
-            text = revealedText ?: androidx.compose.ui.text.AnnotatedString(if (state.isRevealed) cleanText else snippet),
+            text = revealedText ?: androidx.compose.ui.text.AnnotatedString(
+                when {
+                    state.isRevealed -> cleanText
+                    state.type == TestType.FINISH -> state.lead
+                    state.type == TestType.WHICH -> cleanText
+                    else -> snippet
+                }
+            ),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontFamily = AmiriFontFamily,
                 fontSize = 28.sp,
@@ -175,10 +222,56 @@ private fun QuizContent(
             modifier = Modifier.fillMaxWidth()
         )
 
+        // The choices, for the "finish it" and "which verse" tests
+        if (isChoice) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = if (state.type == TestType.FINISH) {
+                        stringResource(R.string.test_q_finish, surahName, verse.ayah)
+                    } else stringResource(R.string.test_q_which),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                state.options.forEachIndexed { i, option ->
+                    val container = when {
+                        state.picked == null -> Color.Transparent
+                        i == state.correct -> MaterialTheme.colorScheme.primaryContainer
+                        i == state.picked -> MaterialTheme.colorScheme.errorContainer
+                        else -> Color.Transparent
+                    }
+                    OutlinedButton(
+                        onClick = { onPick(i) },
+                        enabled = state.picked == null || i == state.correct || i == state.picked,
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = container),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = option,
+                            style = if (state.type == TestType.FINISH) {
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 34.sp, textDirection = TextDirection.Rtl
+                                )
+                            } else MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        )
+                    }
+                }
+                if (state.picked != null) {
+                    Text(
+                        text = stringResource(if (state.picked == state.correct) R.string.test_right else R.string.test_wrong),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (state.picked == state.correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // 3. Group Info
-        if (state.source == TestSource.MINE) Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (state.source == TestSource.MINE && (!isChoice || state.isRevealed)) Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = stringResource(R.string.label_part_of_group),
                 style = MaterialTheme.typography.labelSmall,
@@ -220,7 +313,7 @@ private fun QuizContent(
 
         // 5. Actions
         if (!state.isRevealed) {
-            Button(
+            if (!isChoice) Button(
                 onClick = onReveal,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp)

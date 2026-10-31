@@ -60,7 +60,6 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
     FILL("fill", ExerciseType.QUIZ_FILL),
     ORDER("order", ExerciseType.QUIZ_ORDER),
     WHERE("where", ExerciseType.QUIZ_WHERE),
-    TOPIC("topic", ExerciseType.QUIZ_TOPIC),
     DAILY("daily", null);
 
     companion object {
@@ -240,21 +239,58 @@ class QuizEngine(
             (0..other.size - length).sortedBy { abs(it - start) }.take(2)
                 .map { other.subList(it, it + length).joinToString(" ") }
 
-        val distractors = arrayListOf<String>()
+        val lookalikes = arrayListOf<String>()
         similar.similarTo(id).take(5).forEach { m ->
-            quran.ayahById(m.ayahId)?.let { distractors += spansNear(wordsOf(it)) }
+            quran.ayahById(m.ayahId)?.let { lookalikes += spansNear(wordsOf(it)) }
         }
-        repeat(6) {
-            val other = quran.ayahById(id + random.nextInt(-30, 31))
-            if (other != null && other.id != id) distractors += spansNear(wordsOf(other))
-        }
-        // Words of the same lemma or root in another form are the hardest wrong choices; the harder level
-        // leads with them, the normal one slips in one among the look-alike spans.
+        // What fits the gap is judged by the words around it, not by chance: other forms of the hidden words,
+        // what follows the word before the gap (or comes before the word after it) elsewhere in the Quran, and
+        // the same stretch of a look-alike. Spans of random neighbouring verses are plainly wrong, so they only
+        // fill up the options when nothing better exists. The harder level leads with the closest forms.
         val variants = morphVariants(x, words, start, length)
-        val ordered = if (hard) variants + distractors else variants.take(1) + distractors + variants.drop(1)
+        val fitting = fittingSpans(x, words, start, length)
+        val pool = if (hard) variants + fitting + lookalikes else variants.take(1) + fitting + lookalikes + variants.drop(1)
+        // A span made only of words already shown around the gap cannot be what was removed.
+        val visible = words.filterIndexed { i, _ -> i < start || i >= start + length }.map(QuizText::normalize).toSet()
+        val ranked = pool.sortedBy { span -> if (span.split(" ").all { QuizText.normalize(it) in visible }) 1 else 0 }
+        val fillers = arrayListOf<String>()
+        if (QuizText.options(correct, ranked, 4).size < 4) {
+            repeat(6) {
+                val other = quran.ayahById(id + random.nextInt(-30, 31))
+                if (other != null && other.id != id) fillers += spansNear(wordsOf(other))
+            }
+        }
+        val ordered = ranked + fillers
         return finish(
             ExerciseType.QUIZ_FILL, x, QuizText.blanked(words, start, length, FILL_WINDOW), correct, ordered, x, showRef = true
         )
+    }
+
+    /**
+     * Spans of the same length that stand where the hidden one does in other verses: those that follow the word
+     * before the gap, and those that come before the word after it, found through that word's lemma. The two
+     * kinds are interleaved. Empty without morphology data.
+     */
+    private fun fittingSpans(x: QuranAyah, words: List<String>, start: Int, length: Int): List<String> {
+        val m = morphology ?: return emptyList()
+        val here = m.wordsOfAyah(x.surah, x.ayah).associateBy { it.position }
+
+        fun spans(anchor: MorphWord?, startIn: (WordLocation) -> Int): List<String> {
+            if (anchor == null || anchor.lemma < 0) return emptyList()
+            val found = arrayListOf<String>()
+            for (p in m.occurrencesOfLemma(anchor.lemma).filter { !(it.surah == x.surah && it.ayah == x.ayah) }.shuffled(random).take(FIT_TRIES)) {
+                val other = quran.wordsOfAyah(p.surah, p.ayah).filter { !it.isEnd }.map { it.hafs }
+                val from = startIn(p)
+                if (from < 0 || from + length > other.size) continue
+                found += other.subList(from, from + length).joinToString(" ")
+            }
+            return found
+        }
+
+        // The word before the gap is at position `start` (1-based); the one after it at `start + length + 1`.
+        val after = if (start > 0) spans(here[start]) { it.position } else emptyList()
+        val before = if (start + length < words.size) spans(here[start + length + 1]) { it.position - 1 - length } else emptyList()
+        return (0 until maxOf(after.size, before.size)).flatMap { listOfNotNull(after.getOrNull(it), before.getOrNull(it)) }
     }
 
     /**
@@ -379,6 +415,7 @@ class QuizEngine(
         const val IDENTICAL_SCORE = 95
         const val MORPH_TRIES = 12
         const val MORPH_MAX = 4
+        const val FIT_TRIES = 12
         const val TOPIC_MIN_VERSES = 3
         const val TOPIC_MAX_VERSES = 150
         const val TOPIC_WORDS = 30

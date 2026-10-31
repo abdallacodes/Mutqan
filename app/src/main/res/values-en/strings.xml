@@ -722,7 +722,16 @@
     <string name="tafsir_previous">Previous verse</string>
     <string name="tafsir_next">Next verse</string>
     <string name="test_source_mine">My groups</string>
-    <string name="test_source_ready">Ready-made</string>
+    <string name="test_source_ready">Ready-made similar verses</string>
+    <string name="test_empty_mine">You have no groups yet. Add similar verses to your groups in the vault, or try the ready-made ones.</string>
+    <string name="test_use_ready">Try the ready-made groups</string>
+    <string name="test_type_recall">Recall</string>
+    <string name="test_type_finish">Finish it</string>
+    <string name="test_type_which">Which verse?</string>
+    <string name="test_q_finish">What comes next in %1$s · %2$d?</string>
+    <string name="test_q_which">Which verse is this from?</string>
+    <string name="test_right">Correct</string>
+    <string name="test_wrong">Not quite</string>
     <string name="test_similar_title">Lookalike verses, shared words highlighted</string>
     <string name="settings_palette">Colours</string>
     <string name="palette_paper">Paper</string>

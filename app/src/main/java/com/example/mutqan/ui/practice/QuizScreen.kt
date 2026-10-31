@@ -72,7 +72,6 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             QuizMode.FILL -> R.string.ex_fill_title
             QuizMode.ORDER -> R.string.ex_order_title
             QuizMode.WHERE -> R.string.ex_where_title
-            QuizMode.TOPIC -> R.string.ex_topic_title
             QuizMode.DAILY -> R.string.practice_daily_title
         }
     )

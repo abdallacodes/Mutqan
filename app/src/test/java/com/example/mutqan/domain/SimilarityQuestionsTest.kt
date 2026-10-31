@@ -1,0 +1,61 @@
+package com.example.mutqan.domain
+
+import kotlin.random.Random
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SimilarityQuestionsTest {
+
+    private fun w(text: String) = text.split(" ")
+
+    @Test
+    fun `common prefix counts the shared opening words`() {
+        assertEquals(3, SimilarityQuestions.commonPrefix(w("a b c d"), w("a b c x y")))
+        assertEquals(0, SimilarityQuestions.commonPrefix(w("a b"), w("b a")))
+    }
+
+    @Test
+    fun `finish offers the ending of each verse that shares the opening`() {
+        val verse = w("one two three red fish today")
+        val others = listOf(w("one two three blue fish today"), w("one two nine green"))
+        val set = SimilarityQuestions.finish(verse, others, Random(1))!!
+        assertTrue(set.lead.contains("three"))
+        // Only the lookalike that shares the whole opening ("one two three") is a rival.
+        assertEquals(2, set.options.size)
+        assertTrue(set.options[set.correct].startsWith("red"))
+        assertTrue(set.options.any { it.startsWith("blue") })
+    }
+
+    @Test
+    fun `finish reaches further when the first words of the endings agree`() {
+        val verse = w("a b same same X end")
+        val other = w("a b same same Y end")
+        val set = SimilarityQuestions.finish(verse, listOf(other), Random(2))!!
+        assertEquals(2, set.options.size)
+        assertTrue(set.options[set.correct].contains("X"))
+    }
+
+    @Test
+    fun `finish needs a lookalike that shares an opening`() {
+        assertNull(SimilarityQuestions.finish(w("a b c"), listOf(w("x y z")), Random(3)))
+        assertNull(SimilarityQuestions.finish(w("a b c"), emptyList(), Random(3)))
+    }
+
+    @Test
+    fun `which offers the references of the group`() {
+        val set = SimilarityQuestions.which(
+            w("a b c"), "S1 · 1", listOf("S2 · 5" to w("a b d"), "S3 · 7" to w("a x c")), Random(4)
+        )!!
+        assertEquals(3, set.options.size)
+        assertEquals("S1 · 1", set.options[set.correct])
+    }
+
+    @Test
+    fun `which is skipped when a lookalike is word for word the same`() {
+        assertNull(SimilarityQuestions.which(w("a b c"), "S1 · 1", listOf("S2 · 5" to w("a b c")), Random(5)))
+        assertNotNull(SimilarityQuestions.which(w("a b c"), "S1 · 1", listOf("S2 · 5" to w("a b d")), Random(5)))
+    }
+}

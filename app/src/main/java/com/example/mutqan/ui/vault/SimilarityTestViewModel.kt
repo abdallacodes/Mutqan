@@ -9,8 +9,11 @@ import com.example.mutqan.data.SurahData
 import com.example.mutqan.domain.HifzCoverage
 import com.example.mutqan.domain.ReadyTest
 import com.example.mutqan.domain.SimilarLibrary
+import com.example.mutqan.domain.SimilarityQuestions
 import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.TestType
 import com.example.mutqan.domain.TestVerseResult
+import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.UiText
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 /** A lookalike shown with the answer: where it is, its words, and which of them it shares with the verse asked. */
 data class SimilarVerse(val reference: String, val words: List<String>, val shared: Set<Int>)
@@ -36,11 +40,30 @@ sealed class TestUiState {
         /** The words of the verse and the positions it shares with its lookalikes; only for ready-made groups. */
         val words: List<String> = emptyList(),
         val shared: Set<Int> = emptySet(),
-        val similar: List<SimilarVerse> = emptyList()
+        val similar: List<SimilarVerse> = emptyList(),
+        val type: TestType = TestType.RECALL,
+        /** For the choice types: what is shown above the options, the options, the right one and the one picked. */
+        val lead: String = "",
+        val options: List<String> = emptyList(),
+        val correct: Int = -1,
+        val picked: Int? = null
     ) : TestUiState()
     object Empty : TestUiState()
+    /** The user's own groups are the source and there are none. */
+    object NoGroups : TestUiState()
     data class Error(val message: UiText) : TestUiState()
 }
+
+/** A verse picked for the test, with the other verses of its group. */
+private class Pick(
+    val verse: QuranAyah,
+    val groupId: Int,
+    val groupName: String,
+    val shared: Set<Int>,
+    val others: List<Other>
+)
+
+private class Other(val ayah: QuranAyah, val shared: Set<Int>)
 
 class SimilarityTestViewModel(
     private val context: Context,
@@ -55,13 +78,17 @@ class SimilarityTestViewModel(
     private val _source = MutableStateFlow(TestSource.MINE)
     val source = _source.asStateFlow()
 
+    private val _type = MutableStateFlow(TestType.RECALL)
+    val type = _type.asStateFlow()
+
     private val _uiState = MutableStateFlow<TestUiState>(TestUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
     private val recentGroups = ArrayDeque<Int>()
+    private val random = Random.Default
 
     init {
-        loadNextVerse()
+        loadNextVerse(fallbackToReady = true)
     }
 
     fun chooseSource(source: TestSource) {
@@ -70,34 +97,54 @@ class SimilarityTestViewModel(
         loadNextVerse()
     }
 
-    fun loadNextVerse() {
+    fun chooseType(type: TestType) {
+        if (type == _type.value) return
+        _type.value = type
+        loadNextVerse()
+    }
+
+    /**
+     * [fallbackToReady] is for the first question only: a user with no groups of their own opens on the
+     * ready-made ones. Afterwards an empty "my groups" is shown as such.
+     */
+    fun loadNextVerse(fallbackToReady: Boolean = false) {
         _uiState.update { TestUiState.Loading }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (_source.value == TestSource.READY) {
-                    loadReady()
+                var pick = pickVerse(_source.value)
+                if (pick == null && _source.value == TestSource.MINE && canChooseSource && fallbackToReady) {
+                    _source.value = TestSource.READY
+                    pick = pickVerse(TestSource.READY)
+                }
+                if (pick == null) {
+                    _uiState.update {
+                        if (_source.value == TestSource.MINE && canChooseSource) TestUiState.NoGroups else TestUiState.Empty
+                    }
                     return@launch
                 }
-                val res = study.randomVerseForTest(
-                    groupId = if (groupId != null && groupId > 0) groupId else null,
-                    folderId = if (folderId != null && folderId > 0) folderId else null
-                )
-                when {
-                    res != null -> _uiState.update { TestUiState.Question(res) }
-                    canChooseSource -> {
-                        // An empty vault: the ready-made groups are the test.
-                        _source.value = TestSource.READY
-                        loadReady()
-                    }
-                    else -> _uiState.update { TestUiState.Empty }
-                }
+                _uiState.update { question(pick, _source.value, _type.value) }
             } catch (e: Exception) {
                 _uiState.update { TestUiState.Error(UiText(R.string.error_unknown)) }
             }
         }
     }
 
-    private suspend fun loadReady() {
+    private suspend fun pickVerse(source: TestSource): Pick? {
+        val quran = QuranRepository.getInstance(context)
+        return if (source == TestSource.READY) pickReady(quran) else pickMine(quran)
+    }
+
+    private suspend fun pickMine(quran: QuranRepository): Pick? {
+        val res = study.randomVerseForTest(
+            groupId = if (groupId != null && groupId > 0) groupId else null,
+            folderId = if (folderId != null && folderId > 0) folderId else null
+        ) ?: return null
+        val others = study.groupAyahIds(res.groupId).filter { it != res.verse.id }
+            .mapNotNull { quran.ayahById(it) }.map { Other(it, emptySet()) }
+        return Pick(res.verse, res.groupId, res.groupName, emptySet(), others)
+    }
+
+    private suspend fun pickReady(quran: QuranRepository): Pick? {
         val data = SimilarLibrary.load(context)
         val ranges = study.coverage().first()
         val picked = ReadyTest.pick(
@@ -105,38 +152,43 @@ class SimilarityTestViewModel(
             memorised = { HifzCoverage.containsAll(ranges, it..it) },
             anyMemorised = ranges.isNotEmpty(),
             recent = recentGroups
-        )
-        if (picked == null) {
-            _uiState.update { TestUiState.Empty }
-            return
-        }
+        ) ?: return null
         val (group, member) = picked
         recentGroups.addLast(group.id)
         while (recentGroups.size > ReadyTest.RECENT_LIMIT) recentGroups.removeFirst()
 
+        val verse = quran.ayahById(member.ayahId) ?: return null
+        val others = group.members.filter { it.ayahId != member.ayahId }.mapNotNull { other ->
+            quran.ayahById(other.ayahId)?.let { Other(it, ReadyTest.hits(other.matchedWords)) }
+        }
+        return Pick(verse, group.id, group.description, ReadyTest.hits(member.matchedWords), others)
+    }
+
+    private fun wordsOf(quran: QuranRepository, a: QuranAyah): List<String> =
+        quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }.map { it.hafs }
+
+    private fun reference(a: QuranAyah) = SurahData.nameOf(a.surah) + " · " + a.ayah
+
+    /** The question for [pick] of the chosen [type]; a type that does not suit the verse falls back to recalling it. */
+    private fun question(pick: Pick, source: TestSource, type: TestType): TestUiState.Question {
         val quran = QuranRepository.getInstance(context)
-        val verse = quran.ayahById(member.ayahId)
-        if (verse == null) {
-            _uiState.update { TestUiState.Empty }
-            return
-        }
-        val similar = group.members.filter { it.ayahId != member.ayahId }.mapNotNull { other ->
-            val ayah = quran.ayahById(other.ayahId) ?: return@mapNotNull null
-            SimilarVerse(
-                reference = SurahData.nameOf(ayah.surah) + " · " + ayah.ayah,
-                words = quran.wordsOfAyah(ayah.surah, ayah.ayah).filter { !it.isEnd }.map { it.hafs },
-                shared = ReadyTest.hits(other.matchedWords)
+        val words = wordsOf(quran, pick.verse)
+        val otherWords = pick.others.map { it to wordsOf(quran, it.ayah) }
+        val base = TestUiState.Question(
+            result = TestVerseResult(pick.verse, pick.groupId, pick.groupName),
+            source = source,
+            words = words,
+            shared = pick.shared,
+            similar = otherWords.map { (o, w) -> SimilarVerse(reference(o.ayah), w, o.shared) }
+        )
+        val set = when (type) {
+            TestType.RECALL -> null
+            TestType.FINISH -> SimilarityQuestions.finish(words, otherWords.map { it.second }, random)
+            TestType.WHICH -> SimilarityQuestions.which(
+                words, reference(pick.verse), otherWords.map { (o, w) -> reference(o.ayah) to w }, random
             )
-        }
-        _uiState.update {
-            TestUiState.Question(
-                result = TestVerseResult(verse, group.id, group.description),
-                source = TestSource.READY,
-                words = quran.wordsOfAyah(verse.surah, verse.ayah).filter { !it.isEnd }.map { it.hafs },
-                shared = ReadyTest.hits(member.matchedWords),
-                similar = similar
-            )
-        }
+        } ?: return base
+        return base.copy(type = type, lead = set.lead, options = set.options, correct = set.correct)
     }
 
     fun reveal() {
@@ -144,6 +196,12 @@ class SimilarityTestViewModel(
             if (state is TestUiState.Question) {
                 state.copy(isRevealed = true)
             } else state
+        }
+    }
+
+    fun pick(index: Int) {
+        _uiState.update { state ->
+            if (state is TestUiState.Question && state.picked == null) state.copy(picked = index, isRevealed = true) else state
         }
     }
 }

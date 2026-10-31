@@ -38,7 +38,7 @@ enum class ExerciseType(val code: Int) {
         val PAGE_BOUNDARIES: List<ExerciseType> = listOf(PAGE_EDGES, FIRST_TO_LAST, NEIGHBOURS)
 
         /** The questions with a right answer the app can check. */
-        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE, QUIZ_TOPIC)
+        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE)
     }
 }
 

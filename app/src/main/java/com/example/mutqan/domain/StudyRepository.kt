@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -272,6 +273,11 @@ class StudyRepository(
         dao.observeMembersOfGroup(groupId)
             .map { members -> members.mapNotNull { ref(it.verseId) }.sortedWith(byReadingOrder) }
             .flowOn(Dispatchers.IO)
+
+    /** The ayah ids in one of the user's groups. */
+    suspend fun groupAyahIds(groupId: Int): List<Int> = withContext(Dispatchers.IO) {
+        dao.observeMembersOfGroup(groupId).first().map { it.verseId }
+    }
 
     /** Every member of every group that has at least one member in [surahId]. */
     fun memberRefsBySurahGroups(surahId: Int): Flow<List<GroupMemberRef>> =
