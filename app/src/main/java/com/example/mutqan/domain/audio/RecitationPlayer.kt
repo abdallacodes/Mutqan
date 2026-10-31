@@ -228,16 +228,13 @@ class RecitationPlayer private constructor(context: Context) {
                         .setArtist(reciterName)
                         .build()
                 )
-            if (clip.endMs >= 0) {
-                builder.setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(clip.startMs)
-                        .setEndPositionMs(clip.endMs)
-                        .build()
-                )
+            if (clip.endMs != AudioClip.WHOLE) {
+                val window = MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
+                if (clip.endMs >= 0) window.setEndPositionMs(clip.endMs)
+                builder.setClippingConfiguration(window.build())
             }
             val item = builder.build()
-            repeat(repeat.coerceAtLeast(1)) { items += item; who += id; files += if (clip.endMs < 0 && local == null) clip.url else null }
+            repeat(repeat.coerceAtLeast(1)) { items += item; who += id; files += if (clip.endMs == AudioClip.WHOLE && local == null) clip.url else null }
         }
         if (items.isEmpty()) return
 

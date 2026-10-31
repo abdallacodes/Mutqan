@@ -6,13 +6,17 @@ import com.example.mutqan.R
 import org.json.JSONObject
 
 /**
- * The reciters whose recordings the app can play. The first three have one file per verse under [verseUrlBase];
- * Ali Jaber has one file per surah, and the time each verse starts and ends in it (`assets/recitation/ali_jaber.json`).
+ * The reciters whose recordings the app can play. Those with a [verseUrlBase] have one file per verse under it; the
+ * others have one file per surah, and the time each verse starts and ends in it (`assets/recitation/<id>.json`).
  */
 enum class Reciter(val id: String, @StringRes val nameRes: Int, val verseUrlBase: String?) {
-    HUSARY("husary", R.string.reciter_husary, "https://audio-cdn.tarteel.ai/quran/husaryMuallim/"),
+    HUSARY("husary", R.string.reciter_husary, "https://audio-cdn.tarteel.ai/quran/husary/"),
+    HUSARY_MUALLIM("husary_muallim", R.string.reciter_husary_muallim, "https://audio-cdn.tarteel.ai/quran/husaryMuallim/"),
+    HUSARY_MUJAWWAD("husary_mujawwad", R.string.reciter_husary_mujawwad, null),
     MINSHAWI("minshawi", R.string.reciter_minshawi, "https://audio-cdn.tarteel.ai/quran/minshawyMurattal/"),
     SHATRI("shatri", R.string.reciter_shatri, "https://audio-cdn.tarteel.ai/quran/abuBakrAlShatri/"),
+    MUAIQLY("muaiqly", R.string.reciter_muaiqly, null),
+    BASFAR("basfar", R.string.reciter_basfar, null),
     ALI_JABER("ali_jaber", R.string.reciter_ali_jaber, null);
 
     companion object {
@@ -20,31 +24,44 @@ enum class Reciter(val id: String, @StringRes val nameRes: Int, val verseUrlBase
     }
 }
 
-/** Where one verse's sound is: a file, and the part of it to play ([endMs] is -1 for the whole file). */
-class AudioClip(val url: String, val startMs: Long = 0L, val endMs: Long = -1L)
+/**
+ * Where one verse's sound is: a file, and the part of it to play. [endMs] is [WHOLE] for the whole file, [TO_END]
+ * for from [startMs] to the end of the file (the last verse of a surah), or the time the verse ends.
+ */
+class AudioClip(val url: String, val startMs: Long = 0L, val endMs: Long = WHOLE) {
+    companion object {
+        const val WHOLE = -1L
+        const val TO_END = -2L
+    }
+}
 
 /** Finds the audio of a verse for a reciter. */
 class RecitationSources(private val context: Context) {
 
     private class Surahs(val urlPattern: String, val times: Map<Int, List<LongArray>>)
 
-    private val aliJaber: Surahs by lazy {
-        val root = JSONObject(context.assets.open("recitation/ali_jaber.json").bufferedReader().use { it.readText() })
+    private val timed = HashMap<Reciter, Surahs>()
+
+    private fun timingsOf(reciter: Reciter): Surahs = synchronized(timed) { timed.getOrPut(reciter) { load(reciter) } }
+
+    private fun load(reciter: Reciter): Surahs {
+        val root = JSONObject(context.assets.open("recitation/${reciter.id}.json").bufferedReader().use { it.readText() })
         val t = root.getJSONObject("t")
         val times = HashMap<Int, List<LongArray>>()
         for (key in t.keys()) {
             val arr = t.getJSONArray(key)
             times[key.toInt()] = List(arr.length()) { i -> arr.getJSONArray(i).let { longArrayOf(it.getLong(0), it.getLong(1)) } }
         }
-        Surahs(root.getString("url"), times)
+        return Surahs(root.getString("url"), times)
     }
 
     /** The clip of [surah]:[ayah] (1-based within the surah), or null when this reciter has none. */
     fun clip(reciter: Reciter, surah: Int, ayah: Int): AudioClip? {
         val base = reciter.verseUrlBase
         if (base != null) return AudioClip("$base%03d%03d.mp3".format(surah, ayah))
-        val window = aliJaber.times[surah]?.getOrNull(ayah - 1) ?: return null
-        return AudioClip(aliJaber.urlPattern.format(surah), window[0], window[1])
+        val surahs = timingsOf(reciter)
+        val window = surahs.times[surah]?.getOrNull(ayah - 1) ?: return null
+        return AudioClip(surahs.urlPattern.format(surah), window[0].coerceAtLeast(0L), window[1])
     }
 }
 

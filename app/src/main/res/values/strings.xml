@@ -764,7 +764,11 @@
     <string name="first_sync_other_account">بيانات هذا الجهاز كانت مرتبطة بحساب آخر.</string>
     <string name="first_sync_merge">ادمج الاثنين</string>
     <string name="first_sync_replace">استبدل بيانات الجهاز ببيانات الحساب</string>
-    <string name="reciter_husary">محمود خليل الحصري</string>
+    <string name="reciter_husary">الحصري (مرتّل)</string>
+    <string name="reciter_husary_muallim">الحصري (المعلّم)</string>
+    <string name="reciter_husary_mujawwad">الحصري (مجوّد)</string>
+    <string name="reciter_muaiqly">ماهر المعيقلي</string>
+    <string name="reciter_basfar">عبد الله بصفر</string>
     <string name="reciter_minshawi">محمد صدّيق المنشاوي</string>
     <string name="reciter_shatri">أبو بكر الشاطري</string>
     <string name="reciter_ali_jaber">علي جابر</string>

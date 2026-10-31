@@ -764,7 +764,11 @@
     <string name="first_sync_other_account">The data on this device was linked to a different account.</string>
     <string name="first_sync_merge">Merge both</string>
     <string name="first_sync_replace">Replace this device with the account\'s data</string>
-    <string name="reciter_husary">Mahmoud Khalil al-Husary</string>
+    <string name="reciter_husary">al-Husary (Murattal)</string>
+    <string name="reciter_husary_muallim">al-Husary (Muallim)</string>
+    <string name="reciter_husary_mujawwad">al-Husary (Mujawwad)</string>
+    <string name="reciter_muaiqly">Maher al-Muaiqly</string>
+    <string name="reciter_basfar">Abdullah Basfar</string>
     <string name="reciter_minshawi">Muhammad Siddiq al-Minshawi</string>
     <string name="reciter_shatri">Abu Bakr al-Shatri</string>
     <string name="reciter_ali_jaber">Ali Jaber</string>
