@@ -759,4 +759,9 @@
     <string name="home_show_less">Hide</string>
     <string name="home_later_more">Show %1$d more</string>
     <string name="home_done_show">Show done today (%1$d)</string>
+    <string name="first_sync_title">This account already has saved data</string>
+    <string name="first_sync_body">The cloud holds %1$d revision entries for this account, and this device has %2$d. What should happen?</string>
+    <string name="first_sync_other_account">The data on this device was linked to a different account.</string>
+    <string name="first_sync_merge">Merge both</string>
+    <string name="first_sync_replace">Replace this device with the account\'s data</string>
 </resources>

@@ -97,6 +97,9 @@ class UserPreferencesRepository(private val context: Context) {
         return id
     }
 
+    /** The account this device's data was last synced with, or null if it never was. */
+    suspend fun syncOwner(): String? = context.dataStore.data.first()[KEY_SYNC_UID]?.takeIf { it.isNotEmpty() }
+
     /**
      * What the last sync with [uid]'s cloud copy left behind. Another account has no shared history, so for it
      * everything counts as new.

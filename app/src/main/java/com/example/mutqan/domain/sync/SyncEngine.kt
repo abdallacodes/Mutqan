@@ -43,6 +43,14 @@ class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, p
         throw SyncConflictException()
     }
 
+    /** Makes this device's data the cloud copy's, discarding what is on the device; with no cloud copy it is an ordinary sync. */
+    suspend fun replaceLocal(): SyncOutcome {
+        val cloud = remote.fetch() ?: return sync()
+        local.apply(cloud.text)
+        memory.remember(hash(local.snapshot()), cloud.version)
+        return SyncOutcome.PULLED
+    }
+
     /** One pass; null when the cloud copy changed under us and the pass must be repeated. */
     private suspend fun attempt(): SyncOutcome? {
         val cloud = remote.fetch()

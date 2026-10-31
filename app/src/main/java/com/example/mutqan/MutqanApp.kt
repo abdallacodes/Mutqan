@@ -9,7 +9,7 @@ class MutqanApp : Application() {
     override fun onCreate() {
         super.onCreate()
         applyDefaultLanguage()
-        CloudSync.get(this).takeIf { it.isConfigured }?.syncInBackground()
+        CloudSync.get(this).startAutoSync(this)
     }
 
     /**

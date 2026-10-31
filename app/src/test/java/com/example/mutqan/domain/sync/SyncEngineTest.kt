@@ -44,6 +44,22 @@ class SyncEngineTest {
     private fun sync(local: Local, remote: Remote, memory: Memory) = runBlocking { SyncEngine(local, remote, memory).sync() }
 
     @Test
+    fun `replacing takes the cloud copy and drops what the device had`() {
+        val local = Local(data(1)); val remote = Remote(RemoteSnapshot(4, data(7, 8))); val memory = Memory()
+        assertEquals(SyncOutcome.PULLED, runBlocking { SyncEngine(local, remote, memory).replaceLocal() })
+        assertEquals(data(7, 8), local.text)
+        assertEquals(4L, memory.version)
+        assertEquals(0, remote.pushes)
+    }
+
+    @Test
+    fun `replacing with no cloud copy pushes like a normal sync`() {
+        val local = Local(data(1)); val remote = Remote(); val memory = Memory()
+        assertEquals(SyncOutcome.PUSHED, runBlocking { SyncEngine(local, remote, memory).replaceLocal() })
+        assertEquals(1L, remote.cloud?.version)
+    }
+
+    @Test
     fun `the first sync with an empty cloud pushes`() {
         val local = Local(data(1)); val remote = Remote(); val memory = Memory()
         assertEquals(SyncOutcome.PUSHED, sync(local, remote, memory))

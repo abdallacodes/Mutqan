@@ -759,4 +759,9 @@
     <string name="home_show_less">إخفاء</string>
     <string name="home_later_more">عرض الباقي (%1$d)</string>
     <string name="home_done_show">عرض ما تمّ اليوم (%1$d)</string>
+    <string name="first_sync_title">هذا الحساب لديه بيانات محفوظة</string>
+    <string name="first_sync_body">في السحابة %1$d سجلّ مراجعة لهذا الحساب، وعلى هذا الجهاز %2$d. ماذا تريد أن نفعل؟</string>
+    <string name="first_sync_other_account">بيانات هذا الجهاز كانت مرتبطة بحساب آخر.</string>
+    <string name="first_sync_merge">ادمج الاثنين</string>
+    <string name="first_sync_replace">استبدل بيانات الجهاز ببيانات الحساب</string>
 </resources>

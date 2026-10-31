@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
 import com.example.mutqan.domain.sync.CloudSync
+import com.example.mutqan.domain.sync.FirstSync
 import com.example.mutqan.domain.sync.SyncStatus
 import kotlinx.coroutines.launch
 
@@ -56,6 +57,19 @@ fun AccountSection() {
     val status by cloud.status.collectAsState()
     val lastSync by cloud.lastSyncTime.collectAsState(initial = null)
     var confirmDelete by remember { mutableStateOf(false) }
+    var firstSync by remember { mutableStateOf<FirstSync?>(null) }
+
+    // A new account on this device with data on both sides asks first; everything else syncs straight away.
+    fun startSync() {
+        scope.launch {
+            try {
+                val choice = cloud.firstSyncChoice()
+                if (choice != null) firstSync = choice else cloud.syncNow()
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     SectionLabel(stringResource(R.string.account_title))
     Spacer(Modifier.height(8.dp))
@@ -76,7 +90,7 @@ fun AccountSection() {
                 scope.launch {
                     try {
                         cloud.accounts.signIn(activity)
-                        cloud.syncNow()
+                        if (cloud.accounts.account.value != null) startSync()
                     } catch (e: Exception) {
                         Toast.makeText(context, context.getString(R.string.account_sign_in_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                     }
@@ -117,7 +131,7 @@ fun AccountSection() {
         DataActionRow(
             label = stringResource(R.string.sync_now),
             icon = Icons.Default.Sync,
-            onClick = { if (status != SyncStatus.Syncing) scope.launch { cloud.syncNow() } }
+            onClick = { if (status != SyncStatus.Syncing) startSync() }
         )
         DataActionRow(
             label = stringResource(R.string.sync_delete_cloud),
@@ -128,6 +142,37 @@ fun AccountSection() {
             label = stringResource(R.string.account_sign_out),
             icon = Icons.AutoMirrored.Filled.Logout,
             onClick = { scope.launch { cloud.accounts.signOut() } }
+        )
+    }
+
+    firstSync?.let { choice ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.first_sync_title)) },
+            text = {
+                Text(
+                    stringResource(R.string.first_sync_body, choice.cloudEntries, choice.deviceEntries) +
+                        if (choice.otherAccount) "\n\n" + stringResource(R.string.first_sync_other_account) else ""
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    firstSync = null
+                    scope.launch { cloud.syncNow() }
+                }) { Text(stringResource(R.string.first_sync_merge)) }
+            },
+            dismissButton = {
+                Column {
+                    TextButton(onClick = {
+                        firstSync = null
+                        scope.launch { cloud.syncNow(replaceDevice = true) }
+                    }) { Text(stringResource(R.string.first_sync_replace), color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = {
+                        firstSync = null
+                        scope.launch { cloud.accounts.signOut() }
+                    }) { Text(stringResource(R.string.btn_cancel)) }
+                }
+            }
         )
     }
 
