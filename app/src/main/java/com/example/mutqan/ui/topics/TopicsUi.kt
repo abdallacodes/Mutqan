@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -71,6 +70,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.PaperSwitch
+import com.example.mutqan.ui.components.AyahText
 
 /** Topics, whether the Arabic interface lists the English-only ones, and what the user has memorised. */
 class TopicsViewModel(context: Context) : ViewModel() {
@@ -147,7 +148,7 @@ fun LazyListScope.topicsTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Switch(checked = showAll, onCheckedChange = onShowAllChange)
+                PaperSwitch(checked = showAll, onCheckedChange = onShowAllChange)
             }
         }
     }
@@ -277,12 +278,10 @@ fun TopicScreen(topicId: Int, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit, o
 @Composable
 private fun VerseLine(ayahId: Int, memorised: Boolean, onOpenMushaf: (Int) -> Unit) {
     val context = LocalContext.current
-    val loaded by produceState<Triple<String, Int, String>?>(null, ayahId) {
+    val loaded by produceState<Pair<String, Int>?>(null, ayahId) {
         value = withContext(Dispatchers.IO) {
-            val repo = QuranRepository.getInstance(context)
-            val ayah = repo.ayahById(ayahId) ?: return@withContext null
-            val text = repo.wordsOfAyah(ayah.surah, ayah.ayah).filter { !it.isEnd }.joinToString(" ") { it.hafs }
-            Triple(SurahData.nameOf(ayah.surah) + " · " + ayah.ayah, ayah.firstPage, text)
+            val ayah = QuranRepository.getInstance(context).ayahById(ayahId) ?: return@withContext null
+            Pair(SurahData.nameOf(ayah.surah) + " · " + ayah.ayah, ayah.firstPage)
         }
     }
     Column {
@@ -293,7 +292,7 @@ private fun VerseLine(ayahId: Int, memorised: Boolean, onOpenMushaf: (Int) -> Un
                 .padding(horizontal = PaperSpace.Gutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            loaded?.let { (ref, _, text) ->
+            loaded?.let { (ref, _) ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(ref, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     if (memorised) {
@@ -305,13 +304,7 @@ private fun VerseLine(ayahId: Int, memorised: Boolean, onOpenMushaf: (Int) -> Un
                         )
                     }
                 }
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textDirection = TextDirection.Rtl, fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 42.sp
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                AyahText(ayahId = ayahId, size = 22.sp)
             }
         }
         Hairline()

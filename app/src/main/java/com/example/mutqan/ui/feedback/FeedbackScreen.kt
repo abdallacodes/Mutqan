@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +38,7 @@ import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperChip
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.PaperSwitch
 
 /** Where feedback goes. */
 const val FEEDBACK_ADDRESS = "support.mutqan@gmail.com"
@@ -106,7 +106,7 @@ fun FeedbackScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                Switch(checked = includeInfo, onCheckedChange = { includeInfo = it })
+                PaperSwitch(checked = includeInfo, onCheckedChange = { includeInfo = it })
             }
 
             PaperButton(

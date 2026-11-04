@@ -63,7 +63,9 @@ data class QuranWord(
     /** Plain Hafs text, safe to search and copy. */
     val hafs: String,
     /** True for the ayah-number marker that closes every ayah. */
-    val isEnd: Boolean
+    val isEnd: Boolean,
+    /** Mushaf page the word is printed on, which is also the font its [glyph] belongs to; 0 when not read. */
+    val page: Int = 0
 )
 
 /** A hizb quarter: the 1/240 division of the Quran. */
@@ -329,6 +331,16 @@ class QuranRepository private constructor(context: Context) {
             arrayOf(page.toString())
         ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
 
+    /** The plain Hafs words of every ayah, without ayah-number markers; index 0 is ayah id 1. */
+    fun hafsOfAllAyahs(): List<List<String>> {
+        val all = List(TOTAL_AYAHS) { ArrayList<String>() }
+        db.rawQuery(
+            "SELECT a.id, w.hafs FROM words w JOIN ayahs a ON a.surah = w.surah AND a.ayah = w.ayah WHERE w.is_end = 0 ORDER BY w.id",
+            null
+        ).use { c -> while (c.moveToNext()) all[c.getInt(0) - 1].add(c.getString(1)) }
+        return all
+    }
+
     /** Lines of a page ready for [MushafPageView]. */
     fun page(page: Int): MushafPageData {
         pageCache.get(page)?.let { return it }
@@ -365,11 +377,11 @@ class QuranRepository private constructor(context: Context) {
     /** All words of an ayah including its end marker, in order. */
     fun wordsOfAyah(surah: Int, ayah: Int): List<QuranWord> =
         db.rawQuery(
-            "SELECT id, surah, ayah, word, glyph, hafs, is_end FROM words WHERE surah = ? AND ayah = ? ORDER BY word",
+            "SELECT id, surah, ayah, word, glyph, hafs, is_end, page FROM words WHERE surah = ? AND ayah = ? ORDER BY word",
             arrayOf(surah.toString(), ayah.toString())
         ).use { c ->
             c.readAll {
-                QuranWord(it.getInt(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getString(4), it.getString(5), it.getInt(6) != 0)
+                QuranWord(it.getInt(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getString(4), it.getString(5), it.getInt(6) != 0, it.getInt(7))
             }
         }
 

@@ -23,9 +23,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.example.mutqan.quran.MushafSpan
+import com.example.mutqan.quran.QuranWord
 
 /** A lookalike shown with the answer: where it is, its words, and which of them it shares with the verse asked. */
-data class SimilarVerse(val reference: String, val words: List<String>, val shared: Set<Int>)
+data class SimilarVerse(val reference: String, val words: List<QuranWord>, val shared: Set<Int>, val ayahId: Int)
 
 /** Where the verses of the test come from. */
 enum class TestSource { MINE, READY }
@@ -38,13 +40,13 @@ sealed class TestUiState {
         val isRevealed: Boolean = false,
         val source: TestSource = TestSource.MINE,
         /** The words of the verse and the positions it shares with its lookalikes; only for ready-made groups. */
-        val words: List<String> = emptyList(),
+        val words: List<QuranWord> = emptyList(),
         val shared: Set<Int> = emptySet(),
         val similar: List<SimilarVerse> = emptyList(),
         val type: TestType = TestType.RECALL,
         /** For the choice types: what is shown above the options, the options, the right one and the one picked. */
-        val lead: String = "",
-        val options: List<String> = emptyList(),
+        val lead: MushafSpan = MushafSpan.Empty,
+        val options: List<MushafSpan> = emptyList(),
         val correct: Int = -1,
         val picked: Int? = null
     ) : TestUiState()
@@ -176,8 +178,8 @@ class SimilarityTestViewModel(
         return Pick(verse, group.id, group.description, ReadyTest.hits(member.matchedWords), others)
     }
 
-    private fun wordsOf(quran: QuranRepository, a: QuranAyah): List<String> =
-        quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }.map { it.hafs }
+    private fun wordsOf(quran: QuranRepository, a: QuranAyah): List<QuranWord> =
+        quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }
 
     private fun reference(a: QuranAyah) = SurahData.nameOf(a.surah) + " · " + a.ayah
 
@@ -191,7 +193,7 @@ class SimilarityTestViewModel(
             source = source,
             words = words,
             shared = pick.shared,
-            similar = otherWords.map { (o, w) -> SimilarVerse(reference(o.ayah), w, o.shared) }
+            similar = otherWords.map { (o, w) -> SimilarVerse(reference(o.ayah), w, o.shared, o.ayah.id) }
         )
         val set = when (type) {
             TestType.RECALL -> null

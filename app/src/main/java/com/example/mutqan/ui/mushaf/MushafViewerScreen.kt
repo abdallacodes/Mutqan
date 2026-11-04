@@ -130,6 +130,13 @@ import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.PaperOutlinedButton
+import androidx.compose.foundation.layout.Arrangement
+import com.example.mutqan.ui.components.PeekAction
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.AutoStories
 
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
@@ -160,6 +167,7 @@ private val LocalAyahMarks = compositionLocalOf<AyahMarks?> { null }
 private val LocalPageRibbons = compositionLocalOf<Map<Int, Color>> { emptyMap() }
 private val MushafSelectionTint = Color(0x6027A3A0)
 private val MushafPlayingTint = Color(0x66E58A2B)
+private val MushafSpotTint = Color(0x66D9B13A)
 
 private val MushafGroupTint = Color(0x40C9A227)
 private val MushafBookmarkTint = Color(0x403F8EDC)
@@ -190,6 +198,8 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 fun MushafViewerScreen(
     startPage:   Int,
+    /** An ayah (global id) to tint on arrival, because the reader came here to look at it; 0 for none. */
+    startAyah:   Int = 0,
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
     onOpenTopic: (Int) -> Unit = {},
@@ -296,7 +306,9 @@ fun MushafViewerScreen(
         }
         byPage
     }
-    val marks = remember(groupAyahs, savedPassages, showGroupAyahs, peekAyahId, coverOn, revealed, quarterStarts, playback.ayahId) {
+    var spotlight by rememberSaveable { mutableIntStateOf(startAyah) }
+    LaunchedEffect(peekAyahId) { if (peekAyahId != null) spotlight = 0 }
+    val marks = remember(groupAyahs, savedPassages, showGroupAyahs, peekAyahId, coverOn, revealed, quarterStarts, playback.ayahId, spotlight) {
         val tints = HashMap<Int, Color>()
         if (showGroupAyahs) {
             groupAyahs.forEach { tints[it] = MushafGroupTint }
@@ -305,6 +317,7 @@ fun MushafViewerScreen(
                 for (ayah in saved.startAyahId..minOf(saved.endAyahId, saved.startAyahId + 200)) tints[ayah] = tint
             }
         }
+        if (spotlight != 0) tints[spotlight] = MushafSpotTint
         playback.ayahId?.let { tints[it] = MushafPlayingTint }
         peekAyahId?.let { tints[it] = MushafSelectionTint }
         AyahMarks(
@@ -693,29 +706,38 @@ fun MushafViewerScreen(
     }
 
     peekTarget?.let { target ->
+        val isMemorised = HifzCoverage.contains(memorised, target.verseId)
         QuickPeekBottomSheet(
             target    = target,
             onDismiss = { peekTarget = null; peekAyahId = null; peekGroups = emptyList() },
-            extraContent = {
-                OutlinedButton(
+            actions = listOf(
+                PeekAction(
+                    icon = Icons.Default.PlayArrow,
+                    label = stringResource(R.string.peek_act_listen),
                     onClick = {
                         peekTarget = null; peekAyahId = null; peekGroups = emptyList()
                         listenFrom(target.verseId, target.pageNumber)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.audio_listen_from_here)) }
-                OutlinedButton(onClick = { showSaveSheet = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(if (peekSaved == null) R.string.peek_save else R.string.peek_edit_saved))
-                }
-                val isMemorised = HifzCoverage.contains(memorised, target.verseId)
-                OutlinedButton(
+                    }
+                ),
+                PeekAction(
+                    icon = if (peekSaved == null) Icons.Default.BookmarkBorder else Icons.Default.Bookmark,
+                    label = stringResource(R.string.peek_act_mark),
+                    onClick = { showSaveSheet = true },
+                    active = peekSaved != null
+                ),
+                PeekAction(
+                    icon = if (isMemorised) Icons.Default.CheckCircle else Icons.Default.CheckCircleOutline,
+                    label = stringResource(R.string.peek_act_memorised),
                     onClick = { viewModel.setMemorised(target.verseId..target.verseId, !isMemorised) },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(if (isMemorised) R.string.peek_unmark_memorised else R.string.peek_mark_memorised)) }
-                OutlinedButton(
-                    onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.tafsir_open)) }
+                    active = isMemorised
+                ),
+                PeekAction(
+                    icon = Icons.Default.AutoStories,
+                    label = stringResource(R.string.peek_act_tafsir),
+                    onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) }
+                )
+            ),
+            extraContent = {
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
                 VerseTopics(target.verseId) { topic ->

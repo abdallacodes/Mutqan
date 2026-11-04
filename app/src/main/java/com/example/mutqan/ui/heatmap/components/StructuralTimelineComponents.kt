@@ -41,6 +41,7 @@ import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.ui.heatmap.AnchorCardData
 import com.example.mutqan.ui.heatmap.SubjectWithText
 import com.example.mutqan.ui.theme.*
+import com.example.mutqan.ui.components.AyahText
 
 @Composable
 fun TimelineSpine(
@@ -103,16 +104,11 @@ fun AnchorCard(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "﴿ ${data.startAyahText} ﴾",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = AmiriFontFamily,
-                            fontSize = 22.sp,
-                            lineHeight = 44.sp,
-                            textDirection = TextDirection.Rtl
-                        ),
+                    AyahText(
+                        ayahId = data.unit.startAyahId,
+                        size = 22.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
                     )
                 }
                 
@@ -171,16 +167,12 @@ fun AnchorCard(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 4. Last Ayah Footer
-                Text(
-                    text = data.endAyahText,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = AmiriFontFamily,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    ),
+                AyahText(
+                    ayahId = data.unit.endAyahId,
+                    size = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -279,17 +271,7 @@ fun SubjectRow(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = subjectWithText.startAyahText,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontFamily = AmiriFontFamily,
-                                fontSize = 20.sp,
-                                lineHeight = 32.sp,
-                                textDirection = TextDirection.Rtl
-                            ),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        AyahText(ayahId = subjectWithText.entity.startAyahId, size = 20.sp, textAlign = TextAlign.Center)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.ayah_n, subjectWithText.ayahNumber),

@@ -45,7 +45,7 @@ data class WeakSuggestion(
     val surah: Int,
     val ayah: Int,
     val page: Int,
-    val snippet: String
+    val ayahId: Int
 )
 
 /** A page where practice questions keep going wrong. */
@@ -129,7 +129,7 @@ class HomeViewModel(
 
     private fun describe(p: SavedPassage): WeakSuggestion? {
         val first = quran.ayahById(p.startAyahId) ?: return null
-        return WeakSuggestion(p, first.surah, first.ayah, first.firstPage, first.text.toCleanQuranicText().take(SNIPPET_CHARS))
+        return WeakSuggestion(p, first.surah, first.ayah, first.firstPage, first.id)
     }
 
     /** Records that [item] was revised now, which moves it from "due" to "done". */

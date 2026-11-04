@@ -46,7 +46,6 @@ import kotlinx.coroutines.withContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -76,6 +75,8 @@ import com.example.mutqan.domain.audio.Reciter
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.PaperChip
 import kotlinx.coroutines.launch
+import com.example.mutqan.ui.components.PaperSwitch
+import com.example.mutqan.ui.components.AyahText
 
 private var askedForNotifications = false
 
@@ -393,10 +394,6 @@ fun RecitationSheet(onDismiss: () -> Unit, onOpenStorage: (() -> Unit)? = null) 
 private fun NowPlaying(state: RecitationPlayer.State, player: RecitationPlayer) {
     val context = LocalContext.current
     val quran = remember(context) { QuranRepository.getInstance(context) }
-    val text by produceState("", state.ayahId) {
-        val id = state.ayahId
-        value = if (id == null) "" else withContext(Dispatchers.IO) { quran.ayahById(id)?.text.orEmpty() }
-    }
     var position by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     var dragging by remember { mutableStateOf<Float?>(null) }
@@ -414,13 +411,15 @@ private fun NowPlaying(state: RecitationPlayer.State, player: RecitationPlayer) 
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.tertiary
         )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = AmiriFontFamily, fontSize = 24.sp, lineHeight = 44.sp),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
-        )
+        state.ayahId?.let { id ->
+            AyahText(
+                ayahId = id,
+                size = 24.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+            )
+        }
         if (state.yourTurn) {
             Text(
                 text = stringResource(R.string.audio_your_turn),
@@ -487,6 +486,6 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
             .padding(top = 12.dp)
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        PaperSwitch(checked = checked, onCheckedChange = onChange)
     }
 }

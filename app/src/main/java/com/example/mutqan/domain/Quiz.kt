@@ -1,13 +1,14 @@
 package com.example.mutqan.domain
 
 import com.example.mutqan.quran.ArabicNormalization
+import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
-import kotlin.math.abs
+import com.example.mutqan.quran.QuranWord
 import kotlin.random.Random
 
-/** A verse and the page it starts on. */
-data class QuizRef(val surah: Int, val ayah: Int, val page: Int)
+/** A verse, the page it starts on, and its global id (0 when unknown). */
+data class QuizRef(val surah: Int, val ayah: Int, val page: Int, val id: Int = 0)
 
 /** One quiz question. [subject] is the verse it is about; its page is where a miss is recorded. */
 sealed interface QuizQuestion {
@@ -22,33 +23,46 @@ sealed interface QuizQuestion {
 data class ChoiceQuestion(
     override val type: ExerciseType,
     override val subject: QuizRef,
-    val prompt: String,
-    val options: List<String>,
+    val prompt: MushafSpan,
+    val options: List<MushafSpan>,
     val correct: Int,
-    val revealed: String,
+    val revealed: MushafSpan,
     val revealRef: QuizRef,
     val showRef: Boolean,
     /** True when the options are Quran text (shown in the Mushaf's type); false for plain labels such as topics. */
     val optionsAreVerses: Boolean = true,
     /** A line shown with the answer, e.g. the topics of the verse. */
-    val note: String? = null
+    val note: String? = null,
+    /** For the end-of-verse question: what makes its choices alike. */
+    val kind: EndingKind? = null
 ) : QuizQuestion
+
+/** Why the choices of an end-of-verse question are hard to tell apart. */
+enum class EndingKind {
+    /** The verse and its look-alikes begin the same way and end differently. */
+    LOOKALIKE,
+
+    /** Many verses close with the same words and then a different name or two. */
+    CLOSING
+}
 
 /** Put [shuffled] back in order by tapping them; [correctOrder] lists indices into [shuffled] in the true order. */
 data class OrderQuestion(
     override val type: ExerciseType,
     override val subject: QuizRef,
-    val shuffled: List<String>,
+    val shuffled: List<MushafSpan>,
     val correctOrder: List<Int>,
     /** Verse numbers in the true order, for showing the answer. */
-    val ayahNumbers: List<Int>
+    val ayahNumbers: List<Int>,
+    /** Global ids of the verses in the true order, to open them in the Mushaf. */
+    val ayahIds: List<Int>
 ) : QuizQuestion
 
 /** Name the surah of [text], then (if right) its verse number. */
 data class WhereQuestion(
     override val type: ExerciseType,
     override val subject: QuizRef,
-    val text: String,
+    val text: MushafSpan,
     val surahOptions: List<Int>,
     val ayahOptions: List<Int>
 ) : QuizQuestion
@@ -57,7 +71,7 @@ data class WhereQuestion(
 enum class QuizMode(val route: String, val type: ExerciseType?) {
     ENDING("ending", ExerciseType.QUIZ_ENDING),
     NEXT("next", ExerciseType.QUIZ_NEXT),
-    FILL("fill", ExerciseType.QUIZ_FILL),
+    FINISH("finish", ExerciseType.QUIZ_FINISH),
     ORDER("order", ExerciseType.QUIZ_ORDER),
     WHERE("where", ExerciseType.QUIZ_WHERE),
     DAILY("daily", null);
@@ -71,38 +85,28 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
 /** Plain text helpers for building questions; no Quran database needed. */
 object QuizText {
 
-    const val BLANK = "_____"
-
     fun normalize(text: String): String = ArabicNormalization.normalizeForSearch(text)
 
     /** The first [count] words, with an ellipsis when more follow. */
-    fun opening(words: List<String>, count: Int): String =
-        words.take(count).joinToString(" ") + if (words.size > count) " …" else ""
+    fun opening(words: List<QuranWord>, count: Int): MushafSpan =
+        MushafSpan.of(words.take(count)) + if (words.size > count) MushafSpan.More else MushafSpan.Empty
 
     /** The last [count] words, with an ellipsis before them when words were left out. */
-    fun tail(words: List<String>, count: Int): String =
-        (if (words.size > count) "… " else "") + words.takeLast(count).joinToString(" ")
+    fun tail(words: List<QuranWord>, count: Int): MushafSpan =
+        (if (words.size > count) MushafSpan.More else MushafSpan.Empty) + MushafSpan.of(words.takeLast(count))
 
     /**
      * [correct] followed by up to [max] - 1 of [candidates] that differ from it and from each other
      * once diacritics are ignored. The result may be shorter; its first item is always [correct].
      */
-    fun options(correct: String, candidates: List<String>, max: Int): List<String> {
-        val seen = hashSetOf(normalize(correct))
+    fun options(correct: MushafSpan, candidates: List<MushafSpan>, max: Int): List<MushafSpan> {
+        val seen = hashSetOf(normalize(correct.plain))
         val result = arrayListOf(correct)
         for (c in candidates) {
             if (result.size >= max) break
-            if (c.isNotBlank() && seen.add(normalize(c))) result += c
+            if (c.plain.isNotBlank() && seen.add(normalize(c.plain))) result += c
         }
         return result
-    }
-
-    /** [words] with [length] words from [start] replaced by a blank, cut to a window of [window] words either side. */
-    fun blanked(words: List<String>, start: Int, length: Int, window: Int): String {
-        val from = maxOf(0, start - window)
-        val to = minOf(words.size, start + length + window)
-        val parts = words.subList(from, start) + BLANK + words.subList(start + length, to)
-        return (if (from > 0) "… " else "") + parts.joinToString(" ") + if (to < words.size) " …" else ""
     }
 
     /** A shuffle of 0 until [n] that is not already in order (when n > 1). */
@@ -139,7 +143,7 @@ class QuizEngine(
     private val quran: QuranRepository,
     private val similar: SimilarData,
     private val random: Random = Random.Default,
-    private val morphology: Morphology? = null,
+    private val closings: VerseClosings? = null,
     private val topics: TopicIndex? = null,
     private val topicLanguage: TopicLanguage? = null
 ) {
@@ -147,23 +151,24 @@ class QuizEngine(
     fun build(type: ExerciseType, ayahId: Int, hard: Boolean): QuizQuestion? = when (type) {
         ExerciseType.QUIZ_ENDING -> ending(ayahId)
         ExerciseType.QUIZ_NEXT -> next(ayahId, hard)
-        ExerciseType.QUIZ_FILL -> fill(ayahId, hard)
+        ExerciseType.QUIZ_FINISH -> finishing(ayahId)
         ExerciseType.QUIZ_ORDER -> order(ayahId)
         ExerciseType.QUIZ_WHERE -> where(ayahId)
         ExerciseType.QUIZ_TOPIC -> topic(ayahId)
         else -> null
     }
 
-    private fun wordsOf(a: QuranAyah): List<String> =
-        quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }.map { it.hafs }
+    private fun wordsOf(a: QuranAyah): List<QuranWord> =
+        quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }
 
-    private fun ref(a: QuranAyah) = QuizRef(a.surah, a.ayah, a.firstPage)
+    private fun ref(a: QuranAyah) = QuizRef(a.surah, a.ayah, a.firstPage, a.id)
 
     private fun longest(ranges: List<IntRange>): IntRange? = ranges.maxByOrNull { it.last - it.first }
 
     private fun finish(
-        type: ExerciseType, subject: QuranAyah, prompt: String, correct: String, distractors: List<String>,
-        revealed: QuranAyah, showRef: Boolean, optionsAreVerses: Boolean = true, note: String? = null
+        type: ExerciseType, subject: QuranAyah, prompt: MushafSpan, correct: MushafSpan, distractors: List<MushafSpan>,
+        revealed: QuranAyah, showRef: Boolean, optionsAreVerses: Boolean = true, note: String? = null,
+        kind: EndingKind? = null
     ): ChoiceQuestion? {
         val options = QuizText.options(correct, distractors, 4)
         if (options.size < 2) return null
@@ -174,11 +179,12 @@ class QuizEngine(
             prompt = prompt,
             options = shuffled,
             correct = shuffled.indexOf(correct),
-            revealed = wordsOf(revealed).joinToString(" "),
+            revealed = MushafSpan.of(wordsOf(revealed)),
             revealRef = ref(revealed),
             showRef = showRef,
             optionsAreVerses = optionsAreVerses,
-            note = note
+            note = note,
+            kind = kind
         )
     }
 
@@ -213,7 +219,7 @@ class QuizEngine(
         if (xWords.size < 2) return null
 
         val correct = QuizText.opening(wordsOf(n), NEXT_WORDS)
-        val distractors = arrayListOf<String>()
+        val distractors = arrayListOf<MushafSpan>()
         similar.similarTo(id).take(5).forEach { m ->
             quran.ayahById(m.ayahId + 1)?.let { distractors += QuizText.opening(wordsOf(it), NEXT_WORDS) }
         }
@@ -226,100 +232,65 @@ class QuizEngine(
         )
     }
 
-    /** Hide one to three words of a verse; the wrong choices are spans from its look-alikes and neighbours. */
-    private fun fill(id: Int, hard: Boolean): QuizQuestion? {
+    /**
+     * Complete the end of a verse: its last words are hidden and the choices are what other verses put there.
+     * Either the verse has look-alikes that begin the same way and end differently, or it closes with words many
+     * verses close with ("إن الله" and then a name or two). Whichever of the two the verse has.
+     */
+    private fun finishing(id: Int): QuizQuestion? {
         val x = quran.ayahById(id) ?: return null
         val words = wordsOf(x)
-        if (words.size < 5) return null
-        val length = if (hard) 3 else random.nextInt(1, 3)
-        val start = random.nextInt(0, words.size - length + 1)
-        val correct = words.subList(start, start + length).joinToString(" ")
-
-        fun spansNear(other: List<String>): List<String> =
-            (0..other.size - length).sortedBy { abs(it - start) }.take(2)
-                .map { other.subList(it, it + length).joinToString(" ") }
-
-        val lookalikes = arrayListOf<String>()
-        similar.similarTo(id).take(5).forEach { m ->
-            quran.ayahById(m.ayahId)?.let { lookalikes += spansNear(wordsOf(it)) }
-        }
-        // What fits the gap is judged by the words around it, not by chance: other forms of the hidden words,
-        // what follows the word before the gap (or comes before the word after it) elsewhere in the Quran, and
-        // the same stretch of a look-alike. Spans of random neighbouring verses are plainly wrong, so they only
-        // fill up the options when nothing better exists. The harder level leads with the closest forms.
-        val variants = morphVariants(x, words, start, length)
-        val fitting = fittingSpans(x, words, start, length)
-        val pool = if (hard) variants + fitting + lookalikes else variants.take(1) + fitting + lookalikes + variants.drop(1)
-        // A span made only of words already shown around the gap cannot be what was removed.
-        val visible = words.filterIndexed { i, _ -> i < start || i >= start + length }.map(QuizText::normalize).toSet()
-        val ranked = pool.sortedBy { span -> if (span.split(" ").all { QuizText.normalize(it) in visible }) 1 else 0 }
-        val fillers = arrayListOf<String>()
-        if (QuizText.options(correct, ranked, 4).size < 4) {
-            repeat(6) {
-                val other = quran.ayahById(id + random.nextInt(-30, 31))
-                if (other != null && other.id != id) fillers += spansNear(wordsOf(other))
+        return listOf(EndingKind.LOOKALIKE, EndingKind.CLOSING).shuffled(random).firstNotNullOfOrNull { kind ->
+            when (kind) {
+                EndingKind.LOOKALIKE -> sameStartOtherEnd(x, words)
+                EndingKind.CLOSING -> sameClosing(x, words)
             }
         }
-        val ordered = ranked + fillers
+    }
+
+    /** A look-alike that opens with the same words as the verse: where they stop being the same, in each of the two. */
+    private class Divergence(val ayahId: Int, val inVerse: IntRange, val inOther: IntRange)
+
+    /** The verse with its last words hidden, where look-alikes that open the same way end differently. */
+    private fun sameStartOtherEnd(x: QuranAyah, words: List<QuranWord>): ChoiceQuestion? {
+        // The shared opening: a stretch of at least three words that starts within the first few.
+        fun opening(ranges: List<IntRange>) =
+            ranges.filter { it.first <= START_WITHIN && it.last - it.first >= 2 }.maxByOrNull { it.last - it.first }
+
+        val found = similar.similarTo(x.id).filter { it.matchedWords.isNotEmpty() }.take(LOOKALIKES).mapNotNull { m ->
+            val other = opening(m.matchedWords) ?: return@mapNotNull null
+            val mine = opening(similar.similarTo(m.ayahId).firstOrNull { it.ayahId == x.id }?.matchedWords.orEmpty())
+                ?: return@mapNotNull null
+            Divergence(m.ayahId, mine, other)
+        }
+        // What is hidden is what follows the shared opening, and it is the end of the verse: only a few words.
+        val chosen = found.filter { words.size - it.inVerse.last in 1..MAX_HIDDEN }.randomOrNull(random) ?: return null
+        val cut = chosen.inVerse.last
+        val hidden = words.size - cut
+
+        // Look-alikes that stop being the same at the same word come first: they differ only in the ending.
+        val distractors = found.sortedBy { if (it.inVerse.last == cut) 0 else 1 }.mapNotNull { d ->
+            val y = quran.ayahById(d.ayahId) ?: return@mapNotNull null
+            wordsOf(y).drop(d.inOther.last).take(hidden).takeIf { it.isNotEmpty() }?.let { MushafSpan.of(it) }
+        }
         return finish(
-            ExerciseType.QUIZ_FILL, x, QuizText.blanked(words, start, length, FILL_WINDOW), correct, ordered, x, showRef = true
+            ExerciseType.QUIZ_FINISH, x, QuizText.tail(words.take(cut), FINISH_SHOWN) + MushafSpan.Blank,
+            MushafSpan.of(words.drop(cut)), distractors, x, showRef = true, kind = EndingKind.LOOKALIKE
         )
     }
 
-    /**
-     * Spans of the same length that stand where the hidden one does in other verses: those that follow the word
-     * before the gap, and those that come before the word after it, found through that word's lemma. The two
-     * kinds are interleaved. Empty without morphology data.
-     */
-    private fun fittingSpans(x: QuranAyah, words: List<String>, start: Int, length: Int): List<String> {
-        val m = morphology ?: return emptyList()
-        val here = m.wordsOfAyah(x.surah, x.ayah).associateBy { it.position }
-
-        fun spans(anchor: MorphWord?, startIn: (WordLocation) -> Int): List<String> {
-            if (anchor == null || anchor.lemma < 0) return emptyList()
-            val found = arrayListOf<String>()
-            for (p in m.occurrencesOfLemma(anchor.lemma).filter { !(it.surah == x.surah && it.ayah == x.ayah) }.shuffled(random).take(FIT_TRIES)) {
-                val other = quran.wordsOfAyah(p.surah, p.ayah).filter { !it.isEnd }.map { it.hafs }
-                val from = startIn(p)
-                if (from < 0 || from + length > other.size) continue
-                found += other.subList(from, from + length).joinToString(" ")
-            }
-            return found
+    /** The verse with its last words hidden, where many other verses close with other words after the same two. */
+    private fun sameClosing(x: QuranAyah, words: List<QuranWord>): ChoiceQuestion? {
+        val choice = closings?.choiceFor(x.id, random) ?: return null
+        if (words.size < choice.length) return null
+        val distractors = choice.rivals.mapNotNull { r ->
+            val y = quran.ayahById(r.ayahId) ?: return@mapNotNull null
+            wordsOf(y).takeLast(choice.length).takeIf { it.size == choice.length }?.let { MushafSpan.of(it) }
         }
-
-        // The word before the gap is at position `start` (1-based); the one after it at `start + length + 1`.
-        val after = if (start > 0) spans(here[start]) { it.position } else emptyList()
-        val before = if (start + length < words.size) spans(here[start + length + 1]) { it.position - 1 - length } else emptyList()
-        return (0 until maxOf(after.size, before.size)).flatMap { listOfNotNull(after.getOrNull(it), before.getOrNull(it)) }
-    }
-
-    /**
-     * Copies of the hidden span in which one word is swapped for another form of its lemma, then of its root,
-     * taken from elsewhere in the Quran. Empty without morphology data.
-     */
-    private fun morphVariants(x: QuranAyah, words: List<String>, start: Int, length: Int): List<String> {
-        val m = morphology ?: return emptyList()
-        val here = m.wordsOfAyah(x.surah, x.ayah).associateBy { it.position }
-        val ofLemma = arrayListOf<String>()
-        val ofRoot = arrayListOf<String>()
-
-        fun swap(index: Int, places: List<WordLocation>, into: MutableList<String>) {
-            for (p in places.filter { !(it.surah == x.surah && it.ayah == x.ayah) }.shuffled(random).take(MORPH_TRIES)) {
-                if (into.size >= MORPH_MAX) return
-                val alt = quran.wordsOfAyah(p.surah, p.ayah).getOrNull(p.position - 1)?.takeIf { !it.isEnd }?.hafs ?: continue
-                if (QuizText.normalize(alt) == QuizText.normalize(words[index])) continue
-                val span = words.subList(start, start + length).toMutableList()
-                span[index - start] = alt
-                into += span.joinToString(" ")
-            }
-        }
-
-        for (index in start until start + length) {
-            val word = here[index + 1] ?: continue
-            if (word.lemma >= 0) swap(index, m.occurrencesOfLemma(word.lemma), ofLemma)
-            if (word.root >= 0) swap(index, m.occurrencesOfRoot(word.root), ofRoot)
-        }
-        return ofLemma + ofRoot
+        return finish(
+            ExerciseType.QUIZ_FINISH, x, QuizText.tail(words.dropLast(choice.length), FINISH_SHOWN) + MushafSpan.Blank,
+            MushafSpan.of(words.takeLast(choice.length)), distractors, x, showRef = true, kind = EndingKind.CLOSING
+        )
     }
 
     /**
@@ -345,9 +316,9 @@ class QuizEngine(
 
         return finish(
             ExerciseType.QUIZ_TOPIC, x,
-            if (words.size > TOPIC_WORDS) words.take(TOPIC_WORDS).joinToString(" ") + " …" else words.joinToString(" "),
-            language.title(correct),
-            (siblings + others).map(language::title),
+            QuizText.opening(words, TOPIC_WORDS),
+            MushafSpan.label(language.title(correct)),
+            (siblings + others).map { MushafSpan.label(language.title(it)) },
             x, showRef = false, optionsAreVerses = false,
             note = ofVerse.filter { language.visible(it) }.take(TOPIC_NOTE).joinToString(" · ") { language.title(it) }.ifEmpty { null }
         )
@@ -360,7 +331,7 @@ class QuizEngine(
         if (ayahs.any { it.surah != first.surah }) return null
         val texts = ayahs.map { a ->
             val w = wordsOf(a)
-            if (w.size > 9) w.take(8).joinToString(" ") + " …" else w.joinToString(" ")
+            if (w.size > 9) QuizText.opening(w, 8) else MushafSpan.of(w)
         }
         val perm = QuizText.shuffledOrder(ORDER_COUNT, random)
         return OrderQuestion(
@@ -368,7 +339,8 @@ class QuizEngine(
             subject = ref(first),
             shuffled = perm.map { texts[it] },
             correctOrder = (0 until ORDER_COUNT).map { perm.indexOf(it) },
-            ayahNumbers = ayahs.map { it.ayah }
+            ayahNumbers = ayahs.map { it.ayah },
+            ayahIds = ayahs.map { it.id }
         )
     }
 
@@ -400,7 +372,7 @@ class QuizEngine(
         return WhereQuestion(
             type = ExerciseType.QUIZ_WHERE,
             subject = ref(x),
-            text = if (words.size > WHERE_WORDS) words.take(WHERE_WORDS).joinToString(" ") + " …" else words.joinToString(" "),
+            text = QuizText.opening(words, WHERE_WORDS),
             surahOptions = surahs.shuffled(random),
             ayahOptions = ayahs.toList().sorted()
         )
@@ -409,13 +381,13 @@ class QuizEngine(
     private companion object {
         const val ENDING_WORDS = 5
         const val NEXT_WORDS = 6
-        const val FILL_WINDOW = 14
+        const val FINISH_SHOWN = 12
+        const val START_WITHIN = 3
+        const val MAX_HIDDEN = 5
+        const val LOOKALIKES = 8
         const val ORDER_COUNT = 4
         const val WHERE_WORDS = 22
         const val IDENTICAL_SCORE = 95
-        const val MORPH_TRIES = 12
-        const val MORPH_MAX = 4
-        const val FIT_TRIES = 12
         const val TOPIC_MIN_VERSES = 3
         const val TOPIC_MAX_VERSES = 150
         const val TOPIC_WORDS = 30

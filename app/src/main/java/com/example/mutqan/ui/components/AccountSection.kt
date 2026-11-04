@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
 import com.example.mutqan.domain.sync.CloudSync
 import com.example.mutqan.domain.sync.FirstSync
+import com.example.mutqan.domain.sync.OtherDevice
 import com.example.mutqan.domain.sync.SyncOutcome
 import com.example.mutqan.domain.sync.SyncStatus
 import kotlinx.coroutines.launch
@@ -72,17 +72,34 @@ fun AccountSection() {
     val lastSync by cloud.lastSyncTime.collectAsState(initial = null)
     var confirmDelete by remember { mutableStateOf(false) }
     var firstSync by remember { mutableStateOf<FirstSync?>(null) }
+    var otherDevice by remember { mutableStateOf<OtherDevice?>(null) }
+    val displaced by cloud.displaced.collectAsState(initial = false)
+
+    val backupGate = rememberBackupGate()
+
+    /** Says in a message what the sync that just ended did or why it could not. */
+    fun report() {
+        val text = when (val s = cloud.status.value) {
+            is SyncStatus.Done -> context.getString(outcomeText(s.outcome))
+            is SyncStatus.Failed -> context.getString(R.string.sync_failed, s.message ?: "")
+            else -> null
+        }
+        if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+    }
 
     /** Syncs, then says in a message what it did or why it could not. */
     fun runSync(replaceDevice: Boolean = false) {
         scope.launch {
             cloud.syncNow(replaceDevice)
-            val text = when (val s = cloud.status.value) {
-                is SyncStatus.Done -> context.getString(outcomeText(s.outcome))
-                is SyncStatus.Failed -> context.getString(R.string.sync_failed, s.message ?: "")
-                else -> null
-            }
-            if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+            report()
+        }
+    }
+
+    /** Erases this device's data and starts from the account's copy (or from nothing), then says what happened. */
+    fun runFresh() {
+        scope.launch {
+            cloud.startFresh()
+            report()
         }
     }
 
@@ -92,6 +109,36 @@ fun AccountSection() {
             try {
                 val choice = cloud.firstSyncChoice()
                 if (choice != null) firstSync = choice else runSync()
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // An account works on one device at a time: signing in asks before taking it from another device.
+    fun afterSignIn() {
+        scope.launch {
+            try {
+                val other = cloud.otherDeviceInUse()
+                if (other != null) {
+                    otherDevice = other
+                } else {
+                    cloud.takeOver()
+                    startSync()
+                }
+            } catch (e: Exception) {
+                cloud.signOut()
+                Toast.makeText(context, context.getString(R.string.account_sign_in_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /** The user chose to use the account here: claim it, then sync. */
+    fun useHere() {
+        scope.launch {
+            try {
+                cloud.takeOver()
+                startSync()
             } catch (e: Exception) {
                 Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
             }
@@ -117,7 +164,7 @@ fun AccountSection() {
                 scope.launch {
                     try {
                         cloud.accounts.signIn(activity)
-                        if (cloud.accounts.account.value != null) startSync()
+                        if (cloud.accounts.account.value != null) afterSignIn()
                     } catch (e: Exception) {
                         Toast.makeText(context, context.getString(R.string.account_sign_in_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                     }
@@ -154,20 +201,32 @@ fun AccountSection() {
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
-        DataActionRow(
-            label = stringResource(R.string.sync_now),
-            icon = Icons.Default.Sync,
-            onClick = { if (status != SyncStatus.Syncing) startSync() }
-        )
-        DataActionRow(
-            label = stringResource(R.string.sync_delete_cloud),
-            icon = Icons.Default.CloudOff,
-            onClick = { confirmDelete = true }
-        )
+        if (displaced) {
+            // Another device took the account over; nothing is synced from here until the user decides.
+            Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.session_displaced),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+                PaperButton(stringResource(R.string.session_use_here), onClick = { useHere() }, modifier = Modifier.fillMaxWidth())
+            }
+        } else {
+            DataActionRow(
+                label = stringResource(R.string.sync_now),
+                icon = Icons.Default.Sync,
+                onClick = { if (status != SyncStatus.Syncing) startSync() }
+            )
+            DataActionRow(
+                label = stringResource(R.string.sync_delete_cloud),
+                icon = Icons.Default.CloudOff,
+                onClick = { confirmDelete = true }
+            )
+        }
         DataActionRow(
             label = stringResource(R.string.account_sign_out),
             icon = Icons.AutoMirrored.Filled.Logout,
-            onClick = { scope.launch { cloud.accounts.signOut() } }
+            onClick = { scope.launch { cloud.signOut() } }
         )
     }
 
@@ -178,9 +237,12 @@ fun AccountSection() {
                 firstSync = null
                 runSync()
             },
+            // Erases the device's data, so a backup comes first; the question stays up until it is saved.
             onReplace = {
-                firstSync = null
-                runSync(replaceDevice = true)
+                backupGate.require {
+                    firstSync = null
+                    if (choice.cloudExists) runSync(replaceDevice = true) else runFresh()
+                }
             },
             onCancel = {
                 firstSync = null
@@ -189,19 +251,73 @@ fun AccountSection() {
         )
     }
 
+    otherDevice?.let { other ->
+        OtherDeviceDialog(
+            other = other,
+            onUseHere = {
+                otherDevice = null
+                useHere()
+            },
+            onCancel = {
+                otherDevice = null
+                scope.launch { cloud.signOut() }
+            }
+        )
+    }
+
     if (confirmDelete) {
-        AlertDialog(
+        PaperDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.sync_delete_title)) },
             text = { Text(stringResource(R.string.sync_delete_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
-                    scope.launch { cloud.deleteCloudCopy() }
+                    backupGate.require { scope.launch { cloud.deleteCloudCopy() } }
                 }) { Text(stringResource(R.string.sync_delete_confirm), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.btn_cancel)) } }
         )
+    }
+}
+
+/** Asked when the account being signed in is in use on another device: take it over, or leave it there. */
+@Composable
+private fun OtherDeviceDialog(other: OtherDevice, onUseHere: () -> Unit, onCancel: () -> Unit) {
+    Dialog(onDismissRequest = {}) {
+        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.other_device_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.other_device_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                other.lastActive?.let {
+                    val ago = DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                    Text(
+                        text = stringResource(R.string.other_device_last_active, ago),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                PaperButton(stringResource(R.string.other_device_use_here), onClick = onUseHere, modifier = Modifier.fillMaxWidth())
+                PaperLink(
+                    text = stringResource(R.string.btn_cancel),
+                    onClick = onCancel,
+                    soft = true,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
     }
 }
 
@@ -218,17 +334,17 @@ private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: (
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.first_sync_title),
+                    text = stringResource(if (choice.cloudExists) R.string.first_sync_title else R.string.first_sync_new_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = stringResource(R.string.first_sync_intro),
+                    text = stringResource(if (choice.cloudExists) R.string.first_sync_intro else R.string.first_sync_new_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
+                    if (choice.cloudExists) Text(
                         text = stringResource(R.string.first_sync_cloud_count, choice.cloudEntries),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
@@ -248,17 +364,25 @@ private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: (
                 }
 
                 Spacer(Modifier.height(4.dp))
-                PaperButton(stringResource(R.string.first_sync_merge), onClick = onMerge, modifier = Modifier.fillMaxWidth())
+                PaperButton(
+                    stringResource(if (choice.cloudExists) R.string.first_sync_merge else R.string.first_sync_upload),
+                    onClick = onMerge,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Text(
-                    text = stringResource(R.string.first_sync_merge_hint),
+                    text = stringResource(if (choice.cloudExists) R.string.first_sync_merge_hint else R.string.first_sync_upload_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(4.dp))
-                PaperOutlinedButton(stringResource(R.string.first_sync_replace), onClick = onReplace, modifier = Modifier.fillMaxWidth())
+                PaperOutlinedButton(
+                    stringResource(if (choice.cloudExists) R.string.first_sync_replace else R.string.first_sync_fresh),
+                    onClick = onReplace,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Text(
-                    text = stringResource(R.string.first_sync_replace_hint),
+                    text = stringResource(if (choice.cloudExists) R.string.first_sync_replace_hint else R.string.first_sync_fresh_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )

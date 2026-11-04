@@ -4,6 +4,9 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.room.InvalidationTracker
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
@@ -20,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
@@ -34,7 +38,10 @@ sealed class SyncStatus {
  * Signing in found an account that already has data in the cloud while this device has data of its own, so the
  * user has to say what happens to the two. [otherAccount]: the data on this device was last synced with a different account.
  */
-data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val otherAccount: Boolean)
+data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val otherAccount: Boolean, val cloudExists: Boolean = true)
+
+/** Another device the account is in use on; [lastActive] is when it last synced (millis), if known. */
+data class OtherDevice(val lastActive: Long?)
 
 /** Account and sync for the whole app: one instance, so sign-in state and progress are shared by every screen. */
 class CloudSync private constructor(context: Context) {
@@ -53,6 +60,39 @@ class CloudSync private constructor(context: Context) {
 
     /** When the last sync finished, in millis, or null. */
     val lastSyncTime = prefs.lastSyncTime
+
+    /** True when another device has taken the account over: syncing here is paused until the user decides. */
+    val displaced = prefs.sessionDisplaced
+
+    /** The other device this account is in use on, or null when it is free or already in use here. */
+    suspend fun otherDeviceInUse(): OtherDevice? {
+        val account = accounts.account.value ?: return null
+        val deviceId = prefs.deviceId()
+        val active = withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, deviceId).activeDevice() } ?: return null
+        return if (active.id == deviceId) null else OtherDevice(active.atMillis)
+    }
+
+    /** Makes this device the one the account is used on; the other device's sync stops at its next attempt. */
+    suspend fun takeOver() {
+        val account = accounts.account.value ?: return
+        withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).claim() }
+        prefs.setSessionDisplaced(false)
+    }
+
+    suspend fun signOut() {
+        accounts.signOut()
+        prefs.setSessionDisplaced(false)
+    }
+
+    /** Another device took the account over: syncing here stops until the user decides, and the data here is kept. */
+    private suspend fun displacedHere(announce: Boolean) {
+        prefs.setSessionDisplaced(true)
+        if (announce) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(appContext, appContext.getString(R.string.session_displaced), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     /**
      * Keeps the cloud copy current without being asked: a sync when the app comes to the front and when it goes away,
@@ -89,7 +129,7 @@ class CloudSync private constructor(context: Context) {
     private fun autoSync() {
         scope.launch {
             val account = accounts.account.value ?: return@launch
-            if (prefs.syncOwner() == account.uid) syncNow()
+            if (prefs.syncOwner() == account.uid) syncNow(auto = true)
         }
     }
 
@@ -111,22 +151,35 @@ class CloudSync private constructor(context: Context) {
         val owner = prefs.syncOwner()
         if (owner == account.uid) return null
         return lock.withLock {
-            val cloud = withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).fetch() } ?: return@withLock null
+            val cloud = try {
+                withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).fetch() }
+            } catch (e: SignedInElsewhereException) {
+                displacedHere(announce = false)
+                return@withLock null
+            }
             val device = backup.buildSnapshot()
-            val deviceEntries = device.optJSONArray("revision_logs")?.length() ?: 0
-            val deviceCoverage = device.optJSONArray("hifz_coverage")?.length() ?: 0
-            if (deviceEntries == 0 && deviceCoverage == 0) return@withLock null
+            if (SyncEngine.isEmpty(device.toString())) return@withLock null
+            // Data from another account would otherwise go into this account without a word.
+            if (cloud == null && owner == null) return@withLock null
             FirstSync(
-                cloudEntries = JSONObject(cloud.text).optJSONArray("revision_logs")?.length() ?: 0,
-                deviceEntries = deviceEntries,
-                otherAccount = owner != null
+                cloudEntries = cloud?.let { JSONObject(it.text).optJSONArray("revision_logs")?.length() } ?: 0,
+                deviceEntries = device.optJSONArray("revision_logs")?.length() ?: 0,
+                otherAccount = owner != null,
+                cloudExists = cloud != null
             )
         }
     }
 
-    /** Syncs; with [replaceDevice] this device's data is replaced by the cloud copy instead of being merged with it. */
-    suspend fun syncNow(replaceDevice: Boolean = false) {
+    /**
+     * Syncs; with [replaceDevice] this device's data is replaced by the cloud copy instead of being merged with it.
+     * An [auto] sync does not bring back a cloud copy that was deleted.
+     */
+    suspend fun syncNow(replaceDevice: Boolean = false, auto: Boolean = false) {
         val account = accounts.account.value ?: return
+        if (prefs.isSessionDisplaced()) {
+            if (!auto) _status.value = SyncStatus.Failed(appContext.getString(R.string.session_displaced))
+            return
+        }
         lock.withLock {
             _status.value = SyncStatus.Syncing
             _status.value = try {
@@ -138,14 +191,26 @@ class CloudSync private constructor(context: Context) {
                     remote = FirestoreRemote(account.uid, prefs.deviceId()),
                     memory = prefs.syncMemoryFor(account.uid)
                 )
-                val outcome = withTimeout(TIMEOUT_MS) { if (replaceDevice) engine.replaceLocal() else engine.sync() }
+                val outcome = withTimeout(TIMEOUT_MS) { if (replaceDevice) engine.replaceLocal() else engine.sync(recreateCloud = !auto) }
                 SyncStatus.Done(outcome).also { prefs.setLastSyncTime(System.currentTimeMillis()) }
             } catch (e: TimeoutCancellationException) {
                 SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
+            } catch (e: SignedInElsewhereException) {
+                displacedHere(announce = auto)
+                SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
                 SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
+    }
+
+    /** Erases the data on this device, then syncs: this account starts from what is in its cloud copy, or from nothing. */
+    suspend fun startFresh() {
+        lock.withLock {
+            withContext(Dispatchers.IO) { AppDatabase.getInstance(appContext).clearAllTables() }
+            prefs.forgetSyncHistory()
+        }
+        syncNow()
     }
 
     /** Removes this account's data from the cloud; the data on this device stays. */
@@ -154,8 +219,12 @@ class CloudSync private constructor(context: Context) {
         lock.withLock {
             _status.value = try {
                 FirestoreRemote(account.uid, prefs.deviceId()).deleteAll()
-                prefs.syncMemoryFor(account.uid).remember("", 0)
+                // Automatic syncing stops until the next "Sync now", which starts a fresh copy.
+                prefs.forgetSyncHistory()
                 SyncStatus.Idle
+            } catch (e: SignedInElsewhereException) {
+                displacedHere(announce = false)
+                SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
                 SyncStatus.Failed(e.message)
             }

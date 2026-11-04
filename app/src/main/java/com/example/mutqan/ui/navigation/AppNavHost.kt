@@ -1,43 +1,17 @@
 package com.example.mutqan.ui.navigation
 
 import androidx.compose.foundation.layout.padding
-import com.example.mutqan.ui.components.Hairline
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.CompareArrows
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Today
-import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.CompareArrows
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Quiz
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,17 +20,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
@@ -108,6 +78,31 @@ import com.example.mutqan.ui.topics.TopicScreen
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.example.mutqan.ui.home.HomeViewModel
+import com.example.mutqan.ui.home.HomeViewModelFactory
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.navigation.NavBackStackEntry
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +120,7 @@ object Routes {
     const val PRACTICE       = "practice"
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
+    const val PAGE_EDGES_OF_VERSE = "page_edges_of_verse"
     const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
@@ -150,7 +146,7 @@ object Routes {
     fun groupDetail(groupId: Int, surahId: Int)  = "group_detail/$groupId/$surahId"
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
-    fun mushafViewer(page: Int)                  = "mushaf_viewer/$page"
+    fun mushafViewer(page: Int, ayahId: Int? = null) = "mushaf_viewer/$page" + (ayahId?.let { "?ayah=$it" } ?: "")
     fun topic(topicId: Int)                      = "topic/$topicId"
     fun root(rootId: Int)                        = "root/$rootId"
     fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
@@ -163,7 +159,9 @@ private data class BottomNavItem(
     val route: String,
     val label: String,
     val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val unselectedIcon: ImageVector,
+    /** How many are waiting behind this tab; none shows nothing. */
+    val badge: Int = 0
 )
 
 // ── Top-level scaffold with bottom bar ───────────────────────────────────────
@@ -187,6 +185,12 @@ fun AppNavHost(
     if (isFirstRun == null) return
 
     val startDestination = if (isFirstRun == true) Routes.ONBOARDING else Routes.HOME
+
+    // The Today screen and the badge on its tab read the same plan, so they share one view model.
+    val homeViewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(context))
+    val dueToday by remember(homeViewModel) {
+        homeViewModel.uiState.map { it.today?.due?.size ?: 0 }.distinctUntilChanged()
+    }.collectAsState(initial = 0)
 
     val backStack    by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -259,13 +263,18 @@ fun AppNavHost(
             if (showBottomBar) {
                 MutqanBottomBar(
                     currentRoute  = currentRoute,
+                    dueToday      = dueToday,
                     onNavSelected = { route ->
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        if (route == currentRoute) {
+                            TabReselects.reselected(route)
+                        } else {
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState    = true
                             }
-                            launchSingleTop = true
-                            restoreState    = true
                         }
                     }
                 )
@@ -274,10 +283,16 @@ fun AppNavHost(
         }
     ) { innerPadding ->
 
+        val mushafOpener = remember(navController) { { page: Int, ayahId: Int? -> navController.openMushaf(page, ayahId) } }
+        CompositionLocalProvider(LocalMushafOpener provides mushafOpener) {
         NavHost(
             navController    = navController,
             startDestination = startDestination,
-            modifier         = Modifier.padding(innerPadding)
+            modifier         = Modifier.padding(innerPadding),
+            enterTransition    = { tabEnter() },
+            exitTransition     = { tabExit() },
+            popEnterTransition = { tabEnter() },
+            popExitTransition  = { tabExit() }
         ) {
 
             // ── Onboarding (shown only on first run) ──────────────────
@@ -298,6 +313,7 @@ fun AppNavHost(
 
             composable(Routes.HOME) {
                 HomeScreen(
+                    viewModel       = homeViewModel,
                     onOpenPlan      = { navController.navigate(Routes.PLAN) },
                     onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
                     onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
@@ -396,6 +412,7 @@ fun AppNavHost(
             composable(Routes.PRACTICE) {
                 PracticeScreen(
                     onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
+                    onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
                     onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
                     onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
                     onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
@@ -417,10 +434,11 @@ fun AppNavHost(
             }
 
             composable(Routes.PAGE_BOUNDARIES) {
-                PageBoundariesScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.openMushaf(page) }
-                )
+                PageBoundariesScreen(fromVerse = false, onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.PAGE_EDGES_OF_VERSE) {
+                PageBoundariesScreen(fromVerse = true, onBack = { navController.popBackStack() })
             }
 
             // ── Sub-screens (bottom bar hidden) ──────────────────────
@@ -571,12 +589,16 @@ fun AppNavHost(
             }
 
             composable(
-                route     = "${Routes.MUSHAF_VIEWER}/{page}",
-                arguments = listOf(navArgument("page") { type = NavType.IntType })
+                route     = "${Routes.MUSHAF_VIEWER}/{page}?ayah={ayah}",
+                arguments = listOf(
+                    navArgument("page") { type = NavType.IntType },
+                    navArgument("ayah") { type = NavType.IntType; defaultValue = 0 }
+                )
             ) { entry ->
                 val page = entry.arguments?.getInt("page") ?: 1
                 MushafViewerScreen(
                     startPage   = page,
+                    startAyah   = entry.arguments?.getInt("ayah") ?: 0,
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
                     onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) },
@@ -585,12 +607,42 @@ fun AppNavHost(
                 )
             }
         }
+        }
     }
 }
 
+// ── Moving between tabs ───────────────────────────────────────────────────────
+
+private val tabOrder = listOf(Routes.HOME, Routes.SURAH_LIST, Routes.PRACTICE, Routes.INSIGHTS)
+private const val TAB_MS = 300
+
+/**
+ * Which way the other tab lies, or null when either end of the move is not a tab. The tabs sit in layout order,
+ * so Start and End already mean left and right in a left-to-right layout and the reverse in Arabic.
+ */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabDirection(): AnimatedContentTransitionScope.SlideDirection? {
+    val from = tabOrder.indexOf(initialState.destination.route)
+    val to = tabOrder.indexOf(targetState.destination.route)
+    if (from < 0 || to < 0 || from == to) return null
+    return if (to > from) AnimatedContentTransitionScope.SlideDirection.Start else AnimatedContentTransitionScope.SlideDirection.End
+}
+
+/** A short drift toward the tab, under a fade: enough to say where the screen came from, not a full-width swipe. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabEnter(): EnterTransition {
+    val direction = tabDirection() ?: return fadeIn(animationSpec = tween(700))
+    return slideIntoContainer(direction, tween(TAB_MS, easing = FastOutSlowInEasing)) { it / 6 } +
+        fadeIn(tween(TAB_MS - 80, delayMillis = 80))
+}
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExit(): ExitTransition {
+    val direction = tabDirection() ?: return fadeOut(animationSpec = tween(700))
+    return slideOutOfContainer(direction, tween(TAB_MS, easing = FastOutSlowInEasing)) { it / 6 } +
+        fadeOut(tween(TAB_MS / 2))
+}
+
 /** Opens the Mushaf at [page]. A second tap while it is already open replaces it instead of stacking another one, which Back would then land on. */
-private fun NavHostController.openMushaf(page: Int) {
-    navigate(Routes.mushafViewer(page)) { launchSingleTop = true }
+private fun NavHostController.openMushaf(page: Int, ayahId: Int? = null) {
+    navigate(Routes.mushafViewer(page, ayahId)) { launchSingleTop = true }
 }
 
 // ── Bottom bar composable ─────────────────────────────────────────────────────
@@ -598,76 +650,76 @@ private fun NavHostController.openMushaf(page: Int) {
 @Composable
 private fun MutqanBottomBar(
     currentRoute: String?,
+    dueToday: Int,
     onNavSelected: (String) -> Unit
 ) {
     val items = listOf(
         BottomNavItem(
             route = Routes.HOME,
             label = stringResource(R.string.nav_home),
-            selectedIcon = Icons.Default.Today,
-            unselectedIcon = Icons.Outlined.Today
+            selectedIcon = Icons.Filled.Today,
+            unselectedIcon = Icons.Outlined.Today,
+            badge = dueToday
         ),
         BottomNavItem(
             route = Routes.SURAH_LIST,
             label = stringResource(R.string.nav_quran),
-            selectedIcon = Icons.Default.MenuBook,
+            selectedIcon = Icons.Filled.MenuBook,
             unselectedIcon = Icons.Outlined.MenuBook
         ),
         BottomNavItem(
             route = Routes.PRACTICE,
             label = stringResource(R.string.nav_practice),
-            selectedIcon = Icons.Default.Quiz,
+            selectedIcon = Icons.Filled.Quiz,
             unselectedIcon = Icons.Outlined.Quiz
         ),
         BottomNavItem(
             route = Routes.INSIGHTS,
             label = stringResource(R.string.nav_insights),
-            selectedIcon = Icons.Default.Insights,
+            selectedIcon = Icons.Filled.Insights,
             unselectedIcon = Icons.Outlined.Insights
         )
     )
+    val haptics = LocalHapticFeedback.current
+    val scheme = MaterialTheme.colorScheme
 
-    // A quiet bar: a rule on top, a small gold dot over the current tab, no filled pill.
-    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
-        Hairline()
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
-            items.forEach { item ->
-                val selected = currentRoute == item.route
-                val tint = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 56.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            role = Role.Tab,
-                            onClick = { onNavSelected(item.route) }
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .background(if (selected) MaterialTheme.colorScheme.tertiary else Color.Transparent, CircleShape)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Icon(
-                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = null,
-                        tint = tint,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        color = tint,
-                        maxLines = 1
-                    )
-                }
-            }
+    // The standard bar of today's apps: a raised surface, a pill that fills behind the icon of the current tab, the
+    // icon filled instead of outlined, and the name under every tab.
+    NavigationBar(containerColor = scheme.surfaceContainer, tonalElevation = 0.dp) {
+        items.forEach { item ->
+            val selected = currentRoute == item.route
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    if (!selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    onNavSelected(item.route)
+                },
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            // The Today screen already says what is due, so the count is for the other tabs.
+                            if (item.badge > 0 && !selected) {
+                                val description = stringResource(R.string.nav_due_badge, item.badge)
+                                Badge(
+                                    containerColor = scheme.tertiary,
+                                    contentColor = scheme.onTertiary,
+                                    modifier = Modifier.semantics { contentDescription = description }
+                                ) { Text(if (item.badge > 99) "99+" else item.badge.toString()) }
+                            }
+                        }
+                    ) {
+                        Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null)
+                    }
+                },
+                label = { Text(item.label, maxLines = 1) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = scheme.onPrimaryContainer,
+                    selectedTextColor = scheme.onBackground,
+                    indicatorColor = scheme.primaryContainer,
+                    unselectedIconColor = scheme.onSurfaceVariant,
+                    unselectedTextColor = scheme.onSurfaceVariant
+                )
+            )
         }
     }
 }

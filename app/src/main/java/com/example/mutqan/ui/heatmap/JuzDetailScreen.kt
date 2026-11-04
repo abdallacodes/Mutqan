@@ -70,6 +70,9 @@ import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlin.math.roundToInt
+import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperProgress
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -255,8 +258,8 @@ fun JuzDetailScreen(
     peekData?.let { data ->
         PeekDetailBottomSheet(
             pageNumber = data.pageNumber,
-            startSnippet = data.startSnippet,
-            endSnippet = data.endSnippet,
+            firstAyahId = data.firstAyahId,
+            lastAyahId = data.lastAyahId,
             onOpenInMushaf = { viewModel.dismissPeek(); onPageOpen(data.pageNumber) },
             onDismiss = { viewModel.dismissPeek() }
         )
@@ -294,19 +297,18 @@ fun JuzDetailScreen(
     }
 
     subjectToDelete?.let { subject ->
-        AlertDialog(
+        PaperDialog(
             onDismissRequest = { subjectToDelete = null },
             title = { Text(stringResource(R.string.btn_delete)) },
             text = { Text(stringResource(R.string.delete_subject_confirmation)) },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         viewModel.deleteSubject(subject)
                         subjectToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    }
                 ) {
-                    Text(stringResource(R.string.btn_delete))
+                    Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -388,17 +390,7 @@ private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
 
             if (tracked.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress          = { avg },
-                    modifier          = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    color             = healthClr,
-                    trackColor        = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                    gapSize           = 0.dp,
-                    drawStopIndicator = {}
-                )
+                PaperProgress(fraction = avg, color = healthClr)
             }
         }
     }
@@ -472,10 +464,8 @@ private fun QuickStatusDialog(
     var outcome by remember { mutableStateOf(RecallOutcome.INDEPENDENT) }
     var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
 
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
-        containerColor   = MaterialTheme.colorScheme.surface,
-        shape            = RoundedCornerShape(12.dp),
         title = {
             Column {
                 Text(
@@ -511,7 +501,7 @@ private fun QuickStatusDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                         .padding(12.dp)
                 ) {
@@ -525,21 +515,11 @@ private fun QuickStatusDialog(
 
                     Spacer(Modifier.height(12.dp))
 
-                    Button(
+                    PaperButton(
+                        text = stringResource(R.string.btn_save),
                         onClick = { onSelect(outcome, tags) },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.btn_save),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 HorizontalDivider(

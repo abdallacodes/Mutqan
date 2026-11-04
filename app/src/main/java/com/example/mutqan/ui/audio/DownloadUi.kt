@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
+import com.example.mutqan.ui.components.PaperDialog
 
 /** Whether a surah is kept on the device for the chosen reciter. */
 sealed interface DownloadStatus {
@@ -51,7 +51,7 @@ fun DownloadButton(status: DownloadStatus, onClick: () -> Unit, modifier: Modifi
 
 @Composable
 fun ConfirmDialog(title: String, body: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body) },
@@ -66,7 +66,7 @@ fun ConfirmDialog(title: String, body: String, onConfirm: () -> Unit, onDismiss:
 
 @Composable
 fun DeleteDownloadDialog(surahName: String, reciterName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.audio_delete_title)) },
         text = { Text(stringResource(R.string.audio_delete_body, surahName, reciterName)) },

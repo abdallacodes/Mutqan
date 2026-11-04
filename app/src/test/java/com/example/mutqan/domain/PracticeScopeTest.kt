@@ -72,6 +72,66 @@ class PracticeScopeTest {
     }
 
     @Test
+    fun `the preview counts the levels among the pages the reach gives`() {
+        val p = PracticeScope().preview(covered, states, selfRated, emptyList(), total, now)
+        assertEquals(6, p.reached)
+        assertEquals(6, p.total)
+        assertEquals(mapOf(PlanTier.WEAK to 2, PlanTier.FAIR to 2, PlanTier.STRONG to 2), p.byTier)
+    }
+
+    @Test
+    fun `the preview total follows the chosen levels but the counts stay`() {
+        val p = PracticeScope(tiers = setOf(PlanTier.WEAK, PlanTier.STRONG)).preview(covered, states, selfRated, emptyList(), total, now)
+        assertEquals(6, p.reached)
+        assertEquals(4, p.total)
+        assertEquals(2, p.byTier.getValue(PlanTier.FAIR))
+    }
+
+    @Test
+    fun `the preview of a short reach counts only those pages`() {
+        val logs = listOf(log(1, 1, at = 100), log(5, 5, at = 200), log(3, 3, at = 300))
+        val p = PracticeScope(recentAmount = 2).preview(covered, states, selfRated, logs, total, now)
+        assertEquals(2, p.reached)
+        assertEquals(1, p.byTier.getValue(PlanTier.FAIR))
+        assertEquals(1, p.byTier.getValue(PlanTier.WEAK))
+        assertEquals(0, p.byTier.getValue(PlanTier.STRONG))
+    }
+
+    @Test
+    fun `the preview total always equals the number of pages`() {
+        val logs = listOf(log(1, 4, at = now - day))
+        val scopes = listOf(
+            PracticeScope(),
+            PracticeScope(tiers = setOf(PlanTier.FAIR)),
+            PracticeScope(recentAmount = 3),
+            PracticeScope(tiers = setOf(PlanTier.WEAK, PlanTier.FAIR), recentAmount = 1, recentUnit = RecencyUnit.WEEKS)
+        )
+        for (s in scopes) {
+            assertEquals(s.pages(covered, states, selfRated, logs, total, now).size, s.preview(covered, states, selfRated, logs, total, now).total)
+        }
+    }
+
+    @Test
+    fun `nothing reached previews as zero`() {
+        val p = PracticeScope(recentAmount = 3, recentUnit = RecencyUnit.DAYS).preview(covered, states, selfRated, emptyList(), total, now)
+        assertEquals(0, p.total)
+        assertEquals(0, p.reached)
+    }
+
+    @Test
+    fun `the mask marks exactly the allowed pages`() {
+        val mask = PracticeScope(tiers = setOf(PlanTier.WEAK)).mask(covered, states, selfRated, emptyList(), total, now)!!
+        assertEquals(total, mask.size)
+        assertEquals(setOf(5, 6), (1..total).filter { mask[it - 1] }.toSet())
+    }
+
+    @Test
+    fun `the mask of no choice is what is memorised`() {
+        assertEquals(covered.toList(), PracticeScope().mask(covered, states, selfRated, emptyList(), total, now)!!.toList())
+        assertEquals(null, PracticeScope().mask(null, states, selfRated, emptyList(), total, now))
+    }
+
+    @Test
     fun `the choice survives being stored as a number`() {
         val scope = PracticeScope(tiers = setOf(PlanTier.WEAK, PlanTier.STRONG), recentAmount = 20, recentUnit = RecencyUnit.MONTHS)
         assertEquals(scope, PracticeScope.fromStored(scope.tierMask, scope.recentAmount, scope.recentUnit.code))

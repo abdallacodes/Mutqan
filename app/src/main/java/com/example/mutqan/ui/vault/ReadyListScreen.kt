@@ -50,6 +50,7 @@ import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.AyahText
 
 /**
  * The prepared lists: repeated phrases, and groups of similar ayahs in a folder per surah.
@@ -324,8 +325,7 @@ private fun VerseLine(ayahId: Int, marked: List<IntRange>, onOpenMushaf: (Int) -
             VerseView(
                 surahName = surah?.let { if (isArabic) it.nameArabic else it.nameSimple }.orEmpty(),
                 ayah = ayah.ayah,
-                page = ayah.firstPage,
-                words = repo.wordsOfAyah(ayah.surah, ayah.ayah).filter { !it.isEnd }.map { it.hafs }
+                page = ayah.firstPage
             )
         }
     }
@@ -342,21 +342,14 @@ private fun VerseLine(ayahId: Int, marked: List<IntRange>, onOpenMushaf: (Int) -
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.tertiary
         )
-        Text(
-            text = buildAnnotatedString {
-                view.words.forEachIndexed { i, word ->
-                    if (i > 0) append(" ")
-                    if (marked.any { i + 1 in it }) {
-                        withStyle(SpanStyle(color = markColor, fontWeight = FontWeight.Bold)) { append(word) }
-                    } else {
-                        append(word)
-                    }
-                }
-            },
-            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = AmiriFontFamily, fontSize = 20.sp, lineHeight = 36.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        AyahText(
+            ayahId = ayahId,
+            size = 20.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            marked = marked,
+            markColor = markColor
         )
     }
 }
 
-private class VerseView(val surahName: String, val ayah: Int, val page: Int, val words: List<String>)
+private class VerseView(val surahName: String, val ayah: Int, val page: Int)

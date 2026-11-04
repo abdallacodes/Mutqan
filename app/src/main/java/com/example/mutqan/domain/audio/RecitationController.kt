@@ -14,8 +14,8 @@ class RecitationController private constructor(context: Context) {
     val player = RecitationPlayer.get(app)
     private val downloads = RecitationDownloads.get(app)
 
-    /** The last verse of the run now playing, to carry on to when settings change. */
-    private var runEnd = 0
+    /** What the run now playing was asked for, to work it out again from the verse sounding when settings change. */
+    private var run: RecitationRun? = null
 
     private class Settings(
         val reciter: Reciter,
@@ -39,9 +39,7 @@ class RecitationController private constructor(context: Context) {
 
     /** Plays from verse [ayahId] to the end of [page], or of the surah when the reader chose that. */
     suspend fun playFrom(ayahId: Int, page: Int) {
-        val s = settings()
-        val index = quran.ayahIndex
-        start(RecitationRange.from(ayahId, page, s.toSurahEnd, TOTAL_AYAHS, index::surahOf, index::firstPageOf), s)
+        start(RecitationRun.Stretch(page), ayahId, settings())
     }
 
     /** Carries on from the verse the last recitation reached; false when there was none to carry on from. */
@@ -59,7 +57,7 @@ class RecitationController private constructor(context: Context) {
         val index = quran.ayahIndex
         val wanted = pages.toSortedSet()
         val ids = (1..TOTAL_AYAHS).filter { it in index && index.firstPageOf(it) in wanted }
-        start(ids, s, whole = false)
+        ids.firstOrNull()?.let { start(RecitationRun.Listed(ids), it, s) }
     }
 
     /** Downloads, for the chosen reciter, every surah that has a verse beginning on [pages]. */
@@ -75,22 +73,29 @@ class RecitationController private constructor(context: Context) {
         val s = settings()
         val index = quran.ayahIndex
         val first = (1..TOTAL_AYAHS).firstOrNull { index.surahOf(it) == surah } ?: return
-        start(RecitationRange.from(first, 0, true, TOTAL_AYAHS, index::surahOf, index::firstPageOf), s)
+        start(RecitationRun.Surah, first, s)
     }
 
-    /** Applies changed settings to the run now playing, from the verse sounding now. */
+    /**
+     * Applies changed settings to the run now playing: it is worked out again from the verse sounding, so a new choice
+     * of how far to go takes effect, and the verse carries on from where it had got to rather than starting over.
+     */
     suspend fun reapply() {
         val now = player.state.value
         val id = now.ayahId ?: return
-        if (!now.active || runEnd < id) return
-        start((id..runEnd).toList(), settings())
+        val current = run ?: return
+        if (!now.active) return
+        // While the reader's turn to say the verse is on, the verse has just ended; hear it again rather than resume at its end.
+        val resumeAt = if (now.yourTurn) 0L else player.positionMs()
+        start(current, id, settings(), resumeAt)
     }
 
-    /** [whole] is false for a set of verses that is not one stretch, which settings changes cannot carry on from. */
-    private fun start(ids: List<Int>, s: Settings, whole: Boolean = true) {
+    private fun start(run: RecitationRun, from: Int, s: Settings, startPositionMs: Long = 0L) {
+        val index = quran.ayahIndex
+        val ids = run.verses(from, s.toSurahEnd, TOTAL_AYAHS, index::surahOf, index::firstPageOf)
         if (ids.isEmpty()) return
-        runEnd = if (whole) ids.last() else 0
-        player.play(s.reciter, ids, s.repeat, s.loop, s.speed, s.runRepeat, s.sayAfter)
+        this.run = run
+        player.play(s.reciter, ids, s.repeat, s.loop, s.speed, s.runRepeat, s.sayAfter, startPositionMs)
     }
 
     companion object {

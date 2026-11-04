@@ -5,8 +5,15 @@ import android.graphics.Typeface
 import android.util.Log
 import android.util.LruCache
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -46,6 +53,14 @@ class MushafFontManager private constructor(context: Context) {
     private val typefaces = LruCache<Int, Typeface>(TYPEFACE_CACHE_SIZE)
     private val packLocks = ConcurrentHashMap<String, Mutex>()
     private val httpClient = OkHttpClient()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val inFlight = ConcurrentHashMap.newKeySet<String>()
+    private val failedAt = ConcurrentHashMap<String, Long>()
+
+    private val _revision = MutableStateFlow(0)
+
+    /** Goes up each time a font pack finishes arriving, so whatever is waiting on a font can look again. */
+    val revision: StateFlow<Int> = _revision.asStateFlow()
 
     val packs: List<FontPack> by lazy {
         val json = appContext.assets.open(MANIFEST_ASSET).bufferedReader().use { JSONObject(it.readText()) }
@@ -89,6 +104,41 @@ class MushafFontManager private constructor(context: Context) {
         return loaded?.also { typefaces.put(page, it) }
     }
 
+    /**
+     * Starts fetching, in the background, the packs holding the fonts of [pages] that are not on the device. Returns
+     * at once; [revision] changes when a pack arrives. A pack that failed is not tried again for a minute, so a
+     * screen that keeps asking while offline does not keep the network busy.
+     */
+    fun request(pages: Collection<Int>) {
+        val wanted = pages.filter { it in 1..TOTAL_PAGES && !isAvailable(it) }.mapNotNull(::packFor).distinct()
+        for (pack in wanted) {
+            val failed = failedAt[pack.file]
+            if (failed != null && System.currentTimeMillis() - failed < RETRY_AFTER_MS) continue
+            if (!inFlight.add(pack.file)) continue
+            scope.launch {
+                try {
+                    if (downloadPack(pack)) failedAt.remove(pack.file) else failedAt[pack.file] = System.currentTimeMillis()
+                } finally {
+                    inFlight.remove(pack.file)
+                }
+            }
+        }
+    }
+
+    /** The fonts of [pages] if every one is already loaded in memory; null otherwise (see [load]). */
+    fun cached(pages: Collection<Int>): Map<Int, Typeface>? {
+        val found = HashMap<Int, Typeface>()
+        for (page in pages) found[page] = typefaces.get(page) ?: return null
+        return found
+    }
+
+    /** The fonts of [pages] read from the device; null if any is missing or unreadable. */
+    fun load(pages: Collection<Int>): Map<Int, Typeface>? {
+        val found = HashMap<Int, Typeface>()
+        for (page in pages) found[page] = typeface(page) ?: return null
+        return found
+    }
+
     /** Makes sure [page]'s font is on the device, downloading its pack if needed. */
     suspend fun ensure(page: Int): Boolean {
         if (isAvailable(page)) return true
@@ -104,7 +154,7 @@ class MushafFontManager private constructor(context: Context) {
             try {
                 download(pack, zip)
                 unpack(pack, zip)
-                isPackComplete(pack)
+                isPackComplete(pack).also { if (it) _revision.update { n -> n + 1 } }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -164,7 +214,8 @@ class MushafFontManager private constructor(context: Context) {
         private const val TOTAL_PAGES = 604
         private const val MANIFEST_ASSET = "mushaf_font_manifest.json"
         private const val BASE_URL = "https://github.com/abdallacodes/Mutqan/releases/download/fonts-qpc-v2/"
-        private const val TYPEFACE_CACHE_SIZE = 8
+        private const val TYPEFACE_CACHE_SIZE = 32
+        private const val RETRY_AFTER_MS = 60_000L
         private const val BUFFER_SIZE = 16 * 1024
         private val BUNDLED_PAGES = 1..2
         private val FONT_ENTRY = Regex("""p(\d+)\.ttf""")

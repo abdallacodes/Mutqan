@@ -38,4 +38,35 @@ class RecitationRangeTest {
         assertEquals(emptyList<Int>(), from(0, 1, false))
         assertEquals(emptyList<Int>(), from(11, 1, false))
     }
+
+    private fun run(run: RecitationRun, start: Int, toSurahEnd: Boolean) =
+        run.verses(start, toSurahEnd, 10, { surah[it] }, { page[it] })
+
+    @Test
+    fun `a page run grows when the reader turns on going to the end of the surah`() {
+        val asked = RecitationRun.Stretch(2)
+        assertEquals(listOf(6, 7), run(asked, 6, toSurahEnd = false))
+        assertEquals(listOf(6, 7, 8, 9, 10), run(asked, 6, toSurahEnd = true))
+    }
+
+    @Test
+    fun `a run to the end of the surah shrinks to the page when the reader turns it off`() {
+        // Playing on from page 2 into page 3, then switched off: it finishes the page it has reached.
+        val asked = RecitationRun.Stretch(2)
+        assertEquals(listOf(8, 9, 10), run(asked, 8, toSurahEnd = false))
+    }
+
+    @Test
+    fun `a whole surah ignores the choice`() {
+        assertEquals(listOf(7, 8, 9, 10), run(RecitationRun.Surah, 7, toSurahEnd = false))
+        assertEquals(listOf(7, 8, 9, 10), run(RecitationRun.Surah, 7, toSurahEnd = true))
+    }
+
+    @Test
+    fun `a listed set carries on from the verse sounding and ignores the choice`() {
+        val review = RecitationRun.Listed(listOf(1, 2, 3, 8, 9))
+        assertEquals(listOf(3, 8, 9), run(review, 3, toSurahEnd = true))
+        assertEquals(listOf(3, 8, 9), run(review, 3, toSurahEnd = false))
+        assertEquals(emptyList<Int>(), run(review, 5, toSurahEnd = false))
+    }
 }

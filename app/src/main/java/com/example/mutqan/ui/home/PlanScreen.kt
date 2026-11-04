@@ -41,6 +41,7 @@ import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.PaperStepper
 import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.ui.components.PaperSwitch
 
 /**
  * Creates or edits the revision plan. Four short steps in the order a person thinks about them:
@@ -211,7 +212,7 @@ fun PlanScreen(onBack: () -> Unit) {
                     Text(stringResource(R.string.plan_label_paused), style = MaterialTheme.typography.bodyLarge)
                     Hint(stringResource(R.string.plan_pause_hint))
                 }
-                Switch(checked = state.paused, onCheckedChange = viewModel::setPaused)
+                PaperSwitch(checked = state.paused, onCheckedChange = viewModel::setPaused)
             }
 
             if (state.isExisting) {

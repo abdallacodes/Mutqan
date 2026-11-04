@@ -13,8 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.Icon
@@ -22,7 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,6 +45,11 @@ import com.example.mutqan.ui.components.EmptyStateCard
 import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.ui.components.priorityLabel
 import com.example.mutqan.ui.theme.AmiriFontFamily
+import androidx.compose.ui.draw.alpha
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.AyahText
 
 /** Every bookmark and weak passage the user saved, filterable by type and tag. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -87,7 +89,7 @@ fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = PaperSpace.Gutter),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,8 +119,7 @@ fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
             }
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 if (state.isLoaded && state.items.isEmpty()) {
                     item {
@@ -155,6 +156,7 @@ private fun referenceOf(item: SavedItem): String {
     return if (item.wordPosition > 0) base + " · " + stringResource(R.string.saved_word_position, item.wordPosition) else base
 }
 
+/** One saved passage, set as an entry on the page: its reference, the verse, what it is tagged with, and what can be done. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SavedCard(
@@ -165,65 +167,53 @@ private fun SavedCard(
 ) {
     val passage = item.passage
     val solid = passage.isResolved
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (solid) 0.5f else 1f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val tags = passage.tags.map { it.localizedLabel() }
+    Column(modifier = Modifier.fillMaxWidth().alpha(if (solid) 0.6f else 1f)) {
+        Column(modifier = Modifier.padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = referenceOf(item),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = if (solid) stringResource(R.string.saved_solid_badge)
                     else passage.kind.localizedLabel() + " · " + priorityLabel(passage.priority),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                text = item.snippet,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    textDirection = TextDirection.Rtl,
-                    fontFamily = AmiriFontFamily,
-                    fontSize = 20.sp,
-                    lineHeight = 36.sp
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (passage.tags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    passage.tags.forEach { tag ->
-                        Text(
-                            text = tag.localizedLabel(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            AyahText(ayahId = passage.startAyahId, size = 22.sp, firstWords = SNIPPET_WORDS, maxLines = 3)
+            if (tags.isNotEmpty()) {
+                Text(
+                    text = tags.joinToString(" · "),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (passage.note.isNotBlank()) {
                 Text(
                     text = passage.note,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row {
-                TextButton(onClick = onOpen) { Text(stringResource(R.string.open_in_mushaf)) }
-                TextButton(onClick = onEdit) { Text(stringResource(R.string.peek_edit_saved)) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                PaperLink(text = stringResource(R.string.open_in_mushaf), onClick = onOpen)
+                PaperLink(text = stringResource(R.string.peek_edit_saved), onClick = onEdit, soft = true)
                 if (passage.kind == SavedKind.WEAK) {
-                    TextButton(onClick = onToggleSolid) {
-                        Text(stringResource(if (solid) R.string.saved_reopen else R.string.saved_mark_solid))
-                    }
+                    PaperLink(
+                        text = stringResource(if (solid) R.string.saved_reopen else R.string.saved_mark_solid),
+                        onClick = onToggleSolid,
+                        soft = true
+                    )
                 }
             }
         }
+        Hairline(Modifier.fillMaxWidth())
     }
 }
+
+/** How much of the first verse of a saved passage is shown in the list. */
+private const val SNIPPET_WORDS = 10

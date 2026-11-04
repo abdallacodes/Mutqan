@@ -31,6 +31,7 @@ import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.AyahText
 
 private const val MAX_SHOWN = 4
 
@@ -84,25 +85,7 @@ fun ColumnScope.SimilarAyahsSection(ayahId: Int, onOpenMushaf: ((Int) -> Unit)?)
                     color = MaterialTheme.colorScheme.tertiary
                 )
             }
-            Text(
-                text = buildAnnotatedString {
-                    line.words.forEachIndexed { i, word ->
-                        if (i > 0) append(" ")
-                        if (line.match.matchedWords.any { i + 1 in it }) {
-                            withStyle(SpanStyle(color = markColor, fontWeight = FontWeight.Bold)) { append(word) }
-                        } else {
-                            append(word)
-                        }
-                    }
-                },
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    textDirection = TextDirection.Rtl,
-                    fontFamily = AmiriFontFamily,
-                    fontSize = 20.sp,
-                    lineHeight = 40.sp
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
+            AyahText(ayahId = line.match.ayahId, size = 20.sp, marked = line.match.matchedWords, markColor = markColor)
         }
     }
     if (total > shown.size) {

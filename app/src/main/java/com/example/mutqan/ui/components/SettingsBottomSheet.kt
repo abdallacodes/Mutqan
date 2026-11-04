@@ -7,9 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.foundation.text.KeyboardOptions
@@ -108,6 +106,7 @@ fun SettingsBottomSheet(
     var exportPassword by remember { mutableStateOf<String?>(null) }
     var importPasswordUri by remember { mutableStateOf<Uri?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val backupGate = rememberBackupGate()
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -283,8 +282,9 @@ fun SettingsBottomSheet(
             DataActionRow(
                 label = stringResource(R.string.btn_restore),
                 icon = Icons.Default.Restore,
+                // Restoring replaces everything on the device, so the current data is saved first.
                 onClick = {
-                    importLauncher.launch(arrayOf("application/json"))
+                    backupGate.require { importLauncher.launch(arrayOf("application/json")) }
                 }
             )
 
@@ -309,7 +309,7 @@ fun SettingsBottomSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
+                PaperSwitch(
                     checked = appLock,
                     onCheckedChange = { on ->
                         val secure = context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
@@ -411,14 +411,14 @@ fun SettingsBottomSheet(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
+        PaperDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text(stringResource(R.string.delete_all_title)) },
             text = { Text(stringResource(R.string.delete_all_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    viewModel.deleteAllData()
+                    backupGate.require { viewModel.deleteAllData() }
                 }) { Text(stringResource(R.string.delete_all_confirm), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.btn_cancel)) } }
@@ -438,7 +438,7 @@ private fun PasswordDialog(
     onDismiss: () -> Unit
 ) {
     var password by remember { mutableStateOf("") }
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {

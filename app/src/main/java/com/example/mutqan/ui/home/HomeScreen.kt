@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +74,11 @@ import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.revision.OutcomePicker
 import com.example.mutqan.ui.revision.OutcomePreview
 import com.example.mutqan.ui.theme.AmiriFontFamily
+import com.example.mutqan.ui.components.PaperDialog
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.mutqan.ui.navigation.OnTabReselected
+import com.example.mutqan.ui.navigation.Routes
+import com.example.mutqan.ui.components.AyahText
 
 private const val LATER_PREVIEW = 3
 
@@ -109,10 +113,10 @@ fun HomeScreen(
     onOpenProgress: () -> Unit,
     onOpenMushaf: (Int) -> Unit,
     onLogRevision: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(LocalContext.current))
 ) {
     val context = LocalContext.current
-    val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(context))
     val state by viewModel.uiState.collectAsState()
     var logging by remember { mutableStateOf<PlanItem?>(null) }
     val recitation = remember(context) { RecitationController.get(context) }
@@ -121,6 +125,8 @@ fun HomeScreen(
     var sessionOpen by rememberSaveable { mutableStateOf(false) }
     var laterExpanded by rememberSaveable { mutableStateOf(false) }
     var doneExpanded by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    OnTabReselected(Routes.HOME) { listState.animateScrollToItem(0) }
 
     val sessionToday = state.today
     if (sessionOpen && sessionToday != null) {
@@ -169,6 +175,7 @@ fun HomeScreen(
         if (!state.isLoaded) return@Column
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = PaperSpace.Gutter, vertical = PaperSpace.Section)
         ) {
@@ -524,15 +531,7 @@ private fun WeakQuote(weak: WeakSuggestion, onOpen: () -> Unit, onDismiss: () ->
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
-        Text(
-            text = weak.snippet,
-            fontFamily = AmiriFontFamily,
-            fontSize = 26.sp,
-            lineHeight = 48.sp,
-            style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Rtl),
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.fillMaxWidth()
-        )
+        AyahText(ayahId = weak.ayahId, size = 26.sp, firstWords = 10, maxLines = 3)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PaperLink(stringResource(R.string.home_btn_open), onClick = onOpen)
             PaperLink(stringResource(R.string.home_weak_dismiss), onClick = onDismiss, soft = true)
@@ -544,7 +543,7 @@ private fun WeakQuote(weak: WeakSuggestion, onOpen: () -> Unit, onDismiss: () ->
 private fun LogItemDialog(item: PlanItem, onConfirm: (RecallOutcome, Set<MistakeTag>) -> Unit, onDismiss: () -> Unit) {
     var outcome by remember { mutableStateOf(RecallOutcome.INDEPENDENT) }
     var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_log_dialog_title, item.label())) },
         text = {

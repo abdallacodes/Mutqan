@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MoveUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -88,6 +87,7 @@ import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlin.math.roundToInt
+import com.example.mutqan.ui.components.PaperDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -417,7 +417,7 @@ private fun FolderNameDialog(
     onConfirm: (String) -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -453,7 +453,7 @@ private fun MoveItemDialog(
     // plus a "Vault (Root)" option.
     val dbFolders by viewModel.folders.collectAsState()
     
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_move_title)) },
         text = {
@@ -518,9 +518,9 @@ private fun GroupCard(
 ) {
     val quality       = item.group.masterQuality
     val strengthColor = when {
-        quality >= 0.70f -> Color(0xFF7FAE8C)
-        quality >= 0.40f -> Color(0xFFD2A94A)
-        else          -> Color(0xFFD0705F)
+        quality >= 0.70f -> DifficultySmooth
+        quality >= 0.40f -> DifficultyStruggled
+        else          -> DifficultyCritical
     }
     val versesLabel   = if (item.memberCount == 1)
         stringResource(R.string.verses_singular, item.memberCount)

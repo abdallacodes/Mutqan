@@ -48,6 +48,8 @@ class SettingsViewModel(
     fun deleteAllData() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { database.clearAllTables() }
+            // Otherwise the empty device would look like a change to push over the account's data.
+            preferences.forgetSyncHistory()
             _events.emit(BackupUiEvent.Success(UiText(R.string.delete_all_done)))
         }
     }

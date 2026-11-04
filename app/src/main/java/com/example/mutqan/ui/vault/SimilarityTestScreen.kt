@@ -35,6 +35,18 @@ import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.quran.toCleanQuranicText
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.ui.components.OrnamentDivider
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.ui.practice.Feedback
+import com.example.mutqan.ui.practice.OptionState
+import com.example.mutqan.ui.practice.QuizOption
+import com.example.mutqan.quran.MushafSpan
+import com.example.mutqan.ui.components.AyahText
+import com.example.mutqan.ui.components.MushafText
+import com.example.mutqan.ui.components.OpenInMushaf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,12 +80,13 @@ fun SimilarityTestScreen(
                     PaperTabs(
                         labels = listOf(stringResource(R.string.test_source_mine), stringResource(R.string.test_source_ready)),
                         selectedIndex = source.ordinal,
-                        onSelect = { viewModel.chooseSource(TestSource.entries[it]) }
+                        onSelect = { viewModel.chooseSource(TestSource.entries[it]) },
+                        modifier = Modifier.padding(horizontal = PaperSpace.Gutter)
                     )
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
                 ) {
                     listOf(
                         TestType.RECALL to R.string.test_type_recall,
@@ -87,6 +100,20 @@ fun SimilarityTestScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            val q = uiState as? TestUiState.Question
+            if (q != null && (q.isRevealed || q.type == TestType.RECALL)) {
+                Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
+                    Hairline(Modifier.fillMaxWidth())
+                    PaperButton(
+                        text = stringResource(if (q.isRevealed) R.string.btn_next_verse else R.string.btn_show_ayah),
+                        onClick = { if (q.isRevealed) viewModel.loadNextVerse() else viewModel.reveal() },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 12.dp)
+                    )
                 }
             }
         }
@@ -135,9 +162,7 @@ fun SimilarityTestScreen(
                 is TestUiState.Question -> {
                     QuizContent(
                         state = state,
-                        onReveal = viewModel::reveal,
                         onPick = viewModel::pick,
-                        onNext = viewModel::loadNextVerse,
                         onGroupClick = { onNavigateToGroup(state.result.groupId) }
                     )
                 }
@@ -150,202 +175,97 @@ fun SimilarityTestScreen(
 @Composable
 private fun QuizContent(
     state: TestUiState.Question,
-    onReveal: () -> Unit,
     onPick: (Int) -> Unit,
-    onNext: () -> Unit,
     onGroupClick: () -> Unit
 ) {
+    val scheme = MaterialTheme.colorScheme
     val isChoice = state.type != TestType.RECALL
-    val result = state.result
-    val verse = result.verse
+    val verse = state.result.verse
     val surahName = SurahData.nameOf(verse.surah)
-    val cleanText = verse.text.toCleanQuranicText()
-    val words = cleanText.split(" ")
-    val snippet = words.take(4).joinToString(" ") + " ..."
+    val shared = scheme.primary
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .padding(horizontal = PaperSpace.Gutter, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Meta Info (the reference is the answer when asking which verse it is)
-        if (!(state.type == TestType.WHICH && !state.isRevealed)) Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = surahName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.ayah_n, verse.ayah),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.label_page, verse.firstPage),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
+        // The reference is the answer when asking which verse it is.
+        if (!(state.type == TestType.WHICH && !state.isRevealed)) {
+            Text(
+                text = listOf(
+                    surahName,
+                    stringResource(R.string.ayah_n, verse.ayah),
+                    stringResource(R.string.label_page, verse.firstPage)
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.titleMedium,
+                color = scheme.primary
+            )
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // 2. Ayah Text
-        val shared = MaterialTheme.colorScheme.primary
-        val revealedText = if (state.isRevealed && state.words.isNotEmpty()) sharedWords(state.words, state.shared, shared) else null
-        Text(
-            text = revealedText ?: androidx.compose.ui.text.AnnotatedString(
-                when {
-                    state.isRevealed -> cleanText
-                    state.type == TestType.FINISH -> state.lead
-                    state.type == TestType.WHICH -> cleanText
-                    else -> snippet
-                }
-            ),
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = AmiriFontFamily,
-                fontSize = 28.sp,
-                lineHeight = 44.sp,
-                textDirection = TextDirection.Rtl
-            ),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
+        when {
+            // Ready-made groups mark the words the verse shares with its look-alikes.
+            state.isRevealed && state.words.isNotEmpty() -> MushafText(
+                span = MushafSpan.of(state.words),
+                size = 28.sp,
+                wordColors = state.words.filter { it.position in state.shared }.associate { it.id to shared }
+            )
+            state.isRevealed || state.type == TestType.WHICH -> AyahText(ayahId = verse.id, size = 28.sp)
+            state.type == TestType.FINISH -> MushafText(span = state.lead, size = 28.sp)
+            else -> AyahText(ayahId = verse.id, size = 28.sp, firstWords = 4)
+        }
+        if (state.isRevealed) OpenInMushaf(ayahId = verse.id)
 
         // The choices, for the "finish it" and "which verse" tests
         if (isChoice) {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = if (state.type == TestType.FINISH) {
-                        stringResource(R.string.test_q_finish, surahName, verse.ayah)
-                    } else stringResource(R.string.test_q_which),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = if (state.type == TestType.FINISH) {
+                    stringResource(R.string.test_q_finish, surahName, verse.ayah)
+                } else stringResource(R.string.test_q_which),
+                style = MaterialTheme.typography.headlineSmall,
+                color = scheme.onBackground
+            )
+            state.options.forEachIndexed { i, option ->
+                val optionState = when {
+                    state.picked == null -> OptionState.PLAIN
+                    i == state.correct -> OptionState.CORRECT
+                    i == state.picked -> OptionState.WRONG
+                    else -> OptionState.DIMMED
+                }
+                QuizOption(
+                    span = option,
+                    state = optionState,
+                    enabled = state.picked == null,
+                    onClick = { onPick(i) },
+                    verse = state.type == TestType.FINISH
                 )
-                state.options.forEachIndexed { i, option ->
-                    val container = when {
-                        state.picked == null -> Color.Transparent
-                        i == state.correct -> MaterialTheme.colorScheme.primaryContainer
-                        i == state.picked -> MaterialTheme.colorScheme.errorContainer
-                        else -> Color.Transparent
-                    }
-                    OutlinedButton(
-                        onClick = { onPick(i) },
-                        enabled = state.picked == null || i == state.correct || i == state.picked,
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = container),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = option,
-                            style = if (state.type == TestType.FINISH) {
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 34.sp, textDirection = TextDirection.Rtl
-                                )
-                            } else MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 6.dp)
-                        )
-                    }
-                }
-                if (state.picked != null) {
-                    Text(
-                        text = stringResource(if (state.picked == state.correct) R.string.test_right else R.string.test_wrong),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (state.picked == state.correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                    )
-                }
+            }
+            if (state.picked != null) Feedback(state.picked == state.correct)
+        }
+
+        if (state.source == TestSource.MINE && (!isChoice || state.isRevealed)) {
+            Column {
+                SectionLabel(stringResource(R.string.label_part_of_group))
+                PaperLink(text = state.result.groupName, onClick = onGroupClick)
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // 3. Group Info
-        if (state.source == TestSource.MINE && (!isChoice || state.isRevealed)) Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.label_part_of_group),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = result.groupName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .clickable { onGroupClick() }
-                    .padding(4.dp)
-            )
-        }
-
-        // 4. The lookalikes, for ready-made groups
+        // The lookalikes, for ready-made groups
         if (state.isRevealed && state.similar.isNotEmpty()) {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.test_similar_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                state.similar.forEach { other ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(other.reference, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                        Text(
-                            text = sharedWords(other.words, other.shared, shared),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 38.sp, textDirection = TextDirection.Rtl
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+            OrnamentDivider()
+            SectionLabel(stringResource(R.string.test_similar_title))
+            state.similar.forEach { other ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(other.reference, style = MaterialTheme.typography.titleMedium, color = scheme.primary)
+                    MushafText(
+                        span = MushafSpan.of(other.words),
+                        size = 22.sp,
+                        wordColors = other.words.filter { it.position in other.shared }.associate { it.id to shared }
+                    )
+                    OpenInMushaf(ayahId = other.ayahId, soft = true)
                 }
-            }
-        }
-
-        // 5. Actions
-        if (!state.isRevealed) {
-            if (!isChoice) Button(
-                onClick = onReveal,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(R.string.btn_show_ayah))
-            }
-        } else {
-            Button(
-                onClick = onNext,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Icon(Icons.Default.Refresh, null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.btn_next_verse))
             }
         }
     }
 }
-
-/** [words] as one line, the ones at the 1-based positions in [shared] set in [color] and bold. */
-private fun sharedWords(words: List<String>, shared: Set<Int>, color: Color): androidx.compose.ui.text.AnnotatedString =
-    androidx.compose.ui.text.buildAnnotatedString {
-        words.forEachIndexed { i, word ->
-            if (i > 0) append(" ")
-            if (i + 1 in shared) {
-                withStyle(androidx.compose.ui.text.SpanStyle(color = color, fontWeight = FontWeight.Bold)) { append(word) }
-            } else {
-                append(word)
-            }
-        }
-    }

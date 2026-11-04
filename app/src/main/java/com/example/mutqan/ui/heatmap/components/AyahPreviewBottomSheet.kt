@@ -17,6 +17,7 @@ import com.example.mutqan.R
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.quran.toCleanQuranicText
+import com.example.mutqan.ui.components.AyahText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,16 +46,7 @@ fun AyahPreviewBottomSheet(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Text(
-                text = verse.text.toCleanQuranicText(),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = AmiriFontFamily,
-                    fontSize = 24.sp,
-                    lineHeight = 48.sp
-                ),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            AyahText(ayahId = verse.id, size = 24.sp, textAlign = TextAlign.Center)
             
             Spacer(modifier = Modifier.height(24.dp))
             

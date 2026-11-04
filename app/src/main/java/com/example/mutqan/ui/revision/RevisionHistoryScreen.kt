@@ -27,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -79,6 +78,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.components.PaperButton
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -308,10 +309,8 @@ private fun DeleteConfirmDialog(
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onCancel,
-        containerColor   = MaterialTheme.colorScheme.surface,
-        shape            = RoundedCornerShape(12.dp),
         title = {
             Text(
                 text       = stringResource(R.string.delete_entry_title),
@@ -328,15 +327,8 @@ private fun DeleteConfirmDialog(
             )
         },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                shape   = RoundedCornerShape(8.dp),
-                colors  = ButtonDefaults.buttonColors(
-                    containerColor = DifficultyCritical,
-                    contentColor   = Color.White
-                )
-            ) {
-                Text(stringResource(R.string.btn_delete), fontWeight = FontWeight.Black)
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -446,16 +438,7 @@ private fun EditRevisionDialog(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = onSave,
-                        shape   = RoundedCornerShape(8.dp),
-                        colors  = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor   = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Black)
-                    }
+                    PaperButton(text = stringResource(R.string.btn_save), onClick = onSave)
                 }
             }
         }

@@ -19,13 +19,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.R
 import com.example.mutqan.ui.theme.AmiriFontFamily
+import com.example.mutqan.ui.components.AyahText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PeekDetailBottomSheet(
     pageNumber: Int,
-    startSnippet: String,
-    endSnippet: String,
+    firstAyahId: Int,
+    lastAyahId: Int,
     onOpenInMushaf: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -50,10 +51,7 @@ fun PeekDetailBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Start Snippet
-            SnippetCard(
-                text = "$startSnippet...",
-                isStart = true
-            )
+            SnippetCard(ayahId = firstAyahId, isStart = true)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -77,17 +75,14 @@ fun PeekDetailBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             // End Snippet
-            SnippetCard(
-                text = "...$endSnippet",
-                isStart = false
-            )
+            SnippetCard(ayahId = lastAyahId, isStart = false)
         }
     }
 }
 
 @Composable
 private fun SnippetCard(
-    text: String,
+    ayahId: Int,
     isStart: Boolean
 ) {
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -99,18 +94,7 @@ private fun SnippetCard(
         shape = RoundedCornerShape(8.dp)
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = AmiriFontFamily,
-                    fontSize = 22.sp,
-                    lineHeight = 42.sp
-                ),
-                textAlign = TextAlign.Right,
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 1,
-                overflow = TextOverflow.Clip
-            )
+            AyahText(ayahId = ayahId, size = 22.sp, maxLines = 1, textAlign = TextAlign.Right)
             
             // Fading Edge Overlay
             Box(

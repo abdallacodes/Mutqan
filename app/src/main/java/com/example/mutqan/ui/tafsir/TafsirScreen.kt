@@ -51,6 +51,8 @@ import com.example.mutqan.ui.theme.AmiriFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.AyahText
+import com.example.mutqan.ui.components.OpenInMushaf
 
 private const val TOTAL_AYAHS = 6236
 
@@ -101,14 +103,10 @@ fun TafsirScreen(startAyahId: Int, onBack: () -> Unit) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             item {
                 ayah?.let {
-                    Text(
-                        text = it.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = TextDirection.Rtl, fontFamily = AmiriFontFamily, fontSize = 24.sp, lineHeight = 44.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 16.dp)
-                    )
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 16.dp)) {
+                        AyahText(ayahId = it.id, size = 24.sp)
+                        OpenInMushaf(ayahId = it.id)
+                    }
                 }
                 Hairline()
             }

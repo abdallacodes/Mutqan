@@ -197,7 +197,7 @@ class RecitationPlayer private constructor(context: Context) {
 
     /**
      * Plays [ayahIds] in order with [reciter], each [repeat] times; with [loop] the run starts over when it ends.
-     * Verses the reciter has no sound for are left out.
+     * Verses the reciter has no sound for are left out. The first verse begins [startPositionMs] in.
      */
     fun play(
         reciter: Reciter,
@@ -206,7 +206,8 @@ class RecitationPlayer private constructor(context: Context) {
         loop: Boolean,
         speedPercent: Int,
         runRepeat: Int = 1,
-        sayAfterPercent: Int = 0
+        sayAfterPercent: Int = 0,
+        startPositionMs: Long = 0L
     ) {
         val index = quran.ayahIndex
         val reciterName = app.getString(reciter.nameRes)
@@ -253,7 +254,7 @@ class RecitationPlayer private constructor(context: Context) {
         urls = files
         try {
             startService()
-            exo.setMediaItems(items)
+            exo.setMediaItems(items, 0, startPositionMs.coerceAtLeast(0L))
             exo.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
             exo.setPlaybackSpeed(speedPercent / 100f)
             exo.prepare()

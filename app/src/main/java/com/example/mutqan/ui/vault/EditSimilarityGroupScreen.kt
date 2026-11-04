@@ -87,6 +87,7 @@ import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlin.math.roundToInt
+import com.example.mutqan.ui.components.AyahText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -662,18 +663,7 @@ private fun SearchResultRow(
                 color      = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(2.dp))
-            Text(
-                text     = verse.text.let { t ->
-                    if (t.length > 80) t.take(80) + "…" else t
-                },
-                style    = MaterialTheme.typography.bodySmall.copy(
-                    textDirection = TextDirection.Rtl,
-                    fontFamily    = AmiriFontFamily,
-                    lineHeight    = 20.sp
-                ),
-                color    = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2
-            )
+            AyahText(ayahId = verse.id, size = 16.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
         }
         
         IconButton(onClick = onPeek) {

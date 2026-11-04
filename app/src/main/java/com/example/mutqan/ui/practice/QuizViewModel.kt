@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.ChoiceQuestion
 import com.example.mutqan.domain.ExerciseType
 import com.example.mutqan.data.UserPreferencesRepository
-import com.example.mutqan.domain.MorphologyLibrary
 import com.example.mutqan.domain.TopicLanguage
 import com.example.mutqan.domain.TopicsLibrary
 import com.example.mutqan.domain.OrderQuestion
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.example.mutqan.domain.VerseClosingsLibrary
 
 @Immutable
 data class QuizUiState(
@@ -42,7 +42,7 @@ data class QuizUiState(
     val scopeEmpty: Boolean = false,
     val hard: Boolean = false,
     val question: QuizQuestion? = null,
-    /** Where-is-this: 0 = choosing the surah, 1 = choosing the verse number. */
+    /** Where-is-this: 0 = naming the surah, 1 = the surah was right and the verse number is open as an optional bonus. */
     val stage: Int = 0,
     val pickedOption: Int? = null,
     val pickedSurah: Int? = null,
@@ -113,7 +113,7 @@ class QuizViewModel(
                 showAll = UserPreferencesRepository(appContext).topicsShowAll.first()
             )
             engine = QuizEngine(
-                quran, SimilarLibrary.load(appContext), random, MorphologyLibrary.load(appContext),
+                quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext),
                 TopicsLibrary.load(appContext), language
             )
             loadNext()
@@ -150,19 +150,16 @@ class QuizViewModel(
         val s = _state.value
         val q = s.question as? WhereQuestion ?: return
         if (s.answered || s.stage != 0) return
-        if (surah == q.subject.surah) _state.update { it.copy(pickedSurah = surah, stage = 1) }
-        else {
-            _state.update { it.copy(pickedSurah = surah) }
-            answer(false)
-        }
+        // Naming the surah is the question; it is recorded at once. The verse number that follows is a bonus.
+        _state.update { it.copy(pickedSurah = surah, stage = if (surah == q.subject.surah) 1 else 0) }
+        answer(surah == q.subject.surah)
     }
 
+    /** The optional bonus: the verse number, once the surah was named rightly. It changes neither the score nor the record. */
     fun chooseAyah(ayah: Int) {
         val s = _state.value
-        val q = s.question as? WhereQuestion ?: return
-        if (s.answered || s.stage != 1) return
+        if (!s.answered || s.stage != 1 || s.pickedAyah != null) return
         _state.update { it.copy(pickedAyah = ayah) }
-        answer(ayah == q.subject.ayah)
     }
 
     fun tapOrder(index: Int) {

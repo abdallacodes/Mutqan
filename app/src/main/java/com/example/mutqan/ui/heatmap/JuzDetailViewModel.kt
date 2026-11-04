@@ -109,15 +109,12 @@ class JuzDetailViewModel(
             rubs.map { unit ->
                 val unitAyahs = unit.startAyahId..unit.endAyahId
                 val subjectsWithText = subjects.filter { it.startAyahId in unitAyahs }.map { subject ->
-                    val verse = ayahsById[subject.startAyahId]
-                    SubjectWithText(subject, verse?.text?.toCleanQuranicText() ?: "", verse?.ayah ?: 0)
+                    SubjectWithText(subject, ayahsById[subject.startAyahId]?.ayah ?: 0)
                 }
 
                 AnchorCardData(
                     unit = unit,
                     subjects = subjectsWithText,
-                    startAyahText = ayahsById[unit.startAyahId]?.text?.toCleanQuranicText() ?: "",
-                    endAyahText = ayahsById[unit.endAyahId]?.text?.toCleanQuranicText() ?: "",
                     pages = (unit.startPage..unit.endPage).toList(),
                     ayahsInQuarter = unitAyahs.mapNotNull { ayahsById[it] }
                 )
@@ -155,15 +152,8 @@ class JuzDetailViewModel(
 
     private fun peekPage(pageNumber: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val words = quran.pageWords(pageNumber)
-                .map { it.toCleanQuranicText() }
-                .filter { it.isNotBlank() }
-            if (words.isNotEmpty()) {
-                val startSnippet = words.take(10).joinToString(" ")
-                val endSnippet = words.takeLast(10).joinToString(" ")
-
-                _peekData.value = PagePeekData(pageNumber, startSnippet, endSnippet)
-            }
+            val ayahs = quran.ayahsOnPage(pageNumber)
+            if (ayahs.isNotEmpty()) _peekData.value = PagePeekData(pageNumber, ayahs.first().id, ayahs.last().id)
         }
     }
 
@@ -229,22 +219,20 @@ sealed class SharingEvent {
 
 data class PagePeekData(
     val pageNumber: Int,
-    val startSnippet: String,
-    val endSnippet: String
+    /** The first and last ayah on the page (global ids). */
+    val firstAyahId: Int,
+    val lastAyahId: Int
 )
 
 data class AnchorCardData(
     val unit: QuranRub,
     val subjects: List<SubjectWithText>,
-    val startAyahText: String,
-    val endAyahText: String,
     val pages: List<Int>,
     val ayahsInQuarter: List<QuranAyah>
 )
 
 data class SubjectWithText(
     val entity: UserSubjectEntity,
-    val startAyahText: String,
     val ayahNumber: Int
 )
 

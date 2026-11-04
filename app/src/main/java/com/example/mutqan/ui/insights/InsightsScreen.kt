@@ -14,6 +14,8 @@ import com.example.mutqan.R
 import com.example.mutqan.ui.components.HubRow
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.TopBarOverflowMenu
+import com.example.mutqan.ui.navigation.OnTabReselected
+import com.example.mutqan.ui.navigation.Routes
 
 /** Where the user stands and what they have recorded: progress, the memory map, the journal, coverage and the plan. */
 @Composable
@@ -26,6 +28,9 @@ fun InsightsScreen(
     onOpenPlan: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
+    val scroll = rememberScrollState()
+    OnTabReselected(Routes.INSIGHTS) { scroll.animateScrollTo(0) }
+
     Scaffold(
         topBar = {
             PaperHeader(
@@ -36,7 +41,7 @@ fun InsightsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scroll)) {
             HubRow(stringResource(R.string.progress_title), stringResource(R.string.insights_progress_desc), onOpenProgress)
             HubRow(stringResource(R.string.brain_title), stringResource(R.string.insights_brain_desc), onOpenBrain)
             HubRow(stringResource(R.string.insights_log_title), stringResource(R.string.insights_journal_desc), onLogRevision)

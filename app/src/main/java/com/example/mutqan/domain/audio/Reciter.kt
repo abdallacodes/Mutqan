@@ -65,6 +65,41 @@ class RecitationSources(private val context: Context) {
     }
 }
 
+/**
+ * What a recitation was asked to cover. It is kept while the recitation plays so that, when a setting changes, the
+ * run can be worked out again from the verse sounding: a run asked for "to the end of the page" must grow when the
+ * reader then turns on "to the end of the surah", and the other way round.
+ */
+sealed interface RecitationRun {
+
+    /** The verses to play when starting at [from], with the reader's present choice of [toSurahEnd]. */
+    fun verses(
+        from: Int,
+        toSurahEnd: Boolean,
+        total: Int,
+        surahOf: (Int) -> Int,
+        firstPageOf: (Int) -> Int
+    ): List<Int>
+
+    /** From a verse to the end of its page ([page] is the one it was asked on), or of the surah when the reader chose that. */
+    data class Stretch(val page: Int) : RecitationRun {
+        override fun verses(from: Int, toSurahEnd: Boolean, total: Int, surahOf: (Int) -> Int, firstPageOf: (Int) -> Int) =
+            RecitationRange.from(from, page, toSurahEnd, total, surahOf, firstPageOf)
+    }
+
+    /** A whole surah, whatever the reader chose for the runs that go by pages. */
+    data object Surah : RecitationRun {
+        override fun verses(from: Int, toSurahEnd: Boolean, total: Int, surahOf: (Int) -> Int, firstPageOf: (Int) -> Int) =
+            RecitationRange.from(from, 0, true, total, surahOf, firstPageOf)
+    }
+
+    /** A given set of verses, such as the pages of today's review, in order; the choice of how far to go does not apply. */
+    data class Listed(val ids: List<Int>) : RecitationRun {
+        override fun verses(from: Int, toSurahEnd: Boolean, total: Int, surahOf: (Int) -> Int, firstPageOf: (Int) -> Int) =
+            ids.dropWhile { it != from }
+    }
+}
+
 /** Which verses a recitation covers. */
 object RecitationRange {
 

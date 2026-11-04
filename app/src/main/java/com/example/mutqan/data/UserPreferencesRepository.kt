@@ -5,7 +5,11 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.mutqan.domain.PracticeScope
 import com.example.mutqan.domain.sync.SyncMemory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
 import java.util.UUID
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -40,6 +44,14 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
         private val KEY_SYNC_TIME         = longPreferencesKey("sync_last_time")
         private val KEY_DEVICE_ID         = stringPreferencesKey("sync_device_id")
+        private val KEY_DISPLACED         = booleanPreferencesKey("sync_session_displaced")
+
+        private val SYNCED_INTS = listOf(
+            KEY_RECITE_REPEAT, KEY_RECITE_SPEED, KEY_RECITE_RUN, KEY_RECITE_AFTER,
+            KEY_PRACTICE_TIERS, KEY_PRACTICE_LAST, KEY_PRACTICE_UNIT, KEY_TAFSIR_SOURCE
+        )
+        private val SYNCED_BOOLEANS = listOf(KEY_RECITE_LOOP, KEY_RECITE_SURAH)
+        private val SYNCED_STRINGS = listOf(KEY_RECITER, KEY_MUSHAF_THEME)
     }
 
     /** `true` on fresh installs; `false` after onboarding is completed. */
@@ -181,6 +193,15 @@ class UserPreferencesRepository(private val context: Context) {
         return id
     }
 
+    /** True once another device has taken the account over; syncing here is paused until the user decides. */
+    val sessionDisplaced: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_DISPLACED] ?: false }
+
+    suspend fun isSessionDisplaced(): Boolean = context.dataStore.data.first()[KEY_DISPLACED] ?: false
+
+    suspend fun setSessionDisplaced(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_DISPLACED] = on }
+    }
+
     /** The account this device's data was last synced with, or null if it never was. */
     suspend fun syncOwner(): String? = context.dataStore.data.first()[KEY_SYNC_UID]?.takeIf { it.isNotEmpty() }
 
@@ -199,13 +220,59 @@ class UserPreferencesRepository(private val context: Context) {
             return if (prefs[KEY_SYNC_UID] == uid) prefs[KEY_SYNC_VERSION] ?: 0L else 0L
         }
 
-        override suspend fun remember(localHash: String, remoteVersion: Long) {
+        override suspend fun lastSnapshot(): String? {
+            if (context.dataStore.data.first()[KEY_SYNC_UID] != uid) return null
+            return withContext(Dispatchers.IO) { baseFile().takeIf { it.exists() }?.readText() }
+        }
+
+        override suspend fun remember(localHash: String, remoteVersion: Long, snapshot: String) {
+            // The copy first: if the app dies in between, the older hash just makes the next sync look again.
+            withContext(Dispatchers.IO) {
+                val temp = File(baseFile().path + ".tmp")
+                temp.writeText(snapshot)
+                if (!temp.renameTo(baseFile())) { baseFile().delete(); temp.renameTo(baseFile()) }
+            }
             context.dataStore.edit { prefs ->
                 prefs[KEY_SYNC_UID] = uid
                 prefs[KEY_SYNC_HASH] = localHash
                 prefs[KEY_SYNC_VERSION] = remoteVersion
             }
         }
+    }
+
+    /** The data as the last sync left it (see SyncMemory). */
+    private fun baseFile() = File(context.filesDir, "sync_base.json")
+
+    /**
+     * The settings that follow the reader to every device: reciter and playback, practice choices, tafsir and Mushaf
+     * theme. What belongs to one device (app lock, screen rotation, where the reader was) is left out.
+     */
+    suspend fun syncedSettings(): JSONObject {
+        val prefs = context.dataStore.data.first()
+        return JSONObject().also { out ->
+            for (key in SYNCED_INTS) prefs[key]?.let { out.put(key.name, it) }
+            for (key in SYNCED_BOOLEANS) prefs[key]?.let { out.put(key.name, it) }
+            for (key in SYNCED_STRINGS) prefs[key]?.let { out.put(key.name, it) }
+        }
+    }
+
+    /** Sets the settings [syncedSettings] wrote; any that are missing from [json] stay as they are. */
+    suspend fun applySyncedSettings(json: JSONObject) {
+        context.dataStore.edit { prefs ->
+            for (key in SYNCED_INTS) if (json.has(key.name)) prefs[key] = json.optInt(key.name)
+            for (key in SYNCED_BOOLEANS) if (json.has(key.name)) prefs[key] = json.optBoolean(key.name)
+            for (key in SYNCED_STRINGS) if (json.has(key.name)) prefs[key] = json.optString(key.name)
+        }
+    }
+
+    /** Forgets what was synced, so the next sync treats this device as new to the account and merges instead of overwriting. */
+    suspend fun forgetSyncHistory() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(KEY_SYNC_UID)
+            prefs.remove(KEY_SYNC_HASH)
+            prefs.remove(KEY_SYNC_VERSION)
+        }
+        withContext(Dispatchers.IO) { baseFile().delete() }
     }
 
     suspend fun completeOnboarding() {

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -76,8 +75,9 @@ import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.ui.theme.DifficultyCritical
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.AyahText
 
-private val YellowAccent = Color(0xFFD4A94C)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -451,19 +451,11 @@ private fun RandomAyahSection(
 
             Spacer(Modifier.height(16.dp))
 
-            Button(
+            PaperButton(
+                text = stringResource(R.string.btn_generate_random),
                 onClick = onGenerate,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = YellowAccent),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    stringResource(R.string.btn_generate_random),
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -493,18 +485,7 @@ private fun SearchResultCard(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    text = verse.text,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textDirection = TextDirection.Rtl,
-                        fontFamily = AmiriFontFamily,
-                        fontSize = 18.sp,
-                        lineHeight = 28.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                AyahText(ayahId = verse.id, size = 18.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
             }
             
             Spacer(Modifier.width(8.dp))

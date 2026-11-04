@@ -52,6 +52,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mutqan.ui.theme.AmiriFontFamily
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Surface
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /** The app's own building blocks: a printed page, not stacked cards. */
 
@@ -112,14 +119,21 @@ fun PaperButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
 
 /** A secondary action: the same block outlined by a rule. */
 @Composable
-fun PaperOutlinedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PaperOutlinedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.heightIn(min = 48.dp),
         shape = RoundedCornerShape(4.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, if (enabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant),
         contentPadding = PaddingValues(horizontal = 24.dp)
-    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground) }
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (enabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+    }
 }
 
 /** A text action, underlined like a link in a printed page. */
@@ -297,13 +311,17 @@ fun PaperSmallButton(text: String, onClick: () -> Unit, modifier: Modifier = Mod
 
 /** A hairline track with the finished part drawn over it in the action colour. */
 @Composable
-fun PaperProgress(fraction: Float, modifier: Modifier = Modifier) {
+fun PaperProgress(
+    fraction: Float,
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+) {
     Box(modifier = modifier.fillMaxWidth().height(3.dp).background(MaterialTheme.colorScheme.outlineVariant)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(fraction.coerceIn(0f, 1f))
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(color)
         )
     }
 }
@@ -355,14 +373,18 @@ fun PaperChoice(
     }
 }
 
-/** A number with a square minus button before it and a plus button after it, always in that order. */
+/**
+ * A number with a square minus button before it and a plus button after it, always in that order. With [onValueClick]
+ * the number itself can be tapped, to type a value.
+ */
 @Composable
 fun PaperStepper(
     value: Int,
     onChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     min: Int = 0,
-    max: Int = Int.MAX_VALUE
+    max: Int = Int.MAX_VALUE,
+    onValueClick: (() -> Unit)? = null
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -373,7 +395,9 @@ fun PaperStepper(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(min = 52.dp)
+                modifier = Modifier
+                    .widthIn(min = 52.dp)
+                    .then(if (onValueClick != null) Modifier.clickable(role = Role.Button, onClick = onValueClick) else Modifier)
             )
             StepButton("+", stringResource(R.string.plan_btn_increase), enabled = value < max) { onChange(value + 1) }
         }
@@ -391,6 +415,73 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) { Text(symbol, style = MaterialTheme.typography.titleLarge, color = color) }
+}
+
+/**
+ * A question or a small form on a flat, square-cornered sheet with a rule round it. It takes the slots of
+ * [androidx.compose.material3.AlertDialog], so the two are interchangeable.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun PaperDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: @Composable (() -> Unit)? = null,
+    title: @Composable (() -> Unit)? = null,
+    text: @Composable (() -> Unit)? = null
+) {
+    BasicAlertDialog(onDismissRequest = onDismissRequest, modifier = modifier) {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.background,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp)) {
+                if (title != null) {
+                    ProvideTextStyle(MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onBackground)) { title() }
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (text != null) {
+                    Box(modifier = Modifier.weight(1f, fill = false)) {
+                        ProvideTextStyle(MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)) { text() }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    dismissButton?.invoke()
+                    confirmButton()
+                }
+            }
+        }
+    }
+}
+
+/** An on/off control: a square-cornered track with a square thumb that slides to the "on" end. */
+@Composable
+fun PaperSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val primary = MaterialTheme.colorScheme.primary
+    val rule = MaterialTheme.colorScheme.outline
+    Box(
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 44.dp, height = 24.dp)
+                .border(1.dp, if (checked) primary else rule, RoundedCornerShape(4.dp))
+                .padding(3.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                    .size(16.dp)
+                    .background(if (checked) primary else rule, RoundedCornerShape(2.dp))
+            )
+        }
+    }
 }
 
 /** Spacing used between the parts of a page. */

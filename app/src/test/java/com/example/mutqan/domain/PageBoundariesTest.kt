@@ -57,9 +57,27 @@ class PageBoundariesTest {
 
     @Test
     fun `exercise codes are stable`() {
-        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8, 9), ExerciseType.entries.map { it.code })
-        assertEquals(listOf(4, 5, 6, 7, 8), ExerciseType.QUIZ.map { it.code })
+        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), ExerciseType.entries.map { it.code })
+        assertEquals(listOf(4, 5, 12, 7, 8), ExerciseType.QUIZ.map { it.code })
         assertEquals(ExerciseType.NEIGHBOURS, ExerciseType.fromCode(3))
         assertNull(ExerciseType.fromCode(99))
+    }
+
+    @Test
+    fun `the verse shown is never the answer`() {
+        val verses = listOf(10, 11, 12, 13)
+        repeat(50) {
+            assertTrue(PageBoundaries.promptVerse(verses, ExerciseType.AYAH_PAGE_START) != 10)
+            assertTrue(PageBoundaries.promptVerse(verses, ExerciseType.AYAH_PAGE_END) != 13)
+        }
+        assertEquals(7, PageBoundaries.promptVerse(listOf(7), ExerciseType.AYAH_PAGE_START))
+        assertEquals(null, PageBoundaries.promptVerse(emptyList(), ExerciseType.AYAH_PAGE_END))
+    }
+
+    @Test
+    fun `the new exercises are recorded under their own codes`() {
+        assertEquals(ExerciseType.AYAH_PAGE_START, ExerciseType.fromCode(10))
+        assertEquals(ExerciseType.AYAH_PAGE_END, ExerciseType.fromCode(11))
+        assertTrue(ExerciseType.AYAH_PAGE_END in ExerciseType.PAGE_BOUNDARIES)
     }
 }

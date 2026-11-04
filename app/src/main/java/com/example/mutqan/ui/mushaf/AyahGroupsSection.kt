@@ -23,6 +23,7 @@ import com.example.mutqan.quran.toCleanQuranicText
 import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.ui.vault.MasterStrength
+import com.example.mutqan.ui.components.AyahText
 
 /** The mutashabihat groups an ayah belongs to, each with the look-alike ayahs it is confused with. */
 @Composable
@@ -67,16 +68,7 @@ fun ColumnScope.AyahGroupsSection(groups: List<AyahGroup>) {
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = other.text.toCleanQuranicText(),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = TextDirection.Rtl,
-                            fontFamily = AmiriFontFamily,
-                            fontSize = 20.sp,
-                            lineHeight = 40.sp
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    AyahText(ayahId = other.id, size = 20.sp)
                 }
             }
         }

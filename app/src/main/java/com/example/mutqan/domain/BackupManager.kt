@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import com.example.mutqan.R
 import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.PageStrengthEntity
@@ -15,6 +16,7 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -28,6 +30,12 @@ class BackupManager(private val context: Context) {
     private val dao = db.studyDao()
     private val quran = QuranRepository.getInstance(context)
     private val index by lazy { quran.ayahIndex }
+    private val preferences = UserPreferencesRepository(context)
+
+    private companion object {
+        /** The layout of the snapshot JSON this version writes and understands. */
+        const val SNAPSHOT_VERSION = 5
+    }
 
     /** Everything the user has made, as the JSON that backups and cloud sync both carry. */
     suspend fun buildSnapshot(): JSONObject {
@@ -44,7 +52,7 @@ class BackupManager(private val context: Context) {
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
-                put("version", 5)
+                put("version", SNAPSHOT_VERSION)
                 put("revision_logs", JSONArray().apply {
                     logs.forEach { log ->
                         put(JSONObject().apply {
@@ -156,6 +164,7 @@ class BackupManager(private val context: Context) {
                         })
                     }
                 })
+                put("settings", preferences.syncedSettings())
             }
             return root
     }
@@ -177,7 +186,9 @@ class BackupManager(private val context: Context) {
 
     /** Replaces everything the user has made with the contents of [root], a snapshot from [buildSnapshot] or a backup file. */
     suspend fun restoreSnapshot(root: JSONObject) {
-            
+            // Restoring it here and syncing it back would drop what this version does not know about.
+            if (root.optInt("version", 0) > SNAPSHOT_VERSION) throw NewerDataException(context.getString(R.string.snapshot_too_new))
+
             val logs = mutableListOf<RevisionLogEntity>()
             val logsArray = root.optJSONArray("revision_logs")
             if (logsArray != null) {
@@ -336,19 +347,26 @@ class BackupManager(private val context: Context) {
                 }
             }
 
-            // Perform DB operations
-            dao.clearUserData()
-            dao.insertCoverage(HifzCoverage.merge(coverageRanges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
-            dao.insertFolders(folders)
-            dao.insertRevisionLogs(logs)
-            dao.insertSimilarityGroups(groups)
-            dao.insertSimilarityMembers(members)
-            dao.insertUserSubjects(subjects)
-            dao.insertSavedPassages(savedPassages)
-            dao.insertPlans(plans)
-            dao.insertExerciseResults(exercises)
-            dao.insertPageStrength(strengths)
+            // All or nothing: a failure or a cancelled sync half-way must not leave the device wiped or half-filled.
+            db.withTransaction {
+                dao.clearUserData()
+                dao.insertCoverage(HifzCoverage.merge(coverageRanges).map { HifzCoverageEntity(startAyahId = it.first, endAyahId = it.last) })
+                dao.insertFolders(folders)
+                dao.insertRevisionLogs(logs)
+                dao.insertSimilarityGroups(groups)
+                dao.insertSimilarityMembers(members)
+                dao.insertUserSubjects(subjects)
+                dao.insertSavedPassages(savedPassages)
+                dao.insertPlans(plans)
+                dao.insertExerciseResults(exercises)
+                dao.insertPageStrength(strengths)
+            }
+            // Backups and cloud copies from before settings were kept have none; the settings here stay then.
+            root.optJSONObject("settings")?.let { preferences.applySyncedSettings(it) }
     }
+
+    /** Thrown for data written by a newer version of the app, which this version would only half understand. */
+    class NewerDataException(message: String) : Exception(message)
 
     suspend fun importData(uri: Uri, password: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {

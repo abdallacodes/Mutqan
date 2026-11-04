@@ -2,6 +2,7 @@ package com.example.mutqan.domain
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -19,7 +20,7 @@ class QuizEngineTest {
     fun everyKindOfQuestionIsWellFormed() = runBlocking {
         val quran = QuranRepository.getInstance(context)
         val engine = QuizEngine(
-            quran, SimilarLibrary.load(context), morphology = MorphologyLibrary.load(context),
+            quran, SimilarLibrary.load(context), closings = VerseClosingsLibrary.load(context),
             topics = TopicsLibrary.load(context), topicLanguage = TopicLanguage(arabicUi = true, showAll = false)
         )
         for (type in ExerciseType.QUIZ) {
@@ -31,9 +32,9 @@ class QuizEngineTest {
                         built++
                         assertTrue(q.options.size in 2..4)
                         assertTrue(q.correct in q.options.indices)
-                        assertEquals(q.options.size, q.options.map { QuizText.normalize(it) }.toSet().size)
-                        assertTrue(q.prompt.isNotBlank() && q.revealed.isNotBlank())
-                        if (type == ExerciseType.QUIZ_FILL) assertTrue(q.prompt.contains(QuizText.BLANK))
+                        assertEquals(q.options.size, q.options.map { QuizText.normalize(it.plain) }.toSet().size)
+                        assertTrue(q.prompt.plain.isNotBlank() && q.revealed.plain.isNotBlank())
+                        if (type == ExerciseType.QUIZ_FINISH) assertTrue(q.prompt.plain.contains(MushafSpan.BLANK))
                     }
                     is OrderQuestion -> {
                         built++

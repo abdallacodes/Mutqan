@@ -29,16 +29,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.mutqan.ui.components.PaperChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -79,6 +74,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
+import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.components.PaperOutlinedButton
+import com.example.mutqan.ui.components.PaperSpace
 
 /** Where the user says which parts of the Quran they have memorised. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -105,7 +103,7 @@ fun CoverageScreen(onDone: () -> Unit) {
     }
 
     pending?.let { ask ->
-        AlertDialog(
+        PaperDialog(
             onDismissRequest = { pending = null },
             title = { Text(stringResource(R.string.coverage_choice_title)) },
             text = { Text(stringResource(R.string.coverage_choice_body, ask.ownCount, ask.pageCount)) },
@@ -147,46 +145,54 @@ fun CoverageScreen(onDone: () -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = PaperSpace.Gutter),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (state.isSet) stringResource(R.string.coverage_summary, state.ayahCount, state.pageCount)
+                        else stringResource(R.string.coverage_unset_hint),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (state.isSet && state.levelMix.total > 0) {
                         Text(
-                            text = if (state.isSet) stringResource(R.string.coverage_summary, state.ayahCount, state.pageCount)
-                            else stringResource(R.string.coverage_unset_hint),
-                            style = MaterialTheme.typography.bodyMedium
+                            text = mixCaption(state.levelMix),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        if (state.isSet && state.levelMix.total > 0) {
-                            Text(
-                                text = mixCaption(state.levelMix),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            LevelHeatmap(state.memorisedPages, state.currentLevels)
-                            Text(
-                                text = stringResource(R.string.coverage_levels_note),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        LevelHeatmap(state.memorisedPages, state.currentLevels)
+                        Text(
+                            text = stringResource(R.string.coverage_levels_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = viewModel::setWholeQuran) { Text(stringResource(R.string.coverage_whole_quran)) }
-                    OutlinedButton(onClick = viewModel::clear, enabled = state.isSet) { Text(stringResource(R.string.coverage_clear)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PaperOutlinedButton(
+                        text = stringResource(R.string.coverage_whole_quran),
+                        onClick = viewModel::setWholeQuran,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PaperOutlinedButton(
+                        text = stringResource(R.string.coverage_clear),
+                        onClick = viewModel::clear,
+                        enabled = state.isSet,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
             item {
-                OutlinedButton(onClick = { showSurahPicker = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.coverage_choose_surahs))
-                }
+                PaperOutlinedButton(
+                    text = stringResource(R.string.coverage_choose_surahs),
+                    onClick = { showSurahPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             item { SectionTitle(stringResource(R.string.coverage_juz_section)) }
             item {
@@ -352,14 +358,14 @@ fun CoverageScreen(onDone: () -> Unit) {
                 }
             }
             item {
-                OutlinedButton(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.coverage_add_range))
-                }
+                PaperOutlinedButton(
+                    text = stringResource(R.string.coverage_add_range),
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             item {
-                Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(8.dp)) {
-                    Text(stringResource(R.string.coverage_done), fontWeight = FontWeight.Black)
-                }
+                PaperButton(text = stringResource(R.string.coverage_done), onClick = onDone, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -399,7 +405,7 @@ private fun SurahPickerDialog(
                     onValueChange = { query = it },
                     singleLine = true,
                     placeholder = { Text(stringResource(R.string.coverage_surah_search)) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
                 )
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(surahs, key = { it }) { id ->
@@ -408,7 +414,7 @@ private fun SurahPickerDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable(role = Role.Checkbox) { onToggle(id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = PaperSpace.Gutter, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -440,7 +446,7 @@ private fun SurahPickerDialog(
                 PaperButton(
                     text = stringResource(R.string.coverage_done),
                     onClick = onDone,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 10.dp)
                 )
             }
         }
@@ -674,7 +680,7 @@ private fun AddRangeDialog(
         if (mode == RangeMode.PAGE) R.string.coverage_field_page else R.string.coverage_field_surah
     )
 
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.coverage_add_range)) },
         text = {

@@ -1,5 +1,8 @@
 package com.example.mutqan.ui.practice
 
+import androidx.compose.runtime.remember
+import com.example.mutqan.data.UserPreferencesRepository
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,6 +60,10 @@ import com.example.mutqan.ui.components.PaperOutlinedButton
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.theme.AmiriFontFamily
+import com.example.mutqan.quran.MushafSpan
+import com.example.mutqan.ui.components.MushafText
+import com.example.mutqan.ui.components.OpenInMushaf
+import com.example.mutqan.domain.EndingKind
 
 /** One sitting of questions: a single kind in a row, or a daily set of ten mixed ones. */
 @Composable
@@ -64,12 +71,13 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
     val context = LocalContext.current
     val viewModel: QuizViewModel = viewModel(key = "quiz-${mode.route}", factory = QuizViewModelFactory(context, mode))
     val state by viewModel.state.collectAsState()
+    val scope by remember { UserPreferencesRepository(context.applicationContext).practiceScope }.collectAsState(initial = null)
 
     val title = stringResource(
         when (mode) {
             QuizMode.ENDING -> R.string.ex_ending_title
             QuizMode.NEXT -> R.string.ex_next_title
-            QuizMode.FILL -> R.string.ex_fill_title
+            QuizMode.FINISH -> R.string.ex_finish_title
             QuizMode.ORDER -> R.string.ex_order_title
             QuizMode.WHERE -> R.string.ex_where_title
             QuizMode.DAILY -> R.string.practice_daily_title
@@ -94,6 +102,8 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                 .padding(horizontal = PaperSpace.Gutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Which pages the questions come from, when that is not simply all of them.
+            scope?.takeIf { !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
             val q = state.question
             when {
                 state.loading -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
@@ -110,7 +120,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                     PaperOutlinedButton(stringResource(R.string.quiz_try_again), onClick = viewModel::restart)
                 }
                 else -> {
-                    if (mode == QuizMode.NEXT || mode == QuizMode.FILL) {
+                    if (mode == QuizMode.NEXT) {
                         Row {
                             PaperChip(selected = state.hard, onClick = viewModel::toggleHard, label = { Text(stringResource(R.string.quiz_harder)) })
                         }
@@ -118,17 +128,16 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                     when (q) {
                         is ChoiceQuestion -> ChoiceBody(q, state, viewModel::chooseOption)
                         is OrderQuestion -> OrderBody(q, state, viewModel::tapOrder, viewModel::clearOrder)
-                        is WhereQuestion -> WhereBody(q, state, viewModel::chooseSurah, viewModel::chooseAyah)
+                        is WhereQuestion -> WhereBody(q, state, viewModel::chooseSurah)
                     }
                     if (state.answered) {
                         Feedback(state.correct)
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            PaperButton(
-                                text = stringResource(if (state.isDaily && state.asked >= QuizMode.DAILY_SIZE) R.string.quiz_see_results else R.string.quiz_next),
-                                onClick = viewModel::next
-                            )
-                            PaperLink(stringResource(R.string.quiz_open_page, q.subject.page), onClick = { onOpenMushaf(q.subject.page) })
-                        }
+                        PaperButton(
+                            text = stringResource(if (state.isDaily && state.asked >= QuizMode.DAILY_SIZE) R.string.quiz_see_results else R.string.quiz_next),
+                            onClick = viewModel::next
+                        )
+                        // The verse number is an extra: it is there to answer or to leave.
+                        if (q is WhereQuestion && state.correct) WhereBonus(q, state, viewModel::chooseAyah)
                     }
                 }
             }
@@ -145,26 +154,28 @@ private fun QuestionText(text: String) {
 @Composable
 private fun refLabel(ref: QuizRef): String = stringResource(R.string.quiz_ref, SurahData.nameOf(ref.surah), ref.ayah)
 
-/** A verse (or part of one) in the Mushaf's type. */
+/** A verse (or part of one) as the Mushaf prints it. */
 @Composable
-private fun VerseText(text: String, size: Int = 30, muted: Boolean = false) {
-    Text(
-        text = text,
-        fontFamily = AmiriFontFamily,
-        fontSize = size.sp,
-        lineHeight = (size * 1.85f).sp,
-        style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Rtl),
-        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.fillMaxWidth()
+internal fun VerseText(span: MushafSpan, size: Int = 30, muted: Boolean = false) {
+    MushafText(
+        span = span,
+        size = size.sp,
+        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground
     )
 }
 
-private enum class OptionState { PLAIN, CORRECT, WRONG, DIMMED }
+internal enum class OptionState { PLAIN, CORRECT, WRONG, DIMMED }
 
 /** One answer to press. After the question is answered it shows whether it was right, wrong or neither. */
 @Composable
-private fun QuizOption(
-    text: String,
+internal fun QuizOption(text: String, state: OptionState, enabled: Boolean, onClick: () -> Unit, badge: Int? = null) {
+    QuizOption(MushafSpan.label(text), state, enabled, onClick, verse = false, badge = badge)
+}
+
+/** [verse] says the span is Quran text, drawn like the Mushaf; otherwise it is a plain label. */
+@Composable
+internal fun QuizOption(
+    span: MushafSpan,
     state: OptionState,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -199,10 +210,10 @@ private fun QuizOption(
         }
         Box(modifier = Modifier.weight(1f)) {
             if (verse) {
-                VerseText(text, size = 26, muted = state == OptionState.DIMMED)
+                VerseText(span, size = 26, muted = state == OptionState.DIMMED)
             } else {
                 Text(
-                    text = text,
+                    text = span.plain,
                     style = MaterialTheme.typography.titleLarge,
                     color = if (state == OptionState.DIMMED) scheme.onSurfaceVariant else scheme.onBackground
                 )
@@ -217,11 +228,11 @@ private fun QuizOption(
 }
 
 @Composable
-private fun instruction(type: ExerciseType): String = stringResource(
+private fun instruction(type: ExerciseType, kind: EndingKind? = null): String = stringResource(
     when (type) {
         ExerciseType.QUIZ_ENDING -> R.string.quiz_q_ending
         ExerciseType.QUIZ_NEXT -> R.string.quiz_q_next
-        ExerciseType.QUIZ_FILL -> R.string.quiz_q_fill
+        ExerciseType.QUIZ_FINISH -> if (kind == EndingKind.LOOKALIKE) R.string.quiz_q_finish_lookalike else R.string.quiz_q_finish_closing
         ExerciseType.QUIZ_ORDER -> R.string.quiz_q_order
         ExerciseType.QUIZ_TOPIC -> R.string.quiz_q_topic
         else -> R.string.quiz_q_where_surah
@@ -230,7 +241,7 @@ private fun instruction(type: ExerciseType): String = stringResource(
 
 @Composable
 private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> Unit) {
-    QuestionText(instruction(q.type))
+    QuestionText(instruction(q.type, q.kind))
     if (q.showRef) {
         Text(refLabel(q.subject), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     }
@@ -249,6 +260,7 @@ private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> U
         SectionLabel(stringResource(R.string.quiz_answer_was))
         Text(refLabel(q.revealRef), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         VerseText(q.revealed, size = 28)
+        OpenInMushaf(ayahId = q.revealRef.id)
         q.note?.let {
             SectionLabel(stringResource(R.string.quiz_topics_of_verse))
             Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
@@ -264,7 +276,7 @@ private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary
     )
-    q.shuffled.forEachIndexed { i, text ->
+    q.shuffled.forEachIndexed { i, span ->
         val tapped = state.orderTaps.indexOf(i)
         val optionState = when {
             !state.answered -> OptionState.PLAIN
@@ -272,7 +284,7 @@ private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit
             else -> OptionState.WRONG
         }
         QuizOption(
-            text = text,
+            span = span,
             state = optionState,
             enabled = !state.answered && tapped < 0,
             onClick = { onTap(i) },
@@ -288,49 +300,56 @@ private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit
         q.correctOrder.forEachIndexed { k, shuffledIndex ->
             Text("${q.ayahNumbers[k]}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
             VerseText(q.shuffled[shuffledIndex], size = 26)
+            OpenInMushaf(ayahId = q.ayahIds[k], soft = true)
         }
     }
 }
 
 @Composable
-private fun WhereBody(q: WhereQuestion, state: QuizUiState, onSurah: (Int) -> Unit, onAyah: (Int) -> Unit) {
-    QuestionText(stringResource(if (state.stage == 0) R.string.quiz_q_where_surah else R.string.quiz_q_where_ayah))
+private fun WhereBody(q: WhereQuestion, state: QuizUiState, onSurah: (Int) -> Unit) {
+    QuestionText(stringResource(R.string.quiz_q_where_surah))
     VerseText(q.text)
-    if (state.stage == 1 || state.pickedAyah != null) {
-        Text(
-            text = SurahData.nameOf(q.subject.surah),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        q.ayahOptions.forEach { n ->
-            val optionState = when {
-                !state.answered -> OptionState.PLAIN
-                n == q.subject.ayah -> OptionState.CORRECT
-                n == state.pickedAyah -> OptionState.WRONG
-                else -> OptionState.DIMMED
-            }
-            QuizOption("$n", optionState, enabled = !state.answered, onClick = { onAyah(n) }, verse = false)
+    q.surahOptions.forEach { id ->
+        val optionState = when {
+            !state.answered -> OptionState.PLAIN
+            id == q.subject.surah -> OptionState.CORRECT
+            id == state.pickedSurah -> OptionState.WRONG
+            else -> OptionState.DIMMED
         }
-    } else {
-        q.surahOptions.forEach { id ->
-            val optionState = when {
-                !state.answered -> OptionState.PLAIN
-                id == q.subject.surah -> OptionState.CORRECT
-                id == state.pickedSurah -> OptionState.WRONG
-                else -> OptionState.DIMMED
-            }
-            QuizOption(SurahData.nameOf(id), optionState, enabled = !state.answered, onClick = { onSurah(id) }, verse = false)
-        }
+        QuizOption(SurahData.nameOf(id), optionState, enabled = !state.answered, onClick = { onSurah(id) })
     }
     if (state.answered) {
         OrnamentDivider()
         SectionLabel(stringResource(R.string.quiz_answer_was))
-        Text(refLabel(q.subject), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+        // While the optional verse number is still open, the answer shows the surah only.
+        val numberOpen = state.correct && state.pickedAyah == null
+        Text(
+            text = if (numberOpen) SurahData.nameOf(q.subject.surah) else refLabel(q.subject),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        OpenInMushaf(ayahId = q.subject.id)
+    }
+}
+
+/** The extra question after the surah was named: which verse number. Nothing depends on it. */
+@Composable
+private fun WhereBonus(q: WhereQuestion, state: QuizUiState, onAyah: (Int) -> Unit) {
+    OrnamentDivider()
+    SectionLabel(stringResource(R.string.quiz_bonus_ayah))
+    q.ayahOptions.forEach { n ->
+        val optionState = when {
+            state.pickedAyah == null -> OptionState.PLAIN
+            n == q.subject.ayah -> OptionState.CORRECT
+            n == state.pickedAyah -> OptionState.WRONG
+            else -> OptionState.DIMMED
+        }
+        QuizOption("$n", optionState, enabled = state.pickedAyah == null, onClick = { onAyah(n) })
     }
 }
 
 @Composable
-private fun Feedback(correct: Boolean) {
+internal fun Feedback(correct: Boolean) {
     Text(
         text = stringResource(if (correct) R.string.quiz_correct else R.string.quiz_wrong),
         style = MaterialTheme.typography.headlineSmall,

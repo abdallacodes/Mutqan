@@ -71,6 +71,9 @@ import com.example.mutqan.ui.topics.TopicsViewModel
 import com.example.mutqan.ui.topics.TopicsViewModelFactory
 import com.example.mutqan.ui.topics.rememberTopicLanguage
 import com.example.mutqan.ui.topics.topicsTab
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.mutqan.ui.navigation.OnTabReselected
+import com.example.mutqan.ui.navigation.Routes
 
 /**
  * The Quran tab: a way into the Mushaf. Tapping a surah or a juz opens it to read; the list says which
@@ -99,6 +102,8 @@ fun SurahListScreen(
     val reciting = playingSurah(playback)
     val askForNotifications = rememberAskForNotifications()
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    OnTabReselected(Routes.SURAH_LIST) { listState.animateScrollToItem(0) }
 
     val downloads = remember(context) { RecitationDownloads.get(context) }
     val downloadState by downloads.state.collectAsState()
@@ -163,7 +168,7 @@ fun SurahListScreen(
             }
         )
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
             lastPage?.let { last ->
                 item {
                     HubRow(
@@ -386,16 +391,13 @@ private fun SurahRow(
                     )
                 }
                 // What is not plain information about the surah sits on a line of its own, only when there is something.
-                val hasTags = sizeText != null || item.memorised != SurahMemorised.NONE || item.groupCount > 0
+                val hasTags = item.memorised != SurahMemorised.NONE || item.groupCount > 0
                 if (hasTags) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
-                        sizeText?.let {
-                            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
                         when (item.memorised) {
                             SurahMemorised.FULL -> Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -437,7 +439,13 @@ private fun SurahRow(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            DownloadButton(status = download, onClick = onDownload)
+            // The size goes with the button that fetches it, so the row keeps to two lines.
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                DownloadButton(status = download, onClick = onDownload)
+                sizeText?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
         Hairline()
     }

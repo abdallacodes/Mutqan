@@ -52,6 +52,46 @@ data class PracticeScope(
         totalPages: Int = MemoryEngine.TOTAL_PAGES,
         now: Long = System.currentTimeMillis()
     ): Set<Int> {
+        val reached = reached(covered, logs, totalPages, now)
+        if (tiers.isEmpty()) return reached
+        return reached.filterTo(LinkedHashSet()) { RevisionPlanner.tierOf(states[it - 1], selfRated[it]) in tiers }
+    }
+
+    /** What a choice gives: [reached] pages by the reach alone, how many of them are at each level, and [total] after the levels. */
+    class Preview(val reached: Int, val byTier: Map<PlanTier, Int>, val total: Int)
+
+    /** The counts the picker shows while the choice is being made. */
+    fun preview(
+        covered: BooleanArray?,
+        states: Array<PassageState>,
+        selfRated: Map<Int, PlanTier>,
+        logs: List<RevisionLog>,
+        totalPages: Int = MemoryEngine.TOTAL_PAGES,
+        now: Long = System.currentTimeMillis()
+    ): Preview {
+        val reached = reached(covered, logs, totalPages, now)
+        val byTier = PlanTier.entries.associateWith { 0 }.toMutableMap()
+        for (page in reached) RevisionPlanner.tierOf(states[page - 1], selfRated[page]).let { byTier[it] = byTier.getValue(it) + 1 }
+        val total = if (tiers.isEmpty()) reached.size else tiers.sumOf { byTier.getValue(it) }
+        return Preview(reached.size, byTier, total)
+    }
+
+    /** [pages] as a yes or no for each page, for exercises that take a list of memorised pages; null when every page is allowed. */
+    fun mask(
+        covered: BooleanArray?,
+        states: Array<PassageState>,
+        selfRated: Map<Int, PlanTier>,
+        logs: List<RevisionLog>,
+        totalPages: Int = MemoryEngine.TOTAL_PAGES,
+        now: Long = System.currentTimeMillis()
+    ): BooleanArray? {
+        if (isAll) return covered
+        val allowed = pages(covered, states, selfRated, logs, totalPages, now)
+        return BooleanArray(totalPages) { it + 1 in allowed }
+    }
+
+    /** The pages the reach alone allows, before the levels are looked at. */
+    private fun reached(covered: BooleanArray?, logs: List<RevisionLog>, totalPages: Int, now: Long): Set<Int> {
         fun memorised(page: Int) = covered?.getOrElse(page - 1) { false } ?: true
         fun reviewedAt(log: RevisionLog) = if (log.dateMillis > 0L) log.dateMillis else log.timestamp
         fun pagesOf(log: RevisionLog) = log.startPage.coerceAtLeast(1)..log.endPage.coerceAtMost(totalPages)
@@ -76,8 +116,7 @@ data class PracticeScope(
                 }
             }
         }
-        if (tiers.isEmpty()) return reached
-        return reached.filterTo(LinkedHashSet()) { RevisionPlanner.tierOf(states[it - 1], selfRated[it]) in tiers }
+        return reached
     }
 
     /** The moment [recentAmount] units of time before [now]. */

@@ -19,7 +19,7 @@ enum class ExerciseType(val code: Int) {
     /** Given a verse, pick how the next one begins. */
     QUIZ_NEXT(5),
 
-    /** A verse with some words hidden; pick the missing words. */
+    /** Retired: a verse with some words hidden. No longer asked; kept so results recorded under it still read. */
     QUIZ_FILL(6),
 
     /** Consecutive verses, shuffled; put them back in order. */
@@ -29,16 +29,31 @@ enum class ExerciseType(val code: Int) {
     QUIZ_WHERE(8),
 
     /** Given a verse, pick the topic it belongs to. */
-    QUIZ_TOPIC(9);
+    QUIZ_TOPIC(9),
+
+    /** Given any verse, say the first verse of its page. */
+    AYAH_PAGE_START(10),
+
+    /** Given any verse, say the last verse of its page. */
+    AYAH_PAGE_END(11),
+
+    /** A verse with its last words hidden, among verses that begin or close alike; pick the words that end it. */
+    QUIZ_FINISH(12);
 
     companion object {
         fun fromCode(code: Int): ExerciseType? = entries.firstOrNull { it.code == code }
 
-        /** The page-boundary exercises, which share one place in the Practice list. */
-        val PAGE_BOUNDARIES: List<ExerciseType> = listOf(PAGE_EDGES, FIRST_TO_LAST, NEIGHBOURS)
+        /** The exercises that start from a page: its number, its first verse, or the verses either side. */
+        val FROM_PAGE: List<ExerciseType> = listOf(PAGE_EDGES, FIRST_TO_LAST, NEIGHBOURS)
+
+        /** The exercises that start from a verse and ask for the edge of its page. */
+        val FROM_VERSE: List<ExerciseType> = listOf(AYAH_PAGE_START, AYAH_PAGE_END)
+
+        /** Every page-edge exercise. */
+        val PAGE_BOUNDARIES: List<ExerciseType> = FROM_PAGE + FROM_VERSE
 
         /** The questions with a right answer the app can check. */
-        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FILL, QUIZ_ORDER, QUIZ_WHERE)
+        val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FINISH, QUIZ_ORDER, QUIZ_WHERE)
     }
 }
 
@@ -58,6 +73,20 @@ object PageBoundaries {
     fun pool(covered: BooleanArray?, juzPages: Collection<Int>?, type: ExerciseType): List<Int> =
         (juzPages?.sorted() ?: (1..TOTAL_PAGES).toList())
             .filter { isAskable(it, type) && (covered == null || covered.getOrElse(it - 1) { false }) }
+
+    /**
+     * The verse to show for [type] from the verses [onPage] (global ids, in order): any of them but the one that is
+     * the answer, so the question is never answered by what it shows. A page with a single verse shows that one.
+     */
+    fun promptVerse(onPage: List<Int>, type: ExerciseType, random: Random = Random): Int? {
+        val answer = when (type) {
+            ExerciseType.AYAH_PAGE_START -> onPage.firstOrNull()
+            ExerciseType.AYAH_PAGE_END -> onPage.lastOrNull()
+            else -> null
+        }
+        val others = onPage.filter { it != answer }
+        return (others.ifEmpty { onPage }).randomOrNull(random)
+    }
 
     /** A random page of [pool] that is not among the [recent] ones, unless that leaves nothing. */
     fun pick(pool: List<Int>, recent: Collection<Int>, random: Random = Random): Int? {

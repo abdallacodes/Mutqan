@@ -8,6 +8,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
 import com.example.mutqan.quran.QuranAyah
+import com.example.mutqan.ui.components.PaperDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,7 +25,7 @@ fun SubjectEditorDialog(
     }
     var expanded by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    PaperDialog(
         onDismissRequest = onDismiss,
         title = { 
             Text(

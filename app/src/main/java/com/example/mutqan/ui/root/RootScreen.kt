@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.components.AyahText
 
 /** A lemma of the root and how many times it occurs, for the filter row. */
 data class RootForm(val lemma: Int, val text: String, val count: Int)
@@ -169,11 +170,11 @@ fun RootScreen(rootId: Int, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
 private fun VerseLine(verse: RootVerse, onOpenMushaf: (Int) -> Unit) {
     val context = LocalContext.current
     val mark = MaterialTheme.colorScheme.primary
-    val loaded by produceState<Pair<Int, List<String>>?>(null, verse) {
+    /** The page of the verse and its global id. */
+    val loaded by produceState<Pair<Int, Int>?>(null, verse) {
         value = withContext(Dispatchers.IO) {
-            val repo = QuranRepository.getInstance(context)
-            val page = repo.ayah(verse.surah, verse.ayah)?.firstPage ?: 1
-            page to repo.wordsOfAyah(verse.surah, verse.ayah).filter { !it.isEnd }.map { it.hafs }
+            val ayah = QuranRepository.getInstance(context).ayah(verse.surah, verse.ayah)
+            (ayah?.firstPage ?: 1) to (ayah?.id ?: 0)
         }
     }
     Column {
@@ -189,20 +190,8 @@ private fun VerseLine(verse: RootVerse, onOpenMushaf: (Int) -> Unit) {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-            loaded?.second?.let { words ->
-                Text(
-                    text = buildAnnotatedString {
-                        words.forEachIndexed { i, word ->
-                            if (i > 0) append(" ")
-                            if (i + 1 in verse.hits) withStyle(SpanStyle(color = mark, fontWeight = FontWeight.Bold)) { append(word) }
-                            else append(word)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textDirection = TextDirection.Rtl, fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 42.sp
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+            loaded?.second?.takeIf { it > 0 }?.let { id ->
+                AyahText(ayahId = id, size = 22.sp, marked = verse.hits.map { it..it }, markColor = mark)
             }
         }
         Hairline()
