@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import androidx.room.InvalidationTracker
+import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.domain.BackupManager
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
 sealed class SyncStatus {
@@ -108,7 +111,7 @@ class CloudSync private constructor(context: Context) {
         val owner = prefs.syncOwner()
         if (owner == account.uid) return null
         return lock.withLock {
-            val cloud = FirestoreRemote(account.uid, prefs.deviceId()).fetch() ?: return@withLock null
+            val cloud = withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).fetch() } ?: return@withLock null
             val device = backup.buildSnapshot()
             val deviceEntries = device.optJSONArray("revision_logs")?.length() ?: 0
             val deviceCoverage = device.optJSONArray("hifz_coverage")?.length() ?: 0
@@ -135,10 +138,12 @@ class CloudSync private constructor(context: Context) {
                     remote = FirestoreRemote(account.uid, prefs.deviceId()),
                     memory = prefs.syncMemoryFor(account.uid)
                 )
-                SyncStatus.Done(if (replaceDevice) engine.replaceLocal() else engine.sync())
-                    .also { prefs.setLastSyncTime(System.currentTimeMillis()) }
+                val outcome = withTimeout(TIMEOUT_MS) { if (replaceDevice) engine.replaceLocal() else engine.sync() }
+                SyncStatus.Done(outcome).also { prefs.setLastSyncTime(System.currentTimeMillis()) }
+            } catch (e: TimeoutCancellationException) {
+                SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
             } catch (e: Exception) {
-                SyncStatus.Failed(e.message)
+                SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
     }
@@ -159,6 +164,7 @@ class CloudSync private constructor(context: Context) {
 
     companion object {
         private const val CHANGE_DELAY_MS = 20_000L
+        private const val TIMEOUT_MS = 60_000L
 
         @Volatile
         private var instance: CloudSync? = null

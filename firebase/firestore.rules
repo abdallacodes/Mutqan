@@ -3,6 +3,10 @@ rules_version = '2';
 // Each signed-in user can read and write only their own sync data, under users/{theirUid}.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // The version document itself, and the pieces of the snapshot below it, each spelled out.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }

@@ -61,7 +61,8 @@ class AccountManager(context: Context) {
             throw IllegalStateException("Unexpected credential type")
         }
         val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-        FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+        val result = FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+        result.user?.let { _account.value = it.toAccount() }
     }
 
     suspend fun signOut() {

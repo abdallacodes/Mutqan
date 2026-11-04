@@ -684,6 +684,11 @@
     <string name="sync_last">آخر مزامنة: %1$s</string>
     <string name="sync_never">لم تتم المزامنة بعد</string>
     <string name="sync_failed">تعذّرت المزامنة: %1$s</string>
+    <string name="sync_timeout">انتهت مهلة الاتصال بالسحابة. تأكّد من الإنترنت وأعد المحاولة.</string>
+    <string name="sync_outcome_nothing">كل شيء محدَّث، لا جديد.</string>
+    <string name="sync_outcome_pushed">رُفعت بيانات هذا الجهاز إلى حسابك.</string>
+    <string name="sync_outcome_pulled">نُزّلت بيانات حسابك إلى هذا الجهاز.</string>
+    <string name="sync_outcome_merged">دُمجت بيانات هذا الجهاز مع حسابك.</string>
     <string name="sync_delete_cloud">حذف النسخة السحابية</string>
     <string name="sync_delete_title">حذف النسخة السحابية؟</string>
     <string name="sync_delete_body">تُحذف نسخة حسابك من السحابة فقط. تبقى بياناتك على هذا الجهاز، وستُرفع من جديد عند المزامنة التالية.</string>

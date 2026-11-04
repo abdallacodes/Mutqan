@@ -33,8 +33,16 @@ import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
 import com.example.mutqan.domain.sync.CloudSync
 import com.example.mutqan.domain.sync.FirstSync
+import com.example.mutqan.domain.sync.SyncOutcome
 import com.example.mutqan.domain.sync.SyncStatus
 import kotlinx.coroutines.launch
+
+private fun outcomeText(outcome: SyncOutcome): Int = when (outcome) {
+    SyncOutcome.NOTHING_TO_DO -> R.string.sync_outcome_nothing
+    SyncOutcome.PUSHED -> R.string.sync_outcome_pushed
+    SyncOutcome.PULLED -> R.string.sync_outcome_pulled
+    SyncOutcome.MERGED -> R.string.sync_outcome_merged
+}
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -59,14 +67,27 @@ fun AccountSection() {
     var confirmDelete by remember { mutableStateOf(false) }
     var firstSync by remember { mutableStateOf<FirstSync?>(null) }
 
+    /** Syncs, then says in a message what it did or why it could not. */
+    fun runSync(replaceDevice: Boolean = false) {
+        scope.launch {
+            cloud.syncNow(replaceDevice)
+            val text = when (val s = cloud.status.value) {
+                is SyncStatus.Done -> context.getString(outcomeText(s.outcome))
+                is SyncStatus.Failed -> context.getString(R.string.sync_failed, s.message ?: "")
+                else -> null
+            }
+            if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+        }
+    }
+
     // A new account on this device with data on both sides asks first; everything else syncs straight away.
     fun startSync() {
         scope.launch {
             try {
                 val choice = cloud.firstSyncChoice()
-                if (choice != null) firstSync = choice else cloud.syncNow()
+                if (choice != null) firstSync = choice else runSync()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -115,10 +136,9 @@ fun AccountSection() {
                 SyncStatus.Syncing -> stringResource(R.string.sync_running)
                 is SyncStatus.Failed -> stringResource(R.string.sync_failed, s.message ?: "")
                 else -> lastSync?.let {
-                    stringResource(
-                        R.string.sync_last,
-                        DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
-                    )
+                    val ago = DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                    val done = (status as? SyncStatus.Done)?.let { d -> stringResource(outcomeText(d.outcome)) + "\n" }.orEmpty()
+                    done + stringResource(R.string.sync_last, ago)
                 } ?: stringResource(R.string.sync_never)
             }
             Text(
@@ -158,14 +178,14 @@ fun AccountSection() {
             confirmButton = {
                 TextButton(onClick = {
                     firstSync = null
-                    scope.launch { cloud.syncNow() }
+                    runSync()
                 }) { Text(stringResource(R.string.first_sync_merge)) }
             },
             dismissButton = {
                 Column {
                     TextButton(onClick = {
                         firstSync = null
-                        scope.launch { cloud.syncNow(replaceDevice = true) }
+                        runSync(replaceDevice = true)
                     }) { Text(stringResource(R.string.first_sync_replace), color = MaterialTheme.colorScheme.error) }
                     TextButton(onClick = {
                         firstSync = null

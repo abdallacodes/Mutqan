@@ -684,6 +684,11 @@
     <string name="sync_last">Last synced: %1$s</string>
     <string name="sync_never">Not synced yet</string>
     <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="sync_timeout">The cloud did not answer in time. Check your internet connection and try again.</string>
+    <string name="sync_outcome_nothing">Everything is up to date.</string>
+    <string name="sync_outcome_pushed">This device\'s data was sent to your account.</string>
+    <string name="sync_outcome_pulled">Your account\'s data was brought to this device.</string>
+    <string name="sync_outcome_merged">This device\'s data was merged with your account.</string>
     <string name="sync_delete_cloud">Delete cloud copy</string>
     <string name="sync_delete_title">Delete the cloud copy?</string>
     <string name="sync_delete_body">Only your account copy in the cloud is deleted. The data on this device stays, and is uploaded again at the next sync.</string>
