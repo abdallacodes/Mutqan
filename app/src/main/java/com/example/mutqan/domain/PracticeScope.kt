@@ -12,15 +12,25 @@ enum class RecencyUnit(val code: Int) {
 }
 
 /**
- * Which pages the practice questions are drawn from: those at the chosen levels, and the pages last reviewed, either
- * the latest [recentAmount] pages or everything reviewed within the last [recentAmount] days, weeks, months or years
- * ([recentUnit]). Both count together; with nothing chosen every memorised page does.
+ * Which pages the practice questions are drawn from. First how far back to look: every memorised page, the latest
+ * [recentAmount] pages reviewed (unit [RecencyUnit.PAGES]), or everything reviewed within the last [recentAmount]
+ * days, weeks, months or years. Then, of those, only the chosen [tiers]; with none chosen every level stays.
  */
 data class PracticeScope(
     val tiers: Set<PlanTier> = emptySet(),
     val recentAmount: Int = 0,
     val recentUnit: RecencyUnit = RecencyUnit.PAGES
 ) {
+
+    /** How far back the questions look. */
+    enum class Reach { ALL, COUNT, TIME }
+
+    val reach: Reach
+        get() = when {
+            recentAmount == 0 -> Reach.ALL
+            recentUnit == RecencyUnit.PAGES -> Reach.COUNT
+            else -> Reach.TIME
+        }
 
     val isAll: Boolean get() = tiers.isEmpty() && recentAmount == 0
 
@@ -43,39 +53,31 @@ data class PracticeScope(
         now: Long = System.currentTimeMillis()
     ): Set<Int> {
         fun memorised(page: Int) = covered?.getOrElse(page - 1) { false } ?: true
-        val out = LinkedHashSet<Int>()
-        if (isAll) {
-            for (page in 1..totalPages) if (memorised(page)) out += page
-            return out
-        }
-        if (tiers.isNotEmpty()) {
-            for (page in 1..totalPages) {
-                if (memorised(page) && RevisionPlanner.tierOf(states[page - 1], selfRated[page]) in tiers) out += page
-            }
-        }
-        if (recentAmount > 0) {
-            fun reviewedAt(log: RevisionLog) = if (log.dateMillis > 0L) log.dateMillis else log.timestamp
-            if (recentUnit == RecencyUnit.PAGES) {
-                val recent = LinkedHashSet<Int>()
+        fun reviewedAt(log: RevisionLog) = if (log.dateMillis > 0L) log.dateMillis else log.timestamp
+        fun pagesOf(log: RevisionLog) = log.startPage.coerceAtLeast(1)..log.endPage.coerceAtMost(totalPages)
+
+        val reached = LinkedHashSet<Int>()
+        when (reach) {
+            Reach.ALL -> for (page in 1..totalPages) if (memorised(page)) reached += page
+            Reach.COUNT -> {
                 for (log in logs.sortedByDescending(::reviewedAt)) {
-                    for (page in log.startPage.coerceAtLeast(1)..log.endPage.coerceAtMost(totalPages)) {
-                        if (recent.size >= recentAmount) break
-                        if (memorised(page)) recent += page
+                    for (page in pagesOf(log)) {
+                        if (reached.size >= recentAmount) break
+                        if (memorised(page)) reached += page
                     }
-                    if (recent.size >= recentAmount) break
+                    if (reached.size >= recentAmount) break
                 }
-                out += recent
-            } else {
+            }
+            Reach.TIME -> {
                 val since = cutoff(now)
                 for (log in logs) {
                     if (reviewedAt(log) < since) continue
-                    for (page in log.startPage.coerceAtLeast(1)..log.endPage.coerceAtMost(totalPages)) {
-                        if (memorised(page)) out += page
-                    }
+                    for (page in pagesOf(log)) if (memorised(page)) reached += page
                 }
             }
         }
-        return out
+        if (tiers.isEmpty()) return reached
+        return reached.filterTo(LinkedHashSet()) { RevisionPlanner.tierOf(states[it - 1], selfRated[it]) in tiers }
     }
 
     /** The moment [recentAmount] units of time before [now]. */

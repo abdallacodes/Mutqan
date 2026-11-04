@@ -53,9 +53,16 @@ class PracticeScopeTest {
     }
 
     @Test
-    fun `last reviewed joins the chosen levels`() {
-        val logs = listOf(log(1, 1, at = 100))
-        assertEquals(setOf(5, 6, 1), pages(PracticeScope(tiers = setOf(PlanTier.WEAK), recentAmount = 1), logs))
+    fun `levels narrow the pages reached`() {
+        val logs = listOf(log(1, 1, at = 100), log(5, 5, at = 200), log(3, 3, at = 300))
+        assertEquals(setOf(5), pages(PracticeScope(tiers = setOf(PlanTier.WEAK), recentAmount = 3), logs))
+        assertEquals(setOf(3, 5), pages(PracticeScope(tiers = setOf(PlanTier.WEAK, PlanTier.FAIR), recentAmount = 2), logs))
+    }
+
+    @Test
+    fun `levels narrow a time span too`() {
+        val logs = listOf(log(1, 3, at = now - day))
+        assertEquals(setOf(3), pages(PracticeScope(tiers = setOf(PlanTier.FAIR), recentAmount = 1, recentUnit = RecencyUnit.WEEKS), logs))
     }
 
     @Test

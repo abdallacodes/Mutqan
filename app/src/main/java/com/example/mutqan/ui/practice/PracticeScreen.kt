@@ -166,11 +166,91 @@ fun PracticeScreen(
     }
 }
 
-/** Which pages the questions come from: the levels, and the pages last reviewed. Nothing chosen means all memorised pages. */
+/**
+ * Which pages the questions come from. First how far back to look (all pages, the latest pages reviewed, or a stretch of
+ * time), then which levels of those; none chosen means any level.
+ */
 @Composable
 private fun ScopePicker(scope: PracticeScope, onChange: (PracticeScope) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp)) {
-        SectionLabel(stringResource(R.string.practice_scope_title))
+        SectionLabel(stringResource(R.string.practice_scope_pages_title))
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            PaperChip(
+                selected = scope.reach == PracticeScope.Reach.ALL,
+                onClick = { onChange(scope.copy(recentAmount = 0, recentUnit = RecencyUnit.PAGES)) },
+                label = { Text(stringResource(R.string.practice_scope_mode_all)) },
+                modifier = Modifier.weight(1f)
+            )
+            PaperChip(
+                selected = scope.reach == PracticeScope.Reach.COUNT,
+                onClick = {
+                    onChange(scope.copy(recentAmount = scope.recentAmount.takeIf { it > 0 } ?: PracticeScope.DEFAULT_AMOUNT, recentUnit = RecencyUnit.PAGES))
+                },
+                label = { Text(stringResource(R.string.practice_scope_mode_count)) },
+                modifier = Modifier.weight(1f)
+            )
+            PaperChip(
+                selected = scope.reach == PracticeScope.Reach.TIME,
+                onClick = {
+                    val unit = scope.recentUnit.takeIf { it != RecencyUnit.PAGES } ?: RecencyUnit.WEEKS
+                    onChange(scope.copy(recentAmount = scope.recentAmount.takeIf { it > 0 && scope.reach == PracticeScope.Reach.TIME } ?: 2, recentUnit = unit))
+                },
+                label = { Text(stringResource(R.string.practice_scope_mode_time)) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (scope.reach != PracticeScope.Reach.ALL) {
+            Text(
+                text = stringResource(
+                    if (scope.reach == PracticeScope.Reach.COUNT) R.string.practice_scope_count_hint else R.string.practice_scope_time_hint
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            // The number is typed, so it can be anything; it is saved as soon as it is a number above zero.
+            var text by remember(scope.reach) { mutableStateOf(scope.recentAmount.toString()) }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { input ->
+                        val digits = input.filter { it.isDigit() }.take(3)
+                        text = digits
+                        digits.toIntOrNull()?.takeIf { it > 0 }?.let { onChange(scope.copy(recentAmount = it.coerceAtMost(PracticeScope.MAX_AMOUNT))) }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(88.dp)
+                )
+                if (scope.reach == PracticeScope.Reach.COUNT) {
+                    Text(
+                        text = stringResource(R.string.practice_scope_unit_pages),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+            }
+            if (scope.reach == PracticeScope.Reach.TIME) {
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    listOf(
+                        RecencyUnit.DAYS to R.string.practice_scope_unit_days,
+                        RecencyUnit.WEEKS to R.string.practice_scope_unit_weeks,
+                        RecencyUnit.MONTHS to R.string.practice_scope_unit_months,
+                        RecencyUnit.YEARS to R.string.practice_scope_unit_years
+                    ).forEach { (unit, label) ->
+                        PaperChip(
+                            selected = unit == scope.recentUnit,
+                            onClick = { onChange(scope.copy(recentUnit = unit)) },
+                            label = { Text(stringResource(label)) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+
+        SectionLabel(stringResource(R.string.practice_scope_level_title), modifier = Modifier.padding(top = 16.dp))
         Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
             listOf(
                 PlanTier.WEAK to R.string.practice_scope_weak,
@@ -183,56 +263,6 @@ private fun ScopePicker(scope: PracticeScope, onChange: (PracticeScope) -> Unit)
                     label = { Text(stringResource(label)) },
                     modifier = Modifier.weight(1f)
                 )
-            }
-            PaperChip(
-                selected = scope.recentAmount > 0,
-                onClick = {
-                    onChange(
-                        if (scope.recentAmount > 0) scope.copy(recentAmount = 0)
-                        else scope.copy(recentAmount = PracticeScope.DEFAULT_AMOUNT, recentUnit = RecencyUnit.PAGES)
-                    )
-                },
-                label = { Text(stringResource(R.string.practice_scope_last)) },
-                modifier = Modifier.weight(1.4f)
-            )
-        }
-        if (scope.recentAmount > 0) {
-            Text(
-                text = stringResource(R.string.practice_scope_last_how_many),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                // The number is typed, so it can be anything; it is saved as soon as it is a number above zero.
-                var text by remember { mutableStateOf(scope.recentAmount.toString()) }
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { input ->
-                        val digits = input.filter { it.isDigit() }.take(3)
-                        text = digits
-                        digits.toIntOrNull()?.takeIf { it > 0 }?.let { onChange(scope.copy(recentAmount = it.coerceAtMost(PracticeScope.MAX_AMOUNT))) }
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(88.dp)
-                )
-            }
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                listOf(
-                    RecencyUnit.PAGES to R.string.practice_scope_unit_pages,
-                    RecencyUnit.DAYS to R.string.practice_scope_unit_days,
-                    RecencyUnit.WEEKS to R.string.practice_scope_unit_weeks,
-                    RecencyUnit.MONTHS to R.string.practice_scope_unit_months,
-                    RecencyUnit.YEARS to R.string.practice_scope_unit_years
-                ).forEach { (unit, label) ->
-                    PaperChip(
-                        selected = unit == scope.recentUnit,
-                        onClick = { onChange(scope.copy(recentUnit = unit)) },
-                        label = { Text(stringResource(label)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
             }
         }
         Text(
