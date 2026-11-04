@@ -6,7 +6,13 @@ import android.annotation.SuppressLint
 import android.content.ContextWrapper
 import android.text.format.DateUtils
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -166,32 +172,19 @@ fun AccountSection() {
     }
 
     firstSync?.let { choice ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.first_sync_title)) },
-            text = {
-                Text(
-                    stringResource(R.string.first_sync_body, choice.cloudEntries, choice.deviceEntries) +
-                        if (choice.otherAccount) "\n\n" + stringResource(R.string.first_sync_other_account) else ""
-                )
+        FirstSyncDialog(
+            choice = choice,
+            onMerge = {
+                firstSync = null
+                runSync()
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    firstSync = null
-                    runSync()
-                }) { Text(stringResource(R.string.first_sync_merge)) }
+            onReplace = {
+                firstSync = null
+                runSync(replaceDevice = true)
             },
-            dismissButton = {
-                Column {
-                    TextButton(onClick = {
-                        firstSync = null
-                        runSync(replaceDevice = true)
-                    }) { Text(stringResource(R.string.first_sync_replace), color = MaterialTheme.colorScheme.error) }
-                    TextButton(onClick = {
-                        firstSync = null
-                        scope.launch { cloud.accounts.signOut() }
-                    }) { Text(stringResource(R.string.btn_cancel)) }
-                }
+            onCancel = {
+                firstSync = null
+                scope.launch { cloud.accounts.signOut() }
             }
         )
     }
@@ -209,5 +202,74 @@ fun AccountSection() {
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.btn_cancel)) } }
         )
+    }
+}
+
+/**
+ * Asked when an account that already has data in the cloud signs in on a device that has data too: keep both
+ * (the safe choice, offered first), or let the account's data take the place of this device's.
+ */
+@Composable
+private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: () -> Unit, onCancel: () -> Unit) {
+    Dialog(onDismissRequest = {}) {
+        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.first_sync_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.first_sync_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.first_sync_cloud_count, choice.cloudEntries),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.first_sync_device_count, choice.deviceEntries),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (choice.otherAccount) {
+                    Text(
+                        text = stringResource(R.string.first_sync_other_account),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+                PaperButton(stringResource(R.string.first_sync_merge), onClick = onMerge, modifier = Modifier.fillMaxWidth())
+                Text(
+                    text = stringResource(R.string.first_sync_merge_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(Modifier.height(4.dp))
+                PaperOutlinedButton(stringResource(R.string.first_sync_replace), onClick = onReplace, modifier = Modifier.fillMaxWidth())
+                Text(
+                    text = stringResource(R.string.first_sync_replace_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                PaperLink(
+                    text = stringResource(R.string.btn_cancel),
+                    onClick = onCancel,
+                    soft = true,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
     }
 }

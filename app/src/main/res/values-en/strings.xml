@@ -776,7 +776,11 @@
     <string name="home_later_more">Show %1$d more</string>
     <string name="home_done_show">Show done today (%1$d)</string>
     <string name="first_sync_title">This account already has saved data</string>
-    <string name="first_sync_body">The cloud holds %1$d revision entries for this account, and this device has %2$d. What should happen?</string>
+    <string name="first_sync_intro">This account has data saved in the cloud, and this device has data too. Choose what happens to them.</string>
+    <string name="first_sync_cloud_count">In your account: %1$d revision entries</string>
+    <string name="first_sync_device_count">On this device: %1$d revision entries</string>
+    <string name="first_sync_merge_hint">Keeps everything from both. This is the safe choice.</string>
+    <string name="first_sync_replace_hint">This device\'s data is erased and replaced by the account\'s.</string>
     <string name="first_sync_other_account">The data on this device was linked to a different account.</string>
     <string name="first_sync_merge">Merge both</string>
     <string name="first_sync_replace">Replace this device with the account\'s data</string>
