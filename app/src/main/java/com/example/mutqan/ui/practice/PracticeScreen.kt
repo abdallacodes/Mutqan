@@ -36,6 +36,9 @@ import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.ExerciseType
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PracticeScope
+import com.example.mutqan.domain.RecencyUnit
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperChip
 import com.example.mutqan.ui.components.PaperSpace
@@ -182,25 +185,51 @@ private fun ScopePicker(scope: PracticeScope, onChange: (PracticeScope) -> Unit)
                 )
             }
             PaperChip(
-                selected = scope.lastReviewed > 0,
-                onClick = { onChange(scope.copy(lastReviewed = if (scope.lastReviewed > 0) 0 else PracticeScope.DEFAULT_LAST)) },
+                selected = scope.recentAmount > 0,
+                onClick = {
+                    onChange(
+                        if (scope.recentAmount > 0) scope.copy(recentAmount = 0)
+                        else scope.copy(recentAmount = PracticeScope.DEFAULT_AMOUNT, recentUnit = RecencyUnit.PAGES)
+                    )
+                },
                 label = { Text(stringResource(R.string.practice_scope_last)) },
                 modifier = Modifier.weight(1.4f)
             )
         }
-        if (scope.lastReviewed > 0) {
+        if (scope.recentAmount > 0) {
             Text(
                 text = stringResource(R.string.practice_scope_last_how_many),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )
-            Row(modifier = Modifier.fillMaxWidth()) {
-                PracticeScope.LAST_CHOICES.forEach { count ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                // The number is typed, so it can be anything; it is saved as soon as it is a number above zero.
+                var text by remember { mutableStateOf(scope.recentAmount.toString()) }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { input ->
+                        val digits = input.filter { it.isDigit() }.take(3)
+                        text = digits
+                        digits.toIntOrNull()?.takeIf { it > 0 }?.let { onChange(scope.copy(recentAmount = it.coerceAtMost(PracticeScope.MAX_AMOUNT))) }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(88.dp)
+                )
+            }
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                listOf(
+                    RecencyUnit.PAGES to R.string.practice_scope_unit_pages,
+                    RecencyUnit.DAYS to R.string.practice_scope_unit_days,
+                    RecencyUnit.WEEKS to R.string.practice_scope_unit_weeks,
+                    RecencyUnit.MONTHS to R.string.practice_scope_unit_months,
+                    RecencyUnit.YEARS to R.string.practice_scope_unit_years
+                ).forEach { (unit, label) ->
                     PaperChip(
-                        selected = count == scope.lastReviewed,
-                        onClick = { onChange(scope.copy(lastReviewed = count)) },
-                        label = { Text("$count") },
+                        selected = unit == scope.recentUnit,
+                        onClick = { onChange(scope.copy(recentUnit = unit)) },
+                        label = { Text(stringResource(label)) },
                         modifier = Modifier.weight(1f)
                     )
                 }

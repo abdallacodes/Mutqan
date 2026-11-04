@@ -34,6 +34,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_RECITE_LAST       = intPreferencesKey("recitation_last_ayah")
         private val KEY_PRACTICE_TIERS    = intPreferencesKey("practice_tier_mask")
         private val KEY_PRACTICE_LAST     = intPreferencesKey("practice_last_pages")
+        private val KEY_PRACTICE_UNIT     = intPreferencesKey("practice_last_unit")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -134,13 +135,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     /** Which pages the practice questions are about (see PracticeScope); nothing chosen means every memorised page. */
     val practiceScope: Flow<PracticeScope> = context.dataStore.data.map { prefs ->
-        PracticeScope.fromMask(prefs[KEY_PRACTICE_TIERS] ?: 0, prefs[KEY_PRACTICE_LAST] ?: 0)
+        PracticeScope.fromStored(prefs[KEY_PRACTICE_TIERS] ?: 0, prefs[KEY_PRACTICE_LAST] ?: 0, prefs[KEY_PRACTICE_UNIT] ?: 0)
     }
 
     suspend fun setPracticeScope(scope: PracticeScope) {
         context.dataStore.edit { prefs ->
             prefs[KEY_PRACTICE_TIERS] = scope.tierMask
-            prefs[KEY_PRACTICE_LAST] = scope.lastReviewed
+            prefs[KEY_PRACTICE_LAST] = scope.recentAmount
+            prefs[KEY_PRACTICE_UNIT] = scope.recentUnit.code
         }
     }
 
