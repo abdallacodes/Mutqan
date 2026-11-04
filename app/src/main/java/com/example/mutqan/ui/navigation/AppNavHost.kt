@@ -81,6 +81,7 @@ import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
 import com.example.mutqan.ui.help.HowItWorksScreen
 import com.example.mutqan.ui.audio.AudioStorageScreen
+import com.example.mutqan.ui.feedback.FeedbackScreen
 import com.example.mutqan.ui.home.HomeScreen
 import com.example.mutqan.ui.home.PlanScreen
 import com.example.mutqan.ui.mushaf.MushafViewerScreen
@@ -140,6 +141,7 @@ object Routes {
     const val COVERAGE          = "coverage"
     const val HOW_IT_WORKS      = "how_it_works"
     const val AUDIO_STORAGE     = "audio_storage"
+    const val FEEDBACK          = "feedback"
     const val SAVED             = "saved"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
@@ -231,6 +233,10 @@ fun AppNavHost(
                 showSettingsSheet = false
                 navController.navigate(Routes.AUDIO_STORAGE)
             },
+            onOpenFeedback = {
+                showSettingsSheet = false
+                navController.navigate(Routes.FEEDBACK)
+            },
             onOpenSaved = {
                 showSettingsSheet = false
                 navController.navigate(Routes.SAVED)
@@ -320,6 +326,10 @@ fun AppNavHost(
 
             composable(Routes.AUDIO_STORAGE) {
                 AudioStorageScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.FEEDBACK) {
+                FeedbackScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Routes.SAVED) {

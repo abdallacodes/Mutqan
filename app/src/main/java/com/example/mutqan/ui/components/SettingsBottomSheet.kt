@@ -98,6 +98,7 @@ fun SettingsBottomSheet(
     onOpenSaved: () -> Unit = {},
     onOpenHowItWorks: () -> Unit = {},
     onOpenAudioStorage: () -> Unit = {},
+    onOpenFeedback: () -> Unit = {},
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
@@ -351,6 +352,12 @@ fun SettingsBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth().clickable { onOpenHowItWorks() }.padding(horizontal = 4.dp, vertical = 10.dp)
+            )
+            Text(
+                text = stringResource(R.string.feedback_link),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth().clickable { onOpenFeedback() }.padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.audio_storage_link),

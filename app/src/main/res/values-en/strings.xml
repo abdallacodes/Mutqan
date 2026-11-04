@@ -689,6 +689,17 @@
     <string name="sync_outcome_pushed">This device\'s data was sent to your account.</string>
     <string name="sync_outcome_pulled">Your account\'s data was brought to this device.</string>
     <string name="sync_outcome_merged">This device\'s data was merged with your account.</string>
+    <string name="feedback_link">Send feedback</string>
+    <string name="feedback_title">Your feedback</string>
+    <string name="feedback_subtitle">Every message is read</string>
+    <string name="feedback_kind_idea">Idea</string>
+    <string name="feedback_kind_problem">Problem</string>
+    <string name="feedback_kind_other">Other</string>
+    <string name="feedback_hint">Write your message here</string>
+    <string name="feedback_include_info">Include app version and device model</string>
+    <string name="feedback_send">Send by email</string>
+    <string name="feedback_note">Your mail app opens with the message ready; press send there.</string>
+    <string name="feedback_no_mail">No mail app found. The message was copied; you can send it to %1$s.</string>
     <string name="sync_delete_cloud">Delete cloud copy</string>
     <string name="sync_delete_title">Delete the cloud copy?</string>
     <string name="sync_delete_body">Only your account copy in the cloud is deleted. The data on this device stays, and is uploaded again at the next sync.</string>
