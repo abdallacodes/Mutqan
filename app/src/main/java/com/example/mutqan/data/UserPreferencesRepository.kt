@@ -3,6 +3,7 @@ package com.example.mutqan.data
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.mutqan.domain.PracticeScope
 import com.example.mutqan.domain.sync.SyncMemory
 import kotlinx.coroutines.flow.first
 import java.util.UUID
@@ -31,6 +32,8 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_RECITE_RUN        = intPreferencesKey("recitation_run_repeat")
         private val KEY_RECITE_AFTER      = intPreferencesKey("recitation_say_after_percent")
         private val KEY_RECITE_LAST       = intPreferencesKey("recitation_last_ayah")
+        private val KEY_PRACTICE_TIERS    = intPreferencesKey("practice_tier_mask")
+        private val KEY_PRACTICE_LAST     = intPreferencesKey("practice_last_pages")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -127,6 +130,18 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setRecitationSayAfterPercent(percent: Int) {
         context.dataStore.edit { prefs -> prefs[KEY_RECITE_AFTER] = percent.coerceIn(0, 300) }
+    }
+
+    /** Which pages the practice questions are about (see PracticeScope); nothing chosen means every memorised page. */
+    val practiceScope: Flow<PracticeScope> = context.dataStore.data.map { prefs ->
+        PracticeScope.fromMask(prefs[KEY_PRACTICE_TIERS] ?: 0, prefs[KEY_PRACTICE_LAST] ?: 0)
+    }
+
+    suspend fun setPracticeScope(scope: PracticeScope) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_PRACTICE_TIERS] = scope.tierMask
+            prefs[KEY_PRACTICE_LAST] = scope.lastReviewed
+        }
     }
 
     /** The verse (global id) the last recitation had reached; 0 when there has been none. */

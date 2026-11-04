@@ -32,7 +32,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.ExerciseType
+import com.example.mutqan.domain.PlanTier
+import com.example.mutqan.domain.PracticeScope
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.ui.components.PaperChip
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.SectionLabel
+import kotlinx.coroutines.launch
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.ui.components.HubRow
@@ -46,7 +54,16 @@ import kotlinx.coroutines.flow.stateIn
 private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 
 /** How many page-boundary rounds were done in the last seven days. */
-class PracticeViewModel(study: StudyRepository) : ViewModel() {
+class PracticeViewModel(study: StudyRepository, private val prefs: UserPreferencesRepository) : ViewModel() {
+
+    /** Which pages the questions are drawn from. */
+    val scope: StateFlow<PracticeScope> = prefs.practiceScope
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PracticeScope())
+
+    fun setScope(scope: PracticeScope) {
+        viewModelScope.launch { prefs.setPracticeScope(scope) }
+    }
+
     val boundariesThisWeek: StateFlow<Int> = study.exerciseCountsSince(System.currentTimeMillis() - WEEK_MS)
         .map { counts -> ExerciseType.PAGE_BOUNDARIES.sumOf { counts[it] ?: 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -59,7 +76,7 @@ class PracticeViewModel(study: StudyRepository) : ViewModel() {
 
 class PracticeViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = PracticeViewModel(StudyRepository.create(context)) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = PracticeViewModel(StudyRepository.create(context), UserPreferencesRepository(context.applicationContext)) as T
 }
 
 /** Every exercise in one list. Each entry opens its own screen. */
@@ -76,6 +93,7 @@ fun PracticeScreen(
     val viewModel: PracticeViewModel = viewModel(factory = PracticeViewModelFactory(context))
     val week by viewModel.boundariesThisWeek.collectAsState()
     val quizWeek by viewModel.quizThisWeek.collectAsState()
+    val scope by viewModel.scope.collectAsState()
 
     Scaffold(
         topBar = {
@@ -88,6 +106,7 @@ fun PracticeScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState())) {
+            ScopePicker(scope = scope, onChange = viewModel::setScope)
             HubRow(
                 title = stringResource(R.string.practice_daily_title),
                 subtitle = stringResource(R.string.practice_daily_desc),
@@ -142,4 +161,57 @@ fun PracticeScreen(
             )
         }
     }
+}
+
+/** Which pages the questions come from: the levels, and the pages last reviewed. Nothing chosen means all memorised pages. */
+@Composable
+private fun ScopePicker(scope: PracticeScope, onChange: (PracticeScope) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp)) {
+        SectionLabel(stringResource(R.string.practice_scope_title))
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            listOf(
+                PlanTier.WEAK to R.string.practice_scope_weak,
+                PlanTier.FAIR to R.string.practice_scope_fair,
+                PlanTier.STRONG to R.string.practice_scope_strong
+            ).forEach { (tier, label) ->
+                PaperChip(
+                    selected = tier in scope.tiers,
+                    onClick = { onChange(scope.withTier(tier, tier !in scope.tiers)) },
+                    label = { Text(stringResource(label)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            PaperChip(
+                selected = scope.lastReviewed > 0,
+                onClick = { onChange(scope.copy(lastReviewed = if (scope.lastReviewed > 0) 0 else PracticeScope.DEFAULT_LAST)) },
+                label = { Text(stringResource(R.string.practice_scope_last)) },
+                modifier = Modifier.weight(1.4f)
+            )
+        }
+        if (scope.lastReviewed > 0) {
+            Text(
+                text = stringResource(R.string.practice_scope_last_how_many),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Row(modifier = Modifier.fillMaxWidth()) {
+                PracticeScope.LAST_CHOICES.forEach { count ->
+                    PaperChip(
+                        selected = count == scope.lastReviewed,
+                        onClick = { onChange(scope.copy(lastReviewed = count)) },
+                        label = { Text("$count") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(if (scope.isAll) R.string.practice_scope_all else R.string.practice_scope_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+    Hairline()
 }

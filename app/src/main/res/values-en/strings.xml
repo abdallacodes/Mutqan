@@ -644,6 +644,15 @@
     <string name="quiz_harder">Harder</string>
     <string name="quiz_score">%1$d right of %2$d</string>
     <string name="quiz_progress">Question %1$d of %2$d</string>
+    <string name="practice_scope_title">Pages in the questions</string>
+    <string name="practice_scope_weak">Weak</string>
+    <string name="practice_scope_fair">Fair</string>
+    <string name="practice_scope_strong">Strong</string>
+    <string name="practice_scope_last">Last reviewed</string>
+    <string name="practice_scope_last_how_many">How many of the last pages</string>
+    <string name="practice_scope_all">With none chosen, all your memorised pages are used.</string>
+    <string name="practice_scope_hint">Questions are drawn only from the chosen pages.</string>
+    <string name="quiz_scope_empty">No pages match your choice. Change it on the Practice list.</string>
     <string name="quiz_empty_title">Nothing to ask yet</string>
     <string name="quiz_empty_body">Questions are drawn from what you have memorised. Set it first, or try again.</string>
     <string name="quiz_try_again">Try again</string>

@@ -102,7 +102,11 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                 state.finished -> Summary(state, onAgain = viewModel::restart, onBack = onBack, onOpenMushaf = onOpenMushaf)
                 q == null -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.quiz_empty_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-                    Text(stringResource(R.string.quiz_empty_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(if (state.scopeEmpty) R.string.quiz_scope_empty else R.string.quiz_empty_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     PaperOutlinedButton(stringResource(R.string.quiz_try_again), onClick = viewModel::restart)
                 }
                 else -> {

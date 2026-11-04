@@ -38,6 +38,8 @@ data class QuizUiState(
     val loading: Boolean = true,
     /** True when no question could be built, e.g. nothing memorised yet. */
     val noMaterial: Boolean = false,
+    /** True when that is because no page fits the choice of pages made on the Practice list. */
+    val scopeEmpty: Boolean = false,
     val hard: Boolean = false,
     val question: QuizQuestion? = null,
     /** Where-is-this: 0 = choosing the surah, 1 = choosing the verse number. */
@@ -80,6 +82,7 @@ class QuizViewModel(
     private val recent = ArrayDeque<Int>()
     private val random = Random.Default
     private var schedule: List<ExerciseType> = emptyList()
+    private var scopeEmpty = false
 
     init {
         start()
@@ -95,8 +98,13 @@ class QuizViewModel(
             val covered = study.coveredPages().first()
             val states = PassageStates.compute(study.revisionLogs().first())
             val misses = study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS).first().map { it.page }.toSet()
+            val scope = UserPreferencesRepository(appContext).practiceScope.first()
+            val allowed = scope.pages(
+                covered, states, study.selfRatedStrength().first(), study.revisionLogs().first()
+            )
+            scopeEmpty = !scope.isAll && allowed.isEmpty()
             weights = IntArray(PAGES) { i ->
-                val memorised = covered?.getOrElse(i) { false } ?: true
+                val memorised = (i + 1) in allowed
                 if (!memorised) 0
                 else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
             }
@@ -209,7 +217,7 @@ class QuizViewModel(
                 return
             }
         }
-        _state.update { it.copy(loading = false, noMaterial = true, question = null) }
+        _state.update { it.copy(loading = false, noMaterial = true, scopeEmpty = scopeEmpty, question = null) }
     }
 
     private fun tryBuild(engine: QuizEngine, type: ExerciseType, hard: Boolean): QuizQuestion? {

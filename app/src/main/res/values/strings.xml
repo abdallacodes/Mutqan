@@ -644,6 +644,15 @@
     <string name="quiz_harder">أصعب</string>
     <string name="quiz_score">%1$d صحيحة من %2$d</string>
     <string name="quiz_progress">السؤال %1$d من %2$d</string>
+    <string name="practice_scope_title">صفحات الأسئلة</string>
+    <string name="practice_scope_weak">ضعيف</string>
+    <string name="practice_scope_fair">متوسط</string>
+    <string name="practice_scope_strong">قوي</string>
+    <string name="practice_scope_last">آخر مراجعة</string>
+    <string name="practice_scope_last_how_many">عدد الصفحات الأخيرة</string>
+    <string name="practice_scope_all">دون اختيار تُؤخذ كل صفحاتك المحفوظة.</string>
+    <string name="practice_scope_hint">تُؤخذ الأسئلة من الصفحات المختارة فقط.</string>
+    <string name="quiz_scope_empty">لا توجد صفحات تطابق اختيارك. غيّر الاختيار من قائمة التمارين.</string>
     <string name="quiz_empty_title">لا شيء لأسألك عنه بعد</string>
     <string name="quiz_empty_body">تُؤخذ الأسئلة مما حفظت. حدّد محفوظك أولًا، أو حاول مرة أخرى.</string>
     <string name="quiz_try_again">حاول مرة أخرى</string>
