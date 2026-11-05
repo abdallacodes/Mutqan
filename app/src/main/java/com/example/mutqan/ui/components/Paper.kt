@@ -1,95 +1,96 @@
 package com.example.mutqan.ui.components
 
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ProvideTextStyle
-import androidx.compose.material3.Slider
-import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
-import com.example.mutqan.R
-import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mutqan.R
 import com.example.mutqan.ui.theme.AmiriFontFamily
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Surface
-import androidx.compose.material3.minimumInteractiveComponentSize
+import com.example.mutqan.ui.theme.FolioTheme
 
-/** The app's own building blocks: a printed page, not stacked cards. */
+/**
+ * The app's building blocks, in the look of design system v2 ("Illuminated folio"). The Paper* names stay so that
+ * every screen already uses them; new code can also use the Folio components next to this file.
+ */
 
-/** A thin rule with the ayah-end mark (۝) in the middle, used to separate parts of a page. */
+/** The ayah-end mark (۝) in gold, centred: a quiet pause between parts of a page. Lines on both sides were dropped. */
 @Composable
 fun OrnamentDivider(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Hairline(Modifier.weight(1f))
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Text(
             text = "۝",
             style = TextStyle(fontFamily = AmiriFontFamily, fontSize = 22.sp, lineHeight = 26.sp),
             color = MaterialTheme.colorScheme.tertiary
         )
-        Hairline(Modifier.weight(1f))
     }
 }
 
-/** A one-pixel rule in the page's rule colour, as wide as the space it is given. */
+/** A faint rule as wide as the space it is given. Use it only where rows of one list need a line between them. */
 @Composable
 fun Hairline(modifier: Modifier = Modifier) {
-    val color = MaterialTheme.colorScheme.outline
-    Box(modifier = modifier.fillMaxWidth().height(1.dp).drawBehind {
-        drawLine(color, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
-    })
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+    )
 }
 
 /** A small quiet label above a group, in the soft ink colour. */
@@ -97,71 +98,45 @@ fun Hairline(modifier: Modifier = Modifier) {
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
     )
 }
 
-/** The main action: a flat, square-cornered block of the action colour. */
+/** The main action: filled with the action colour, rounded, with a spring on press. */
 @Composable
 fun PaperButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = 48.dp),
-        shape = RoundedCornerShape(4.dp),
-        elevation = null,
-        contentPadding = PaddingValues(horizontal = 32.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-    ) { Text(text, style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)) }
+    PrimaryButton(text = text, onClick = onClick, modifier = modifier, enabled = enabled)
 }
 
-/** A secondary action: the same block outlined by a rule. */
+/** A secondary action: filled with the tonal colour. */
 @Composable
 fun PaperOutlinedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = 48.dp),
-        shape = RoundedCornerShape(4.dp),
-        border = BorderStroke(1.dp, if (enabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant),
-        contentPadding = PaddingValues(horizontal = 24.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (enabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
-    }
+    TonalButton(text = text, onClick = onClick, modifier = modifier, enabled = enabled)
 }
 
-/** A text action, underlined like a link in a printed page. */
+/** A text action in the action colour (or, [soft], in the quiet ink colour). Not underlined: the colour and weight say it can be pressed. */
 @Composable
 fun PaperLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, soft: Boolean = false) {
     TextButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 44.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
+        modifier = modifier.heightIn(min = 48.dp),
+        shape = FolioTheme.shapes.control,
+        contentPadding = PaddingValues(horizontal = 12.dp)
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontWeight = if (soft) FontWeight.Normal else FontWeight.Medium,
-                textDecoration = if (soft) TextDecoration.None else TextDecoration.Underline
-            ),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (soft) FontWeight.Medium else FontWeight.SemiBold),
             color = if (soft) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
         )
     }
 }
 
 /**
- * A page heading: the title in display type, an optional quiet line under it, actions at the end
- * and an ornament divider below. [onBack] adds a back arrow at the start for sub-screens.
- * [compact] is for a task screen whose own content (a question) is the focal point: the title is set small.
+ * A page heading: the title in display type, an optional quiet line under it and actions at the end. [onBack] adds a
+ * back arrow at the start for sub-screens. [compact] is for a task screen whose own content (a question) is the
+ * focal point: the title is set small. With large text the title steps down so it never takes a quarter of the screen.
  */
 @Composable
 fun PaperHeader(
@@ -173,82 +148,86 @@ fun PaperHeader(
     compact: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    // With large text a display-size title alone takes a quarter of the screen; a headline is still the largest text there.
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val titleStyle = when {
         compact -> MaterialTheme.typography.titleMedium
-        largeText -> MaterialTheme.typography.headlineSmall
-        else -> MaterialTheme.typography.displaySmall
+        largeText -> MaterialTheme.typography.titleLarge
+        else -> MaterialTheme.typography.headlineMedium
     }
-    Column(modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = if (onBack == null) PaperSpace.Gutter else 8.dp, end = 8.dp, top = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(start = if (onBack == null) PaperSpace.Gutter else 8.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
-            Column(modifier = Modifier.weight(1f)) {
-                if (titleGlyph != null) {
-                    Box(Modifier.semantics(mergeDescendants = true) { contentDescription = title }) { titleGlyph() }
-                } else {
-                    Text(
-                        text = title,
-                        style = titleStyle,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            actions()
         }
-        OrnamentDivider(Modifier.padding(horizontal = PaperSpace.Gutter))
+        Column(modifier = Modifier.weight(1f)) {
+            if (titleGlyph != null) {
+                Box(Modifier.semantics(mergeDescendants = true) { contentDescription = title }) { titleGlyph() }
+            } else {
+                Text(
+                    text = title,
+                    style = titleStyle,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        actions()
     }
 }
 
-/** Two or three choices set as words with a rule under the current one, instead of a segmented block. */
+/** Two or three choices as one segmented pill: the current one is raised like a card, the others sit flat in the tonal track. */
 @Composable
 fun PaperTabs(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxWidth().selectableGroup()) {
+    val colors = FolioTheme.colors
+    val pill = FolioTheme.shapes.pill
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .selectableGroup()
+            .background(colors.tonal.copy(alpha = 0.55f), pill)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         labels.forEachIndexed { i, label ->
             val selected = i == selectedIndex
-            Column(
+            val container by animateColorAsState(if (selected) colors.folio else Color.Transparent, label = "tabFill")
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(i) }),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .heightIn(min = 44.dp)
+                    .then(if (selected) Modifier.lifted(pill) else Modifier)
+                    .background(container, pill)
+                    .clip(pill)
+                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(i) })
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Box(
-                    modifier = Modifier
-                        .padding(top = 6.dp)
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }
     }
 }
 
-/** A choice that can be on or off: plain words, with a rule under them when chosen. Replaces filter chips. */
+/** A choice that can be on or off, as a pill: filled and checked when on, outlined when off. */
 @Composable
 fun PaperChip(
     selected: Boolean,
@@ -256,32 +235,10 @@ fun PaperChip(
     label: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
-    Column(
-        modifier = modifier
-            .heightIn(min = 48.dp)
-            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
-            .padding(horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        ProvideTextStyle(
-            MaterialTheme.typography.labelLarge.copy(
-                color = color,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
-        ) { label() }
-        Box(
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .fillMaxWidth()
-                .height(if (selected) 2.dp else 1.dp)
-                .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-        )
-    }
+    FilterPill(selected = selected, onClick = onClick, modifier = modifier, label = label)
 }
 
-/** A thin slider: a hairline track, the filled part in the action colour, a small round handle. */
+/** A slider with a rounded track, the filled part in the action colour and a round handle. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaperSlider(
@@ -292,7 +249,7 @@ fun PaperSlider(
     steps: Int = 0
 ) {
     val primary = MaterialTheme.colorScheme.primary
-    val rule = MaterialTheme.colorScheme.outline
+    val track = FolioTheme.colors.tonal
     Slider(
         value = value,
         onValueChange = onValueChange,
@@ -300,50 +257,45 @@ fun PaperSlider(
         valueRange = valueRange,
         steps = steps,
         thumb = {
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(14.dp).background(primary, CircleShape))
+            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(22.dp).background(primary, CircleShape).border(3.dp, FolioTheme.colors.folio, CircleShape))
             }
         },
         track = { state ->
             val span = state.valueRange.endInclusive - state.valueRange.start
             val fraction = if (span == 0f) 0f else ((state.value - state.valueRange.start) / span).coerceIn(0f, 1f)
-            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(rule)) {
-                Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(primary))
+            Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(track, FolioTheme.shapes.pill)) {
+                Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(primary, FolioTheme.shapes.pill))
             }
         }
     )
 }
 
-/** A compact outlined action for rows in a list, in the action colour so it reads as something to press. */
+/** A compact tonal action for rows in a list. */
 @Composable
 fun PaperSmallButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
+    val colors = FolioTheme.colors
+    Button(
         onClick = onClick,
         modifier = modifier.heightIn(min = 40.dp),
-        shape = RoundedCornerShape(4.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-        contentPadding = PaddingValues(horizontal = 16.dp)
-    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+        shape = FolioTheme.shapes.control,
+        elevation = null,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = colors.tonal, contentColor = colors.onTonal)
+    ) { Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)) }
 }
 
-/** A hairline track with the finished part drawn over it in the action colour. */
+/** A thick rounded bar with the finished part drawn over it, animated. */
 @Composable
 fun PaperProgress(
     fraction: Float,
     modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
-    Box(modifier = modifier.fillMaxWidth().height(3.dp).background(MaterialTheme.colorScheme.outlineVariant)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                .fillMaxHeight()
-                .background(color)
-        )
-    }
+    PageStrip(fraction = fraction, modifier = modifier, height = 8.dp, color = color)
 }
 
-/** One of several exclusive options: a ring, a name and an optional sentence, with a rule under it. */
+/** One of several exclusive options on its own card: a ring, a name and an optional sentence. The chosen card is outlined in the action colour. */
 @Composable
 fun PaperChoice(
     title: String,
@@ -353,45 +305,47 @@ fun PaperChoice(
     description: String? = null
 ) {
     val primary = MaterialTheme.colorScheme.primary
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
+    val colors = FolioTheme.colors
+    val shape = FolioTheme.shapes.control
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .background(if (selected) colors.tonal.copy(alpha = 0.6f) else colors.folio, shape)
+            .border(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outlineVariant, shape)
+            .clip(shape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-                .padding(vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .size(22.dp)
+                .border(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outline, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .border(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outline, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (selected) Box(modifier = Modifier.size(12.dp).background(primary, CircleShape))
-            }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (selected) Box(modifier = Modifier.size(12.dp).background(primary, CircleShape))
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (description != null) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (description != null) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
-        Hairline()
     }
 }
 
 /**
- * A number with a square minus button before it and a plus button after it, always in that order. With [onValueClick]
+ * A number with a minus button before it and a plus button after it, always in that order. With [onValueClick]
  * the number itself can be tapped, to type a value.
  */
 @Composable
@@ -423,19 +377,27 @@ fun PaperStepper(
 
 @Composable
 private fun StepButton(symbol: String, description: String, enabled: Boolean, onClick: () -> Unit) {
-    val color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val colors = FolioTheme.colors
+    val shape = FolioTheme.shapes.control
     Box(
         modifier = Modifier
             .size(48.dp)
-            .border(1.dp, color, RoundedCornerShape(4.dp))
+            .background(if (enabled) colors.tonal else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), shape)
+            .clip(shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
-    ) { Text(symbol, style = MaterialTheme.typography.titleLarge, color = color) }
+    ) {
+        Text(
+            symbol,
+            style = MaterialTheme.typography.titleLarge,
+            color = if (enabled) colors.onTonal else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
 }
 
 /**
- * A question or a small form on a flat, square-cornered sheet with a rule round it. It takes the slots of
+ * A question or a small form on a rounded raised sheet. It takes the slots of
  * [androidx.compose.material3.AlertDialog], so the two are interchangeable.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -450,13 +412,14 @@ fun PaperDialog(
 ) {
     BasicAlertDialog(onDismissRequest = onDismissRequest, modifier = modifier) {
         Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.background,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            shape = RoundedCornerShapeDialog,
+            color = FolioTheme.colors.folio,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, FolioTheme.colors.edge.copy(alpha = 0.6f))
         ) {
             Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp)) {
                 if (title != null) {
-                    ProvideTextStyle(MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onBackground)) { title() }
+                    ProvideTextStyle(MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface)) { title() }
                     Spacer(Modifier.height(16.dp))
                 }
                 if (text != null) {
@@ -474,14 +437,19 @@ fun PaperDialog(
     }
 }
 
+private val RoundedCornerShapeDialog = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+
 /**
- * An on/off control: a square-cornered track with a square thumb that slides to the "on" end. Beside a label, pass
+ * An on/off control: a pill track with a round thumb that slides to the "on" end. Beside a label, pass
  * null for [onCheckedChange] and make the whole row `toggleable`, so the switch is announced with its name.
  */
 @Composable
 fun PaperSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
-    val rule = MaterialTheme.colorScheme.outline
+    val outline = MaterialTheme.colorScheme.outline
+    val track by animateColorAsState(if (checked) primary else FolioTheme.colors.folio, label = "switchTrack")
+    val thumb by animateColorAsState(if (checked) MaterialTheme.colorScheme.onPrimary else outline, label = "switchThumb")
+    val bias by animateFloatAsState(if (checked) 1f else -1f, label = "switchThumbPosition")
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
@@ -493,15 +461,16 @@ fun PaperSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifie
     ) {
         Box(
             modifier = Modifier
-                .size(width = 44.dp, height = 24.dp)
-                .border(1.dp, if (checked) primary else rule, RoundedCornerShape(4.dp))
-                .padding(3.dp)
+                .size(width = 48.dp, height = 28.dp)
+                .background(track, CircleShape)
+                .border(2.dp, if (checked) primary else outline, CircleShape)
+                .padding(4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                    .align(BiasAlignment(horizontalBias = bias, verticalBias = 0f))
                     .size(16.dp)
-                    .background(if (checked) primary else rule, RoundedCornerShape(2.dp))
+                    .background(thumb, CircleShape)
             )
         }
     }
@@ -509,6 +478,6 @@ fun PaperSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifie
 
 /** Spacing used between the parts of a page. */
 object PaperSpace {
-    val Gutter = 24.dp
-    val Section = 28.dp
+    val Gutter = 20.dp
+    val Section = 24.dp
 }

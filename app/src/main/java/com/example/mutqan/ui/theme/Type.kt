@@ -25,7 +25,6 @@ val PlexSansArabicFamily = FontFamily(
 /**
  * Design system v2 type: Amiri for display, headline, title-large and big numerals; IBM Plex Sans Arabic for
  * every smaller role. No letter spacing (it breaks Arabic joining); Arabic gets taller lines.
- * Used by the component gallery now; replaces [paperTypography] app-wide in step 1 of the upgrade plan.
  */
 fun folioTypography(arabic: Boolean): Typography {
     fun sans(size: Int, line: Int, arabicLine: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
@@ -60,45 +59,5 @@ fun folioTypography(arabic: Boolean): Typography {
         labelLarge = sans(15, 21, 24, FontWeight.Medium),
         labelMedium = sans(13, 17, 20, FontWeight.Medium),
         labelSmall = sans(12, 16, 19, FontWeight.Medium)
-    )
-}
-
-/**
- * Paper typography: large headings and numerals in Amiri, quiet system sans for everything
- * else, no letter spacing (it breaks Arabic letter joining). Arabic gets taller lines.
- */
-fun paperTypography(arabic: Boolean): Typography {
-    fun body(size: Int, line: Int, arabicLine: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = weight,
-        fontSize = size.sp,
-        lineHeight = (if (arabic) arabicLine else line).sp,
-        letterSpacing = 0.sp
-    )
-
-    fun display(size: Int, line: Int) = TextStyle(
-        fontFamily = AmiriFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = size.sp,
-        lineHeight = line.sp,
-        letterSpacing = 0.sp
-    )
-
-    return Typography(
-        displayLarge = display(72, 84),
-        displayMedium = display(48, 58),
-        displaySmall = display(36, 46),
-        headlineLarge = display(32, 42),
-        headlineMedium = display(28, 38),
-        headlineSmall = display(24, 34),
-        titleLarge = display(24, 36),
-        titleMedium = display(20, 32),
-        titleSmall = body(16, 23, 26, FontWeight.Medium),
-        bodyLarge = body(17, 25, 30),
-        bodyMedium = body(15, 23, 26),
-        bodySmall = body(13, 19, 22),
-        labelLarge = body(15, 21, 24, FontWeight.Medium),
-        labelMedium = body(13, 17, 20, FontWeight.Medium),
-        labelSmall = body(12, 16, 19, FontWeight.Medium)
     )
 }

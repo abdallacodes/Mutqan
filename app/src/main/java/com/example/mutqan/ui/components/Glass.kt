@@ -75,6 +75,7 @@ fun FrostedPanel(
     rim: Brush,
     modifier: Modifier = Modifier,
     blur: Dp = 12.dp,
+    shadow: Color = Color.Black,
     content: @Composable BoxScope.() -> Unit
 ) {
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -87,8 +88,8 @@ fun FrostedPanel(
             .shadow(
                 elevation = 14.dp,
                 shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.18f),
-                spotColor = Color.Black.copy(alpha = 0.24f)
+                ambientColor = shadow.copy(alpha = 0.18f),
+                spotColor = shadow.copy(alpha = 0.30f)
             )
             .onGloballyPositioned { origin = it.positionInRoot() }
             .drawBehind {

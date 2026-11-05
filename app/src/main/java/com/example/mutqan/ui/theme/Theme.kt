@@ -82,13 +82,13 @@ private val paperDarkScheme = darkColorScheme(
     surfaceContainerHighest = Color(0xFF302920),
 )
 
-// Small radii: printed, not bubbly.
+// Design system v2 radii: soft enough to feel crafted, never bubbly. Controls use 14, cards 20 (see FolioShapes).
 private val paperShapes = Shapes(
-    extraSmall = RoundedCornerShape(2.dp),
-    small = RoundedCornerShape(4.dp),
-    medium = RoundedCornerShape(6.dp),
-    large = RoundedCornerShape(8.dp),
-    extraLarge = RoundedCornerShape(14.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable
@@ -124,7 +124,7 @@ fun MutqanTheme(
     ) {
         MaterialTheme(
             colorScheme = paletteColors(palette, dark)?.toScheme(dark) ?: if (dark) paperDarkScheme else paperLightScheme,
-            typography  = paperTypography(arabic),
+            typography  = folioTypography(arabic),
             shapes      = paperShapes,
             content     = content
         )
