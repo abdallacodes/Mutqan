@@ -83,6 +83,7 @@ import com.example.mutqan.quran.QuranTitleGlyph
 import com.example.mutqan.quran.RevelationGlyph
 import com.example.mutqan.quran.SurahNameGlyph
 import com.example.mutqan.quran.JuzNameGlyph
+import com.example.mutqan.ui.components.StarMedallion
 
 /**
  * The Quran tab: a way into the Mushaf. Tapping a surah or a juz opens it to read; the list says which
@@ -389,12 +390,7 @@ private fun SurahRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "${item.info.id}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.width(32.dp)
-            )
+            StarMedallion(text = "${item.info.id}", size = 40.dp)
             Column(modifier = Modifier.weight(1f)) {
                 // In Arabic the name is set in calligraphy, as a printed Mushaf heads its surahs.
                 if (arabic) {
@@ -494,7 +490,7 @@ private fun SurahRow(
                 }
             }
         }
-        Hairline(Modifier.padding(horizontal = PaperSpace.Gutter))
+        Hairline(Modifier.padding(start = PaperSpace.Gutter + 52.dp, end = PaperSpace.Gutter))
     }
 }
 
@@ -507,8 +503,10 @@ private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, d
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = PaperSpace.Gutter, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            StarMedallion(text = entry.juz.toString(), size = 40.dp)
             Column(modifier = Modifier.weight(1f)) {
                 if (arabic) {
                     JuzNumberGlyph(
@@ -540,6 +538,6 @@ private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, d
             )
             DownloadButton(status = download, onClick = onDownload, description = stringResource(R.string.audio_download_juz))
         }
-        Hairline(Modifier.padding(horizontal = PaperSpace.Gutter))
+        Hairline(Modifier.padding(start = PaperSpace.Gutter + 52.dp, end = PaperSpace.Gutter))
     }
 }

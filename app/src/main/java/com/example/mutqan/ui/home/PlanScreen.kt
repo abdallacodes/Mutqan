@@ -45,6 +45,13 @@ import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.PaperStepper
 import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.components.PaperSwitch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.components.lifted
+import com.example.mutqan.ui.theme.FolioTheme
 
 /**
  * Creates or edits the revision plan. Four short steps in the order a person thinks about them:
@@ -66,9 +73,10 @@ fun PlanScreen(onBack: () -> Unit) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .lifted(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                        .background(FolioTheme.colors.folio, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                         .navigationBarsPadding()
                 ) {
-                    Hairline()
                     Column(
                         modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -139,7 +147,6 @@ fun PlanScreen(onBack: () -> Unit) {
                         cycleDays = state.cycleOf(tier),
                         onChange = { viewModel.setTierPages(tier, it) }
                     )
-                    Hairline()
                 }
             } else {
                 Hint(stringResource(R.string.plan_label_templates))
@@ -213,6 +220,7 @@ fun PlanScreen(onBack: () -> Unit) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 56.dp)
                     .toggleable(value = state.paused, role = Role.Switch, onValueChange = viewModel::setPaused),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -255,8 +263,9 @@ private fun Step(number: Int, title: String) {
  */
 @Composable
 private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onChange: (Int) -> Unit) {
+    Folio(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -293,6 +302,7 @@ private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onC
                 textAlign = TextAlign.Center
             )
         }
+    }
     }
 }
 

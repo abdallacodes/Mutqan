@@ -39,6 +39,15 @@ import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.components.FolioDivider
+import com.example.mutqan.ui.components.FolioGroup
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.components.PageStrip
+import com.example.mutqan.ui.theme.FolioTheme
 
 /**
  * One page that says where the user stands, from what they recorded: how much is memorised,
@@ -64,98 +73,120 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
 
             // ── Coverage ──
             item {
-                SectionLabel(stringResource(R.string.progress_section_coverage))
-                if (state.coveredPages == 0) {
+                val accent = FolioTheme.colors.heroAccent
+                HeroCard(modifier = Modifier.fillMaxWidth(), onClick = onOpenCoverage) {
                     Text(
-                        text = stringResource(R.string.progress_coverage_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = stringResource(R.string.progress_section_coverage),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = accent
                     )
-                } else {
+                    if (state.coveredPages == 0) {
+                        Text(
+                            text = stringResource(R.string.progress_coverage_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.progress_coverage_value, state.coveredPages, 604),
+                            style = MaterialTheme.typography.displaySmall
+                        )
+                        PageStrip(
+                            fraction = state.coveredPages / 604f,
+                            track = accent.copy(alpha = 0.25f),
+                            color = accent,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        )
+                    }
                     Text(
-                        text = stringResource(R.string.progress_coverage_value, state.coveredPages, 604),
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = stringResource(R.string.progress_open_coverage),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = accent
                     )
                 }
-                PaperLink(stringResource(R.string.progress_open_coverage), onClick = onOpenCoverage)
             }
 
             if (state.coveredPages > 0) {
                 // ── What recall shows ──
                 item {
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
-                    Hairline()
-                    Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.progress_section_evidence))
-                    Spacer(Modifier.height(8.dp))
-                    EvidenceBar(state.stateCounts, state.coveredPages)
-                }
-                items(PassageState.entries.reversed().filter { (state.stateCounts[it] ?: 0) > 0 }, key = { it }) { s ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(Modifier.size(10.dp).background(s.tone(), CircleShape))
-                        Text(
-                            text = s.localizedLabel(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = state.stateCounts.getValue(s).let { pluralStringResource(R.plurals.count_pages, it, it) },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Spacer(Modifier.height(10.dp))
+                    Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+                        EvidenceBar(state.stateCounts, state.coveredPages)
+                        Spacer(Modifier.height(8.dp))
+                        PassageState.entries.reversed().filter { (state.stateCounts[it] ?: 0) > 0 }.forEach { s ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(Modifier.size(10.dp).background(s.tone(), CircleShape))
+                                Text(
+                                    text = s.localizedLabel(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = state.stateCounts.getValue(s).let { pluralStringResource(R.plurals.count_pages, it, it) },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-                    Hairline()
                 }
 
                 // ── Consistency ──
                 item {
-                    // The last evidence row already ends in a rule.
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
                     SectionLabel(stringResource(R.string.progress_section_consistency))
-                    Text(
-                        text = pluralStringResource(R.plurals.progress_days, state.daysRevised, state.daysRevised, WINDOW_DAYS),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    DaysGrid(state.revisedDays)
+                    Spacer(Modifier.height(10.dp))
+                    Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+                        Text(
+                            text = pluralStringResource(R.plurals.progress_days, state.daysRevised, state.daysRevised, WINDOW_DAYS),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        DaysGrid(state.revisedDays)
+                    }
                 }
 
                 // ── Worth a look ──
                 item {
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
-                    Hairline()
-                    Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.progress_section_attention))
+                    Spacer(Modifier.height(10.dp))
                     if (state.attention.isEmpty()) {
                         Text(
                             text = stringResource(R.string.progress_none_attention),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    } else {
+                        FolioGroup(Modifier.fillMaxWidth()) {
+                            state.attention.forEachIndexed { index, a ->
+                                if (index > 0) FolioDivider(inset = 16.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.progress_juz_attention, a.juz, pluralStringResource(R.plurals.count_pages, a.pages, a.pages)),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    PaperLink(stringResource(R.string.home_btn_open), onClick = { onOpenMushaf(a.firstPage) })
+                                }
+                            }
+                        }
                     }
-                }
-                items(state.attention, key = { "juz-${it.juz}" }) { a ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.progress_juz_attention, a.juz, pluralStringResource(R.plurals.count_pages, a.pages, a.pages)),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f)
-                        )
-                        PaperLink(stringResource(R.string.home_btn_open), onClick = { onOpenMushaf(a.firstPage) })
-                    }
-                    Hairline()
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -175,7 +206,7 @@ private fun PassageState.tone(): Color = when (this) {
 /** A thin bar split by share of memorised pages in each state. */
 @Composable
 private fun EvidenceBar(counts: Map<PassageState, Int>, total: Int) {
-    Row(modifier = Modifier.fillMaxWidth().height(8.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().height(10.dp).clip(FolioTheme.shapes.pill), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         PassageState.entries.forEach { s ->
             val n = counts[s] ?: 0
             if (n > 0) Box(Modifier.weight(n.toFloat() / total).fillMaxSize().background(s.tone()))
