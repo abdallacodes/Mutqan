@@ -52,6 +52,10 @@ import com.example.mutqan.ui.components.localizedLabel
 import com.example.mutqan.ui.revision.OutcomePreview
 import com.example.mutqan.ui.revision.caption
 import com.example.mutqan.ui.revision.rememberOutcomeEffects
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.theme.FolioTheme
 
 /**
  * Today's due portions one after another: each shows what it is, and a tap on how it went logs it and brings up
@@ -125,20 +129,20 @@ fun ReviewSession(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = PaperSpace.Gutter, vertical = PaperSpace.Section)
                 ) {
-                    Text(
-                        text = current.label(),
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    if (current.unit != PlanUnit.PAGE) {
+                    HeroCard(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = stringResource(R.string.pages_range, current.startPage, current.endPage),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = current.label(),
+                            style = MaterialTheme.typography.displayMedium
                         )
-                    }
-                    current.tier?.let {
-                        Text(it.hint(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                        if (current.unit != PlanUnit.PAGE) {
+                            Text(
+                                text = stringResource(R.string.pages_range, current.startPage, current.endPage),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        current.tier?.let {
+                            Text(it.hint(), style = MaterialTheme.typography.labelLarge, color = FolioTheme.colors.heroAccent)
+                        }
                     }
                     PaperOutlinedButton(
                         text = stringResource(R.string.home_btn_open_mushaf),
@@ -150,9 +154,8 @@ fun ReviewSession(
                         text = stringResource(R.string.session_how_did_it_go),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 28.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(top = 28.dp, bottom = 8.dp)
                     )
-                    Hairline()
                     if (showTags) {
                         FlowRow(
                             modifier = Modifier.padding(vertical = 12.dp),
@@ -166,15 +169,13 @@ fun ReviewSession(
                                 )
                             }
                         }
-                        Hairline()
                     } else {
                         PaperLink(
                             text = stringResource(R.string.session_add_mistakes),
                             onClick = { showTags = true },
                             soft = true,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 4.dp)
                         )
-                        Hairline()
                     }
                     RecallOutcome.entries.forEach { option ->
                         OutcomeButton(
@@ -198,26 +199,21 @@ fun ReviewSession(
     }
 }
 
-/** One way it could have gone: a tap logs it. Under the name, what it would do to the strength of the pages. */
+/** One way it could have gone: a card, a tap logs it. Under the name, what it would do to the strength of the pages. */
 @Composable
 private fun OutcomeButton(label: String, caption: Pair<String, Color>?, onClick: () -> Unit) {
-    Column {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(vertical = 14.dp)
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            if (caption != null) {
-                Text(text = caption.first, style = MaterialTheme.typography.labelMedium, color = caption.second)
-            }
+    Folio(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (caption != null) {
+            Text(text = caption.first, style = MaterialTheme.typography.labelMedium, color = caption.second)
         }
-        Hairline()
     }
 }

@@ -64,6 +64,10 @@ import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.ui.components.MushafText
 import com.example.mutqan.ui.components.OpenInMushaf
 import com.example.mutqan.domain.EndingKind
+import androidx.compose.ui.draw.clip
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.components.rememberHaptics
+import com.example.mutqan.ui.theme.FolioTheme
 
 /** One sitting of questions: a single kind in a row, or a daily set of ten mixed ones. */
 @Composable
@@ -186,19 +190,22 @@ internal fun QuizOption(
     val accent = when (state) {
         OptionState.CORRECT -> scheme.primary
         OptionState.WRONG -> scheme.error
-        else -> scheme.outline
+        else -> scheme.outlineVariant
     }
     val fill = when (state) {
         OptionState.CORRECT -> scheme.primary.copy(alpha = 0.10f)
         OptionState.WRONG -> scheme.error.copy(alpha = 0.10f)
-        else -> Color.Transparent
+        else -> FolioTheme.colors.folio
     }
+    val shape = FolioTheme.shapes.control
+    val haptics = rememberHaptics()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(fill, RoundedCornerShape(4.dp))
-            .border(if (state == OptionState.CORRECT || state == OptionState.WRONG) 2.dp else 1.dp, accent, RoundedCornerShape(4.dp))
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .background(fill, shape)
+            .border(if (state == OptionState.CORRECT || state == OptionState.WRONG) 2.dp else 1.dp, accent, shape)
+            .clip(shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = { haptics.tick(); onClick() })
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -360,13 +367,14 @@ internal fun Feedback(correct: Boolean) {
 /** The end of a daily set: the score, and the pages that went wrong, each a link into the Mushaf. */
 @Composable
 private fun Summary(state: QuizUiState, onAgain: () -> Unit, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
-    Text(stringResource(R.string.quiz_done_title), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onBackground)
-    Text(
-        text = stringResource(R.string.quiz_score, state.right, state.asked),
-        style = MaterialTheme.typography.headlineMedium,
-        color = MaterialTheme.colorScheme.primary
-    )
-    OrnamentDivider()
+    HeroCard(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.quiz_done_title), style = MaterialTheme.typography.displaySmall)
+        Text(
+            text = stringResource(R.string.quiz_score, state.right, state.asked),
+            style = MaterialTheme.typography.headlineMedium,
+            color = FolioTheme.colors.heroAccent
+        )
+    }
     if (state.missedPages.isEmpty()) {
         Text(stringResource(R.string.quiz_all_right), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mutqan.ui.theme.FolioTheme
 
 /**
  * Reusable full-area empty state: the ayah-end mark, a title in display type and a short
@@ -45,11 +46,19 @@ fun EmptyStateCard(
             modifier            = Modifier.padding(horizontal = 40.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text  = "\u06DD",
-                style = TextStyle(fontFamily = AmiriFontFamily, fontSize = 40.sp, lineHeight = 48.sp),
-                color = MaterialTheme.colorScheme.tertiary
-            )
+            Box(
+                modifier = Modifier
+                    .size(88.dp.withFontScale())
+                    .clip(EightPointStarShape)
+                    .background(FolioTheme.colors.tonal),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text  = "\u06DD",
+                    style = TextStyle(fontFamily = AmiriFontFamily, fontSize = 36.sp, lineHeight = 44.sp),
+                    color = FolioTheme.colors.onTonal
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text      = title,

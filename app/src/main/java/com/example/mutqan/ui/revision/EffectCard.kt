@@ -26,11 +26,14 @@ import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import java.util.Locale
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.mutqan.ui.components.Folio
 
 /** What logging the revision being entered would do to the strength of its pages, updated as the form changes. */
 @Composable
 fun EffectCard(effect: LogEffect, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Folio(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(stringResource(R.string.effect_title))
         when {
             effect.practiceOnly -> Muted(stringResource(R.string.effect_practice))
@@ -63,7 +66,7 @@ fun EffectCard(effect: LogEffect, modifier: Modifier = Modifier) {
                 if (effect.tracked < effect.total) Muted(stringResource(R.string.effect_outside, effect.total - effect.tracked))
             }
         }
-        Hairline()
+      }
     }
 }
 
