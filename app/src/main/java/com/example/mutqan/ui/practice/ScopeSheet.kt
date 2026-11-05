@@ -64,6 +64,10 @@ import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import com.example.mutqan.ui.components.PaperDialog
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.draw.clip
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Words for a choice ──────────────────────────────────────────────────────
 
@@ -110,15 +114,16 @@ fun scopeSummary(scope: PracticeScope): String {
 
 // ── On the Practice list ────────────────────────────────────────────────────
 
-/** The choice of pages as one line on the Practice list: what it is in words, how many pages, and a way in to change it. */
+/** The choice of pages as a card on the Practice list: what it is in words, how many pages, and a way in to change it. */
 @Composable
 fun ScopeRow(scope: PracticeScope, preview: PracticeScope.Preview?, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
+    Folio(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp),
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = PaperSpace.Gutter, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -127,7 +132,7 @@ fun ScopeRow(scope: PracticeScope, preview: PracticeScope.Preview?, onClick: () 
                 Text(
                     text = scopeSummary(scope),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             if (preview != null) {
@@ -144,7 +149,6 @@ fun ScopeRow(scope: PracticeScope, preview: PracticeScope.Preview?, onClick: () 
                 modifier = Modifier.size(22.dp)
             )
         }
-        Hairline()
     }
 }
 
@@ -180,7 +184,7 @@ fun ScopeSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background,
-        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
@@ -194,8 +198,7 @@ fun ScopeSheet(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            SectionLabel(stringResource(R.string.scope_pages_label), modifier = Modifier.padding(top = 16.dp))
-            Hairline(Modifier.padding(top = 6.dp))
+            SectionLabel(stringResource(R.string.scope_pages_label), modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
             PaperChoice(
                 title = stringResource(R.string.scope_opt_all),
                 selected = scope.reach == PracticeScope.Reach.ALL,
@@ -215,7 +218,6 @@ fun ScopeSheet(
             )
             if (scope.reach == PracticeScope.Reach.COUNT) {
                 AmountEditor(scope, onChange)
-                Hairline()
             }
             PaperChoice(
                 title = stringResource(R.string.scope_opt_time),
@@ -229,7 +231,6 @@ fun ScopeSheet(
             )
             if (scope.reach == PracticeScope.Reach.TIME) {
                 AmountEditor(scope, onChange)
-                Hairline()
             }
 
             SectionLabel(stringResource(R.string.scope_levels_label), modifier = Modifier.padding(top = 24.dp))
@@ -258,7 +259,6 @@ fun ScopeSheet(
         }
 
         // The count and the way out stay in view while the choices above scroll.
-        Hairline(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter))
         Column(modifier = Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 12.dp, bottom = 24.dp)) {
             if (preview != null) {
                 if (preview.total == 0) {
@@ -385,15 +385,17 @@ private fun NumberDialog(initial: Int, onDone: (Int?) -> Unit) {
 /** One level to take pages from: its name, the colour it has elsewhere in the app, and how many pages it has now. */
 @Composable
 private fun LevelToggle(tier: PlanTier, count: Int?, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(4.dp)
+    val shape = FolioTheme.shapes.control
     val primary = MaterialTheme.colorScheme.primary
     Column(
         modifier = modifier
             .heightIn(min = 68.dp)
+            .background(if (selected) FolioTheme.colors.tonal.copy(alpha = 0.6f) else FolioTheme.colors.folio, shape)
             .border(
-                BorderStroke(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outline),
+                BorderStroke(if (selected) 2.dp else 1.dp, if (selected) primary else MaterialTheme.colorScheme.outlineVariant),
                 shape
             )
+            .clip(shape)
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

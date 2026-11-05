@@ -39,6 +39,16 @@ import com.example.mutqan.ui.navigation.OnTabReselected
 import com.example.mutqan.ui.navigation.Routes
 import com.example.mutqan.ui.progress.ProgressViewModel
 import com.example.mutqan.ui.progress.ProgressViewModelFactory
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Psychology
+import androidx.compose.ui.text.font.FontWeight
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.components.PageStrip
+import com.example.mutqan.ui.theme.FolioTheme
 
 private const val TOTAL_PAGES = 604
 
@@ -76,50 +86,52 @@ fun InsightsScreen(
             if (state.coveredPages > 0) {
                 ProgressLead(covered = state.coveredPages, onClick = onOpenProgress)
             } else {
-                HubRow(stringResource(R.string.progress_title), stringResource(R.string.insights_progress_desc), onOpenProgress)
+                HubRow(stringResource(R.string.progress_title), stringResource(R.string.insights_progress_desc), onOpenProgress, icon = Icons.Rounded.Insights)
             }
-            HubRow(stringResource(R.string.brain_title), stringResource(R.string.insights_brain_desc), onOpenBrain, compact = true)
-            HubRow(stringResource(R.string.insights_log_title), stringResource(R.string.insights_journal_desc), onLogRevision, compact = true)
-            HubRow(stringResource(R.string.insights_history_title), stringResource(R.string.insights_history_desc), onOpenHistory, compact = true)
-            HubRow(stringResource(R.string.coverage_title), stringResource(R.string.insights_coverage_desc), onOpenCoverage, compact = true)
-            HubRow(stringResource(R.string.plan_title), stringResource(R.string.insights_plan_desc), onOpenPlan, compact = true)
+            HubRow(stringResource(R.string.brain_title), stringResource(R.string.insights_brain_desc), onOpenBrain, compact = true, icon = Icons.Rounded.Psychology)
+            HubRow(stringResource(R.string.insights_log_title), stringResource(R.string.insights_journal_desc), onLogRevision, compact = true, icon = Icons.Rounded.EditNote)
+            HubRow(stringResource(R.string.insights_history_title), stringResource(R.string.insights_history_desc), onOpenHistory, compact = true, icon = Icons.Rounded.History)
+            HubRow(stringResource(R.string.coverage_title), stringResource(R.string.insights_coverage_desc), onOpenCoverage, compact = true, icon = Icons.Rounded.DoneAll)
+            HubRow(stringResource(R.string.plan_title), stringResource(R.string.insights_plan_desc), onOpenPlan, compact = true, icon = Icons.Rounded.CalendarMonth)
         }
     }
 }
 
-/** The first thing on the page: how much is memorised, in display type, over a bar of how much is left. */
+/** The first thing on the page: how much is memorised, in display type on the deep card, over a bar of how much is left. */
 @Composable
 private fun ProgressLead(covered: Int, onClick: () -> Unit) {
-    Column {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = PaperSpace.Gutter, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            SectionLabel(stringResource(R.string.progress_title))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.progress_coverage_value, covered, TOTAL_PAGES),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            PaperProgress(fraction = covered.toFloat() / TOTAL_PAGES, modifier = Modifier.padding(vertical = 4.dp))
+    val accent = FolioTheme.colors.heroAccent
+    HeroCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp),
+        onClick = onClick
+    ) {
+        Text(
+            text = stringResource(R.string.progress_title),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = accent
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = stringResource(R.string.insights_progress_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = stringResource(R.string.progress_coverage_value, covered, TOTAL_PAGES),
+                style = MaterialTheme.typography.displaySmall,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(24.dp)
             )
         }
-        Hairline(Modifier.padding(horizontal = PaperSpace.Gutter))
+        PageStrip(
+            fraction = covered.toFloat() / TOTAL_PAGES,
+            track = accent.copy(alpha = 0.25f),
+            color = accent,
+            modifier = Modifier.padding(vertical = 10.dp)
+        )
+        Text(
+            text = stringResource(R.string.insights_progress_desc),
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }

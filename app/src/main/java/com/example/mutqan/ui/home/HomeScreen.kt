@@ -80,6 +80,20 @@ import com.example.mutqan.ui.navigation.OnTabReselected
 import com.example.mutqan.ui.navigation.Routes
 import com.example.mutqan.ui.components.AyahText
 import com.example.mutqan.ui.components.LocalDockInset
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.ui.text.font.FontWeight
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.components.FolioDivider
+import com.example.mutqan.ui.components.FolioGroup
+import com.example.mutqan.ui.components.HeroButton
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.components.PageStrip
+import com.example.mutqan.ui.components.PrimaryButton
+import com.example.mutqan.ui.components.TonalButton
+import com.example.mutqan.ui.theme.FolioTheme
 
 private const val LATER_PREVIEW = 3
 
@@ -158,6 +172,8 @@ fun HomeScreen(
         context, now, DateUtils.FORMAT_SHOW_WEEKDAY or DateUtils.FORMAT_SHOW_DATE
     )
 
+    val accent = FolioTheme.colors.heroAccent
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -179,9 +195,10 @@ fun HomeScreen(
             state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(
-                start = PaperSpace.Gutter, top = PaperSpace.Section, end = PaperSpace.Gutter,
+                start = PaperSpace.Gutter, top = 8.dp, end = PaperSpace.Gutter,
                 bottom = PaperSpace.Section + LocalDockInset.current
-            )
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             val plan = state.plan
             val today = state.today
@@ -206,82 +223,60 @@ fun HomeScreen(
                     val first = today.due.firstOrNull()
                     val total = today.due.size + today.done.size
                     item {
-                        if (total > 0) {
-                            Text(
-                                text = stringResource(R.string.home_progress_today, today.done.size, total),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            PaperProgress(
-                                fraction = today.done.size.toFloat() / total,
-                                modifier = Modifier.padding(top = 8.dp, bottom = PaperSpace.Section)
-                            )
-                        }
                         if (first != null) {
-                            SectionLabel(stringResource(R.string.home_due_title))
-                            Text(
-                                text = first.label(),
-                                style = MaterialTheme.typography.displayLarge,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            if (first.unit != PlanUnit.PAGE) {
+                            // The one deep card of the screen: what is due now, how far the day is, and the button that starts it.
+                            HeroCard(modifier = Modifier.fillMaxWidth()) {
+                                if (total > 0) {
+                                    Text(
+                                        text = stringResource(R.string.home_progress_today, today.done.size, total),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = accent
+                                    )
+                                    PageStrip(
+                                        fraction = today.done.size.toFloat() / total,
+                                        track = accent.copy(alpha = 0.25f),
+                                        color = accent,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 18.dp)
+                                    )
+                                }
                                 Text(
-                                    text = stringResource(R.string.pages_range, first.startPage, first.endPage),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = stringResource(R.string.home_due_title),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                    color = accent
                                 )
-                            }
-                            first.tier?.let { tier ->
                                 Text(
-                                    text = tier.hint(),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.tertiary
+                                    text = first.label(),
+                                    style = MaterialTheme.typography.displayMedium
                                 )
-                            }
-                            if (today.due.size > 1) {
-                                PaperButton(
-                                    text = stringResource(R.string.home_btn_start_review, today.due.size),
-                                    onClick = { sessionOpen = true },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp)
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(top = if (today.due.size > 1) 12.dp else 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                if (today.due.size > 1) PaperOutlinedButton(
-                                    text = stringResource(R.string.home_btn_revised),
-                                    onClick = { logging = first },
-                                    modifier = Modifier.weight(1f)
-                                ) else PaperButton(
-                                    text = stringResource(R.string.home_btn_revised),
-                                    onClick = { logging = first },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                PaperOutlinedButton(
-                                    text = stringResource(R.string.home_btn_open_mushaf),
-                                    onClick = { onOpenMushaf(first.startPage) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            val reviewPages = today.due.flatMap { it.startPage..it.endPage }
-                            FlowRow(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                PaperLink(
-                                    text = stringResource(R.string.audio_listen_review),
-                                    onClick = {
-                                        askForNotifications()
-                                        scope.launch { recitation.playPages(reviewPages) }
-                                    },
-                                    soft = true
-                                )
-                                PaperLink(
-                                    text = stringResource(R.string.audio_download_review),
-                                    onClick = {
-                                        askForNotifications()
-                                        scope.launch { recitation.downloadPages(reviewPages) }
-                                    },
-                                    soft = true
-                                )
+                                if (first.unit != PlanUnit.PAGE) {
+                                    Text(
+                                        text = stringResource(R.string.pages_range, first.startPage, first.endPage),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                first.tier?.let { tier ->
+                                    Text(
+                                        text = tier.hint(),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = accent
+                                    )
+                                }
+                                Spacer(Modifier.height(20.dp))
+                                if (today.due.size > 1) {
+                                    HeroButton(
+                                        text = stringResource(R.string.home_btn_start_review, today.due.size),
+                                        onClick = { sessionOpen = true },
+                                        icon = Icons.Rounded.PlayArrow,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    HeroButton(
+                                        text = stringResource(R.string.home_btn_revised),
+                                        onClick = { logging = first },
+                                        icon = Icons.Default.Check,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         } else {
                             val status = when {
@@ -289,38 +284,87 @@ fun HomeScreen(
                                 today.isRestDay -> R.string.home_rest_day
                                 else -> R.string.home_all_done
                             }
-                            Text(
-                                text = stringResource(status),
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                            HeroCard(modifier = Modifier.fillMaxWidth()) {
+                                if (total > 0) {
+                                    Text(
+                                        text = stringResource(R.string.home_progress_today, today.done.size, total),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = accent
+                                    )
+                                    PageStrip(
+                                        fraction = today.done.size.toFloat() / total,
+                                        track = accent.copy(alpha = 0.25f),
+                                        color = accent,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 14.dp)
+                                    )
+                                }
+                                Text(text = stringResource(status), style = MaterialTheme.typography.headlineMedium)
+                            }
+                        }
+                    }
+                    if (first != null) {
+                        item {
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    if (today.due.size > 1) TonalButton(
+                                        text = stringResource(R.string.home_btn_revised),
+                                        onClick = { logging = first },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TonalButton(
+                                        text = stringResource(R.string.home_btn_open_mushaf),
+                                        onClick = { onOpenMushaf(first.startPage) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                val reviewPages = today.due.flatMap { it.startPage..it.endPage }
+                                FlowRow(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    PaperLink(
+                                        text = stringResource(R.string.audio_listen_review),
+                                        onClick = {
+                                            askForNotifications()
+                                            scope.launch { recitation.playPages(reviewPages) }
+                                        },
+                                        soft = true
+                                    )
+                                    PaperLink(
+                                        text = stringResource(R.string.audio_download_review),
+                                        onClick = {
+                                            askForNotifications()
+                                            scope.launch { recitation.downloadPages(reviewPages) }
+                                        },
+                                        soft = true
+                                    )
+                                }
+                            }
                         }
                     }
                     if (today.due.size > 1) {
                         item {
-                            Spacer(Modifier.height(PaperSpace.Section))
-                            SectionLabel(stringResource(R.string.home_later_title))
-                            Spacer(Modifier.height(4.dp))
-                            Hairline()
-                        }
-                        val later = today.due.drop(1)
-                        val shown = if (laterExpanded) later else later.take(LATER_PREVIEW)
-                        items(shown, key = { "due-${it.unit}-${it.number}" }) { portion ->
-                            PortionRow(portion, done = false, onOpen = { onOpenMushaf(portion.startPage) }, onLog = { logging = portion })
-                        }
-                        if (later.size > LATER_PREVIEW) item {
-                            PaperLink(
-                                text = if (laterExpanded) stringResource(R.string.home_show_less)
-                                else stringResource(R.string.home_later_more, later.size - LATER_PREVIEW),
-                                onClick = { laterExpanded = !laterExpanded },
-                                soft = true,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
+                            val later = today.due.drop(1)
+                            val shown = if (laterExpanded) later else later.take(LATER_PREVIEW)
+                            Column {
+                                SectionLabel(stringResource(R.string.home_later_title), Modifier.padding(bottom = 10.dp))
+                                FolioGroup(Modifier.fillMaxWidth()) {
+                                    shown.forEachIndexed { index, portion ->
+                                        if (index > 0) FolioDivider(inset = 16.dp)
+                                        PortionRow(portion, done = false, onOpen = { onOpenMushaf(portion.startPage) }, onLog = { logging = portion })
+                                    }
+                                }
+                                if (later.size > LATER_PREVIEW) {
+                                    PaperLink(
+                                        text = if (laterExpanded) stringResource(R.string.home_show_less)
+                                        else stringResource(R.string.home_later_more, later.size - LATER_PREVIEW),
+                                        onClick = { laterExpanded = !laterExpanded },
+                                        soft = true,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                     if (today.done.isNotEmpty() && !doneExpanded) {
                         item {
-                            Spacer(Modifier.height(PaperSpace.Section))
                             PaperLink(
                                 text = stringResource(R.string.home_done_show, today.done.size),
                                 onClick = { doneExpanded = true },
@@ -330,21 +374,21 @@ fun HomeScreen(
                     }
                     if (today.done.isNotEmpty() && doneExpanded) {
                         item {
-                            Spacer(Modifier.height(PaperSpace.Section))
-                            SectionLabel(stringResource(R.string.home_done_title))
-                            Spacer(Modifier.height(4.dp))
-                            Hairline()
-                        }
-                        items(today.done, key = { "done-${it.unit}-${it.number}" }) { portion ->
-                            PortionRow(portion, done = true, onOpen = { onOpenMushaf(portion.startPage) }, onLog = {})
-                        }
-                        item {
-                            PaperLink(
-                                text = stringResource(R.string.home_show_less),
-                                onClick = { doneExpanded = false },
-                                soft = true,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
+                            Column {
+                                SectionLabel(stringResource(R.string.home_done_title), Modifier.padding(bottom = 10.dp))
+                                FolioGroup(Modifier.fillMaxWidth()) {
+                                    today.done.forEachIndexed { index, portion ->
+                                        if (index > 0) FolioDivider(inset = 16.dp)
+                                        PortionRow(portion, done = true, onOpen = { onOpenMushaf(portion.startPage) }, onLog = {})
+                                    }
+                                }
+                                PaperLink(
+                                    text = stringResource(R.string.home_show_less),
+                                    onClick = { doneExpanded = false },
+                                    soft = true,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -352,10 +396,7 @@ fun HomeScreen(
 
             if (state.weak.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(PaperSpace.Section))
-                    Hairline()
-                    Spacer(Modifier.height(20.dp))
-                    SectionLabel(stringResource(R.string.home_weak_title))
+                    SectionLabel(stringResource(R.string.home_weak_title), Modifier.padding(top = 10.dp))
                 }
                 items(state.weak, key = { "weak-${it.passage.id}" }) { weak ->
                     WeakQuote(
@@ -368,41 +409,35 @@ fun HomeScreen(
 
             if (state.missed.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(PaperSpace.Section))
-                    Hairline()
-                    Spacer(Modifier.height(20.dp))
-                    SectionLabel(stringResource(R.string.home_missed_title))
-                    Spacer(Modifier.height(4.dp))
-                    Hairline()
-                }
-                items(state.missed, key = { "missed-${it.page}" }) { missed ->
                     Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(role = Role.Button, onClick = { onOpenMushaf(missed.page) })
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = pluralStringResource(R.plurals.home_missed_line, missed.count, missed.page, missed.count),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.weight(1f)
-                            )
-                            PaperSmallButton(stringResource(R.string.home_btn_open), onClick = { onOpenMushaf(missed.page) })
+                        SectionLabel(stringResource(R.string.home_missed_title), Modifier.padding(top = 10.dp, bottom = 10.dp))
+                        FolioGroup(Modifier.fillMaxWidth()) {
+                            state.missed.forEachIndexed { index, missed ->
+                                if (index > 0) FolioDivider(inset = 16.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(role = Role.Button, onClick = { onOpenMushaf(missed.page) })
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = pluralStringResource(R.plurals.home_missed_line, missed.count, missed.page, missed.count),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    PaperSmallButton(stringResource(R.string.home_btn_open), onClick = { onOpenMushaf(missed.page) })
+                                }
+                            }
                         }
-                        Hairline()
                     }
                 }
             }
 
             if (state.hasCoverage && plan != null && today != null) {
                 item {
-                    Spacer(Modifier.height(PaperSpace.Section))
-                    Hairline()
-                    Spacer(Modifier.height(20.dp))
                     PlanSummary(
                         name = plan.name,
                         line = if (plan.order == PlanOrder.BY_STRENGTH) {
@@ -415,35 +450,38 @@ fun HomeScreen(
                 }
             }
 
-            // Everything else Today can lead to, set as rows with an arrow so each one reads as pressable.
+            // Everything else Today can lead to, as cards with an arrow so each one reads as pressable.
             item {
-                Spacer(Modifier.height(PaperSpace.Section))
-                Hairline()
-                state.lastPage?.let { page ->
-                    HubRow(
-                        title = stringResource(R.string.home_continue_title),
-                        subtitle = null,
-                        note = stringResource(R.string.home_continue_page, page),
-                        onClick = { onOpenMushaf(page) },
-                        horizontalPadding = 0.dp,
-                        compact = true
-                    )
-                }
-                if (state.hasCoverage) {
-                    HubRow(
-                        title = stringResource(R.string.home_btn_progress),
-                        subtitle = stringResource(R.string.home_progress_hint),
-                        onClick = onOpenProgress,
-                        horizontalPadding = 0.dp,
-                        compact = true
-                    )
-                    HubRow(
-                        title = stringResource(R.string.home_btn_log_revision),
-                        subtitle = stringResource(R.string.home_log_hint),
-                        onClick = onLogRevision,
-                        horizontalPadding = 0.dp,
-                        compact = true
-                    )
+                Column {
+                    state.lastPage?.let { page ->
+                        HubRow(
+                            title = stringResource(R.string.home_continue_title),
+                            subtitle = null,
+                            note = stringResource(R.string.home_continue_page, page),
+                            onClick = { onOpenMushaf(page) },
+                            horizontalPadding = 0.dp,
+                            compact = true,
+                            icon = Icons.Rounded.MenuBook
+                        )
+                    }
+                    if (state.hasCoverage) {
+                        HubRow(
+                            title = stringResource(R.string.home_btn_progress),
+                            subtitle = stringResource(R.string.home_progress_hint),
+                            onClick = onOpenProgress,
+                            horizontalPadding = 0.dp,
+                            compact = true,
+                            icon = Icons.Rounded.Insights
+                        )
+                        HubRow(
+                            title = stringResource(R.string.home_btn_log_revision),
+                            subtitle = stringResource(R.string.home_log_hint),
+                            onClick = onLogRevision,
+                            horizontalPadding = 0.dp,
+                            compact = true,
+                            icon = Icons.Rounded.EditNote
+                        )
+                    }
                 }
             }
         }
@@ -452,95 +490,88 @@ fun HomeScreen(
 
 @Composable
 private fun Prompt(title: String, body: String, action: String, onAction: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-        Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        PaperButton(action, onClick = onAction)
+    Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+        PrimaryButton(action, onClick = onAction, modifier = Modifier.fillMaxWidth())
     }
 }
 
-/** The plan in one block: its name, what it asks for, and a button that says it can be changed. */
+/** The plan in one card: its name, what it asks for, and a button that says it can be changed. */
 @Composable
 private fun PlanSummary(name: String, line: String, onEdit: () -> Unit) {
     Column {
-        SectionLabel(stringResource(R.string.home_plan_title))
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-                Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SectionLabel(stringResource(R.string.home_plan_title), Modifier.padding(bottom = 10.dp))
+        Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                PaperLink(stringResource(R.string.home_btn_edit_plan), onClick = onEdit)
             }
-            PaperLink(stringResource(R.string.home_btn_edit_plan), onClick = onEdit)
         }
     }
 }
 
-/** One portion as a line on the page. The line opens the Mushaf; the button beside it marks it revised. */
+/** One portion as a row. The row opens the Mushaf; the button beside it marks it revised. */
 @Composable
 private fun PortionRow(portion: PlanItem, done: Boolean, onOpen: () -> Unit, onLog: () -> Unit) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onOpen)
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (done) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = portion.label(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground
-                )
-                val sub = when {
-                    portion.tier != null -> portion.tier.hint()
-                    portion.unit != PlanUnit.PAGE -> stringResource(R.string.pages_range, portion.startPage, portion.endPage)
-                    else -> null
-                }
-                if (sub != null) {
-                    Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            if (!done) PaperSmallButton(stringResource(R.string.home_btn_log), onClick = onLog)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onOpen)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (done) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(18.dp)
+            )
         }
-        Hairline()
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = portion.label(),
+                style = MaterialTheme.typography.titleMedium,
+                color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+            )
+            val sub = when {
+                portion.tier != null -> portion.tier.hint()
+                portion.unit != PlanUnit.PAGE -> stringResource(R.string.pages_range, portion.startPage, portion.endPage)
+                else -> null
+            }
+            if (sub != null) {
+                Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (!done) PaperSmallButton(stringResource(R.string.home_btn_log), onClick = onLog)
     }
 }
 
-/** A weak passage set like a quotation: a rule down the leading edge, the reference, then the text. */
+/** A weak passage on its own card: the reference, then the text, then what to do with it. */
 @Composable
 private fun WeakQuote(weak: WeakSuggestion, onOpen: () -> Unit, onDismiss: () -> Unit) {
-    val rule = MaterialTheme.colorScheme.tertiary
-    val direction = LocalLayoutDirection.current
-    Column(
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .drawBehind {
-                val x = if (direction == LayoutDirection.Rtl) size.width else 0f
-                drawLine(rule, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
-            }
-            .padding(start = 14.dp, end = 14.dp)
-    ) {
+    Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
         Text(
             text = stringResource(R.string.saved_ref, SurahData.nameOf(weak.surah), weak.ayah),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
         AyahText(ayahId = weak.ayahId, size = 26.sp, firstWords = 10, maxLines = 3)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             PaperLink(stringResource(R.string.home_btn_open), onClick = onOpen)
             PaperLink(stringResource(R.string.home_weak_dismiss), onClick = onDismiss, soft = true)
         }

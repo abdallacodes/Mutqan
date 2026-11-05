@@ -61,6 +61,25 @@ import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.components.LocalDockInset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.Compare
+import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.VerticalAlignTop
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.mutqan.ui.components.ActionTile
+import com.example.mutqan.ui.components.HeroButton
+import com.example.mutqan.ui.components.HeroCard
+import com.example.mutqan.ui.components.StarMedallion
+import com.example.mutqan.ui.theme.FolioTheme
 
 private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 
@@ -141,26 +160,26 @@ fun PracticeScreen(
             TileGroup(
                 label = stringResource(R.string.practice_group_questions),
                 tiles = listOf(
-                    PracticeTile(R.string.ex_ending_title, R.string.ex_ending_desc) { onOpenQuiz(QuizMode.ENDING) },
-                    PracticeTile(R.string.ex_next_title, R.string.ex_next_desc) { onOpenQuiz(QuizMode.NEXT) },
-                    PracticeTile(R.string.ex_finish_title, R.string.ex_finish_desc) { onOpenQuiz(QuizMode.FINISH) },
-                    PracticeTile(R.string.ex_order_title, R.string.ex_order_desc) { onOpenQuiz(QuizMode.ORDER) }
+                    PracticeTile(Icons.Rounded.Flag, R.string.ex_ending_title, R.string.ex_ending_desc) { onOpenQuiz(QuizMode.ENDING) },
+                    PracticeTile(Icons.Rounded.SkipNext, R.string.ex_next_title, R.string.ex_next_desc) { onOpenQuiz(QuizMode.NEXT) },
+                    PracticeTile(Icons.Rounded.Edit, R.string.ex_finish_title, R.string.ex_finish_desc) { onOpenQuiz(QuizMode.FINISH) },
+                    PracticeTile(Icons.Rounded.SwapVert, R.string.ex_order_title, R.string.ex_order_desc) { onOpenQuiz(QuizMode.ORDER) }
                 )
             )
             TileGroup(
                 label = stringResource(R.string.practice_group_place),
                 tiles = listOf(
-                    PracticeTile(R.string.ex_where_title, R.string.ex_where_desc) { onOpenQuiz(QuizMode.WHERE) },
-                    PracticeTile(R.string.ex_boundaries_title, R.string.ex_boundaries_desc, if (week > 0) stringResource(R.string.ex_this_week, week) else null, onOpenBoundaries),
-                    PracticeTile(R.string.ex_edges_title, R.string.ex_edges_desc, null, onOpenPageEdges),
-                    PracticeTile(R.string.ex_random_title, R.string.ex_random_desc, null, onRandomVerse)
+                    PracticeTile(Icons.Rounded.Place, R.string.ex_where_title, R.string.ex_where_desc) { onOpenQuiz(QuizMode.WHERE) },
+                    PracticeTile(Icons.Rounded.VerticalAlignTop, R.string.ex_boundaries_title, R.string.ex_boundaries_desc, if (week > 0) stringResource(R.string.ex_this_week, week) else null, onOpenBoundaries),
+                    PracticeTile(Icons.Rounded.Crop, R.string.ex_edges_title, R.string.ex_edges_desc, null, onOpenPageEdges),
+                    PracticeTile(Icons.Rounded.Shuffle, R.string.ex_random_title, R.string.ex_random_desc, null, onRandomVerse)
                 )
             )
             TileGroup(
                 label = stringResource(R.string.practice_group_similar),
                 tiles = listOf(
-                    PracticeTile(R.string.ex_similarity_title, R.string.ex_similarity_desc, null, onSimilarityTest),
-                    PracticeTile(R.string.vault_title, R.string.ex_vault_desc, null, onOpenVault)
+                    PracticeTile(Icons.Rounded.Compare, R.string.ex_similarity_title, R.string.ex_similarity_desc, null, onSimilarityTest),
+                    PracticeTile(Icons.Rounded.Bookmarks, R.string.vault_title, R.string.ex_vault_desc, null, onOpenVault)
                 )
             )
             Spacer(Modifier.height(24.dp))
@@ -179,81 +198,65 @@ fun PracticeScreen(
 
 /** One exercise in a group: a name, a line about it, and optionally a small note (what was done this week). */
 private class PracticeTile(
+    val icon: ImageVector,
     @StringRes val title: Int,
     @StringRes val desc: Int,
     val note: String? = null,
     val onClick: () -> Unit
 )
 
-/** What to do first: the daily set, named, described, with a button that starts it. */
+/** What to do first: the daily set on the screen's one deep card, with a gold button that starts it. */
 @Composable
 private fun DailyHero(note: String?, onStart: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.practice_daily_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = stringResource(R.string.practice_daily_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(8.dp))
-        PaperButton(text = stringResource(R.string.practice_start), onClick = onStart, modifier = Modifier.fillMaxWidth())
+    HeroCard(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            StarMedallion(text = "10", onHero = true)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.practice_daily_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    text = stringResource(R.string.practice_daily_desc),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        HeroButton(text = stringResource(R.string.practice_start), onClick = onStart, icon = Icons.Rounded.PlayArrow, modifier = Modifier.fillMaxWidth())
         if (note != null) {
-            Text(text = note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
+            Text(
+                text = note,
+                style = MaterialTheme.typography.labelMedium,
+                color = FolioTheme.colors.heroAccent,
+                modifier = Modifier.padding(top = 10.dp)
+            )
         }
     }
-    Hairline(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter))
 }
 
-/** A named group of exercises set two to a row, ruled like a table. */
+/** A named group of exercises, two tiles to a row: each a raised card with an icon, so it reads as something to press. */
 @Composable
 private fun TileGroup(label: String, tiles: List<PracticeTile>) {
-    SectionLabel(label, Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 24.dp, bottom = 8.dp))
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
-        Hairline(Modifier.fillMaxWidth())
-        tiles.chunked(2).forEach { pair ->
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                TileCell(pair[0], first = true, modifier = Modifier.weight(1f).fillMaxHeight())
-                Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outline))
-                if (pair.size > 1) {
-                    TileCell(pair[1], first = false, modifier = Modifier.weight(1f).fillMaxHeight())
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-            }
-            Hairline(Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-private fun TileCell(tile: PracticeTile, first: Boolean, modifier: Modifier = Modifier) {
+    SectionLabel(label, Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 24.dp, bottom = 10.dp))
     Column(
-        modifier = modifier
-            .clickable(role = Role.Button, onClick = tile.onClick)
-            .padding(start = if (first) 0.dp else 16.dp, end = if (first) 16.dp else 0.dp, top = 14.dp, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = stringResource(tile.title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = stringResource(tile.desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (tile.note != null) {
-            Text(text = tile.note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
+        tiles.chunked(2).forEach { pair ->
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                pair.forEach { tile ->
+                    ActionTile(
+                        icon = tile.icon,
+                        title = stringResource(tile.title),
+                        onClick = tile.onClick,
+                        description = stringResource(tile.desc),
+                        note = tile.note,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
         }
     }
 }

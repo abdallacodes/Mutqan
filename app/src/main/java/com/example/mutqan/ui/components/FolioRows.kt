@@ -37,7 +37,8 @@ fun ActionTile(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    description: String? = null
+    description: String? = null,
+    note: String? = null
 ) {
     Folio(modifier = modifier, onClick = onClick, contentPadding = PaddingValues(16.dp)) {
         IconMedallion(icon)
@@ -52,9 +53,12 @@ fun ActionTile(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+        if (note != null) {
+            Text(text = note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
         }
     }
 }
