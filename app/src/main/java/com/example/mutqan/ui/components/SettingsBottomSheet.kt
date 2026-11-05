@@ -82,6 +82,8 @@ import com.example.mutqan.R
 import com.example.mutqan.data.ThemeKey
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.quran.DownloadState
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Theme choices: follow the system, or Paper in its light or dark version ──────
 
@@ -217,12 +219,7 @@ fun SettingsBottomSheet(
             Spacer(Modifier.height(12.dp))
             PalettePicker(selected = palette, dark = darkNow, onSelect = themeViewModel::setPalette)
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider(
-                color     = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp
-            )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(28.dp))
 
             // ── Language section ─────────────────────────────────────────────
             SectionLabel(stringResource(R.string.settings_language))
@@ -242,21 +239,12 @@ fun SettingsBottomSheet(
                 onDismiss   = onDismiss
             )
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider(
-                color     = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp
-            )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(28.dp))
 
             // ── Account ────────────────────────────────────────────────────
             if (remember { com.example.mutqan.domain.sync.CloudSync.get(context).isConfigured }) {
                 AccountSection()
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 20.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 0.5.dp
-                )
+                Spacer(Modifier.height(28.dp))
             }
 
             // ── Backup section ─────────────────────────────────────────────
@@ -265,37 +253,43 @@ fun SettingsBottomSheet(
 
             val downloadState by viewModel.downloadState.collectAsState()
 
-            DataActionRow(
-                label = stringResource(R.string.coverage_title),
-                icon = Icons.Default.TaskAlt,
-                onClick = onOpenCoverage
-            )
+            FolioGroup(Modifier.fillMaxWidth()) {
+                DataActionRow(
+                    label = stringResource(R.string.coverage_title),
+                    icon = Icons.Default.TaskAlt,
+                    onClick = onOpenCoverage
+                )
+                FolioDivider(inset = ActionRowInset)
 
-            DataActionRow(
-                label = stringResource(R.string.saved_title),
-                icon = Icons.Default.Bookmarks,
-                onClick = onOpenSaved
-            )
+                DataActionRow(
+                    label = stringResource(R.string.saved_title),
+                    icon = Icons.Default.Bookmarks,
+                    onClick = onOpenSaved
+                )
+                FolioDivider(inset = ActionRowInset)
 
-            DownloadActionRow(
-                state = downloadState,
-                onClick = { viewModel.startMushafDownload() }
-            )
+                DownloadActionRow(
+                    state = downloadState,
+                    onClick = { viewModel.startMushafDownload() }
+                )
+                FolioDivider(inset = ActionRowInset)
 
-            DataActionRow(
-                label = stringResource(R.string.btn_backup),
-                icon = Icons.Default.Backup,
-                onClick = { showExportDialog = true }
-            )
+                DataActionRow(
+                    label = stringResource(R.string.btn_backup),
+                    icon = Icons.Default.Backup,
+                    onClick = { showExportDialog = true }
+                )
+                FolioDivider(inset = ActionRowInset)
 
-            DataActionRow(
-                label = stringResource(R.string.btn_restore),
-                icon = Icons.Default.Restore,
-                // Restoring replaces everything on the device, so the current data is saved first.
-                onClick = {
-                    backupGate.require { importLauncher.launch(arrayOf("application/json")) }
-                }
-            )
+                DataActionRow(
+                    label = stringResource(R.string.btn_restore),
+                    icon = Icons.Default.Restore,
+                    // Restoring replaces everything on the device, so the current data is saved first.
+                    onClick = {
+                        backupGate.require { importLauncher.launch(arrayOf("application/json")) }
+                    }
+                )
+            }
 
             // ── Privacy ────────────────────────────────────────────────────
             Spacer(Modifier.height(20.dp))
@@ -309,40 +303,45 @@ fun SettingsBottomSheet(
                 if (on && !secure) Toast.makeText(context, noScreenLock, Toast.LENGTH_LONG).show()
                 else viewModel.setAppLock(on)
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .toggleable(value = appLock, role = Role.Switch, onValueChange = setAppLock)
-                    .padding(vertical = 8.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_app_lock), style = MaterialTheme.typography.bodyMedium)
+            FolioGroup(Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(value = appLock, role = Role.Switch, onValueChange = setAppLock)
+                        .heightIn(min = 64.dp)
+                        .padding(vertical = 10.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconMedallion(Icons.Default.Lock, size = 36.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_app_lock), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            stringResource(R.string.settings_app_lock_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    PaperSwitch(checked = appLock, onCheckedChange = null)
+                }
+                FolioDivider(inset = ActionRowInset)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDeleteDialog = true }
+                        .heightIn(min = 56.dp)
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).padding(start = 0.dp))
+                    Spacer(Modifier.width(28.dp))
                     Text(
-                        stringResource(R.string.settings_app_lock_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        stringResource(R.string.delete_all_row),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
-                PaperSwitch(checked = appLock, onCheckedChange = null)
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDeleteDialog = true }
-                    .padding(vertical = 14.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.delete_all_row),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
             }
 
             // ── About ──────────────────────────────────────────────────────
@@ -493,16 +492,12 @@ private fun DownloadActionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = state is DownloadState.Idle || state is DownloadState.Failed, onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 4.dp),
+            .heightIn(min = 64.dp)
+            .padding(vertical = 10.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Default.CloudDownload,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(12.dp))
+        IconMedallion(Icons.Default.CloudDownload, size = 36.dp)
+        Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.btn_download_mushaf),
@@ -574,22 +569,23 @@ internal fun DataActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 4.dp),
+            .clickable(role = Role.Button, onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(vertical = 10.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(12.dp))
+        IconMedallion(icon, size = 36.dp)
+        Spacer(Modifier.width(16.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -603,12 +599,14 @@ private fun ThemeChoice(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val border = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    val border = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val shape = FolioTheme.shapes.control
     Box(
         modifier = modifier
             .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .border(if (isSelected) 2.dp else 1.dp, border, RoundedCornerShape(4.dp))
+            .background(if (isSelected) FolioTheme.colors.tonal.copy(alpha = 0.6f) else FolioTheme.colors.folio, shape)
+            .clip(shape)
+            .border(if (isSelected) 2.dp else 1.dp, border, shape)
             .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

@@ -52,6 +52,9 @@ import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.animateDpAsState
+import com.example.mutqan.ui.components.StarMedallion
+import com.example.mutqan.ui.theme.FolioTheme
 
 /** One page of the introduction: what the app does here, and where in the app to find it. */
 private data class OnboardingSlide(
@@ -204,11 +207,15 @@ private fun SlidesStep(pagerState: PagerState, onSkip: () -> Unit, onAdvance: ()
         ) {
             repeat(featureSlides.size) { index ->
                 val on = pagerState.currentPage == index
+                val width by animateDpAsState(if (on) 28.dp else 8.dp, label = "dotWidth")
                 Box(
                     modifier = Modifier
-                        .width(if (on) 28.dp else 14.dp)
-                        .height(if (on) 3.dp else 2.dp)
-                        .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                        .width(width)
+                        .height(8.dp)
+                        .background(
+                            if (on) MaterialTheme.colorScheme.primary else FolioTheme.colors.tonal,
+                            FolioTheme.shapes.pill
+                        )
                 )
             }
         }
@@ -230,12 +237,8 @@ private fun Slide(slide: OnboardingSlide, number: Int) {
             .padding(horizontal = PaperSpace.Gutter),
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "۝ $number",
-            style = TextStyle(fontFamily = AmiriFontFamily, fontSize = 48.sp, lineHeight = 60.sp),
-            color = MaterialTheme.colorScheme.tertiary
-        )
-        Spacer(Modifier.height(12.dp))
+        StarMedallion(text = number.toString(), size = 72.dp)
+        Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(slide.titleRes),
             style = MaterialTheme.typography.displaySmall,

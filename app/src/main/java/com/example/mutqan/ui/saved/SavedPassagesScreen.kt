@@ -50,6 +50,8 @@ import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.AyahText
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.mutqan.ui.components.Folio
 
 /** Every bookmark and weak passage the user saved, filterable by type and tag. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -168,8 +170,11 @@ private fun SavedCard(
     val passage = item.passage
     val solid = passage.isResolved
     val tags = passage.tags.map { it.localizedLabel() }
-    Column(modifier = Modifier.fillMaxWidth().alpha(if (solid) 0.6f else 1f)) {
-        Column(modifier = Modifier.padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Folio(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp).alpha(if (solid) 0.6f else 1f),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = referenceOf(item),
@@ -211,7 +216,6 @@ private fun SavedCard(
                 }
             }
         }
-        Hairline(Modifier.fillMaxWidth())
     }
 }
 
