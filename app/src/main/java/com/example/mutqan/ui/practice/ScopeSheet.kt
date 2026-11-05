@@ -84,6 +84,7 @@ private fun tierLabel(tier: PlanTier): Int = when (tier) {
     PlanTier.STRONG -> R.string.practice_scope_strong
 }
 
+@Composable
 private fun tierColor(tier: PlanTier): Color = when (tier) {
     PlanTier.WEAK -> DifficultyCritical
     PlanTier.FAIR -> DifficultyStruggled

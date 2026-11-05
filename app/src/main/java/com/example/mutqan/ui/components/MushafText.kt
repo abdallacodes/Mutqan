@@ -13,6 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -23,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import com.example.mutqan.R
 import com.example.mutqan.quran.MushafFontManager
 import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranRepository
@@ -88,9 +93,20 @@ fun MushafText(
         }
     }
 
+    // The page fonts draw each word from a private glyph code; a screen reader gets the words themselves.
+    val blank = stringResource(R.string.cd_verse_blank)
+    val spoken = remember(span, blank) {
+        span.pieces.joinToString(" ") { piece ->
+            when (piece) {
+                is SpanPiece.Word -> piece.word.hafs.toPlainQuran()
+                is SpanPiece.Mark -> if (piece.text == MushafSpan.BLANK) blank else piece.text
+            }
+        }
+    }
+
     Text(
         text = text,
-        modifier = modifier,
+        modifier = modifier.clearAndSetSemantics { this.text = AnnotatedString(spoken) },
         color = color,
         maxLines = maxLines,
         overflow = if (maxLines == Int.MAX_VALUE) TextOverflow.Clip else TextOverflow.Ellipsis,

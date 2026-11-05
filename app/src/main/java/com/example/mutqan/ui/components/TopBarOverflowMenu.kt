@@ -22,7 +22,8 @@ import com.example.mutqan.R
 
 /**
  * WhatsApp-style overflow menu (three dots) for TopAppBars.
- * Centralises access to Help, Settings, and future context-aware actions.
+ * Centralises access to Help, Settings, and future context-aware actions. With nothing but Settings to offer it is
+ * just the Settings button: a menu of one item is a tap wasted.
  */
 @Composable
 fun TopBarOverflowMenu(
@@ -30,6 +31,17 @@ fun TopBarOverflowMenu(
     onSettingsClick: () -> Unit,
     extraItems: (@Composable (dismissMenu: () -> Unit) -> Unit)? = null
 ) {
+    if (onHelpClick == null && extraItems == null) {
+        IconButton(onClick = onSettingsClick) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = stringResource(R.string.settings),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        return
+    }
+
     var expanded by remember { mutableStateOf(false) }
     val dismissMenu = { expanded = false }
 

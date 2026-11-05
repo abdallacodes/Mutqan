@@ -1,5 +1,11 @@
 package com.example.mutqan.ui.components
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
 import com.example.mutqan.domain.BackupCrypto
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +40,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -137,10 +144,12 @@ fun SettingsBottomSheet(
         containerColor    = MaterialTheme.colorScheme.surface,
         shape             = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = {
+            val handleLabel = stringResource(R.string.cd_drag_handle)
             Box(
                 modifier         = Modifier
                     .padding(top = 12.dp, bottom = 4.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .semantics { contentDescription = handleLabel },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -179,7 +188,7 @@ fun SettingsBottomSheet(
             Spacer(Modifier.height(12.dp))
 
             Row(
-                modifier              = Modifier.fillMaxWidth(),
+                modifier              = Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 themeChoices.forEach { (key, labelRes) ->
@@ -295,8 +304,16 @@ fun SettingsBottomSheet(
 
             val appLock by viewModel.appLockEnabled.collectAsState()
             val noScreenLock = stringResource(R.string.lock_needs_screen_lock)
+            val setAppLock: (Boolean) -> Unit = { on ->
+                val secure = context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+                if (on && !secure) Toast.makeText(context, noScreenLock, Toast.LENGTH_LONG).show()
+                else viewModel.setAppLock(on)
+            }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = appLock, role = Role.Switch, onValueChange = setAppLock)
+                    .padding(vertical = 8.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -309,14 +326,7 @@ fun SettingsBottomSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                PaperSwitch(
-                    checked = appLock,
-                    onCheckedChange = { on ->
-                        val secure = context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
-                        if (on && !secure) Toast.makeText(context, noScreenLock, Toast.LENGTH_LONG).show()
-                        else viewModel.setAppLock(on)
-                    }
-                )
+                PaperSwitch(checked = appLock, onCheckedChange = null)
             }
 
             Row(
@@ -351,19 +361,19 @@ fun SettingsBottomSheet(
                 text = stringResource(R.string.how_link),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth().clickable { onOpenHowItWorks() }.padding(horizontal = 4.dp, vertical = 10.dp)
+                modifier = Modifier.fillMaxWidth().clickable { onOpenHowItWorks() }.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.feedback_link),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth().clickable { onOpenFeedback() }.padding(horizontal = 4.dp, vertical = 10.dp)
+                modifier = Modifier.fillMaxWidth().clickable { onOpenFeedback() }.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.audio_storage_link),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth().clickable { onOpenAudioStorage() }.padding(horizontal = 4.dp, vertical = 10.dp)
+                modifier = Modifier.fillMaxWidth().clickable { onOpenAudioStorage() }.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.settings_about_sources),
@@ -504,12 +514,7 @@ private fun DownloadActionRow(
                 is DownloadState.Idle -> {
                     if (state.current > 0) {
                         Text(
-                            text = stringResource(
-                                R.string.downloading_mushaf,
-                                state.current,
-                                state.total,
-                                (state.progress * 100).toInt()
-                            ),
+                            text = stringResource(R.string.mushaf_download_partial, state.current, state.total),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -601,10 +606,10 @@ private fun ThemeChoice(
     val border = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     Box(
         modifier = modifier
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(4.dp))
             .border(if (isSelected) 2.dp else 1.dp, border, RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick),
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -628,7 +633,7 @@ private fun LanguageSettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
+            .selectable(selected = isSelected, role = Role.RadioButton) {
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
                 onDismiss()
             }

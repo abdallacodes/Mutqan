@@ -107,7 +107,7 @@ enum class MushafLineType { AYAH, SURAH_NAME, BASMALLAH }
 /**
  * One of the (up to) 15 lines of a Mushaf page.
  * [words] holds the QPC V2 glyph of every word, first word first (right-most on screen);
- * it is empty for surah-name and basmallah lines, where [surahNameArabic] names the surah.
+ * it is empty for surah-name and basmallah lines, where [surahNameArabic] names the surah and [surahId] numbers it.
  * [wordIds] and [ayahIds] run parallel to [words]: the global word id and the global ayah id
  * (`QuranAyah.id`) of each word.
  */
@@ -118,7 +118,8 @@ data class MushafLine(
     val words: List<String>,
     val surahNameArabic: String?,
     val wordIds: List<Int> = emptyList(),
-    val ayahIds: List<Int> = emptyList()
+    val ayahIds: List<Int> = emptyList(),
+    val surahId: Int = 0
 )
 
 data class MushafPageData(val page: Int, val lines: List<MushafLine>)
@@ -346,7 +347,7 @@ class QuranRepository private constructor(context: Context) {
         pageCache.get(page)?.let { return it }
         val ayahOfWord = ayahIdsOfWordsOnPage(page)
         val lines = db.rawQuery(
-            """SELECT l.line, l.type, l.is_centered, l.first_word_id, l.last_word_id, s.name_arabic
+            """SELECT l.line, l.type, l.is_centered, l.first_word_id, l.last_word_id, s.name_arabic, l.surah
                FROM lines l LEFT JOIN surahs s ON s.id = l.surah
                WHERE l.page = ? ORDER BY l.line""",
             arrayOf(page.toString())
@@ -365,7 +366,8 @@ class QuranRepository private constructor(context: Context) {
                     words           = words.map { w -> w.second },
                     surahNameArabic = if (it.isNull(5)) null else it.getString(5),
                     wordIds         = words.map { w -> w.first },
-                    ayahIds         = words.map { w -> ayahOfWord[w.first] ?: 0 }
+                    ayahIds         = words.map { w -> ayahOfWord[w.first] ?: 0 },
+                    surahId         = if (it.isNull(6)) 0 else it.getInt(6)
                 )
             }
         }

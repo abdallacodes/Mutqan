@@ -91,7 +91,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
     }
 
     Scaffold(
-        topBar = { PaperHeader(title = title, subtitle = subtitle, onBack = onBack) },
+        topBar = { PaperHeader(title = title, subtitle = subtitle, onBack = onBack, compact = true) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(

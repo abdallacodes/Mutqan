@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.mutqan.ui.components.PaperButton
@@ -385,7 +386,7 @@ private fun FolderCard(
             }
             Box {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), modifier = Modifier.size(20.dp))
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
@@ -522,10 +523,7 @@ private fun GroupCard(
         quality >= 0.40f -> DifficultyStruggled
         else          -> DifficultyCritical
     }
-    val versesLabel   = if (item.memberCount == 1)
-        stringResource(R.string.verses_singular, item.memberCount)
-    else
-        stringResource(R.string.verses_plural, item.memberCount)
+    val versesLabel   = pluralStringResource(R.plurals.count_ayahs, item.memberCount, item.memberCount)
 
     var showMenu by remember { mutableStateOf(false) }
 
@@ -593,7 +591,7 @@ private fun GroupCard(
                         border = BorderStroke(1.dp, strengthColor.copy(alpha = 0.4f))
                     ) {
                         Text(
-                            text      = "${(quality * 100).roundToInt()}%",
+                            text      = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
                             modifier  = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style     = MaterialTheme.typography.labelSmall,
                             color     = strengthColor,
@@ -613,7 +611,7 @@ private fun GroupCard(
 
             Box {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), modifier = Modifier.size(20.dp))
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
@@ -643,6 +641,7 @@ private fun GroupCard(
 }
 
 
+@Composable
 private fun strengthColor(quality: Float): Color = when {
     quality >= 0.70f -> DifficultySmooth
     quality >= 0.40f -> DifficultyStruggled

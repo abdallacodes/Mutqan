@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.revision
 
+import android.text.format.DateFormat as AndroidDateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -457,7 +459,7 @@ private fun EditDateButton(millis: Long, onClick: () -> Unit) {
         border  = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .heightIn(min = 48.dp)
     ) {
         Row(
             modifier          = Modifier
@@ -531,7 +533,7 @@ private fun HistoryDatePickerDialog(
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
 // Made per use so a change of language shows at once.
-private fun historyUtcSdf() = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
+private fun historyUtcSdf() = SimpleDateFormat(AndroidDateFormat.getBestDateTimePattern(Locale.getDefault(), "yMMMd"), Locale.getDefault()).also {
     it.timeZone = TimeZone.getTimeZone("UTC")
 }
 
@@ -542,7 +544,7 @@ private fun historyDateLabel(dateMillis: Long, fallbackTimestamp: Long): String 
 
 private fun historyDateDisplay(millis: Long, context: android.content.Context): String {
     if (millis == 0L) return context.getString(R.string.select_date_inline)
-    return SimpleDateFormat("EEE, MMM d yyyy", Locale.getDefault()).also {
+    return SimpleDateFormat(AndroidDateFormat.getBestDateTimePattern(Locale.getDefault(), "yMMMEd"), Locale.getDefault()).also {
         it.timeZone = TimeZone.getTimeZone("UTC")
     }.format(Date(millis))
 }

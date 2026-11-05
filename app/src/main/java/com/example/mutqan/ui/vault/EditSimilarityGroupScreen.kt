@@ -669,7 +669,7 @@ private fun SearchResultRow(
         IconButton(onClick = onPeek) {
             Icon(
                 imageVector = Icons.Default.Visibility,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_peek_verse),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                 modifier = Modifier.size(18.dp)
             )
@@ -765,7 +765,7 @@ private fun EditQualitySlider(quality: Float, onSelect: (Float) -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${(quality * 100).roundToInt()}%",
+                text = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -809,6 +809,7 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     errorContainerColor     = MaterialTheme.colorScheme.surface
 )
 
+@Composable
 private fun strengthColor(s: MasterStrength): Color = when (s) {
     MasterStrength.WEAK   -> DifficultyCritical
     MasterStrength.STABLE -> DifficultyStruggled

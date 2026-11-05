@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.revision
 
+import android.text.format.DateFormat as AndroidDateFormat
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -412,13 +413,13 @@ private fun RevisionLogItem(log: RevisionLog) {
 // ── Date formatting helpers ───────────────────────────────────────────────────
 
 // Made per use so a change of language shows at once.
-private fun utcSdf() = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).also {
+private fun utcSdf() = SimpleDateFormat(AndroidDateFormat.getBestDateTimePattern(Locale.getDefault(), "yMMMd"), Locale.getDefault()).also {
     it.timeZone = TimeZone.getTimeZone("UTC")
 }
 
 private fun formatDateMillisDisplay(millis: Long, context: Context): String {
     if (millis == 0L) return context.getString(R.string.select_date)
-    return SimpleDateFormat("EEE, MMM d yyyy", Locale.getDefault()).also {
+    return SimpleDateFormat(AndroidDateFormat.getBestDateTimePattern(Locale.getDefault(), "yMMMEd"), Locale.getDefault()).also {
         it.timeZone = TimeZone.getTimeZone("UTC")
     }.format(Date(millis))
 }
@@ -441,9 +442,9 @@ private fun formatRelativeTime(timestamp: Long, context: Context): String {
 
     return when {
         seconds < 60 -> context.getString(R.string.just_now)
-        minutes < 60 -> context.getString(R.string.x_min_ago, minutes)
-        hours   < 24 -> context.getString(R.string.x_hr_ago, hours)
-        days    < 7  -> context.getString(R.string.x_day_ago, days)
-        else -> SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(timestamp))
+        minutes < 60 -> context.resources.getQuantityString(R.plurals.x_min_ago, minutes.toInt(), minutes)
+        hours   < 24 -> context.resources.getQuantityString(R.plurals.x_hr_ago, hours.toInt(), hours)
+        days    < 7  -> context.resources.getQuantityString(R.plurals.x_day_ago, days.toInt(), days)
+        else -> SimpleDateFormat(AndroidDateFormat.getBestDateTimePattern(Locale.getDefault(), "yMMMd"), Locale.getDefault()).format(Date(timestamp))
     }
 }

@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.feedback
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -100,13 +102,16 @@ fun FeedbackScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.toggleable(value = includeInfo, role = Role.Switch, onValueChange = { includeInfo = it })
+            ) {
                 Text(
                     text = stringResource(R.string.feedback_include_info),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                PaperSwitch(checked = includeInfo, onCheckedChange = { includeInfo = it })
+                PaperSwitch(checked = includeInfo, onCheckedChange = null)
             }
 
             PaperButton(

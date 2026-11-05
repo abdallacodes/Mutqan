@@ -331,7 +331,7 @@ private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
     val avg         = if (tracked.isEmpty()) 0f
                       else tracked.map { it.score }.average().toFloat()
     val healthClr   = if (tracked.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                      else healthColor(avg)
+                      else healthTextColor(avg)
     val critical    = tracked.count { it.score < 0.25f }
     val fading      = tracked.count { it.score in 0.25f..0.50f }
 
@@ -441,7 +441,7 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
                 modifier   = Modifier.fillMaxWidth()
             )
             Text(
-                text      = if (ps.isTracked) "${(ps.score * 100).roundToInt()}%"
+                text      = if (ps.isTracked) stringResource(R.string.percent_value, (ps.score * 100).roundToInt())
                             else stringResource(R.string.untracked_dash),
                 style     = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                 color     = dimColor,

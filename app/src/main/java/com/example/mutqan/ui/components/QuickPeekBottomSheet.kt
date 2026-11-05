@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.components
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -116,10 +118,12 @@ fun QuickPeekBottomSheet(
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
         dragHandle = {
+            val handleLabel = stringResource(R.string.cd_drag_handle)
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp, bottom = 4.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .semantics { contentDescription = handleLabel },
                 contentAlignment = Alignment.Center
             ) {
                 Box(

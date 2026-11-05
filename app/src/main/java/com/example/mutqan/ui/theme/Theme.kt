@@ -1,5 +1,9 @@
 package com.example.mutqan.ui.theme
 
+import androidx.compose.runtime.CompositionLocalProvider
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -7,9 +11,12 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.example.mutqan.data.Palette
 import com.example.mutqan.data.ThemeKey
 
@@ -96,10 +103,32 @@ fun MutqanTheme(
     }
     val arabic = LocalConfiguration.current.locales[0].language == "ar"
 
-    MaterialTheme(
-        colorScheme = paletteColors(palette, dark)?.toScheme(dark) ?: if (dark) paperDarkScheme else paperLightScheme,
-        typography  = paperTypography(arabic),
-        shapes      = paperShapes,
-        content     = content
-    )
+    // The clock and icons in the bars follow the theme chosen here, not the system's own light or dark:
+    // a dark theme on a light system would otherwise leave them dark on dark.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        val window = view.context.findActivity()?.window
+        LaunchedEffect(window, dark) {
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !dark
+                controller.isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
+
+    CompositionLocalProvider(LocalStatusColors provides statusColors(onLight = !dark)) {
+        MaterialTheme(
+            colorScheme = paletteColors(palette, dark)?.toScheme(dark) ?: if (dark) paperDarkScheme else paperLightScheme,
+            typography  = paperTypography(arabic),
+            shapes      = paperShapes,
+            content     = content
+        )
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

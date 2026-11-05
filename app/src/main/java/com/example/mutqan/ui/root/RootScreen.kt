@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -123,7 +124,11 @@ fun RootScreen(rootId: Int, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
         topBar = {
             PaperHeader(
                 title = state.letters,
-                subtitle = if (state.loaded) stringResource(R.string.root_summary, state.words, state.verses.size) else null,
+                subtitle = if (state.loaded) stringResource(
+                    R.string.root_summary,
+                    pluralStringResource(R.plurals.count_words, state.words, state.words),
+                    pluralStringResource(R.plurals.count_ayahs, state.verses.size, state.verses.size)
+                ) else null,
                 onBack = onBack
             )
         },

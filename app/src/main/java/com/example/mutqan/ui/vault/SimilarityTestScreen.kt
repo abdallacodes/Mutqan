@@ -70,9 +70,10 @@ fun SimilarityTestScreen(
                 PaperHeader(
                     title = stringResource(R.string.vault_test_title),
                     onBack = onBack,
+                    compact = true,
                     actions = {
                         IconButton(onClick = { viewModel.loadNextVerse() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_another_verse))
                         }
                     }
                 )

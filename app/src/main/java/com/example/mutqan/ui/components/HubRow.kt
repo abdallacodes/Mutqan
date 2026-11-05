@@ -23,6 +23,10 @@ import androidx.compose.ui.unit.dp
  * One entry of a hub page (Practice, Insights, the foot of Today): a name in display type, a sentence
  * under it, an optional small note, and an arrow at the end that says it opens something. Set as a
  * line on the page with a rule, not a card.
+ *
+ * A page with several of them lets one lead at full size and sets the rest [compact]: a smaller name,
+ * a quieter sentence and less air, so the eye has a first place to land. With no [subtitle] and a
+ * [note], a compact row is a single line: the name at one end and its value at the other.
  */
 @Composable
 fun HubRow(
@@ -31,27 +35,28 @@ fun HubRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     note: String? = null,
-    horizontalPadding: Dp = PaperSpace.Gutter
+    horizontalPadding: Dp = PaperSpace.Gutter,
+    compact: Boolean = false
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = horizontalPadding, vertical = 16.dp),
+                .padding(horizontal = horizontalPadding, vertical = if (compact) 10.dp else 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -70,6 +75,6 @@ fun HubRow(
                 modifier = Modifier.size(22.dp)
             )
         }
-        Hairline()
+        Hairline(Modifier.padding(horizontal = horizontalPadding))
     }
 }

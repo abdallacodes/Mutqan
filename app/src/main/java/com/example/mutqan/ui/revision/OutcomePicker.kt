@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.revision
 
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,7 +125,7 @@ private fun OutcomeRow(label: String, selected: Boolean, caption: Pair<String, C
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.RadioButton, onClick = onClick)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .padding(vertical = 10.dp)
         ) {
             val ring = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline

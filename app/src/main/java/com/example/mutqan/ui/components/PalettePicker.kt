@@ -1,17 +1,19 @@
 package com.example.mutqan.ui.components
 
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +39,18 @@ private fun Palette.nameRes() = when (this) {
     Palette.GRAPHITE -> R.string.palette_graphite
 }
 
-/** One tile per palette, drawn in the version (light or dark) the app is showing now. */
+/**
+ * One tile per palette, drawn in the version (light or dark) the app is showing now. Two rows of three: six tiles do
+ * not fit one row on a phone, and a scrolling row hid the last one off-screen.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PalettePicker(selected: Palette, dark: Boolean, onSelect: (Palette) -> Unit) {
-    Row(
+    FlowRow(
+        maxItemsInEachRow = 3,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.horizontalScroll(rememberScrollState())
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().selectableGroup()
     ) {
         Palette.entries.forEach { palette ->
             val (bg, primary, accent) = paletteSwatch(palette, dark)
@@ -51,13 +59,14 @@ fun PalettePicker(selected: Palette, dark: Boolean, onSelect: (Palette) -> Unit)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .width(64.dp)
-                    .clickable(role = Role.RadioButton) { onSelect(palette) }
+                    .weight(1f)
+                    .selectable(selected = isSelected, role = Role.RadioButton) { onSelect(palette) }
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(width = 64.dp, height = 44.dp)
+                        .fillMaxWidth()
+                        .height(44.dp)
                         .clip(shape)
                         .background(bg)
                         .border(

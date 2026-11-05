@@ -73,7 +73,8 @@ fun PageBoundariesScreen(fromVerse: Boolean, onBack: () -> Unit) {
             PaperHeader(
                 title = stringResource(if (fromVerse) R.string.ex_edges_title else R.string.ex_boundaries_title),
                 subtitle = if (state.done > 0) stringResource(R.string.ex_done_session, state.done) else null,
-                onBack = onBack
+                onBack = onBack,
+                compact = true
             )
         },
         // What to do next stays in reach: reveal the answer, then say how it went.

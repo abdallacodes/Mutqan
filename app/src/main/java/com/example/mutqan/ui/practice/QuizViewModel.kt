@@ -108,10 +108,7 @@ class QuizViewModel(
                 if (!memorised) 0
                 else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
             }
-            val language = TopicLanguage(
-                arabicUi = appContext.resources.configuration.locales[0].language == "ar",
-                showAll = UserPreferencesRepository(appContext).topicsShowAll.first()
-            )
+            val language = TopicLanguage(arabicUi = appContext.resources.configuration.locales[0].language == "ar")
             engine = QuizEngine(
                 quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext),
                 TopicsLibrary.load(appContext), language

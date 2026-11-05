@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.audio
 
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -271,7 +273,7 @@ fun RecitationSheet(onDismiss: () -> Unit, onOpenStorage: (() -> Unit)? = null) 
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(role = Role.RadioButton) {
+                            .selectable(selected = option == reciter, role = Role.RadioButton) {
                                 reciterOpen = false
                                 change { prefs.setReciterId(option.id) }
                             }
@@ -484,8 +486,9 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 12.dp)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        PaperSwitch(checked = checked, onCheckedChange = onChange)
+        PaperSwitch(checked = checked, onCheckedChange = null)
     }
 }

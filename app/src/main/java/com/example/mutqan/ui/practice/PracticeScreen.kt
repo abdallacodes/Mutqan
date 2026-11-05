@@ -60,6 +60,7 @@ import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.ui.components.LocalDockInset
 
 private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 
@@ -131,7 +132,7 @@ fun PracticeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scroll)) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scroll).padding(bottom = LocalDockInset.current)) {
             ScopeRow(scope = scope, preview = preview, onClick = { choosing = true })
             DailyHero(
                 note = if (quizWeek > 0) stringResource(R.string.ex_this_week, quizWeek) else null,

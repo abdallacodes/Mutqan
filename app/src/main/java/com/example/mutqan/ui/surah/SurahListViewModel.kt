@@ -33,7 +33,9 @@ data class SurahListItem(
     /** Mushaf page (1–604) where this Surah begins; 0 if not loaded yet. */
     val startPage: Int,
     val groupCount: Int,
-    val memorised: SurahMemorised = SurahMemorised.NONE
+    val memorised: SurahMemorised = SurahMemorised.NONE,
+    /** True for a surah revealed in Makkah, false for Madinah; null until known. */
+    val makkah: Boolean? = null
 )
 
 /** One juz as a line in the index: where it starts and which surah it opens with. */
@@ -52,6 +54,7 @@ class SurahListViewModel(
     val morphology: StateFlow<Morphology?> = _morphology
 
     private val surahRanges = MutableStateFlow<Map<Int, IntRange>>(emptyMap())
+    private val revealedInMakkah = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
 
     private val _juz = MutableStateFlow<List<JuzListItem>>(emptyList())
     val juz: StateFlow<List<JuzListItem>> = _juz
@@ -59,6 +62,7 @@ class SurahListViewModel(
     init {
         viewModelScope.launch { _morphology.value = MorphologyLibrary.load(appContext) }
         viewModelScope.launch(Dispatchers.Default) {
+            revealedInMakkah.value = (1..114).mapNotNull { s -> quran.surah(s)?.let { s to (it.revelationPlace == "makkah") } }.toMap()
             surahRanges.value = (1..114).mapNotNull { s ->
                 val first = quran.ayah(s, 1)?.id
                 val last = quran.surah(s)?.let { quran.ayah(s, it.versesCount)?.id }
@@ -76,7 +80,7 @@ class SurahListViewModel(
      * Merges the hardcoded Surah names with the Quran metadata, the user's group counts and which
      * surahs they have memorised. Reactive: it updates whenever a group is linked or coverage changes.
      */
-    val surahs: StateFlow<List<SurahListItem>> = combine(study.surahMetaList(), study.coverage(), surahRanges) { metaList, ranges, bounds ->
+    val surahs: StateFlow<List<SurahListItem>> = combine(study.surahMetaList(), study.coverage(), surahRanges, revealedInMakkah) { metaList, ranges, bounds, places ->
         val metaById = metaList.associateBy { it.surahId }
         SurahData.ALL.map { info ->
             val meta = metaById[info.id]
@@ -93,7 +97,8 @@ class SurahListViewModel(
                 startJuz = meta?.startJuz ?: 0,
                 startPage = meta?.startPage ?: 0,
                 groupCount = meta?.groupCount ?: 0,
-                memorised = memorised
+                memorised = memorised,
+                makkah = places[info.id]
             )
         }
     }

@@ -31,7 +31,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,6 +46,7 @@ import androidx.core.content.res.ResourcesCompat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.luminance
 
 /**
  * Covers the words of a page for reciting from memory: every ayah is drawn as grey bars in place of its words
@@ -97,7 +97,7 @@ fun MushafPageView(
                 val data = quran.page(page)
                 val typeface = if (fonts.ensure(page)) fonts.typeface(page) else null
                 val first = quran.ayahsOnPage(page).firstOrNull()
-                val head = MushafHead(first?.let { quran.surah(it.surah)?.nameArabic }.orEmpty(), first?.juz ?: 0)
+                val head = MushafHead(first?.let { quran.surah(it.surah)?.nameArabic }.orEmpty(), first?.juz ?: 0, first?.surah ?: 0)
                 if (typeface != null) PageLoad.Ready(data, typeface, head) else PageLoad.Failed
             }
         } catch (e: CancellationException) {
@@ -148,7 +148,8 @@ private fun PageCanvas(
 ) {
     val context = LocalContext.current
     val headerTypeface = remember(context) { ResourcesCompat.getFont(context, R.font.amiri_regular) }
-    val basmallah = stringResource(R.string.mushaf_basmallah)
+    val frameTypeface = remember(context) { ResourcesCompat.getFont(context, R.font.quran_common) }
+    val nameTypeface = remember(context) { ResourcesCompat.getFont(context, R.font.surah_name_v4) }
 
     val pagePaint = remember(ready.typeface) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = ready.typeface }
@@ -161,6 +162,13 @@ private fun PageCanvas(
             typeface  = headerTypeface
             textAlign = Paint.Align.CENTER
         }
+    }
+
+    val framePaint = remember(frameTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = frameTypeface }
+    }
+    val namePaint = remember(nameTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = nameTypeface }
     }
 
     var size by remember { mutableStateOf(IntSize.Zero) }
@@ -218,6 +226,7 @@ private fun PageCanvas(
     ) {
         val g = geometry ?: return@Canvas
         val inkArgb = ink.toArgb()
+        val frameColor = surahFrameColor(ink).toArgb()
         pagePaint.color = inkArgb
         pagePaint.textSize = g.textSize
         headerPaint.color = inkArgb
@@ -228,16 +237,20 @@ private fun PageCanvas(
         val margin = this.size.width * 0.045f
 
         // The running head and foot of a printed page: juz on the right, surah on the left, the page number below.
-        railPaint.color = ink.copy(alpha = 0.8f).toArgb()
+        val railArgb = ink.copy(alpha = 0.8f).toArgb()
+        railPaint.color = railArgb
         railPaint.textSize = g.lineHeight * 0.4f
         val railBaseline = -(railPaint.fontMetrics.ascent + railPaint.fontMetrics.descent) / 2f
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
-            if (ready.head.juz > 0) {
-                railPaint.textAlign = Paint.Align.RIGHT
-                native.drawText(MushafHeader.juzTitle(ready.head.juz), this.size.width - margin, g.headY + railBaseline, railPaint)
+            if (ready.head.juz in 1..JUZ) {
+                framePaint.color = railArgb
+                drawGlyph(native, framePaint, QuranGlyphs.juzNumber(ready.head.juz), g.lineHeight * RAIL_INK, this.size.width - margin, g.headY, Paint.Align.RIGHT)
             }
-            if (ready.head.surah.isNotEmpty()) {
+            if (ready.head.surahId in 1..SURAHS) {
+                namePaint.color = railArgb
+                drawSurahTitle(native, namePaint, ready.head.surahId, g.lineHeight * RAIL_INK, margin, g.headY)
+            } else if (ready.head.surah.isNotEmpty()) {
                 railPaint.textAlign = Paint.Align.LEFT
                 native.drawText(context.getString(R.string.mushaf_surah_title, ready.head.surah), margin, g.headY + railBaseline, railPaint)
             }
@@ -274,14 +287,23 @@ private fun PageCanvas(
                             }
                         }
                     MushafLineType.SURAH_NAME -> {
-                        val name = placed.line.surahNameArabic.orEmpty()
-                        native.drawText(
-                            context.getString(R.string.mushaf_surah_title, name),
-                            this.size.width / 2f, placed.centerY + headerBaseline, headerPaint
-                        )
+                        framePaint.color = frameColor
+                        namePaint.color = inkArgb
+                        drawSurahHeader(native, framePaint, namePaint, placed.line.surahId, placed.centerY, g.lineHeight, margin, this.size.width)
+                        if (placed.line.surahId !in 1..SURAHS) {
+                            headerPaint.textSize = g.lineHeight * 0.34f
+                            val nameBaseline = -(headerPaint.fontMetrics.ascent + headerPaint.fontMetrics.descent) / 2f
+                            native.drawText(
+                                context.getString(R.string.mushaf_surah_title, placed.line.surahNameArabic.orEmpty()),
+                                this.size.width / 2f, placed.centerY + nameBaseline, headerPaint
+                            )
+                            headerPaint.textSize = g.lineHeight * 0.45f
+                        }
                     }
-                    MushafLineType.BASMALLAH ->
-                        native.drawText(basmallah, this.size.width / 2f, placed.centerY + headerBaseline, headerPaint)
+                    MushafLineType.BASMALLAH -> {
+                        framePaint.color = inkArgb
+                        drawGlyph(native, framePaint, QuranGlyphs.BASMALLAH, g.lineHeight * BASMALLAH_INK, this.size.width / 2f, placed.centerY, Paint.Align.CENTER)
+                    }
                 }
             }
         }
@@ -301,21 +323,59 @@ private fun PageCanvas(
             }
         }
 
-        // The surah title sits between two double rules, like the heading band of a printed mushaf.
-        for (placed in g.lines) {
-            if (placed.line.type != MushafLineType.SURAH_NAME) continue
-            val top = placed.centerY - g.lineHeight * 0.36f
-            val bottom = placed.centerY + g.lineHeight * 0.36f
-            val gap = 3.dp.toPx()
-            val strong = ink.copy(alpha = 0.55f)
-            val soft = ink.copy(alpha = 0.3f)
-            for ((y, outward) in listOf(top to -1f, bottom to 1f)) {
-                drawLine(strong, Offset(margin, y), Offset(this.size.width - margin, y), strokeWidth = 1.5.dp.toPx())
-                drawLine(
-                    soft, Offset(margin, y - outward * gap), Offset(this.size.width - margin, y - outward * gap),
-                    strokeWidth = 0.75.dp.toPx()
-                )
-            }
-        }
     }
+}
+
+private const val SURAHS = 114
+private const val JUZ = 30
+
+/** How tall the ink of the running head's calligraphy is, and of the basmallah, in lines. */
+private const val RAIL_INK = 0.58f
+private const val BASMALLAH_INK = 0.65f
+
+// The pointed panel in the banner, in 1/1024 em of the banner's font: 762 high and about 3400 wide where it is level.
+private const val PANEL_HEIGHT = 762f
+private const val PANEL_WIDTH = 3400f
+private const val TITLE_GAP = 0.18f
+
+/** Gold on the page, as the printed banner has it; paler on a dark page, where [ink] is light. */
+private fun surahFrameColor(ink: Color): Color =
+    if (ink.luminance() > 0.5f) Color(0xFFBFA05A) else Color(0xFF8A6D2F)
+
+/** The width of "سورة" and a surah's name side by side, in em. */
+private fun surahTitleEm(paint: Paint, surah: Int): Float {
+    paint.textSize = QuranGlyphs.UNITS
+    return (paint.inkWidth(QuranGlyphs.surahName(surah).text) + paint.inkWidth(QuranGlyphs.SURAH_WORD.text)) / QuranGlyphs.UNITS + TITLE_GAP
+}
+
+/** The word "سورة" and [surah]'s name, the name first as the pair reads right to left, with its ink [inkHeight] tall. */
+private fun drawSurahTitle(canvas: android.graphics.Canvas, paint: Paint, surah: Int, inkHeight: Float, left: Float, centerY: Float) {
+    val name = QuranGlyphs.surahName(surah)
+    drawGlyph(canvas, paint, name, inkHeight, left, centerY)
+    val nameWidth = paint.inkWidth(name.text)
+    drawGlyph(canvas, paint, QuranGlyphs.SURAH_WORD, inkHeight, left + nameWidth + paint.textSize * TITLE_GAP, centerY)
+}
+
+/**
+ * The banner the printed mushaf puts round a surah's name, as QUL draws it: the banner glyph across the page, and in
+ * its panel the word "سورة" and the surah's name in calligraphy. The banner is one line tall and spans the text.
+ */
+private fun drawSurahHeader(
+    canvas: android.graphics.Canvas, framePaint: Paint, namePaint: Paint,
+    surah: Int, centerY: Float, lineHeight: Float, margin: Float, width: Float
+) {
+    val banner = QuranGlyphs.BANNER
+    val frameSize = lineHeight * QuranGlyphs.UNITS / banner.inkUnits
+    framePaint.textSize = frameSize
+    framePaint.textScaleX = 1f
+    val natural = framePaint.measureText(banner.text).takeIf { it > 0f } ?: return
+    framePaint.textScaleX = (width - 2f * margin) / natural
+    framePaint.textAlign = Paint.Align.LEFT
+    canvas.drawText(banner.text, margin, centerY + frameSize * banner.centerUnits / QuranGlyphs.UNITS, framePaint)
+    if (surah !in 1..SURAHS) return
+
+    // The name is as tall as the panel (its ink is about three quarters of that), and shrinks only if the pair is wider than the panel.
+    val pairEm = surahTitleEm(namePaint, surah)
+    val size = minOf(frameSize * PANEL_HEIGHT / QuranGlyphs.UNITS, frameSize * PANEL_WIDTH * 0.9f / QuranGlyphs.UNITS / pairEm)
+    drawSurahTitle(canvas, namePaint, surah, size, width / 2f - pairEm * size / 2f, centerY)
 }

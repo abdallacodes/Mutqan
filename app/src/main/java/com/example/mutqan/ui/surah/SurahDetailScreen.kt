@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -243,7 +244,7 @@ private fun SurahGroupCard(
                     border = BorderStroke(1.dp, healthColor.copy(alpha = 0.4f))
                 ) {
                     Text(
-                        text       = "${(quality * 100).roundToInt()}%",
+                        text       = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
                         modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         style      = MaterialTheme.typography.labelSmall,
                         color      = healthColor,
@@ -269,10 +270,7 @@ private fun SurahGroupCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 MetaBadge(
-                    text = stringResource(
-                        R.string.group_meta_total_verses,
-                        gwv.internalVerses.size + gwv.externalVerses.size
-                    ),
+                    text = (gwv.internalVerses.size + gwv.externalVerses.size).let { pluralStringResource(R.plurals.count_ayahs, it, it) },
                     borderColor = MaterialTheme.colorScheme.outline
                 )
                 MetaBadge(

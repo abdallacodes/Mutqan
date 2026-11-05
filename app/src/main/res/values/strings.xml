@@ -16,6 +16,8 @@
     <string name="settings_data_management">إدارة البيانات</string>
     <string name="btn_download_mushaf">تحميل المصحف (للاستخدام بدون إنترنت)</string>
     <string name="downloading_mushaf">جاري تحميل الصفحات: %1$d/%2$d (%3$d٪)</string>
+    <string name="mushaf_download_partial">%1$d من %2$d صفحة على هذا الجهاز · اضغط لتحميل الباقي</string>
+    <string name="percent_value">%1$d٪</string>
     <string name="mushaf_download_complete">تم تحميل جميع الصفحات (604) بنجاح.</string>
     <string name="mushaf_download_failed">فشل التحميل (الصفحات %1$d–%2$d)</string>
     <string name="btn_backup">نسخة احتياطية</string>
@@ -52,9 +54,30 @@
     <string name="select_date">اختر التاريخ</string>
     <string name="pages_range">الصفحات %1$d–%2$d</string>
     <string name="just_now">الآن</string>
-    <string name="x_min_ago">منذ %d دقيقة</string>
-    <string name="x_hr_ago">منذ %d ساعة</string>
-    <string name="x_day_ago">منذ %d يوم</string>
+    <plurals name="x_min_ago">
+        <item quantity="zero">منذ %d دقيقة</item>
+        <item quantity="one">منذ دقيقة</item>
+        <item quantity="two">منذ دقيقتين</item>
+        <item quantity="few">منذ %d دقائق</item>
+        <item quantity="many">منذ %d دقيقةً</item>
+        <item quantity="other">منذ %d دقيقة</item>
+    </plurals>
+    <plurals name="x_hr_ago">
+        <item quantity="zero">منذ %d ساعة</item>
+        <item quantity="one">منذ ساعة</item>
+        <item quantity="two">منذ ساعتين</item>
+        <item quantity="few">منذ %d ساعات</item>
+        <item quantity="many">منذ %d ساعةً</item>
+        <item quantity="other">منذ %d ساعة</item>
+    </plurals>
+    <plurals name="x_day_ago">
+        <item quantity="zero">منذ %d يوم</item>
+        <item quantity="one">منذ يوم</item>
+        <item quantity="two">منذ يومين</item>
+        <item quantity="few">منذ %d أيام</item>
+        <item quantity="many">منذ %d يومًا</item>
+        <item quantity="other">منذ %d يوم</item>
+    </plurals>
 
     <!-- ── Revision History Screen ─────────────────────────────────────────── -->
     <string name="history_title">سجل المراجعات</string>
@@ -74,8 +97,6 @@
     <string name="cd_add_group">إضافة مجموعة</string>
     <string name="cd_view_group">عرض المجموعة</string>
     <string name="cd_edit_group">تعديل المجموعة</string>
-    <string name="verses_singular">آية واحدة</string>
-    <string name="verses_plural">%d آيات</string>
     <string name="label_folders">المجلدات</string>
     <string name="label_uncategorized">غير مصنف</string>
     <string name="cd_add_folder">إضافة مجلد</string>
@@ -105,6 +126,9 @@
     <string name="group_desc_placeholder">مثال: وَإِذْ قَالَ رَبُّكَ / وَإِذْ قَالَ اللَّهُ</string>
     <string name="cd_save_group">حفظ المجموعة</string>
     <string name="cd_more_options">خيارات إضافية</string>
+    <string name="cd_drag_handle">مقبض السحب</string>
+    <string name="cd_verse_blank">فراغ</string>
+    <string name="cd_another_verse">آية أخرى</string>
     <string name="cd_delete_verse">حذف الآية</string>
     <string name="cd_peek_verse">معاينة الآية</string>
     <string name="section_search_by_text">أو ابحث بالنص</string>
@@ -122,7 +146,7 @@
     <string name="snackbar_already_member">هذه الآية موجودة في المجموعة بالفعل.</string>
     <string name="snackbar_verse_added">تمت إضافة الآية.</string>
     <string name="snackbar_desc_required">أدخل وصفًا قبل إضافة الآيات.</string>
-    <string name="label_page">صفحة %d</string>
+    <string name="label_page">صفحة\u00A0%d</string>
     <string name="group_notes_detail_label">ملاحظات الحفظ</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
@@ -138,11 +162,17 @@
     <string name="stat_debt_sublabel">ثباتها دون 50٪</string>
     <string name="stat_stability_index">متوسط الثبات</string>
     <string name="stat_forecast_label">التنبؤ</string>
-    <string name="stat_forecast_days">%d يوم</string>
-    <string name="stat_pages_tracked">%d صفحة مرصودة</string>
-    <string name="legend_fresh">ممتاز (≥ 70%%)</string>
-    <string name="legend_fading">متراجع (40–70%%)</string>
-    <string name="legend_critical">حرج (&lt; 40%%)</string>
+    <plurals name="stat_pages_tracked">
+        <item quantity="zero">%d صفحة مرصودة</item>
+        <item quantity="one">صفحة واحدة مرصودة</item>
+        <item quantity="two">صفحتان مرصودتان</item>
+        <item quantity="few">%d صفحات مرصودة</item>
+        <item quantity="many">%d صفحةً مرصودة</item>
+        <item quantity="other">%d صفحة مرصودة</item>
+    </plurals>
+    <string name="legend_fresh">ممتاز (≥ 70٪)</string>
+    <string name="legend_fading">متراجع (40–70٪)</string>
+    <string name="legend_critical">حرج (&lt; 40٪)</string>
     <string name="legend_untracked">غير مرصود</string>
     <string name="juz_label">جزء</string>
     <string name="juz_meta_overall_health_short">%d٪</string>
@@ -153,13 +183,13 @@
     <!-- ── Juz Detail Screen ───────────────────────────────────────────────── -->
     <string name="loading_subtitle">جار التحميل…</string>
     <string name="loading_pages">جار تحميل الصفحات…</string>
-    <string name="juz_title">الجزء %d</string>
+    <string name="juz_title">الجزء\u00A0%d</string>
     <string name="juz_health">جودة الجزء</string>
     <string name="no_revisions_juz">لا توجد مراجعات بعد</string>
     <string name="pages_tracked_summary">%1$d%%  ·  %2$d/%3$d صفحة مرصودة</string>
     <string name="count_critical">%d حرج</string>
     <string name="count_fading">%d متراجع</string>
-    <string name="dialog_page_title">صفحة %d</string>
+    <string name="dialog_page_title">صفحة\u00A0%d</string>
 
 
     <!-- ── Surah List Screen ───────────────────────────────────────────────── -->
@@ -168,13 +198,12 @@
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
     <string name="linked_groups_header">المجموعات المرتبطة</string>
     <string name="linked_groups_hint">اضغط على المجموعة لعرض التفاصيل كاملة</string>
-    <string name="group_meta_total_verses">%d آيات</string>
     <string name="group_meta_in_surah">في هذه السورة: %d</string>
     <string name="group_meta_other_surahs">سور أخرى: %d</string>
     <string name="no_groups_for_surah">لا توجد مجموعات متشابهات لهذه السورة بعد.\nاستخدم المخزن لإنشاء المجموعات وربطها.</string>
     <string name="ayah_n">آية %d</string>
     <string name="page_n">ص. %d</string>
-    <string name="surah_fallback_title">سورة %d</string>
+    <string name="surah_fallback_title">سورة\u00A0%d</string>
 
     <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
     <string name="group_detail_fallback_title">تفاصيل المجموعة</string>
@@ -289,7 +318,7 @@
     <string name="error_folder_name_exists">اسم المجلد موجود بالفعل</string>
     <string name="subject_name_label">اسم الموضوع</string>
     <string name="subject_start_ayah_label">آية البداية</string>
-    <string name="subject_ayah_option">الآية %1$d (سورة %2$d)</string>
+    <string name="subject_ayah_option">الآية\u00A0%1$d (سورة\u00A0%2$d)</string>
     <string name="search_filters_title">خيارات البحث</string>
     <string name="search_no_results_filtered">لا توجد نتائج بالمرشحات الحالية</string>
     <string name="error_unknown">خطأ غير معروف</string>
@@ -325,7 +354,7 @@
     <string name="state_evidence_label">حالة الاستحضار: %1$s</string>
     <string name="state_self_reported">بحسب ما سجّلته بنفسك</string>
     <string name="coverage_title">ما حفظته</string>
-    <string name="coverage_summary">%1$d آية · %2$d صفحة</string>
+    <string name="coverage_summary">%1$s · %2$s</string>
     <string name="coverage_unset_hint">لم تحدد محفوظك بعد. إلى أن تفعل، يُعدّ كل ما تسجله من مراجعات ضمن محفوظك.</string>
     <string name="coverage_whole_quran">القرآن كله</string>
     <string name="coverage_clear">مسح الكل</string>
@@ -431,8 +460,8 @@
     <string name="home_weak_title">مواضع للتقوية</string>
     <string name="home_weak_dismiss">إخفاء</string>
     <string name="home_log_dialog_title">تسجيل: %1$s</string>
-    <string name="plan_item_juz">الجزء %1$d</string>
-    <string name="plan_item_page">الصفحة %1$d</string>
+    <string name="plan_item_juz">الجزء\u00A0%1$d</string>
+    <string name="plan_item_page">الصفحة\u00A0%1$d</string>
     <string name="plan_unit_juz">جزء</string>
     <string name="plan_unit_page">صفحة</string>
     <string name="plan_unit_surah">سورة</string>
@@ -450,7 +479,7 @@
     <string name="plan_order_rotation">الأقدم مراجعةً أولًا</string>
     <string name="plan_order_weakest">الأضعف أولًا</string>
     <string name="plan_label_paused">إيقاف الخطة مؤقتًا</string>
-    <string name="plan_preview">%1$d وحدة في محفوظك · دورة كاملة في نحو %2$d يومًا</string>
+    <string name="plan_preview">%1$s · %2$s</string>
     <string name="plan_preview_empty">حدّد ما حفظته أولًا حتى تُبنى الخطة.</string>
     <string name="plan_btn_save">حفظ الخطة</string>
     <string name="plan_btn_delete">حذف الخطة</string>
@@ -483,7 +512,14 @@
     <string name="plan_tier_fair">صفحات متوسطة</string>
     <string name="plan_tier_strong">صفحات قوية</string>
     <string name="plan_tier_empty">لا صفحات هنا الآن</string>
-    <string name="plan_strength_total">المجموع: %d صفحة يوميًا</string>
+    <plurals name="plan_strength_total">
+        <item quantity="zero">المجموع: %d صفحة يوميًا</item>
+        <item quantity="one">المجموع: صفحة واحدة يوميًا</item>
+        <item quantity="two">المجموع: صفحتان يوميًا</item>
+        <item quantity="few">المجموع: %d صفحات يوميًا</item>
+        <item quantity="many">المجموع: %d صفحةً يوميًا</item>
+        <item quantity="other">المجموع: %d صفحة يوميًا</item>
+    </plurals>
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
     <string name="home_tier_strong">قوية · تعود نادرًا</string>
@@ -492,11 +528,20 @@
     <string name="ready_list_similar_subtitle">مجموعات جاهزة من الآيات المتشابهة</string>
     <string name="ready_folder_count">المجموعات: %d</string>
     <string name="ready_add_folder">أضف المجموعات الجديدة (%d) إلى مخزني</string>
-    <string name="ready_folder_added_toast">أُضيفت %d مجموعة إلى المخزن</string>
+    <plurals name="ready_folder_added_toast">
+        <item quantity="zero">أُضيفت %d مجموعة إلى المخزن</item>
+        <item quantity="one">أُضيفت مجموعة واحدة إلى المخزن</item>
+        <item quantity="two">أُضيفت مجموعتان إلى المخزن</item>
+        <item quantity="few">أُضيفت %d مجموعات إلى المخزن</item>
+        <item quantity="many">أُضيفت %d مجموعةً إلى المخزن</item>
+        <item quantity="other">أُضيفت %d مجموعة إلى المخزن</item>
+    </plurals>
     <string name="ready_folder_all_added">كل مجموعات هذه السورة في مخزنك</string>
     <string name="peek_similar_title">آيات تشبه هذه الآية</string>
     <string name="peek_similar_score">تشابه %d٪</string>
-    <string name="peek_similar_more">وآيات أخرى: %d</string>
+    <string name="peek_similar_range">%1$d–%2$d من %3$d</string>
+    <string name="peek_similar_next">التالية</string>
+    <string name="peek_similar_prev">السابقة</string>
     <string name="recall_btn_reveal">اكشف النص</string>
     <string name="progress_title">تقدّمك</string>
     <string name="progress_subtitle">بحسب ما سجّلته أنت</string>
@@ -505,12 +550,18 @@
     <string name="progress_coverage_empty">حدّد ما تحفظه أولًا لتظهر هنا صورة تقدّمك.</string>
     <string name="progress_open_coverage">عدّل المحفوظ</string>
     <string name="progress_section_evidence">ماذا يُظهر تسميعك</string>
-    <string name="progress_pages">%d صفحة</string>
     <string name="progress_section_consistency">الانتظام</string>
-    <string name="progress_days">راجعتَ في %1$d يومًا من آخر %2$d</string>
+    <plurals name="progress_days">
+        <item quantity="zero">لم تراجع في أي يوم من آخر %2$d</item>
+        <item quantity="one">راجعتَ في يوم واحد من آخر %2$d</item>
+        <item quantity="two">راجعتَ في يومين من آخر %2$d</item>
+        <item quantity="few">راجعتَ في %1$d أيام من آخر %2$d</item>
+        <item quantity="many">راجعتَ في %1$d يومًا من آخر %2$d</item>
+        <item quantity="other">راجعتَ في %1$d يوم من آخر %2$d</item>
+    </plurals>
     <string name="progress_section_attention">مواضع تستحق نظرة</string>
     <string name="progress_none_attention">لا صفحات تحتاج عناية الآن. أحسنت.</string>
-    <string name="progress_juz_attention">الجزء %1$d · %2$d صفحة</string>
+    <string name="progress_juz_attention">الجزء\u00A0%1$d · %2$s</string>
     <string name="home_btn_progress">تقدّمك</string>
     <string name="settings_privacy">الخصوصية</string>
     <string name="settings_app_lock">قفل التطبيق</string>
@@ -578,16 +629,30 @@
     <string name="coverage_surah_picker_hint">اضغط على السورة التي تحفظها كاملة</string>
     <string name="coverage_surah_search">ابحث عن سورة بالاسم أو الرقم</string>
     <string name="coverage_surah_partly">جزء منها</string>
-    <string name="plan_tier_cycle">%1$d صفحة في هذه الفئة · دورة كاملة كل %2$d يومًا تقريبًا</string>
-    <string name="plan_tier_off">%d صفحة في هذه الفئة · غير مضمَّنة في الخطة</string>
+    <string name="plan_tier_cycle">%1$s · %2$s</string>
+    <string name="plan_tier_off">%1$s · غير مضمَّنة في الخطة</string>
     <string name="home_progress_today">تمّ %1$d من %2$d اليوم</string>
     <string name="home_btn_revised">أنهيتُ المراجعة</string>
     <string name="home_later_title">لاحقًا اليوم</string>
     <string name="home_plan_title">خطتك</string>
-    <string name="home_plan_line_strength">نحو %d صفحة يوميًا</string>
-    <string name="home_plan_line_fixed">دورة كاملة في نحو %d يومًا</string>
+    <plurals name="home_plan_line_strength">
+        <item quantity="zero">نحو %d صفحة يوميًا</item>
+        <item quantity="one">نحو صفحة واحدة يوميًا</item>
+        <item quantity="two">نحو صفحتين يوميًا</item>
+        <item quantity="few">نحو %d صفحات يوميًا</item>
+        <item quantity="many">نحو %d صفحةً يوميًا</item>
+        <item quantity="other">نحو %d صفحة يوميًا</item>
+    </plurals>
+    <plurals name="home_plan_line_fixed">
+        <item quantity="zero">دورة كاملة في نحو %d يوم</item>
+        <item quantity="one">دورة كاملة في نحو يوم واحد</item>
+        <item quantity="two">دورة كاملة في نحو يومين</item>
+        <item quantity="few">دورة كاملة في نحو %d أيام</item>
+        <item quantity="many">دورة كاملة في نحو %d يومًا</item>
+        <item quantity="other">دورة كاملة في نحو %d يوم</item>
+    </plurals>
     <string name="home_continue_title">تابع القراءة</string>
-    <string name="home_continue_page">من الصفحة %d</string>
+    <string name="home_continue_page">من الصفحة\u00A0%d</string>
     <string name="home_progress_hint">المحفوظ ونتائج التسميع والانتظام</string>
     <string name="home_log_hint">سجّل مراجعة لم تكن ضمن خطة اليوم</string>
     <string name="plan_step_number">الخطوة %d</string>
@@ -610,11 +675,13 @@
     <string name="quran_tab_surahs">السور</string>
     <string name="quran_tab_juz">الأجزاء</string>
     <string name="quran_search_hint">اسم السورة أو رقمها أو رقم الصفحة</string>
-    <string name="quran_go_page">اذهب إلى الصفحة %d</string>
-    <string name="quran_surah_info">%1$d آية · الجزء %2$d · صفحة %3$d</string>
+    <string name="quran_go_page">اذهب إلى الصفحة\u00A0%d</string>
+    <string name="quran_surah_info">%1$s · الجزء\u00A0%2$d · صفحة\u00A0%3$d</string>
     <string name="quran_memorised">محفوظة</string>
     <string name="quran_lookalikes">المتشابهات: %d</string>
-    <string name="quran_juz_info">تبدأ في الصفحة %1$d · %2$s</string>
+    <string name="quran_juz_info">تبدأ في الصفحة\u00A0%1$d · %2$s</string>
+    <string name="surah_makki">سورة مكية</string>
+    <string name="surah_madani">سورة مدنية</string>
     <string name="practice_daily_title">مجموعة اليوم</string>
     <string name="practice_daily_desc">10 أسئلة متنوعة، أغلبها من صفحاتك الأضعف</string>
     <string name="ex_ending_title">أيّ الخاتمتين الصحيحة؟</string>
@@ -680,39 +747,50 @@
     <string name="ex_finish_desc">آيات متشابهة في بدايتها أو خاتمتها، اختر تمام الآية</string>
     <string name="quiz_q_finish_closing">كيف تُختم هذه الآية؟</string>
     <string name="quiz_q_finish_lookalike">بدايتها تشبه آيات أخرى وخاتمتها تختلف. كيف تُختم هذه الآية؟</string>
-    <string name="quiz_open_page">افتح الصفحة %d</string>
+    <string name="quiz_open_page">افتح الصفحة\u00A0%d</string>
     <string name="home_missed_title">أخطأت فيها في التدريب</string>
-    <string name="home_missed_line">الصفحة %1$d · أخطأت %2$d مرات هذا الأسبوع</string>
-    <string name="root_summary">%1$d كلمة في %2$d آية</string>
+    <plurals name="home_missed_line">
+        <item quantity="zero">الصفحة\u00A0%1$d · أخطأت %2$d مرة هذا الأسبوع</item>
+        <item quantity="one">الصفحة\u00A0%1$d · أخطأت مرة واحدة هذا الأسبوع</item>
+        <item quantity="two">الصفحة\u00A0%1$d · أخطأت مرتين هذا الأسبوع</item>
+        <item quantity="few">الصفحة\u00A0%1$d · أخطأت %2$d مرات هذا الأسبوع</item>
+        <item quantity="many">الصفحة\u00A0%1$d · أخطأت %2$d مرةً هذا الأسبوع</item>
+        <item quantity="other">الصفحة\u00A0%1$d · أخطأت %2$d مرة هذا الأسبوع</item>
+    </plurals>
+    <string name="root_summary">%1$s · %2$s</string>
     <string name="root_row_title">الجذر: %s</string>
     <string name="root_forms">الصيغ</string>
     <string name="root_all_forms">الكل</string>
     <string name="quran_tab_topics">المواضيع</string>
     <string name="topics_search_hint">ابحث عن موضوع</string>
-    <string name="topics_show_all">أظهر أيضًا المواضيع التي ليس لها اسم عربي</string>
     <string name="topics_none">لا مواضيع بهذا الاسم</string>
     <string name="topics_themes">المحاور</string>
     <string name="topics_concepts">المفاهيم</string>
     <string name="topics_popular">الأكثر ذكرًا</string>
-    <string name="topic_verses">%d آية</string>
     <string name="topic_subtopics">مواضيع فرعية</string>
     <string name="topic_related">مواضيع ذات صلة</string>
     <string name="topic_verses_header">الآيات (%d)</string>
     <string name="topic_memorised_of">حفظت %1$d من %2$d</string>
     <string name="topic_only_memorised">ما حفظته فقط</string>
-    <string name="peek_topics_title">مواضيع الآية</string>
+    <string name="peek_theme_title">موضوع المقطع</string>
+    <string name="theme_range">الآيات %1$d–%2$d</string>
+    <string name="theme_range_one">الآية\u00A0%1$d</string>
+    <string name="theme_row_place">%1$s · %2$s · صفحة\u00A0%3$d</string>
+    <string name="themes_search_hint">ابحث في موضوعات المقاطع</string>
+    <string name="mushaf_tab_themes">موضوعات</string>
     <string name="quiz_q_topic">إلى أي موضوع تنتمي هذه الآية؟</string>
     <string name="quiz_topics_of_verse">مواضيع هذه الآية</string>
     <string name="account_title">الحساب</string>
     <string name="account_intro">سجّل الدخول بحساب Google لتبقى مراجعتك ومحفوظك متطابقين على كل أجهزتك. عند الدخول تُدمج بيانات هذا الجهاز مع نسخة الحساب. ويعمل الحساب على جهاز واحد في كل مرة.</string>
     <string name="account_sign_in">تسجيل الدخول بحساب Google</string>
-    <string name="account_sign_in_failed">تعذّر تسجيل الدخول: %1$s</string>
+    <string name="account_sign_in_failed">تعذّر تسجيل الدخول. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.</string>
     <string name="account_sign_out">تسجيل الخروج</string>
     <string name="sync_now">مزامنة الآن</string>
     <string name="sync_running">جارٍ المزامنة…</string>
     <string name="sync_last">آخر مزامنة: %1$s</string>
+    <string name="sync_last_now">آخر مزامنة: الآن</string>
     <string name="sync_never">لم تتم المزامنة بعد</string>
-    <string name="sync_failed">تعذّرت المزامنة: %1$s</string>
+    <string name="sync_failed">تعذّرت المزامنة. تحقّق من اتصالك بالإنترنت ثم اضغط «مزامنة الآن».</string>
     <string name="snapshot_too_new">هذه البيانات كُتبت بنسخة أحدث من التطبيق. حدّث التطبيق أولًا حتى لا تضيع بعض بياناتك.</string>
     <string name="sync_timeout">انتهت مهلة الاتصال بالسحابة. تأكّد من الإنترنت وأعد المحاولة.</string>
     <string name="sync_outcome_nothing">كل شيء محدَّث، لا جديد.</string>
@@ -771,14 +849,18 @@
     <string name="mushaf_tab_surah">سورة</string>
     <string name="mushaf_tab_juz">جزء</string>
     <string name="mushaf_tab_page">صفحة</string>
-    <string name="mushaf_surah_row">%1$d آية · صفحة %2$d</string>
-    <string name="mushaf_juz_row">الجزء %1$d</string>
-    <string name="mushaf_juz_hizb">الجزء %1$d · الحزب %2$d</string>
+    <string name="mushaf_surah_row">%1$s · صفحة\u00A0%2$d</string>
+    <string name="mushaf_juz_row">الجزء\u00A0%1$d</string>
+    <string name="mushaf_juz_hizb">الجزء\u00A0%1$d · الحزب\u00A0%2$d</string>
     <string name="mushaf_page_field">رقم الصفحة (١–٦٠٤)</string>
     <string name="mushaf_go">اذهب</string>
     <string name="mushaf_cd_menu">المزيد</string>
+    <string name="mushaf_cd_page">صفحة\u00A0%1$d. %2$s</string>
+    <string name="mushaf_cd_page_part">%1$s، الآيات %2$d–%3$d</string>
+    <string name="mushaf_cd_page_part_one">%1$s، الآية\u00A0%2$d</string>
+    <string name="mushaf_cd_toggle_bar">إظهار الشريط أو إخفاؤه</string>
     <string name="mushaf_cd_revised">سجّل مراجعة هذه الصفحة</string>
-    <string name="mushaf_revised_title">مراجعة الصفحة %1$d</string>
+    <string name="mushaf_revised_title">مراجعة الصفحة\u00A0%1$d</string>
     <string name="mushaf_revised_saved">سُجّلت المراجعة</string>
     <string name="mushaf_cd_cover">إخفاء النص للتسميع</string>
     <string name="mushaf_cd_uncover">إظهار النص</string>
@@ -822,8 +904,16 @@
     <string name="session_use_here">استخدم الحساب هنا من جديد</string>
     <string name="first_sync_title">هذا الحساب لديه بيانات محفوظة</string>
     <string name="first_sync_intro">على هذا الحساب بيانات محفوظة في السحابة، وعلى هذا الجهاز بيانات أيضًا. اختر ما يحدث لهما.</string>
-    <string name="first_sync_cloud_count">في حسابك: %1$d سجلّ مراجعة</string>
-    <string name="first_sync_device_count">على هذا الجهاز: %1$d سجلّ مراجعة</string>
+    <string name="first_sync_cloud_count">في حسابك: %1$s</string>
+    <string name="first_sync_device_count">على هذا الجهاز: %1$s</string>
+    <plurals name="count_revision_entries">
+        <item quantity="zero">%d مراجعة</item>
+        <item quantity="one">مراجعة واحدة</item>
+        <item quantity="two">مراجعتان</item>
+        <item quantity="few">%d مراجعات</item>
+        <item quantity="many">%d مراجعةً</item>
+        <item quantity="other">%d مراجعة</item>
+    </plurals>
     <string name="first_sync_merge_hint">يُبقي كل شيء من الاثنين. هذا الخيار آمن.</string>
     <string name="first_sync_replace_hint">تُمسح بيانات هذا الجهاز وتحلّ محلها بيانات الحساب.</string>
     <string name="first_sync_other_account">بيانات هذا الجهاز كانت مرتبطة بحساب آخر.</string>
@@ -882,7 +972,6 @@
     <string name="audio_storage_subtitle">ما حمّلته وما خُزّن أثناء الاستماع</string>
     <string name="audio_storage_link">إدارة مساحة التلاوة</string>
     <string name="audio_storage_empty">لا توجد تلاوات محمّلة.</string>
-    <string name="audio_storage_count">%1$d سورة</string>
     <string name="audio_storage_cache">الذاكرة المؤقتة للبث</string>
     <string name="audio_storage_cache_hint">ما تسمعه دون تحميل يُحفظ مؤقتًا، ويُمسح تلقائيًا الأقدم فالأقدم عند امتلائه.</string>
     <string name="audio_storage_clear_cache">مسح الذاكرة المؤقتة</string>
@@ -901,7 +990,7 @@
     <string name="coverage_levels_note">اللون يبيّن مستوى كل صفحة الآن. الصفحة التي لم تُقدَّر ولم تُراجَع تُحسب متوسطة.</string>
     <string name="coverage_show_pages">عرض الصفحات</string>
     <string name="coverage_hide_pages">إخفاء الصفحات</string>
-    <string name="coverage_shared_page">الصفحة %1$d مشتركة مع الجزء %2$d.</string>
+    <string name="coverage_shared_page">الصفحة\u00A0%1$d مشتركة مع الجزء\u00A0%2$d.</string>
     <string name="coverage_choice_title">تغيير مستوى الصفحات؟</string>
     <string name="coverage_choice_body">%1$d من %2$d صفحة لها مستوى خاص بها. ماذا تريد؟</string>
     <string name="coverage_choice_all">كل الصفحات</string>
@@ -971,5 +1060,77 @@
         <item quantity="few">ستُستخدم %d صفحات</item>
         <item quantity="many">ستُستخدم %d صفحةً</item>
         <item quantity="other">ستُستخدم %d صفحة</item>
+    </plurals>
+    <plurals name="count_ayahs">
+        <item quantity="zero">%d آية</item>
+        <item quantity="one">آية واحدة</item>
+        <item quantity="two">آيتان</item>
+        <item quantity="few">%d آيات</item>
+        <item quantity="many">%d آيةً</item>
+        <item quantity="other">%d آية</item>
+    </plurals>
+    <plurals name="count_pages">
+        <item quantity="zero">%d صفحة</item>
+        <item quantity="one">صفحة واحدة</item>
+        <item quantity="two">صفحتان</item>
+        <item quantity="few">%d صفحات</item>
+        <item quantity="many">%d صفحةً</item>
+        <item quantity="other">%d صفحة</item>
+    </plurals>
+    <plurals name="count_words">
+        <item quantity="zero">%d كلمة</item>
+        <item quantity="one">كلمة واحدة</item>
+        <item quantity="two">كلمتان</item>
+        <item quantity="few">%d كلمات</item>
+        <item quantity="many">%d كلمةً</item>
+        <item quantity="other">%d كلمة</item>
+    </plurals>
+    <plurals name="count_surahs">
+        <item quantity="zero">%d سورة</item>
+        <item quantity="one">سورة واحدة</item>
+        <item quantity="two">سورتان</item>
+        <item quantity="few">%d سور</item>
+        <item quantity="many">%d سورةً</item>
+        <item quantity="other">%d سورة</item>
+    </plurals>
+    <plurals name="count_days">
+        <item quantity="zero">%d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%d أيام</item>
+        <item quantity="many">%d يومًا</item>
+        <item quantity="other">%d يوم</item>
+    </plurals>
+    <plurals name="plan_preview_units">
+        <item quantity="zero">%d وحدة في محفوظك</item>
+        <item quantity="one">وحدة واحدة في محفوظك</item>
+        <item quantity="two">وحدتان في محفوظك</item>
+        <item quantity="few">%d وحدات في محفوظك</item>
+        <item quantity="many">%d وحدةً في محفوظك</item>
+        <item quantity="other">%d وحدة في محفوظك</item>
+    </plurals>
+    <plurals name="plan_preview_cycle">
+        <item quantity="zero">دورة كاملة في نحو %d يوم</item>
+        <item quantity="one">دورة كاملة في نحو يوم واحد</item>
+        <item quantity="two">دورة كاملة في نحو يومين</item>
+        <item quantity="few">دورة كاملة في نحو %d أيام</item>
+        <item quantity="many">دورة كاملة في نحو %d يومًا</item>
+        <item quantity="other">دورة كاملة في نحو %d يوم</item>
+    </plurals>
+    <plurals name="plan_tier_pages">
+        <item quantity="zero">%d صفحة في هذه الفئة</item>
+        <item quantity="one">صفحة واحدة في هذه الفئة</item>
+        <item quantity="two">صفحتان في هذه الفئة</item>
+        <item quantity="few">%d صفحات في هذه الفئة</item>
+        <item quantity="many">%d صفحةً في هذه الفئة</item>
+        <item quantity="other">%d صفحة في هذه الفئة</item>
+    </plurals>
+    <plurals name="plan_tier_every_days">
+        <item quantity="zero">دورة كاملة كل %d يوم تقريبًا</item>
+        <item quantity="one">دورة كاملة كل يوم تقريبًا</item>
+        <item quantity="two">دورة كاملة كل يومين تقريبًا</item>
+        <item quantity="few">دورة كاملة كل %d أيام تقريبًا</item>
+        <item quantity="many">دورة كاملة كل %d يومًا تقريبًا</item>
+        <item quantity="other">دورة كاملة كل %d يوم تقريبًا</item>
     </plurals>
 </resources>

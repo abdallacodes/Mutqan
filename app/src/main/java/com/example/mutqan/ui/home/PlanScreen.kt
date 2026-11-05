@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.home
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,9 +75,13 @@ fun PlanScreen(onBack: () -> Unit) {
                     ) {
                         Text(
                             text = when {
-                                state.byStrength -> stringResource(R.string.plan_strength_total, state.dailyTotal)
+                                state.byStrength -> pluralStringResource(R.plurals.plan_strength_total, state.dailyTotal, state.dailyTotal)
                                 state.itemCount == 0 -> stringResource(R.string.plan_preview_empty)
-                                else -> stringResource(R.string.plan_preview, state.itemCount, state.cycleDays)
+                                else -> stringResource(
+                                    R.string.plan_preview,
+                                    pluralStringResource(R.plurals.plan_preview_units, state.itemCount, state.itemCount),
+                                    pluralStringResource(R.plurals.plan_preview_cycle, state.cycleDays, state.cycleDays)
+                                )
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -204,7 +211,9 @@ fun PlanScreen(onBack: () -> Unit) {
 
             Step(4, stringResource(R.string.plan_step_pause))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = state.paused, role = Role.Switch, onValueChange = viewModel::setPaused),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -212,7 +221,7 @@ fun PlanScreen(onBack: () -> Unit) {
                     Text(stringResource(R.string.plan_label_paused), style = MaterialTheme.typography.bodyLarge)
                     Hint(stringResource(R.string.plan_pause_hint))
                 }
-                PaperSwitch(checked = state.paused, onCheckedChange = viewModel::setPaused)
+                PaperSwitch(checked = state.paused, onCheckedChange = null)
             }
 
             if (state.isExisting) {
@@ -266,8 +275,12 @@ private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onC
             Hint(
                 when {
                     pages == 0 -> stringResource(R.string.plan_tier_empty)
-                    perDay == 0 -> stringResource(R.string.plan_tier_off, pages)
-                    else -> stringResource(R.string.plan_tier_cycle, pages, cycleDays)
+                    perDay == 0 -> stringResource(R.string.plan_tier_off, pluralStringResource(R.plurals.plan_tier_pages, pages, pages))
+                    else -> stringResource(
+                        R.string.plan_tier_cycle,
+                        pluralStringResource(R.plurals.plan_tier_pages, pages, pages),
+                        pluralStringResource(R.plurals.plan_tier_every_days, cycleDays, cycleDays)
+                    )
                 }
             )
         }

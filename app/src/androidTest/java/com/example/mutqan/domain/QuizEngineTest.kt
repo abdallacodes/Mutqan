@@ -21,7 +21,7 @@ class QuizEngineTest {
         val quran = QuranRepository.getInstance(context)
         val engine = QuizEngine(
             quran, SimilarLibrary.load(context), closings = VerseClosingsLibrary.load(context),
-            topics = TopicsLibrary.load(context), topicLanguage = TopicLanguage(arabicUi = true, showAll = false)
+            topics = TopicsLibrary.load(context), topicLanguage = TopicLanguage(arabicUi = true)
         )
         for (type in ExerciseType.QUIZ) {
             var built = 0

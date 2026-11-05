@@ -16,6 +16,8 @@
     <string name="settings_data_management">DATA MANAGEMENT</string>
     <string name="btn_download_mushaf">DOWNLOAD MUSHAF (OFFLINE)</string>
     <string name="downloading_mushaf">Downloading pages: %1$d/%2$d (%3$d%%)</string>
+    <string name="mushaf_download_partial">%1$d of %2$d pages on this phone · tap to download the rest</string>
+    <string name="percent_value">%1$d%%</string>
     <string name="mushaf_download_complete">All 604 pages are now offline.</string>
     <string name="mushaf_download_failed">Download failed (pages %1$d–%2$d)</string>
     <string name="btn_backup">BACKUP DATA</string>
@@ -52,9 +54,18 @@
     <string name="select_date">Select Date</string>
     <string name="pages_range">Pages %1$d\u2013%2$d</string>
     <string name="just_now">Just now</string>
-    <string name="x_min_ago">%d min ago</string>
-    <string name="x_hr_ago">%d hr ago</string>
-    <string name="x_day_ago">%d day ago</string>
+    <plurals name="x_min_ago">
+        <item quantity="one">%d min ago</item>
+        <item quantity="other">%d min ago</item>
+    </plurals>
+    <plurals name="x_hr_ago">
+        <item quantity="one">%d hr ago</item>
+        <item quantity="other">%d hr ago</item>
+    </plurals>
+    <plurals name="x_day_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
 
     <!-- ── Revision History Screen ─────────────────────────────────────────── -->
     <string name="history_title">REVISION HISTORY</string>
@@ -74,8 +85,6 @@
     <string name="cd_add_group">Add group</string>
     <string name="cd_view_group">View group</string>
     <string name="cd_edit_group">Edit group</string>
-    <string name="verses_singular">%d verse</string>
-    <string name="verses_plural">%d verses</string>
     <string name="label_folders">FOLDERS</string>
     <string name="label_uncategorized">UNCATEGORIZED</string>
     <string name="cd_add_folder">Add folder</string>
@@ -105,6 +114,9 @@
     <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
     <string name="cd_save_group">Save group</string>
     <string name="cd_more_options">More options</string>
+    <string name="cd_drag_handle">Drag handle</string>
+    <string name="cd_verse_blank">blank</string>
+    <string name="cd_another_verse">Another verse</string>
     <string name="cd_delete_verse">Delete verse</string>
     <string name="cd_peek_verse">Preview verse</string>
     <string name="section_search_by_text">OR SEARCH BY TEXT</string>
@@ -122,7 +134,7 @@
     <string name="snackbar_already_member">That verse is already in this group.</string>
     <string name="snackbar_verse_added">Verse added.</string>
     <string name="snackbar_desc_required">Enter a description before adding verses.</string>
-    <string name="label_page">Page %d</string>
+    <string name="label_page">Page\u00A0%d</string>
     <string name="group_notes_detail_label">Memorization notes</string>
 
     <!-- ── Strength labels ─────────────────────────────────────────────────── -->
@@ -134,15 +146,17 @@
     <string name="brain_title">THE BRAIN</string>
     <string name="help_brain_title">How The Brain Works</string>
     <string name="help_brain_desc">The Brain is your intelligent memorization assistant. It uses a scientific model (FSRS) to predict how well you remember every page.\n\n\u25cf <b>Stability (Colors)</b>: Green means the page is solid in your memory. Yellow/Red means it is fading and needs revision soon.\n\n\u25cf <b>Symmetry</b>: The app rewards you more if you revise a page right before you forget it. Revising too early provides a smaller boost to long-term memory.\n\n\u25cf <b>Forecast Slider</b>: Move the slider at the top to travel through time! See which pages will turn red in 7, 14, or 30 days if you don\'t revise them.\n\n\u25cf <b>Semantic Interference</b>: If you struggle with a verse in the Vault (Mutashabihat), the app automatically lowers the stability of similar verses elsewhere, as they are likely confusion points.\n\n\u25cf <b>Revision Debt</b>: The number of pages that have fallen below 50%% stability.\n\n\u25cf <b>Recovery Goal</b>: The number of pages you need to revise daily to turn your entire Brain green within a month.</string>
-    <string name="stat_revision_debt">REVISION DEBT</string>
+    <string name="stat_revision_debt">PAGES TO REVISE</string>
     <string name="stat_debt_sublabel">pages below 50%%</string>
     <string name="stat_stability_index">STABILITY INDEX</string>
     <string name="stat_forecast_label">FORECAST</string>
-    <string name="stat_forecast_days">%d days</string>
-    <string name="stat_pages_tracked">%d pages tracked</string>
-    <string name="legend_fresh">Fresh (\u2265 70%%)</string>
-    <string name="legend_fading">Fading (40\u201370%%)</string>
-    <string name="legend_critical">Critical (&lt; 40%%)</string>
+    <plurals name="stat_pages_tracked">
+        <item quantity="one">%d page tracked</item>
+        <item quantity="other">%d pages tracked</item>
+    </plurals>
+    <string name="legend_fresh" formatted="false">Fresh (≥ 70%)</string>
+    <string name="legend_fading" formatted="false">Fading (40–70%)</string>
+    <string name="legend_critical" formatted="false">Critical (&lt; 40%)</string>
     <string name="legend_untracked">Untracked</string>
     <string name="juz_label">JUZ</string>
     <string name="juz_meta_overall_health_short">%d%%</string>
@@ -168,13 +182,12 @@
     <!-- ── Surah Detail Screen ─────────────────────────────────────────────── -->
     <string name="linked_groups_header">LINKED GROUPS</string>
     <string name="linked_groups_hint">Tap a group to view full details</string>
-    <string name="group_meta_total_verses">%d verses</string>
     <string name="group_meta_in_surah">In this Surah: %d</string>
     <string name="group_meta_other_surahs">Other Surahs: %d</string>
     <string name="no_groups_for_surah">No similarity groups for this Surah yet.\nUse the Vault to create and link verse groups.</string>
-    <string name="ayah_n">Ayah %d</string>
+    <string name="ayah_n">Ayah\u00A0%d</string>
     <string name="page_n">p. %d</string>
-    <string name="surah_fallback_title">Surah %d</string>
+    <string name="surah_fallback_title">Surah\u00A0%d</string>
 
     <!-- ── Group Detail Screen ─────────────────────────────────────────────── -->
     <string name="group_detail_fallback_title">Group Detail</string>
@@ -196,8 +209,8 @@
     <string name="btn_copy">Copy</string>
     <string name="btn_share">Share</string>
     <string name="share_verse_title">Share Verse</string>
-    <string name="verse_label_format">%1$s \u00b7 Ayah %2$d</string>
-    <string name="share_verse_body">%1$s\n\n\u2014 %2$s, Ayah %3$d</string>
+    <string name="verse_label_format">%1$s \u00b7 Ayah\u00A0%2$d</string>
+    <string name="share_verse_body">%1$s\n\n\u2014 %2$s, Ayah\u00A0%3$d</string>
 
     <!-- ── Mushaf Viewer ─────────────────────────────────────────────────── -->
     <string name="open_in_mushaf">Open in Mushaf</string>
@@ -289,7 +302,7 @@
     <string name="error_folder_name_exists">Folder name already exists</string>
     <string name="subject_name_label">Subject name</string>
     <string name="subject_start_ayah_label">Start ayah</string>
-    <string name="subject_ayah_option">Ayah %1$d (Surah %2$d)</string>
+    <string name="subject_ayah_option">Ayah\u00A0%1$d (Surah\u00A0%2$d)</string>
     <string name="search_filters_title">SEARCH FILTERS</string>
     <string name="search_no_results_filtered">No results found with current filters</string>
     <string name="error_unknown">Unknown error</string>
@@ -325,7 +338,7 @@
     <string name="state_evidence_label">Recall evidence: %1$s</string>
     <string name="state_self_reported">As you reported it</string>
     <string name="coverage_title">What I\'ve memorised</string>
-    <string name="coverage_summary">%1$d ayahs · %2$d pages</string>
+    <string name="coverage_summary">%1$s · %2$s</string>
     <string name="coverage_unset_hint">You haven\'t set what you\'ve memorised yet. Until you do, everything you log counts as memorised.</string>
     <string name="coverage_whole_quran">Whole Quran</string>
     <string name="coverage_clear">Clear all</string>
@@ -431,8 +444,8 @@
     <string name="home_weak_title">Weak passages to revisit</string>
     <string name="home_weak_dismiss">Dismiss</string>
     <string name="home_log_dialog_title">Log: %1$s</string>
-    <string name="plan_item_juz">Juz %1$d</string>
-    <string name="plan_item_page">Page %1$d</string>
+    <string name="plan_item_juz">Juz\u00A0%1$d</string>
+    <string name="plan_item_page">Page\u00A0%1$d</string>
     <string name="plan_unit_juz">juz</string>
     <string name="plan_unit_page">pages</string>
     <string name="plan_unit_surah">surahs</string>
@@ -450,7 +463,7 @@
     <string name="plan_order_rotation">Longest ago first</string>
     <string name="plan_order_weakest">Weakest first</string>
     <string name="plan_label_paused">Pause this plan</string>
-    <string name="plan_preview">%1$d portions in what you have memorised · a full cycle takes about %2$d days</string>
+    <string name="plan_preview">%1$s · %2$s</string>
     <string name="plan_preview_empty">Set what you have memorised first so the plan can be built.</string>
     <string name="plan_btn_save">Save plan</string>
     <string name="plan_btn_delete">Delete plan</string>
@@ -483,7 +496,10 @@
     <string name="plan_tier_fair">Fair pages</string>
     <string name="plan_tier_strong">Strong pages</string>
     <string name="plan_tier_empty">No pages here right now</string>
-    <string name="plan_strength_total">Total: %d pages a day</string>
+    <plurals name="plan_strength_total">
+        <item quantity="one">Total: %d page a day</item>
+        <item quantity="other">Total: %d pages a day</item>
+    </plurals>
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
     <string name="home_tier_strong">Strong · comes around rarely</string>
@@ -492,11 +508,16 @@
     <string name="ready_list_similar_subtitle">Ready groups of similar ayahs</string>
     <string name="ready_folder_count">Groups: %d</string>
     <string name="ready_add_folder">Add the new groups (%d) to my vault</string>
-    <string name="ready_folder_added_toast">%d groups added to your vault</string>
+    <plurals name="ready_folder_added_toast">
+        <item quantity="one">%d group added to your vault</item>
+        <item quantity="other">%d groups added to your vault</item>
+    </plurals>
     <string name="ready_folder_all_added">Every group of this surah is in your vault</string>
     <string name="peek_similar_title">Ayahs that resemble this one</string>
     <string name="peek_similar_score">%d%% match</string>
-    <string name="peek_similar_more">And %d more</string>
+    <string name="peek_similar_range">%1$d–%2$d of %3$d</string>
+    <string name="peek_similar_next">Next</string>
+    <string name="peek_similar_prev">Previous</string>
     <string name="recall_btn_reveal">Reveal the text</string>
     <string name="progress_title">Your progress</string>
     <string name="progress_subtitle">From what you recorded</string>
@@ -505,12 +526,14 @@
     <string name="progress_coverage_empty">Set what you have memorised and your progress will appear here.</string>
     <string name="progress_open_coverage">Edit what you memorised</string>
     <string name="progress_section_evidence">What your recall shows</string>
-    <string name="progress_pages">%d pages</string>
     <string name="progress_section_consistency">Consistency</string>
-    <string name="progress_days">You revised on %1$d of the last %2$d days</string>
+    <plurals name="progress_days">
+        <item quantity="one">You revised on %1$d of the last %2$d days</item>
+        <item quantity="other">You revised on %1$d of the last %2$d days</item>
+    </plurals>
     <string name="progress_section_attention">Worth a look</string>
     <string name="progress_none_attention">No pages need attention right now. Well done.</string>
-    <string name="progress_juz_attention">Juz %1$d · %2$d pages</string>
+    <string name="progress_juz_attention">Juz\u00A0%1$d · %2$s</string>
     <string name="home_btn_progress">Your progress</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_app_lock">App lock</string>
@@ -578,16 +601,22 @@
     <string name="coverage_surah_picker_hint">Tap each surah you know in full</string>
     <string name="coverage_surah_search">Search a surah by name or number</string>
     <string name="coverage_surah_partly">Partly</string>
-    <string name="plan_tier_cycle">%1$d pages in this group · a full pass about every %2$d days</string>
-    <string name="plan_tier_off">%d pages in this group · left out of the plan</string>
+    <string name="plan_tier_cycle">%1$s · %2$s</string>
+    <string name="plan_tier_off">%1$s · left out of the plan</string>
     <string name="home_progress_today">%1$d of %2$d done today</string>
     <string name="home_btn_revised">I’ve finished revising</string>
     <string name="home_later_title">Later today</string>
     <string name="home_plan_title">Your plan</string>
-    <string name="home_plan_line_strength">About %d pages a day</string>
-    <string name="home_plan_line_fixed">A full cycle takes about %d days</string>
+    <plurals name="home_plan_line_strength">
+        <item quantity="one">About %d page a day</item>
+        <item quantity="other">About %d pages a day</item>
+    </plurals>
+    <plurals name="home_plan_line_fixed">
+        <item quantity="one">A full cycle takes about %d day</item>
+        <item quantity="other">A full cycle takes about %d days</item>
+    </plurals>
     <string name="home_continue_title">Continue reading</string>
-    <string name="home_continue_page">From page %d</string>
+    <string name="home_continue_page">From page\u00A0%d</string>
     <string name="home_progress_hint">Coverage, recall results and consistency</string>
     <string name="home_log_hint">Record a revision that was not in today’s plan</string>
     <string name="plan_step_number">Step %d</string>
@@ -610,11 +639,13 @@
     <string name="quran_tab_surahs">Surahs</string>
     <string name="quran_tab_juz">Juz</string>
     <string name="quran_search_hint">Surah name, number or page</string>
-    <string name="quran_go_page">Go to page %d</string>
-    <string name="quran_surah_info">%1$d ayahs · Juz %2$d · page %3$d</string>
+    <string name="quran_go_page">Go to page\u00A0%d</string>
+    <string name="quran_surah_info">%1$s · Juz\u00A0%2$d · page\u00A0%3$d</string>
     <string name="quran_memorised">Memorised</string>
     <string name="quran_lookalikes">Look-alikes: %d</string>
-    <string name="quran_juz_info">Starts on page %1$d · %2$s</string>
+    <string name="quran_juz_info">Starts on page\u00A0%1$d · %2$s</string>
+    <string name="surah_makki">Revealed in Makkah</string>
+    <string name="surah_madani">Revealed in Madinah</string>
     <string name="practice_daily_title">Daily set</string>
     <string name="practice_daily_desc">10 mixed questions, mostly from your weaker pages</string>
     <string name="ex_ending_title">Which ending is real?</string>
@@ -680,39 +711,46 @@
     <string name="ex_finish_desc">Verses alike at the start or the close: pick the right ending</string>
     <string name="quiz_q_finish_closing">How does this verse end?</string>
     <string name="quiz_q_finish_lookalike">Its start matches other verses, its end does not. How does this one end?</string>
-    <string name="quiz_open_page">Open page %d</string>
+    <string name="quiz_open_page">Open page\u00A0%d</string>
     <string name="home_missed_title">Missed in practice</string>
-    <string name="home_missed_line">Page %1$d · missed %2$d times this week</string>
-    <string name="root_summary">%1$d words in %2$d verses</string>
+    <plurals name="home_missed_line">
+        <item quantity="one">Page\u00A0%1$d · missed once this week</item>
+        <item quantity="other">Page\u00A0%1$d · missed %2$d times this week</item>
+    </plurals>
+    <string name="root_summary">%1$s · %2$s</string>
     <string name="root_row_title">Root: %s</string>
     <string name="root_forms">Forms</string>
     <string name="root_all_forms">All</string>
     <string name="quran_tab_topics">Topics</string>
     <string name="topics_search_hint">Search a topic</string>
-    <string name="topics_show_all">Also show topics that have no Arabic name</string>
     <string name="topics_none">No topics with that name</string>
     <string name="topics_themes">Themes</string>
     <string name="topics_concepts">Concepts</string>
     <string name="topics_popular">Most mentioned</string>
-    <string name="topic_verses">%d verses</string>
     <string name="topic_subtopics">Subtopics</string>
     <string name="topic_related">Related topics</string>
     <string name="topic_verses_header">Verses (%d)</string>
     <string name="topic_memorised_of">You have memorised %1$d of %2$d</string>
     <string name="topic_only_memorised">Only what I have memorised</string>
-    <string name="peek_topics_title">Topics of this verse</string>
+    <string name="peek_theme_title">Theme of this passage</string>
+    <string name="theme_range">Verses %1$d–%2$d</string>
+    <string name="theme_range_one">Verse\u00A0%1$d</string>
+    <string name="theme_row_place">%1$s · %2$s · page\u00A0%3$d</string>
+    <string name="themes_search_hint">Search passage themes</string>
+    <string name="mushaf_tab_themes">Themes</string>
     <string name="quiz_q_topic">Which topic does this verse belong to?</string>
     <string name="quiz_topics_of_verse">Topics of this verse</string>
     <string name="account_title">Account</string>
     <string name="account_intro">Sign in with Google to keep your revision and memorisation the same on all your devices. Signing in combines the data on this device with the account copy. An account works on one device at a time.</string>
     <string name="account_sign_in">Sign in with Google</string>
-    <string name="account_sign_in_failed">Sign-in failed: %1$s</string>
+    <string name="account_sign_in_failed">Sign-in didn\'t work. Check your internet connection and try again.</string>
     <string name="account_sign_out">Sign out</string>
     <string name="sync_now">Sync now</string>
     <string name="sync_running">Syncing…</string>
     <string name="sync_last">Last synced: %1$s</string>
+    <string name="sync_last_now">Last synced: just now</string>
     <string name="sync_never">Not synced yet</string>
-    <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="sync_failed">Sync didn\'t work. Check your internet connection, then tap Sync now.</string>
     <string name="snapshot_too_new">This data was written by a newer version of the app. Update the app first so none of it is lost.</string>
     <string name="sync_timeout">The cloud did not answer in time. Check your internet connection and try again.</string>
     <string name="sync_outcome_nothing">Everything is up to date.</string>
@@ -771,14 +809,18 @@
     <string name="mushaf_tab_surah">Surah</string>
     <string name="mushaf_tab_juz">Juz</string>
     <string name="mushaf_tab_page">Page</string>
-    <string name="mushaf_surah_row">%1$d verses · page %2$d</string>
-    <string name="mushaf_juz_row">Juz %1$d</string>
-    <string name="mushaf_juz_hizb">Juz %1$d · Hizb %2$d</string>
+    <string name="mushaf_surah_row">%1$s · page\u00A0%2$d</string>
+    <string name="mushaf_juz_row">Juz\u00A0%1$d</string>
+    <string name="mushaf_juz_hizb">Juz\u00A0%1$d · Hizb\u00A0%2$d</string>
     <string name="mushaf_page_field">Page number (1–604)</string>
     <string name="mushaf_go">Go</string>
     <string name="mushaf_cd_menu">More</string>
+    <string name="mushaf_cd_page">Page\u00A0%1$d. %2$s</string>
+    <string name="mushaf_cd_page_part">%1$s, verses %2$d–%3$d</string>
+    <string name="mushaf_cd_page_part_one">%1$s, verse\u00A0%2$d</string>
+    <string name="mushaf_cd_toggle_bar">Show or hide the bar</string>
     <string name="mushaf_cd_revised">Log a revision of this page</string>
-    <string name="mushaf_revised_title">Revised page %1$d</string>
+    <string name="mushaf_revised_title">Revised page\u00A0%1$d</string>
     <string name="mushaf_revised_saved">Revision logged</string>
     <string name="mushaf_cd_cover">Cover the text to recite</string>
     <string name="mushaf_cd_uncover">Show the text</string>
@@ -822,8 +864,12 @@
     <string name="session_use_here">Use the account here again</string>
     <string name="first_sync_title">This account already has saved data</string>
     <string name="first_sync_intro">This account has data saved in the cloud, and this device has data too. Choose what happens to them.</string>
-    <string name="first_sync_cloud_count">In your account: %1$d revision entries</string>
-    <string name="first_sync_device_count">On this device: %1$d revision entries</string>
+    <string name="first_sync_cloud_count">In your account: %1$s</string>
+    <string name="first_sync_device_count">On this device: %1$s</string>
+    <plurals name="count_revision_entries">
+        <item quantity="one">%d revision entry</item>
+        <item quantity="other">%d revision entries</item>
+    </plurals>
     <string name="first_sync_merge_hint">Keeps everything from both. This is the safe choice.</string>
     <string name="first_sync_replace_hint">This device\'s data is erased and replaced by the account\'s.</string>
     <string name="first_sync_other_account">The data on this device was linked to a different account.</string>
@@ -882,7 +928,6 @@
     <string name="audio_storage_subtitle">What you downloaded and what is kept while streaming</string>
     <string name="audio_storage_link">Manage recitation storage</string>
     <string name="audio_storage_empty">No recitations are downloaded.</string>
-    <string name="audio_storage_count">%1$d surahs</string>
     <string name="audio_storage_cache">Streaming cache</string>
     <string name="audio_storage_cache_hint">What you listen to without downloading is kept for a while, and the oldest is cleared automatically when it fills.</string>
     <string name="audio_storage_clear_cache">Clear the streaming cache</string>
@@ -901,7 +946,7 @@
     <string name="coverage_levels_note">Colour shows where each page stands now. A page nobody has rated or revised counts as fair.</string>
     <string name="coverage_show_pages">Show pages</string>
     <string name="coverage_hide_pages">Hide pages</string>
-    <string name="coverage_shared_page">Page %1$d is shared with juz %2$d.</string>
+    <string name="coverage_shared_page">Page\u00A0%1$d is shared with juz %2$d.</string>
     <string name="coverage_choice_title">Change the level of these pages?</string>
     <string name="coverage_choice_body">%1$d of these %2$d pages already have a level of their own. What should happen?</string>
     <string name="coverage_choice_all">All pages</string>
@@ -947,5 +992,41 @@
     <plurals name="scope_will_use">
         <item quantity="one">%d page will be used</item>
         <item quantity="other">%d pages will be used</item>
+    </plurals>
+    <plurals name="count_ayahs">
+        <item quantity="one">%d verse</item>
+        <item quantity="other">%d verses</item>
+    </plurals>
+    <plurals name="count_pages">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <plurals name="count_words">
+        <item quantity="one">%d word</item>
+        <item quantity="other">%d words</item>
+    </plurals>
+    <plurals name="count_surahs">
+        <item quantity="one">%d surah</item>
+        <item quantity="other">%d surahs</item>
+    </plurals>
+    <plurals name="count_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="plan_preview_units">
+        <item quantity="one">%d portion in what you have memorised</item>
+        <item quantity="other">%d portions in what you have memorised</item>
+    </plurals>
+    <plurals name="plan_preview_cycle">
+        <item quantity="one">a full cycle takes about %d day</item>
+        <item quantity="other">a full cycle takes about %d days</item>
+    </plurals>
+    <plurals name="plan_tier_pages">
+        <item quantity="one">%d page in this group</item>
+        <item quantity="other">%d pages in this group</item>
+    </plurals>
+    <plurals name="plan_tier_every_days">
+        <item quantity="one">a full pass about every day</item>
+        <item quantity="other">a full pass about every %d days</item>
     </plurals>
 </resources>

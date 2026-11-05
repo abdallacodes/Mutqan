@@ -31,7 +31,7 @@ private fun c(hex: Long) = Color(0xFF000000 or hex)
 private val lapisLight = PaletteColors(
     bg = c(0xEEF2F6), surface = c(0xF5F8FB), surfaceVariant = c(0xE0E8F0), ink = c(0x14202E), inkSoft = c(0x526377),
     rule = c(0xB7C6D6), ruleSoft = c(0xD3DDE8), primary = c(0x1F4E8C), onPrimary = c(0xF5F8FB),
-    primaryContainer = c(0xD2E1F3), onPrimaryContainer = c(0x0E2B52), tertiary = c(0x0F7F87), error = c(0xA33A2C)
+    primaryContainer = c(0xD2E1F3), onPrimaryContainer = c(0x0E2B52), tertiary = c(0x0D7077), error = c(0xA33A2C)
 )
 private val lapisDark = PaletteColors(
     bg = c(0x0E1520), surface = c(0x141D2A), surfaceVariant = c(0x1B2636), ink = c(0xE3EAF3), inkSoft = c(0x93A3B8),
@@ -40,7 +40,7 @@ private val lapisDark = PaletteColors(
 )
 
 private val duneLight = PaletteColors(
-    bg = c(0xF2E8DA), surface = c(0xF8F0E4), surfaceVariant = c(0xE9DAC5), ink = c(0x2A1D14), inkSoft = c(0x75604D),
+    bg = c(0xF2E8DA), surface = c(0xF8F0E4), surfaceVariant = c(0xE9DAC5), ink = c(0x2A1D14), inkSoft = c(0x6F5B49),
     rule = c(0xD2B995), ruleSoft = c(0xE2D0B3), primary = c(0xA24A27), onPrimary = c(0xFBF5EC),
     primaryContainer = c(0xF0D3C1), onPrimaryContainer = c(0x5A2410), tertiary = c(0x7A6420), error = c(0x9E2F2F)
 )
@@ -53,7 +53,7 @@ private val duneDark = PaletteColors(
 private val oliveLight = PaletteColors(
     bg = c(0xEEF0E4), surface = c(0xF5F6EC), surfaceVariant = c(0xE0E4D0), ink = c(0x1D2314), inkSoft = c(0x5C6449),
     rule = c(0xBDC5A0), ruleSoft = c(0xD6DBC0), primary = c(0x4B5F23), onPrimary = c(0xF5F6EC),
-    primaryContainer = c(0xD9E2B8), onPrimaryContainer = c(0x26330D), tertiary = c(0x8A6A17), error = c(0xA33A2C)
+    primaryContainer = c(0xD9E2B8), onPrimaryContainer = c(0x26330D), tertiary = c(0x7A5E14), error = c(0xA33A2C)
 )
 private val oliveDark = PaletteColors(
     bg = c(0x11140D), surface = c(0x181C12), surfaceVariant = c(0x21261A), ink = c(0xE8ECD9), inkSoft = c(0xA0A98A),

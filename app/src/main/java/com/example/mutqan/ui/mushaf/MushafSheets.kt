@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
@@ -42,15 +43,18 @@ import com.example.mutqan.ui.revision.OutcomePicker
 import com.example.mutqan.ui.revision.OutcomePreview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mutqan.ui.topics.ThemesList
+import com.example.mutqan.ui.topics.themesAvailable
 
 private const val TOTAL_PAGES = 604
 
-/** Jump to a surah, a juz or a page number. [onGo] gets the page to open. */
+/** Jump to a surah, a juz, a page number or a passage by what it is about. [onGo] gets the page to open. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MushafJumpSheet(quran: QuranRepository, currentPage: Int, onGo: (Int) -> Unit, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val themes = themesAvailable()
     val data by produceState<Pair<List<QuranSurah>, Map<Int, List<Int>>>?>(null) {
         value = withContext(Dispatchers.IO) { quran.surahs() to quran.pagesByJuz() }
     }
@@ -63,10 +67,11 @@ fun MushafJumpSheet(quran: QuranRepository, currentPage: Int, onGo: (Int) -> Uni
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
             )
             PaperTabs(
-                labels = listOf(
+                labels = listOfNotNull(
                     stringResource(R.string.mushaf_tab_surah),
                     stringResource(R.string.mushaf_tab_juz),
-                    stringResource(R.string.mushaf_tab_page)
+                    stringResource(R.string.mushaf_tab_page),
+                    if (themes) stringResource(R.string.mushaf_tab_themes) else null
                 ),
                 selectedIndex = tab,
                 onSelect = { tab = it }
@@ -76,7 +81,11 @@ fun MushafJumpSheet(quran: QuranRepository, currentPage: Int, onGo: (Int) -> Uni
                     items(data?.first.orEmpty(), key = { it.id }) { surah ->
                         HubRow(
                             title = SurahData.nameOf(surah.id),
-                            subtitle = stringResource(R.string.mushaf_surah_row, surah.versesCount, surah.firstPage),
+                            subtitle = stringResource(
+                                R.string.mushaf_surah_row,
+                                pluralStringResource(R.plurals.count_ayahs, surah.versesCount, surah.versesCount),
+                                surah.firstPage
+                            ),
                             onClick = { onGo(surah.firstPage) }
                         )
                     }
@@ -90,6 +99,7 @@ fun MushafJumpSheet(quran: QuranRepository, currentPage: Int, onGo: (Int) -> Uni
                         )
                     }
                 }
+                3 -> ThemesList(onGo = onGo)
                 else -> {
                     var text by rememberSaveable { mutableStateOf(currentPage.toString()) }
                     val page = text.toIntOrNull()?.takeIf { it in 1..TOTAL_PAGES }

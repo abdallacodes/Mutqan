@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
@@ -81,7 +82,7 @@ fun AccountSection() {
     fun report() {
         val text = when (val s = cloud.status.value) {
             is SyncStatus.Done -> context.getString(outcomeText(s.outcome))
-            is SyncStatus.Failed -> context.getString(R.string.sync_failed, s.message ?: "")
+            is SyncStatus.Failed -> context.getString(R.string.sync_failed)
             else -> null
         }
         if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
@@ -110,7 +111,7 @@ fun AccountSection() {
                 val choice = cloud.firstSyncChoice()
                 if (choice != null) firstSync = choice else runSync()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -128,7 +129,7 @@ fun AccountSection() {
                 }
             } catch (e: Exception) {
                 cloud.signOut()
-                Toast.makeText(context, context.getString(R.string.account_sign_in_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.account_sign_in_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -140,7 +141,7 @@ fun AccountSection() {
                 cloud.takeOver()
                 startSync()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -166,7 +167,7 @@ fun AccountSection() {
                         cloud.accounts.signIn(activity)
                         if (cloud.accounts.account.value != null) afterSignIn()
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.account_sign_in_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.account_sign_in_failed), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -187,11 +188,13 @@ fun AccountSection() {
             }
             val line = when (val s = status) {
                 SyncStatus.Syncing -> stringResource(R.string.sync_running)
-                is SyncStatus.Failed -> stringResource(R.string.sync_failed, s.message ?: "")
+                is SyncStatus.Failed -> stringResource(R.string.sync_failed)
                 else -> lastSync?.let {
-                    val ago = DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                    val now = System.currentTimeMillis()
                     val done = (status as? SyncStatus.Done)?.let { d -> stringResource(outcomeText(d.outcome)) + "\n" }.orEmpty()
-                    done + stringResource(R.string.sync_last, ago)
+                    // Under a minute DateUtils says "0 minutes ago".
+                    done + if (now - it < DateUtils.MINUTE_IN_MILLIS) stringResource(R.string.sync_last_now)
+                    else stringResource(R.string.sync_last, DateUtils.getRelativeTimeSpanString(it, now, DateUtils.MINUTE_IN_MILLIS).toString())
                 } ?: stringResource(R.string.sync_never)
             }
             Text(
@@ -345,12 +348,18 @@ private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: (
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (choice.cloudExists) Text(
-                        text = stringResource(R.string.first_sync_cloud_count, choice.cloudEntries),
+                        text = stringResource(
+                            R.string.first_sync_cloud_count,
+                            pluralStringResource(R.plurals.count_revision_entries, choice.cloudEntries, choice.cloudEntries)
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = stringResource(R.string.first_sync_device_count, choice.deviceEntries),
+                        text = stringResource(
+                            R.string.first_sync_device_count,
+                            pluralStringResource(R.plurals.count_revision_entries, choice.deviceEntries, choice.deviceEntries)
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )

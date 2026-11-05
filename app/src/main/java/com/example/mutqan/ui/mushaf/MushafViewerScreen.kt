@@ -1,5 +1,14 @@
 package com.example.mutqan.ui.mushaf
 
+import com.example.mutqan.quran.QuranAyah
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.contentDescription
+import com.example.mutqan.ui.theme.statusColors
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.ui.saved.SavePassageSheet
 import com.example.mutqan.domain.SavedPassage
@@ -41,7 +50,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -102,7 +110,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
@@ -124,10 +131,6 @@ import com.example.mutqan.quran.MushafPageView
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
-import com.example.mutqan.ui.topics.VerseTopics
-import com.example.mutqan.ui.theme.DifficultyCritical
-import com.example.mutqan.ui.theme.DifficultySmooth
-import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.mutqan.ui.components.PaperOutlinedButton
@@ -137,6 +140,9 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import com.example.mutqan.ui.topics.VerseTheme
 
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
@@ -202,7 +208,6 @@ fun MushafViewerScreen(
     startAyah:   Int = 0,
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
-    onOpenTopic: (Int) -> Unit = {},
     onOpenTafsir: (Int) -> Unit = {},
     onOpenAudioStorage: () -> Unit = {}
 ) {
@@ -216,7 +221,7 @@ fun MushafViewerScreen(
     // Tracks the \"primary\" Mushaf page for the top bar; persists across rotations.
     var currentPage by rememberSaveable { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
 
-    // The page the user specifically navigated to — used to draw the green border.
+    // The page the user specifically navigated to; the two-page view marks its number so it can be told from its neighbour.
     // Fixed for the lifetime of this screen; does not change on swipe.
     var activePage by remember { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
 
@@ -389,8 +394,15 @@ fun MushafViewerScreen(
         }
         onDispose { }
     }
+    val appBarsLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
     DisposableEffect(window) {
-        onDispose { window?.let { WindowCompat.getInsetsController(it, view).show(WindowInsetsCompat.Type.systemBars()) } }
+        onDispose {
+            window?.let {
+                val controller = WindowCompat.getInsetsController(it, view)
+                controller.show(WindowInsetsCompat.Type.systemBars())
+                controller.isAppearanceLightStatusBars = appBarsLight
+            }
+        }
     }
 
     DisposableEffect(Unit) {
@@ -456,8 +468,6 @@ fun MushafViewerScreen(
                                 spreadFillWidth  = spreadFillWidth,
                                 rightPage        = spreadRightPage(pageIndex),
                                 leftPage         = spreadLeftPage(pageIndex),
-                                rightStability   = spreadRightPage(pageIndex)?.let { state.stabilities.getOrNull(it - 1) },
-                                leftStability    = spreadLeftPage(pageIndex)?.let  { state.stabilities.getOrNull(it - 1) },
                                 activePage       = activePage,
                                 quran            = quran,
                                 fonts            = fonts,
@@ -469,8 +479,6 @@ fun MushafViewerScreen(
                             SinglePageView(
                                 pagerState    = pagerState,
                                 page          = page,
-                                stability     = state.stabilities.getOrNull(page - 1),
-                                activePage    = activePage,
                                 quran         = quran,
                                 fonts         = fonts,
                                 onScaleChange = { scale -> currentScale = scale },
@@ -492,10 +500,11 @@ fun MushafViewerScreen(
         ) {
             val juzHizb = pageInfo?.let { stringResource(R.string.mushaf_juz_hizb, it.first, it.second) }
             val pageLine = listOfNotNull(juzHizb, pageBarLabel).joinToString(" · ")
+            // Opaque, so with large text the taller bar covers the page's own top line instead of mixing with it.
             Row(
                 modifier          = Modifier
                     .fillMaxWidth()
-                    .background(MushafHeaderScrim)
+                    .background(MushafParchment)
                     .statusBarsPadding()
                     .padding(horizontal = 2.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -522,13 +531,21 @@ fun MushafViewerScreen(
                         maxLines   = 1,
                         overflow   = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text     = pageLine,
-                        style    = MaterialTheme.typography.labelSmall,
-                        color    = MushafInkMuted,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // How well each page in view is known, in the colour it has everywhere else.
+                        val inView = if (useSpreadLayout) {
+                            listOfNotNull(spreadRightPage((currentPage - 1) / 2), spreadLeftPage((currentPage - 1) / 2))
+                        } else listOf(currentPage)
+                        inView.forEach { StabilityDot(state.stabilities.getOrNull(it - 1), Modifier.padding(end = 6.dp)) }
+                        // Two lines at most: with large text the page number wraps rather than being cut off.
+                        Text(
+                            text     = pageLine,
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = MushafInkMuted,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 IconButton(onClick = { showRevised = true }) {
                     Icon(
@@ -544,15 +561,7 @@ fun MushafViewerScreen(
                         tint               = if (coverOn) MaterialTheme.colorScheme.primary else MushafInk
                     )
                 }
-                IconButton(onClick = { useSpreadLayout = !useSpreadLayout }) {
-                    Icon(
-                        imageVector        = if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook,
-                        contentDescription = stringResource(
-                            if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
-                        ),
-                        tint               = if (useSpreadLayout) MaterialTheme.colorScheme.primary else MushafInk
-                    )
-                }
+                // The page is the subject; only the two things done while reading stay in the bar, the rest is in the menu.
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(
@@ -592,6 +601,15 @@ fun MushafViewerScreen(
                             leadingIcon = { Icon(Icons.Filled.Bookmarks, null) },
                             onClick = { menuOpen = false; onOpenSaved() }
                         )
+                        DropdownMenuItem(
+                            text = {
+                                Text(stringResource(
+                                    if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
+                                ))
+                            },
+                            leadingIcon = { Icon(if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook, null) },
+                            onClick = { useSpreadLayout = !useSpreadLayout; menuOpen = false }
+                        )
                         if (useSpreadLayout) {
                             DropdownMenuItem(
                                 text = {
@@ -606,11 +624,12 @@ fun MushafViewerScreen(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.mushaf_rotate)) },
                             leadingIcon = { if (rotateWithDevice) Icon(Icons.Filled.Check, null) },
+                            modifier = Modifier.semantics { toggleableState = ToggleableState(rotateWithDevice) },
                             onClick = { coroutineScope.launch { prefs.setMushafRotate(!rotateWithDevice) }; menuOpen = false }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.mushaf_mark_page_memorised)) },
-                            leadingIcon = { Icon(Icons.Filled.TaskAlt, null) },
+                            leadingIcon = { Icon(Icons.Filled.Verified, null) },
                             onClick = {
                                 menuOpen = false
                                 coroutineScope.launch {
@@ -630,6 +649,7 @@ fun MushafViewerScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(option.labelRes)) },
                                 leadingIcon = { if (option == readingTheme) Icon(Icons.Filled.Check, null) },
+                                modifier = Modifier.semantics { selected = option == readingTheme },
                                 onClick = { coroutineScope.launch { prefs.setMushafTheme(option.name) }; menuOpen = false }
                             )
                         }
@@ -738,12 +758,9 @@ fun MushafViewerScreen(
                 )
             ),
             extraContent = {
+                VerseTheme(target.verseId)
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
-                VerseTopics(target.verseId) { topic ->
-                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
-                    onOpenTopic(topic)
-                }
             }
         )
 
@@ -786,38 +803,57 @@ fun MushafViewerScreen(
     }
 }
 
+// ── What a screen reader says for a page ─────────────────────────────────────
+
+/**
+ * Each of [pages] as its number and the verses on it ("Page 51. Al Imran, verses 10–15"): the page itself is drawn
+ * glyphs, which a screen reader cannot read.
+ */
+@Composable
+private fun rememberPageDescription(quran: QuranRepository, pages: List<Int>): String {
+    val ayahs by produceState(emptyMap<Int, List<QuranAyah>>(), pages) {
+        value = withContext(Dispatchers.IO) { pages.associateWith { quran.ayahsOnPage(it) } }
+    }
+    val described = pages.map { page ->
+        val parts = ayahs[page].orEmpty().groupBy { it.surah }.map { (surah, onPage) ->
+            val first = onPage.minOf { it.ayah }
+            val last = onPage.maxOf { it.ayah }
+            if (first == last) stringResource(R.string.mushaf_cd_page_part_one, SurahData.nameOf(surah), first)
+            else stringResource(R.string.mushaf_cd_page_part, SurahData.nameOf(surah), first, last)
+        }
+        stringResource(R.string.mushaf_cd_page, page, parts.joinToString(". "))
+    }
+    return described.joinToString(" ")
+}
+
 // ── Portrait: single page ─────────────────────────────────────────────────────
 
 @Composable
 private fun SinglePageView(
     pagerState:    PagerState,
     page:          Int,
-    stability:     PageStability?,
-    activePage:    Int,
     quran:         QuranRepository,
     fonts:         MushafFontManager,
     onScaleChange: (Float) -> Unit,
     onTap:         () -> Unit,
     modifier:      Modifier = Modifier
 ) {
+    val description = rememberPageDescription(quran, listOf(page))
+    val toggleLabel = stringResource(R.string.mushaf_cd_toggle_bar)
     ZoomableSurface(
         pagerState    = pagerState,
         onScaleChange = onScaleChange,
         onTap         = onTap,
-        modifier      = modifier
+        modifier      = modifier.semantics {
+            contentDescription = description
+            onClick(label = toggleLabel) { onTap(); true }
+        }
     ) {
         PageImage(
             page          = page,
             quran         = quran,
             fonts         = fonts,
-            isActive      = page == activePage,
             modifier      = Modifier.fillMaxSize()
-        )
-        StabilityDot(
-            stability = stability,
-            modifier  = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(10.dp)
         )
     }
 }
@@ -830,8 +866,8 @@ private fun SinglePageView(
 // spread 301 → right=page603, left=page602
 // spread 302 → right=blank, left=page604 (alone)
 //
-// The active page (= startPage) gets a green DifficultySmooth border;
-// the companion page has no border.
+// Under the two pages, a strip with the number of each: filled for the page the reader came to, quiet for its
+// neighbour. A soft shade runs down the middle where the pages meet, like the gutter of an open book.
 
 @Composable
 private fun SpreadView(
@@ -839,8 +875,6 @@ private fun SpreadView(
     spreadFillWidth:  Boolean,
     rightPage:        Int?,
     leftPage:         Int?,
-    rightStability:   PageStability?,
-    leftStability:    PageStability?,
     activePage:       Int,
     quran:            QuranRepository,
     fonts:            MushafFontManager,
@@ -854,11 +888,18 @@ private fun SpreadView(
         spreadSharedScroll.scrollTo(0)
     }
 
+    // Right page first: the order they are read in.
+    val description = rememberPageDescription(quran, listOfNotNull(rightPage, leftPage))
+    val toggleLabel = stringResource(R.string.mushaf_cd_toggle_bar)
+    Column(modifier = modifier.fillMaxSize().background(MushafParchment)) {
     ZoomableSurface(
         pagerState    = pagerState,
         onScaleChange = onScaleChange,
         onTap         = onTap,
-        modifier      = modifier
+        modifier      = Modifier.weight(1f).semantics {
+            contentDescription = description
+            onClick(label = toggleLabel) { onTap(); true }
+        }
     ) {
         // ALWAYS FORCE LTR for the Spread View itself.
         // We want Right Column = Odd Page and Left Column = Even Page
@@ -879,15 +920,8 @@ private fun SpreadView(
                             page                     = leftPage,
                             quran                    = quran,
                             fonts                    = fonts,
-                            isActive                 = leftPage == activePage,
                             fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
                             modifier                 = Modifier.fillMaxSize()
-                        )
-                        StabilityDot(
-                            stability = leftStability,
-                            modifier  = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(6.dp)
                         )
                     }
                 }
@@ -913,21 +947,52 @@ private fun SpreadView(
                             page                     = rightPage,
                             quran                    = quran,
                             fonts                    = fonts,
-                            isActive                 = rightPage == activePage,
                             fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
                             modifier                 = Modifier.fillMaxSize()
-                        )
-                        StabilityDot(
-                            stability = rightStability,
-                            modifier  = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(6.dp)
                         )
                     }
                 }
             }
         }
+
+        // The gutter: a soft shade where the two pages meet.
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .width(GUTTER_WIDTH)
+                .fillMaxHeight()
+                .background(Brush.horizontalGradient(listOf(Color.Transparent, MushafInk.copy(alpha = 0.10f), Color.Transparent)))
+        )
     }
+
+    // The numbers sit outside the zoomed pages so they stay put and readable. Same left-to-right order as the pages.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
+            listOf(leftPage, rightPage).forEach { page ->
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    if (page != null) SpreadPageNumber(page = page, active = page == activePage)
+                }
+            }
+        }
+    }
+    }
+}
+
+private val GUTTER_WIDTH = 28.dp
+
+/** The number of a page in the two-page view: filled for the page the reader came to, quiet for its neighbour. */
+@Composable
+private fun SpreadPageNumber(page: Int, active: Boolean, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Text(
+        text = page.toString(),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+        color = if (active) scheme.onPrimary else MushafInkMuted,
+        modifier = modifier
+            .background(if (active) scheme.primary else MushafInk.copy(alpha = 0.07f), RoundedCornerShape(50))
+            .padding(horizontal = 14.dp, vertical = 3.dp)
+    )
 }
 
 // ── Zoom container ────────────────────────────────────────────────────────────
@@ -1006,9 +1071,6 @@ private fun ZoomableSurface(
 
 // ── Single Mushaf page ────────────────────────────────────────────────────────
 //
-// isActive = true  → 3dp green border (DifficultySmooth) — the navigated page
-// isActive = false → no border — companion page in the spread
-//
 // The page is drawn from the QPC V2 layout and its own font (see MushafPageView); the
 // canvas keeps the page aspect ratio, so the full page is always visible (no edge crop).
 
@@ -1017,20 +1079,14 @@ private fun PageImage(
     page:                    Int,
     quran:                   QuranRepository,
     fonts:                   MushafFontManager,
-    isActive:                Boolean = false,
     modifier:                Modifier = Modifier,
     /** Spread “fill width” mode: page uses full column width; scroll to see full height. */
     fillWidthVerticalScroll: ScrollState? = null
 ) {
     val marks = LocalAyahMarks.current
-    val borderMod = if (isActive)
-        Modifier.border(width = 3.dp, color = DifficultySmooth, shape = RectangleShape)
-    else
-        Modifier
 
     Box(
         modifier          = modifier
-            .then(borderMod)
             .background(MushafParchment),
         contentAlignment  = if (fillWidthVerticalScroll != null) Alignment.TopCenter else Alignment.Center
     ) {
@@ -1102,16 +1158,18 @@ private fun StabilityDot(
     stability: PageStability?,
     modifier:  Modifier = Modifier
 ) {
+    // The dot sits on the page, whose colour can differ from the app's (a light page in a dark app).
+    val status = statusColors(onLight = MushafParchment.luminance() > 0.5f)
     val color = when {
         stability == null || !stability.isTracked -> return
-        stability.score >= 0.60f                  -> DifficultySmooth
-        stability.score >= 0.30f                  -> DifficultyStruggled
-        else                                       -> DifficultyCritical
+        stability.score >= 0.60f                  -> status.good
+        stability.score >= 0.30f                  -> status.fair
+        else                                       -> status.weak
     }
 
     Box(
         modifier = modifier
-            .size(10.dp)
+            .size(8.dp)
             .clip(CircleShape)
             .background(color)
     )

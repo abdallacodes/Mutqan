@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -62,7 +63,6 @@ import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.HubRow
-import com.example.mutqan.ui.components.OrnamentDivider
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperLink
@@ -79,6 +79,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.mutqan.ui.navigation.OnTabReselected
 import com.example.mutqan.ui.navigation.Routes
 import com.example.mutqan.ui.components.AyahText
+import com.example.mutqan.ui.components.LocalDockInset
 
 private const val LATER_PREVIEW = 3
 
@@ -177,7 +178,10 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = PaperSpace.Gutter, vertical = PaperSpace.Section)
+            contentPadding = PaddingValues(
+                start = PaperSpace.Gutter, top = PaperSpace.Section, end = PaperSpace.Gutter,
+                bottom = PaperSpace.Section + LocalDockInset.current
+            )
         ) {
             val plan = state.plan
             val today = state.today
@@ -349,7 +353,7 @@ fun HomeScreen(
             if (state.weak.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(PaperSpace.Section))
-                    OrnamentDivider()
+                    Hairline()
                     Spacer(Modifier.height(20.dp))
                     SectionLabel(stringResource(R.string.home_weak_title))
                 }
@@ -365,7 +369,7 @@ fun HomeScreen(
             if (state.missed.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(PaperSpace.Section))
-                    OrnamentDivider()
+                    Hairline()
                     Spacer(Modifier.height(20.dp))
                     SectionLabel(stringResource(R.string.home_missed_title))
                     Spacer(Modifier.height(4.dp))
@@ -382,7 +386,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.home_missed_line, missed.page, missed.count),
+                                text = pluralStringResource(R.plurals.home_missed_line, missed.count, missed.page, missed.count),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.weight(1f)
@@ -397,14 +401,14 @@ fun HomeScreen(
             if (state.hasCoverage && plan != null && today != null) {
                 item {
                     Spacer(Modifier.height(PaperSpace.Section))
-                    OrnamentDivider()
+                    Hairline()
                     Spacer(Modifier.height(20.dp))
                     PlanSummary(
                         name = plan.name,
                         line = if (plan.order == PlanOrder.BY_STRENGTH) {
-                            stringResource(R.string.home_plan_line_strength, today.dailyPages)
+                            pluralStringResource(R.plurals.home_plan_line_strength, today.dailyPages, today.dailyPages)
                         } else {
-                            stringResource(R.string.home_plan_line_fixed, today.cycleDays)
+                            pluralStringResource(R.plurals.home_plan_line_fixed, today.cycleDays, today.cycleDays)
                         },
                         onEdit = onOpenPlan
                     )
@@ -418,9 +422,11 @@ fun HomeScreen(
                 state.lastPage?.let { page ->
                     HubRow(
                         title = stringResource(R.string.home_continue_title),
-                        subtitle = stringResource(R.string.home_continue_page, page),
+                        subtitle = null,
+                        note = stringResource(R.string.home_continue_page, page),
                         onClick = { onOpenMushaf(page) },
-                        horizontalPadding = 0.dp
+                        horizontalPadding = 0.dp,
+                        compact = true
                     )
                 }
                 if (state.hasCoverage) {
@@ -428,13 +434,15 @@ fun HomeScreen(
                         title = stringResource(R.string.home_btn_progress),
                         subtitle = stringResource(R.string.home_progress_hint),
                         onClick = onOpenProgress,
-                        horizontalPadding = 0.dp
+                        horizontalPadding = 0.dp,
+                        compact = true
                     )
                     HubRow(
                         title = stringResource(R.string.home_btn_log_revision),
                         subtitle = stringResource(R.string.home_log_hint),
                         onClick = onLogRevision,
-                        horizontalPadding = 0.dp
+                        horizontalPadding = 0.dp,
+                        compact = true
                     )
                 }
             }
@@ -466,7 +474,7 @@ private fun PlanSummary(name: String, line: String, onEdit: () -> Unit) {
                 Text(name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                 Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            PaperSmallButton(stringResource(R.string.home_btn_edit_plan), onClick = onEdit)
+            PaperLink(stringResource(R.string.home_btn_edit_plan), onClick = onEdit)
         }
     }
 }

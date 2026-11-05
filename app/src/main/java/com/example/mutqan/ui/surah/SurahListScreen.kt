@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,6 +75,14 @@ import com.example.mutqan.ui.topics.topicsTab
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.mutqan.ui.navigation.OnTabReselected
 import com.example.mutqan.ui.navigation.Routes
+import com.example.mutqan.ui.components.LocalDockInset
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.LocalConfiguration
+import com.example.mutqan.quran.JuzNumberGlyph
+import com.example.mutqan.quran.QuranTitleGlyph
+import com.example.mutqan.quran.RevelationGlyph
+import com.example.mutqan.quran.SurahNameGlyph
+import com.example.mutqan.quran.JuzNameGlyph
 
 /**
  * The Quran tab: a way into the Mushaf. Tapping a surah or a juz opens it to read; the list says which
@@ -134,8 +143,7 @@ fun SurahListScreen(
     var topicQuery by rememberSaveable { mutableStateOf("") }
     val topicsViewModel: TopicsViewModel = viewModel(factory = TopicsViewModelFactory(context))
     val topicIndex by topicsViewModel.index.collectAsState()
-    val topicsShowAll by topicsViewModel.showAll.collectAsState()
-    val topicLanguage = rememberTopicLanguage(topicsShowAll)
+    val topicLanguage = rememberTopicLanguage()
 
     val needle = ArabicNormalization.normalizeForSearch(query.trim())
     val page = query.trim().toIntOrNull()?.takeIf { it in 1..604 }
@@ -160,6 +168,7 @@ fun SurahListScreen(
         PaperHeader(
             title = stringResource(R.string.nav_quran),
             subtitle = stringResource(R.string.surahs_subtitle),
+            titleGlyph = { QuranTitleGlyph(height = 52.dp, color = MaterialTheme.colorScheme.onBackground) },
             actions = {
                 IconButton(onClick = onSearchClick) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search))
@@ -168,13 +177,19 @@ fun SurahListScreen(
             }
         )
 
-        LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = LocalDockInset.current)
+        ) {
             lastPage?.let { last ->
                 item {
                     HubRow(
                         title = stringResource(R.string.home_continue_title),
-                        subtitle = stringResource(R.string.home_continue_page, last),
-                        onClick = { onOpenMushaf(last) }
+                        subtitle = null,
+                        note = stringResource(R.string.home_continue_page, last),
+                        onClick = { onOpenMushaf(last) },
+                        compact = true
                     )
                 }
             }
@@ -183,11 +198,13 @@ fun SurahListScreen(
                 item {
                     HubRow(
                         title = stringResource(R.string.audio_continue),
-                        subtitle = nowPlayingLabel(lastAyah),
+                        subtitle = null,
+                        note = nowPlayingLabel(lastAyah),
                         onClick = {
                             askForNotifications()
                             scope.launch { recitation.resume() }
-                        }
+                        },
+                        compact = true
                     )
                 }
             }
@@ -239,7 +256,11 @@ fun SurahListScreen(
                 items(roots, key = { "root-${it.first}" }) { (root, info) ->
                     HubRow(
                         title = stringResource(R.string.root_row_title, morphology!!.rootSpaced(root)),
-                        subtitle = stringResource(R.string.root_summary, info.words, info.verses),
+                        subtitle = stringResource(
+                            R.string.root_summary,
+                            pluralStringResource(R.plurals.count_words, info.words, info.words),
+                            pluralStringResource(R.plurals.count_ayahs, info.verses, info.verses)
+                        ),
                         onClick = { onOpenRoot(root) }
                     )
                 }
@@ -294,8 +315,6 @@ fun SurahListScreen(
                     language = topicLanguage,
                     query = topicQuery,
                     onQueryChange = { topicQuery = it },
-                    showAll = topicsShowAll,
-                    onShowAllChange = topicsViewModel::setShowAll,
                     onOpenTopic = onOpenTopic
                 )
             } else {
@@ -360,6 +379,7 @@ private fun SurahRow(
     playing: Boolean,
     onPlay: () -> Unit
 ) {
+    val arabic = LocalConfiguration.current.locales[0].language == "ar"
     Column {
         Row(
             modifier = Modifier
@@ -376,19 +396,46 @@ private fun SurahRow(
                 modifier = Modifier.width(32.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.info.getDisplayName(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (item.verseCount > 0) {
-                    Text(
-                        text = stringResource(R.string.quran_surah_info, item.verseCount, item.startJuz, item.startPage),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // In Arabic the name is set in calligraphy, as a printed Mushaf heads its surahs.
+                if (arabic) {
+                    SurahNameGlyph(
+                        surah = item.info.id,
+                        height = 30.dp,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        description = item.info.getDisplayName(),
+                        modifier = Modifier.padding(vertical = 2.dp)
                     )
+                } else {
+                    Text(
+                        text = item.info.getDisplayName(),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (item.verseCount > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        item.makkah?.let { makkah ->
+                            RevelationGlyph(
+                                makkah = makkah,
+                                height = 14.dp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                description = stringResource(if (makkah) R.string.surah_makki else R.string.surah_madani)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = stringResource(
+                                R.string.quran_surah_info,
+                                pluralStringResource(R.plurals.count_ayahs, item.verseCount, item.verseCount),
+                                item.startJuz,
+                                item.startPage
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 // What is not plain information about the surah sits on a line of its own, only when there is something.
                 val hasTags = item.memorised != SurahMemorised.NONE || item.groupCount > 0
@@ -447,12 +494,13 @@ private fun SurahRow(
                 }
             }
         }
-        Hairline()
+        Hairline(Modifier.padding(horizontal = PaperSpace.Gutter))
     }
 }
 
 @Composable
 private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, download: DownloadStatus, onDownload: () -> Unit) {
+    val arabic = LocalConfiguration.current.locales[0].language == "ar"
     Column {
         Row(
             modifier = Modifier
@@ -462,11 +510,20 @@ private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, d
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.plan_item_juz, entry.juz),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                if (arabic) {
+                    JuzNumberGlyph(
+                        juz = entry.juz,
+                        height = 30.dp,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        description = stringResource(R.string.plan_item_juz, entry.juz)
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.plan_item_juz, entry.juz),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 Text(
                     text = stringResource(R.string.quran_juz_info, entry.startPage, SurahData.nameOf(entry.firstSurah)) +
                         (sizeText?.let { " · $it" } ?: ""),
@@ -474,8 +531,15 @@ private fun JuzRow(entry: JuzListItem, sizeText: String?, onClick: () -> Unit, d
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            // The juz by its opening words, as a hafiz names it: الم, سيقول, عمّ.
+            JuzNameGlyph(
+                juz = entry.juz,
+                height = 40.dp,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
             DownloadButton(status = download, onClick = onDownload, description = stringResource(R.string.audio_download_juz))
         }
-        Hairline()
+        Hairline(Modifier.padding(horizontal = PaperSpace.Gutter))
     }
 }

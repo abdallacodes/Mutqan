@@ -23,8 +23,8 @@ class TopicsTest {
         )
     )
 
-    private val arabic = TopicLanguage(arabicUi = true, showAll = false)
-    private val english = TopicLanguage(arabicUi = false, showAll = false)
+    private val arabic = TopicLanguage(arabicUi = true)
+    private val english = TopicLanguage(arabicUi = false)
 
     @Test
     fun `roots are the tops of the thematic tree and of the ontology`() {
@@ -46,10 +46,11 @@ class TopicsTest {
     }
 
     @Test
-    fun `the Arabic interface lists only Arabic-named topics unless asked for all`() {
+    fun `the Arabic interface lists only Arabic-named topics, and no English-only themes`() {
         val english = index[5]!!
         assertFalse(arabic.visible(english))
-        assertTrue(TopicLanguage(arabicUi = true, showAll = true).visible(english))
+        assertFalse(arabic.themesVisible())
+        assertTrue(this.english.themesVisible())
         assertTrue(this.english.visible(english))
         assertEquals("الصبر", arabic.title(index[3]!!))
         assertEquals("Battle", arabic.title(english))

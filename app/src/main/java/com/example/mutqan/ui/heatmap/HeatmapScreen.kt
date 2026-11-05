@@ -7,6 +7,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -130,10 +133,10 @@ fun HeatmapScreen(
                             )
                             StatCard(
                                 modifier = Modifier.weight(1f),
-                                value    = "${(uiState.stats.stabilityIndex * 100).roundToInt()}%",
+                                value    = stringResource(R.string.percent_value, (uiState.stats.stabilityIndex * 100).roundToInt()),
                                 label    = stringResource(R.string.stat_stability_index),
-                                sublabel = stringResource(R.string.stat_pages_tracked, uiState.stats.trackedPages),
-                                valueColor = healthColor(uiState.stats.stabilityIndex)
+                                sublabel = pluralStringResource(R.plurals.stat_pages_tracked, uiState.stats.trackedPages, uiState.stats.trackedPages),
+                                valueColor = healthTextColor(uiState.stats.stabilityIndex)
                             )
                         }
                     }
@@ -155,7 +158,7 @@ fun HeatmapScreen(
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        stringResource(R.string.stat_forecast_days, uiState.forecastDays),
+                                        pluralStringResource(R.plurals.count_days, uiState.forecastDays, uiState.forecastDays),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -235,14 +238,16 @@ private fun StatCard(
     }
 }
 
+// Wraps instead of squeezing the last item when the text is large.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HeatmapLegend() {
-    Row(
+    FlowRow(
         modifier              = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment     = Alignment.CenterVertically
+        verticalArrangement   = Arrangement.spacedBy(4.dp)
     ) {
         LegendDot(color = DifficultySmooth,    label = stringResource(R.string.legend_fresh))
         LegendDot(color = DifficultyStruggled, label = stringResource(R.string.legend_fading))
@@ -263,7 +268,7 @@ private fun LegendDot(color: Color, label: String, border: Boolean = false) {
         Spacer(Modifier.width(4.dp))
         Text(
             text  = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

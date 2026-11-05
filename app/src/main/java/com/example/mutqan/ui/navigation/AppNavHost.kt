@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
@@ -98,11 +99,53 @@ import androidx.navigation.NavBackStackEntry
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import com.example.mutqan.ui.components.FrostedPanel
+import com.example.mutqan.ui.components.GlassBackdrop
+import com.example.mutqan.ui.components.LocalDockInset
+import com.example.mutqan.ui.components.glassSource
+import com.example.mutqan.ui.components.rememberGlassBackdrop
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.snapshotFlow
+import androidx.navigation.NavGraphBuilder
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -251,44 +294,92 @@ fun AppNavHost(
     // The Mushaf draws edge to edge under the system bars. If it took their insets as padding, every tap that shows
     // or hides them would resize the page under the reader's eyes.
     val inMushaf = currentRoute?.startsWith(Routes.MUSHAF_VIEWER) == true
+
+    // The tabs run under the floating dock, so each leaves its own bottom room as tall as the dock (and the player over it).
+    val backdrop = rememberGlassBackdrop()
+    var dockHeightPx by remember { mutableIntStateOf(0) }
+    val dockInset = with(LocalDensity.current) { dockHeightPx.toDp() }
+    val layoutDirection = LocalLayoutDirection.current
+    val haptics = LocalHapticFeedback.current
+
+    // Which tab the pager shows: the current one, or while it is still leaving, the one a screen is sliding in over.
+    val visibleEntries by navController.visibleEntries.collectAsState()
+    val tabRoute = if (currentRoute in tabOrder) currentRoute
+    else visibleEntries.lastOrNull { it.destination.route in tabOrder }?.destination?.route
+    val pagerState = rememberPagerState(initialPage = tabOrder.indexOf(startDestination).coerceAtLeast(0)) { tabOrder.size }
+    val tabPageStates = rememberSaveableStateHolder()
+    val selectTab: (String) -> Unit = { route ->
+        if (route == currentRoute) {
+            TabReselects.reselected(route)
+        } else {
+            navController.navigate(route) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState    = true
+            }
+        }
+    }
+    // A tab picked in the bar (or reached any other way) slides the pager to it ...
+    LaunchedEffect(tabRoute) {
+        val target = tabOrder.indexOf(tabRoute)
+        if (target >= 0 && pagerState.currentPage != target) pagerState.animateScrollToPage(target)
+    }
+    // ... and a swipe that settles on another tab makes it the current one.
+    val latestRoute by rememberUpdatedState(currentRoute)
+    val latestSelect by rememberUpdatedState(selectTab)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            val route = tabOrder[page]
+            if (latestRoute in tabOrder && route != latestRoute) latestSelect(route)
+        }
+    }
     Scaffold(
         modifier       = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = if (inMushaf) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
+        // On a tab the player sits in the floating dock's column instead, above the glass.
         bottomBar = {
-            Column {
-            if (playback.active && currentRoute?.startsWith(Routes.MUSHAF_VIEWER) != true) {
+            if (playback.active && !inMushaf && !showBottomBar) {
                 RecitationBar(state = playback, onOpenSettings = { showRecitationSheet = true })
-            }
-            if (showBottomBar) {
-                MutqanBottomBar(
-                    currentRoute  = currentRoute,
-                    dueToday      = dueToday,
-                    onNavSelected = { route ->
-                        if (route == currentRoute) {
-                            TabReselects.reselected(route)
-                        } else {
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState    = true
-                            }
-                        }
-                    }
-                )
-            }
             }
         }
     ) { innerPadding ->
 
         val mushafOpener = remember(navController) { { page: Int, ayahId: Int? -> navController.openMushaf(page, ayahId) } }
-        CompositionLocalProvider(LocalMushafOpener provides mushafOpener) {
+        val pagePadding = if (showBottomBar) {
+            PaddingValues(
+                start = innerPadding.calculateStartPadding(layoutDirection),
+                top   = innerPadding.calculateTopPadding(),
+                end   = innerPadding.calculateEndPadding(layoutDirection)
+            )
+        } else innerPadding
+        Box(modifier = Modifier.fillMaxSize()) {
+        // The tabs sit side by side in a pager behind the NavHost, so a swipe drags one screen out and the next in under
+        // the finger. Navigation still decides which tab is current; the pager and it follow each other.
+        Box(modifier = Modifier.fillMaxSize().glassSource(backdrop, MaterialTheme.colorScheme.background)) {
+        CompositionLocalProvider(
+            LocalMushafOpener provides mushafOpener,
+            LocalDockInset provides if (showBottomBar) dockInset else 0.dp
+        ) {
+        if (tabRoute != null) {
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+                key = { tabOrder[it] },
+                modifier = Modifier.fillMaxSize().padding(pagePadding)
+            ) { page ->
+                val route = tabOrder[page]
+                tabPageStates.SaveableStateProvider(route) {
+                    TabPage(route, navController, homeViewModel, onSettingsClick = { showSettingsSheet = true })
+                }
+            }
+        }
         NavHost(
             navController    = navController,
             startDestination = startDestination,
-            modifier         = Modifier.padding(innerPadding),
+            modifier         = Modifier.padding(pagePadding),
             enterTransition    = { tabEnter() },
             exitTransition     = { tabExit() },
             popEnterTransition = { tabEnter() },
@@ -311,17 +402,7 @@ fun AppNavHost(
 
             // ── Top-level tabs ────────────────────────────────────────
 
-            composable(Routes.HOME) {
-                HomeScreen(
-                    viewModel       = homeViewModel,
-                    onOpenPlan      = { navController.navigate(Routes.PLAN) },
-                    onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
-                    onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
-                    onOpenMushaf    = { page -> navController.openMushaf(page) },
-                    onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
-                    onSettingsClick = { showSettingsSheet = true }
-                )
-            }
+            tabDestination(Routes.HOME)
 
             composable(Routes.PLAN) {
                 PlanScreen(onBack = { navController.popBackStack() })
@@ -381,17 +462,7 @@ fun AppNavHost(
                 )
             }
 
-            composable(Routes.SURAH_LIST) {
-                SurahListScreen(
-                    onSurahClick   = { id -> navController.navigate(Routes.surahDetail(id)) },
-                    onOpenMushaf    = { page -> navController.openMushaf(page) },
-                    onSettingsClick = { showSettingsSheet = true },
-                    onSearchClick   = { navController.navigate(Routes.VERSE_SEARCH) },
-                    onOpenRoot      = { root -> navController.navigate(Routes.root(root)) },
-                    onOpenTopic     = { topic -> navController.navigate(Routes.topic(topic)) },
-                    onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
-                )
-            }
+            tabDestination(Routes.SURAH_LIST)
 
             composable(Routes.VERSE_SEARCH) {
                 VerseSearchScreen(
@@ -409,29 +480,9 @@ fun AppNavHost(
                 )
             }
 
-            composable(Routes.PRACTICE) {
-                PracticeScreen(
-                    onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
-                    onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
-                    onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
-                    onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
-                    onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
-                    onOpenVault      = { navController.navigate(Routes.VAULT_LIST) },
-                    onSettingsClick  = { showSettingsSheet = true }
-                )
-            }
+            tabDestination(Routes.PRACTICE)
 
-            composable(Routes.INSIGHTS) {
-                InsightsScreen(
-                    onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
-                    onOpenBrain     = { navController.navigate(Routes.HEATMAP) },
-                    onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
-                    onOpenHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
-                    onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
-                    onOpenPlan      = { navController.navigate(Routes.PLAN) },
-                    onSettingsClick = { showSettingsSheet = true }
-                )
-            }
+            tabDestination(Routes.INSIGHTS)
 
             composable(Routes.PAGE_BOUNDARIES) {
                 PageBoundariesScreen(fromVerse = false, onBack = { navController.popBackStack() })
@@ -601,9 +652,29 @@ fun AppNavHost(
                     startAyah   = entry.arguments?.getInt("ayah") ?: 0,
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
-                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) },
                     onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) },
                     onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
+                )
+            }
+        }
+        }
+        }
+
+        if (showBottomBar) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { dockHeightPx = it.height }
+            ) {
+                if (playback.active) {
+                    RecitationBar(state = playback, onOpenSettings = { showRecitationSheet = true })
+                }
+                MutqanBottomBar(
+                    currentRoute  = if (tabRoute != null) tabOrder[pagerState.targetPage] else currentRoute,
+                    dueToday      = dueToday,
+                    backdrop      = backdrop,
+                    onNavSelected = selectTab
                 )
             }
         }
@@ -612,6 +683,60 @@ fun AppNavHost(
 }
 
 // ── Moving between tabs ───────────────────────────────────────────────────────
+
+/** A tab is a stop in the back stack and nothing more: its screen is drawn by the pager behind the NavHost. */
+private fun NavGraphBuilder.tabDestination(route: String) {
+    composable(
+        route              = route,
+        enterTransition    = { EnterTransition.None },
+        exitTransition     = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition  = { ExitTransition.None }
+    ) {}
+}
+
+/** The screen of one tab, as the pager shows it. */
+@Composable
+private fun TabPage(route: String, navController: NavHostController, homeViewModel: HomeViewModel, onSettingsClick: () -> Unit) {
+    when (route) {
+        Routes.HOME -> HomeScreen(
+            viewModel       = homeViewModel,
+            onOpenPlan      = { navController.navigate(Routes.PLAN) },
+            onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+            onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
+            onOpenMushaf    = { page -> navController.openMushaf(page) },
+            onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
+            onSettingsClick = onSettingsClick
+        )
+        Routes.SURAH_LIST -> SurahListScreen(
+            onSurahClick       = { id -> navController.navigate(Routes.surahDetail(id)) },
+            onOpenMushaf       = { page -> navController.openMushaf(page) },
+            onSettingsClick    = onSettingsClick,
+            onSearchClick      = { navController.navigate(Routes.VERSE_SEARCH) },
+            onOpenRoot         = { root -> navController.navigate(Routes.root(root)) },
+            onOpenTopic        = { topic -> navController.navigate(Routes.topic(topic)) },
+            onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
+        )
+        Routes.PRACTICE -> PracticeScreen(
+            onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
+            onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
+            onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
+            onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
+            onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
+            onOpenVault      = { navController.navigate(Routes.VAULT_LIST) },
+            onSettingsClick  = onSettingsClick
+        )
+        Routes.INSIGHTS -> InsightsScreen(
+            onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
+            onOpenBrain     = { navController.navigate(Routes.HEATMAP) },
+            onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
+            onOpenHistory   = { navController.navigate(Routes.REVISION_HISTORY) },
+            onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
+            onOpenPlan      = { navController.navigate(Routes.PLAN) },
+            onSettingsClick = onSettingsClick
+        )
+    }
+}
 
 private val tabOrder = listOf(Routes.HOME, Routes.SURAH_LIST, Routes.PRACTICE, Routes.INSIGHTS)
 private const val TAB_MS = 300
@@ -651,6 +776,7 @@ private fun NavHostController.openMushaf(page: Int, ayahId: Int? = null) {
 private fun MutqanBottomBar(
     currentRoute: String?,
     dueToday: Int,
+    backdrop: GlassBackdrop,
     onNavSelected: (String) -> Unit
 ) {
     val items = listOf(
@@ -683,42 +809,134 @@ private fun MutqanBottomBar(
     val haptics = LocalHapticFeedback.current
     val scheme = MaterialTheme.colorScheme
 
-    // The standard bar of today's apps: a raised surface, a pill that fills behind the icon of the current tab, the
-    // icon filled instead of outlined, and the name under every tab.
-    NavigationBar(containerColor = scheme.surfaceContainer, tonalElevation = 0.dp) {
-        items.forEach { item ->
-            val selected = currentRoute == item.route
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (!selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                    onNavSelected(item.route)
-                },
-                icon = {
-                    BadgedBox(
-                        badge = {
-                            // The Today screen already says what is due, so the count is for the other tabs.
-                            if (item.badge > 0 && !selected) {
-                                val description = stringResource(R.string.nav_due_badge, item.badge)
-                                Badge(
-                                    containerColor = scheme.tertiary,
-                                    contentColor = scheme.onTertiary,
-                                    modifier = Modifier.semantics { contentDescription = description }
-                                ) { Text(if (item.badge > 99) "99+" else item.badge.toString()) }
-                            }
-                        }
-                    ) {
-                        Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null)
-                    }
-                },
-                label = { Text(item.label, maxLines = 1) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = scheme.onPrimaryContainer,
-                    selectedTextColor = scheme.onBackground,
-                    indicatorColor = scheme.primaryContainer,
-                    unselectedIconColor = scheme.onSurfaceVariant,
-                    unselectedTextColor = scheme.onSurfaceVariant
+    // A floating dock of frosted glass: the page scrolls behind it and shows through, blurred. The current tab opens
+    // into a filled pill with its name beside the icon; the others are icons alone.
+    val dark = scheme.background.luminance() < 0.5f
+    val colors = DockColors(
+        tint   = (if (dark) scheme.surfaceVariant else scheme.surface).copy(alpha = if (backdrop.blurs) 0.28f else 0.95f),
+        sheen  = Color.White.copy(alpha = if (dark) 0.07f else 0.34f),
+        rim    = Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = if (dark) 0.30f else 0.95f), Color.White.copy(alpha = if (dark) 0.06f else 0.30f))
+        ),
+        pill   = scheme.primary,
+        onPill = scheme.onPrimary,
+        idle   = scheme.onSurface.copy(alpha = 0.72f)
+    )
+    val fade = scheme.background
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            // The page fades out under the dock, so nothing crowds the gesture bar below the glass.
+            .drawBehind {
+                val reach = 28.dp.toPx()
+                drawRect(
+                    brush   = Brush.verticalGradient(listOf(Color.Transparent, fade.copy(alpha = 0.7f), fade.copy(alpha = 0.97f))),
+                    topLeft = Offset(0f, -reach),
+                    size    = Size(size.width, size.height + reach)
                 )
+            }
+            .navigationBarsPadding()
+            .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 12.dp)
+    ) {
+        FrostedPanel(
+            backdrop = backdrop,
+            shape    = RoundedCornerShape(34.dp),
+            tint     = colors.tint,
+            sheen    = colors.sheen,
+            rim      = colors.rim,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { item ->
+                    DockTab(
+                        item = item,
+                        selected = currentRoute == item.route,
+                        colors = colors,
+                        onClick = {
+                            if (currentRoute != item.route) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                            onNavSelected(item.route)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** What the dock is made of: the glass (tint, sheen, rim), the pill of the current tab, what is drawn on it, and the other tabs. */
+private class DockColors(val tint: Color, val sheen: Color, val rim: Brush, val pill: Color, val onPill: Color, val idle: Color)
+
+/** One tab of the dock. The weight is animated, so the chosen tab grows and the others give way. */
+@Composable
+private fun RowScope.DockTab(
+    item: BottomNavItem,
+    selected: Boolean,
+    colors: DockColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val grow by animateFloatAsState(
+        targetValue = if (selected) 2.1f else 1f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+        label = "dockGrow"
+    )
+    val pill by animateColorAsState(if (selected) colors.pill else Color.Transparent, label = "dockPill")
+    val ink by animateColorAsState(if (selected) colors.onPill else colors.idle, label = "dockInk")
+    val pop by animateFloatAsState(
+        targetValue = if (selected) 1.12f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "dockPop"
+    )
+    val shape = RoundedCornerShape(26.dp)
+    Row(
+        modifier = Modifier
+            .weight(grow)
+            .height(52.dp)
+            .clip(shape)
+            .background(pill, shape)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = item.label },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BadgedBox(
+            badge = {
+                // The Today screen already says what is due, so the count is for the other tabs.
+                if (item.badge > 0 && !selected) {
+                    val description = stringResource(R.string.nav_due_badge, item.badge)
+                    Badge(
+                        containerColor = colors.pill,
+                        contentColor = colors.onPill,
+                        modifier = Modifier.semantics { contentDescription = description }
+                    ) { Text(if (item.badge > 99) "99+" else item.badge.toString()) }
+                }
+            }
+        ) {
+            Icon(
+                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                contentDescription = null,
+                tint = ink,
+                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = pop; scaleY = pop }
+            )
+        }
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(tween(160, delayMillis = 60)) + expandHorizontally(),
+            exit = fadeOut(tween(90)) + shrinkHorizontally()
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = ink,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }

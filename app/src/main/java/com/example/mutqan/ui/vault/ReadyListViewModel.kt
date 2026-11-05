@@ -133,7 +133,7 @@ class ReadyListViewModel(
             val folderId = dao.getAllFoldersSync().firstOrNull { it.parentId == null && it.name == name }?.id
                 ?: dao.insertFolder(VaultFolderEntity(name = name)).toInt()
             groups.forEach { insertGroup(it.description, it.members.map { m -> m.ayahId }, folderId) }
-            _events.emit(UiText(R.string.ready_folder_added_toast, groups.size))
+            _events.emit(UiText.plural(R.plurals.ready_folder_added_toast, groups.size))
         }
     }
 

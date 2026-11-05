@@ -26,16 +26,19 @@ class Topic(
 }
 
 /** Which names the interface can show. QUL names about a third of its topics in Arabic. */
-data class TopicLanguage(val arabicUi: Boolean, val showAll: Boolean) {
+data class TopicLanguage(val arabicUi: Boolean) {
 
-    /** True when the topic may be listed: always in English; in Arabic only with an Arabic name, unless all are shown. */
-    fun visible(topic: Topic): Boolean = !arabicUi || showAll || topic.arabic.isNotEmpty()
+    /** True when the topic may be listed: always in English; in Arabic only with an Arabic name. */
+    fun visible(topic: Topic): Boolean = !arabicUi || topic.arabic.isNotEmpty()
 
     /** The name in the interface language, falling back to English when there is no Arabic name. */
     fun title(topic: Topic): String = if (arabicUi && topic.arabic.isNotEmpty()) topic.arabic else topic.name
 
     /** A second name worth showing under the first: the Arabic one in an English interface. */
     fun secondary(topic: Topic): String? = if (!arabicUi && topic.arabic.isNotEmpty()) topic.arabic else null
+
+    /** The themes of passages exist only in English, so only the English interface lists them. */
+    fun themesVisible(): Boolean = !arabicUi
 }
 
 /**

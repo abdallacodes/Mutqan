@@ -1,10 +1,13 @@
 package com.example.mutqan.ui.components
 
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -80,11 +83,11 @@ fun OrnamentDivider(modifier: Modifier = Modifier) {
     }
 }
 
-/** A one-pixel rule in the page's rule colour. */
+/** A one-pixel rule in the page's rule colour, as wide as the space it is given. */
 @Composable
 fun Hairline(modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.outline
-    Box(modifier = modifier.height(1.dp).drawBehind {
+    Box(modifier = modifier.fillMaxWidth().height(1.dp).drawBehind {
         drawLine(color, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
     })
 }
@@ -158,6 +161,7 @@ fun PaperLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
 /**
  * A page heading: the title in display type, an optional quiet line under it, actions at the end
  * and an ornament divider below. [onBack] adds a back arrow at the start for sub-screens.
+ * [compact] is for a task screen whose own content (a question) is the focal point: the title is set small.
  */
 @Composable
 fun PaperHeader(
@@ -165,8 +169,17 @@ fun PaperHeader(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
+    titleGlyph: (@Composable () -> Unit)? = null,
+    compact: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    // With large text a display-size title alone takes a quarter of the screen; a headline is still the largest text there.
+    val largeText = LocalDensity.current.fontScale >= 1.5f
+    val titleStyle = when {
+        compact -> MaterialTheme.typography.titleMedium
+        largeText -> MaterialTheme.typography.headlineSmall
+        else -> MaterialTheme.typography.displaySmall
+    }
     Column(modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
         Row(
             modifier = Modifier
@@ -180,11 +193,15 @@ fun PaperHeader(
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                if (titleGlyph != null) {
+                    Box(Modifier.semantics(mergeDescendants = true) { contentDescription = title }) { titleGlyph() }
+                } else {
+                    Text(
+                        text = title,
+                        style = titleStyle,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
@@ -202,14 +219,14 @@ fun PaperHeader(
 /** Two or three choices set as words with a rule under the current one, instead of a segmented block. */
 @Composable
 fun PaperTabs(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxWidth()) {
+    Row(modifier = modifier.fillMaxWidth().selectableGroup()) {
         labels.forEachIndexed { i, label ->
             val selected = i == selectedIndex
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
-                    .clickable(role = Role.Tab, onClick = { onSelect(i) }),
+                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(i) }),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -242,8 +259,8 @@ fun PaperChip(
     val color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = modifier
-            .heightIn(min = 44.dp)
-            .clickable(role = Role.Checkbox, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .padding(horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -340,7 +357,7 @@ fun PaperChoice(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.RadioButton, onClick = onClick)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .padding(vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -409,7 +426,7 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
     val color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(48.dp)
             .border(1.dp, color, RoundedCornerShape(4.dp))
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
@@ -457,15 +474,21 @@ fun PaperDialog(
     }
 }
 
-/** An on/off control: a square-cornered track with a square thumb that slides to the "on" end. */
+/**
+ * An on/off control: a square-cornered track with a square thumb that slides to the "on" end. Beside a label, pass
+ * null for [onCheckedChange] and make the whole row `toggleable`, so the switch is announced with its name.
+ */
 @Composable
-fun PaperSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun PaperSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
     val rule = MaterialTheme.colorScheme.outline
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+            .then(
+                if (onCheckedChange != null) Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
         Box(

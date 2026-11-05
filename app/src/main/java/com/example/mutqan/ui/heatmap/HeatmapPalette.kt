@@ -1,5 +1,9 @@
 package com.example.mutqan.ui.heatmap
 
+import com.example.mutqan.ui.theme.DifficultyCritical
+import com.example.mutqan.ui.theme.DifficultyStruggled
+import com.example.mutqan.ui.theme.DifficultySmooth
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import com.example.mutqan.domain.PageStability
@@ -32,6 +36,15 @@ internal fun healthColor(score: Float): Color {
     // terracotta (forgotten) -> ochre (fading) -> sage (solid)
     val s = score.coerceIn(0f, 1f)
     return if (s < 0.5f) lerp(HealthLow, HealthMid, s / 0.5f) else lerp(HealthMid, HealthHigh, (s - 0.5f) / 0.5f)
+}
+
+/** The health of [score] as one of the three status colours, banded like the legend (70 % and 40 %): for text and marks
+ *  on the app's own background, where the blended [healthColor] would be too faint in light themes. */
+@Composable
+internal fun healthTextColor(score: Float): Color = when {
+    score >= 0.70f -> DifficultySmooth
+    score >= 0.40f -> DifficultyStruggled
+    else -> DifficultyCritical
 }
 
 internal fun adaptiveTextColor(bgColor: Color): Color {

@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.coverage
 
+import androidx.compose.foundation.selection.toggleable
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.quran.ArabicNormalization
@@ -10,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.clickable
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -151,9 +155,13 @@ fun CoverageScreen(onDone: () -> Unit) {
             item {
                 Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (state.isSet) stringResource(R.string.coverage_summary, state.ayahCount, state.pageCount)
+                        text = if (state.isSet) stringResource(
+                            R.string.coverage_summary,
+                            pluralStringResource(R.plurals.count_ayahs, state.ayahCount, state.ayahCount),
+                            pluralStringResource(R.plurals.count_pages, state.pageCount, state.pageCount)
+                        )
                         else stringResource(R.string.coverage_unset_hint),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = if (state.isSet) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     if (state.isSet && state.levelMix.total > 0) {
@@ -172,27 +180,19 @@ fun CoverageScreen(onDone: () -> Unit) {
                     }
                 }
             }
+            // One way in, choosing surahs; the shortcuts and the undo sit under it as quiet links.
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column {
                     PaperOutlinedButton(
-                        text = stringResource(R.string.coverage_whole_quran),
-                        onClick = viewModel::setWholeQuran,
-                        modifier = Modifier.weight(1f)
+                        text = stringResource(R.string.coverage_choose_surahs),
+                        onClick = { showSurahPicker = true },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    PaperOutlinedButton(
-                        text = stringResource(R.string.coverage_clear),
-                        onClick = viewModel::clear,
-                        enabled = state.isSet,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        PaperLink(stringResource(R.string.coverage_whole_quran), onClick = viewModel::setWholeQuran)
+                        if (state.isSet) PaperLink(stringResource(R.string.coverage_clear), onClick = viewModel::clear, soft = true)
+                    }
                 }
-            }
-            item {
-                PaperOutlinedButton(
-                    text = stringResource(R.string.coverage_choose_surahs),
-                    onClick = { showSurahPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
             item { SectionTitle(stringResource(R.string.coverage_juz_section)) }
             item {
@@ -206,59 +206,66 @@ fun CoverageScreen(onDone: () -> Unit) {
                 val memorised = juz in state.fullJuz
                 val row = state.strengths.firstOrNull { it.juz == juz }
                 val open = juz in expandedJuz
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(role = Role.Checkbox) { viewModel.toggleJuz(juz) }
-                            .padding(vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (memorised) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            contentDescription = null,
-                            tint = if (memorised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
-                        Column(modifier = Modifier.padding(start = 12.dp)) {
-                            Text(
-                                text = stringResource(R.string.mushaf_juz_row, juz),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // The level chips drop under the name when both don't fit on one line (large text).
+                    FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f)
+                                .toggleable(value = memorised, role = Role.Checkbox, onValueChange = { viewModel.toggleJuz(juz) })
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (memorised) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (memorised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
-                            if (row != null) MixLine(row.mix)
-                        }
-                    }
-                    TierChips(
-                        selected = if (memorised) row?.tier else null,
-                        onSelect = { tier ->
-                            if (row != null && row.needsChoice) {
-                                pending = PendingRate(tier, row.pages.count { it in state.memorisedPages }, row.pages.count { it in state.pageLevels }) { vm, only ->
-                                    vm.rateJuz(juz, tier, only)
-                                }
-                            } else {
-                                viewModel.rateJuz(juz, tier)
+                            Column(modifier = Modifier.padding(start = 12.dp)) {
+                                Text(
+                                    text = stringResource(R.string.mushaf_juz_row, juz),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal,
+                                    softWrap = false
+                                )
+                                if (row != null) Column(modifier = Modifier.widthIn(max = 140.dp)) { MixLine(row.mix) }
                             }
                         }
-                    )
+                        // A level is for a juz that is memorised; ticking one brings its levels in.
+                        if (memorised) {
+                            TierChips(
+                                selected = row?.tier,
+                                onSelect = { tier ->
+                                    if (row != null && row.needsChoice) {
+                                        pending = PendingRate(tier, row.pages.count { it in state.memorisedPages }, row.pages.count { it in state.pageLevels }) { vm, only ->
+                                            vm.rateJuz(juz, tier, only)
+                                        }
+                                    } else {
+                                        viewModel.rateJuz(juz, tier)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    if (row != null) {
+                        PaperLink(
+                            text = stringResource(if (open) R.string.coverage_hide_pages else R.string.coverage_show_pages),
+                            onClick = { expandedJuz = if (open) expandedJuz - juz else expandedJuz + juz },
+                            soft = true
+                        )
+                    }
+                    if (open && row != null) {
+                        JuzPages(
+                            row = row,
+                            memorised = state.memorisedPages,
+                            levels = state.pageLevels,
+                            brush = brush,
+                            onBrush = { brush = it },
+                            onPage = { page -> viewModel.ratePage(page, brush?.let { PlanTier.fromCode(it) }) }
+                        )
+                    }
+                    Hairline()
                 }
-                if (row != null) {
-                    PaperLink(
-                        text = stringResource(if (open) R.string.coverage_hide_pages else R.string.coverage_show_pages),
-                        onClick = { expandedJuz = if (open) expandedJuz - juz else expandedJuz + juz },
-                        soft = true
-                    )
-                }
-                if (open && row != null) {
-                    JuzPages(
-                        row = row,
-                        memorised = state.memorisedPages,
-                        levels = state.pageLevels,
-                        brush = brush,
-                        onBrush = { brush = it },
-                        onPage = { page -> viewModel.ratePage(page, brush?.let { PlanTier.fromCode(it) }) }
-                    )
-                }
-                Hairline()
             }
             item {
                 PaperLink(
@@ -276,26 +283,28 @@ fun CoverageScreen(onDone: () -> Unit) {
                     )
                 }
                 items(state.surahStrengths, key = { "surah-${it.surah}" }) { row ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f).padding(vertical = 10.dp)) {
-                            Text(text = SurahData.nameOf(row.surah), style = MaterialTheme.typography.bodyLarge)
-                            MixLine(row.mix)
-                        }
-                        TierChips(
-                            selected = row.tier,
-                            onSelect = { tier ->
-                                if (row.needsChoice) {
-                                    val total = state.surahPageCounts[row.surah] ?: row.mix.total
-                                    pending = PendingRate(tier, total, state.surahRatedCounts[row.surah] ?: 0) { vm, only ->
-                                        vm.rateSurah(row.surah, tier, only)
-                                    }
-                                } else {
-                                    viewModel.rateSurah(row.surah, tier)
-                                }
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f).padding(vertical = 10.dp)) {
+                                Text(text = SurahData.nameOf(row.surah), style = MaterialTheme.typography.bodyLarge, softWrap = false)
+                                MixLine(row.mix)
                             }
-                        )
+                            TierChips(
+                                selected = row.tier,
+                                onSelect = { tier ->
+                                    if (row.needsChoice) {
+                                        val total = state.surahPageCounts[row.surah] ?: row.mix.total
+                                        pending = PendingRate(tier, total, state.surahRatedCounts[row.surah] ?: 0) { vm, only ->
+                                            vm.rateSurah(row.surah, tier, only)
+                                        }
+                                    } else {
+                                        viewModel.rateSurah(row.surah, tier)
+                                    }
+                                }
+                            )
+                        }
+                        Hairline()
                     }
-                    Hairline()
                 }
                 item { SectionTitle(stringResource(R.string.coverage_page_levels)) }
                 item {
@@ -413,7 +422,7 @@ private fun SurahPickerDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(role = Role.Checkbox) { onToggle(id) }
+                                .toggleable(value = isFull, role = Role.Checkbox, onValueChange = { onToggle(id) })
                                 .padding(horizontal = PaperSpace.Gutter, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -466,7 +475,8 @@ private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
                 selected = selected == tier,
                 onClick = { onSelect(tier) },
                 label = { Text(stringResource(label)) },
-                modifier = Modifier.width(64.dp)
+                // As wide as the word, never narrower than 64dp: a fixed width split words at large text.
+                modifier = Modifier.widthIn(min = 64.dp).width(IntrinsicSize.Max)
             )
         }
     }

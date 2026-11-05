@@ -25,12 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.ui.components.Hairline
-import com.example.mutqan.ui.components.OrnamentDivider
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.PaperSpace
@@ -85,7 +85,7 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                 // ── What recall shows ──
                 item {
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
-                    OrnamentDivider()
+                    Hairline()
                     Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.progress_section_evidence))
                     Spacer(Modifier.height(8.dp))
@@ -105,7 +105,7 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = stringResource(R.string.progress_pages, state.stateCounts.getValue(s)),
+                            text = state.stateCounts.getValue(s).let { pluralStringResource(R.plurals.count_pages, it, it) },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -115,12 +115,11 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
 
                 // ── Consistency ──
                 item {
+                    // The last evidence row already ends in a rule.
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
-                    OrnamentDivider()
-                    Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.progress_section_consistency))
                     Text(
-                        text = stringResource(R.string.progress_days, state.daysRevised, WINDOW_DAYS),
+                        text = pluralStringResource(R.plurals.progress_days, state.daysRevised, state.daysRevised, WINDOW_DAYS),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -131,7 +130,7 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                 // ── Worth a look ──
                 item {
                     Spacer(Modifier.height(PaperSpace.Section - 6.dp))
-                    OrnamentDivider()
+                    Hairline()
                     Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.progress_section_attention))
                     if (state.attention.isEmpty()) {
@@ -149,7 +148,7 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = stringResource(R.string.progress_juz_attention, a.juz, a.pages),
+                            text = stringResource(R.string.progress_juz_attention, a.juz, pluralStringResource(R.plurals.count_pages, a.pages, a.pages)),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.weight(1f)

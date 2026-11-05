@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
@@ -126,7 +127,7 @@ fun AudioStorageScreen(onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = stringResource(R.string.audio_storage_count, surahs.size) + " · " +
+                                text = pluralStringResource(R.plurals.count_surahs, surahs.size, surahs.size) + " · " +
                                     Formatter.formatShortFileSize(context, reciterBytes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
