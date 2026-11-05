@@ -163,7 +163,7 @@ private fun GroupsSectionHeader(count: Int) {
         }
         if (count > 0) {
             Surface(
-                shape  = RoundedCornerShape(4.dp),
+                shape  = RoundedCornerShape(12.dp),
                 color  = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
             ) {
@@ -203,7 +203,7 @@ private fun SurahGroupCard(
             .height(IntrinsicSize.Min)
             .background(
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
     ) {
@@ -239,7 +239,7 @@ private fun SurahGroupCard(
                 Spacer(Modifier.width(8.dp))
                 
                 Surface(
-                    shape  = RoundedCornerShape(4.dp),
+                    shape  = RoundedCornerShape(12.dp),
                     color  = healthColor.copy(alpha = 0.12f),
                     border = BorderStroke(1.dp, healthColor.copy(alpha = 0.4f))
                 ) {
@@ -289,7 +289,7 @@ private fun SurahGroupCard(
 @Composable
 private fun MetaBadge(text: String, borderColor: Color) {
     Surface(
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.background,
         border = BorderStroke(1.dp, borderColor)
     ) {

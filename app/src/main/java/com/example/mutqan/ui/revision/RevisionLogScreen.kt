@@ -283,7 +283,7 @@ private fun DateSelectorButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp),
-        shape  = RoundedCornerShape(4.dp),
+        shape  = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -349,7 +349,7 @@ private fun PageRangeInputRow(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine    = true,
             colors        = fieldColors,
-            shape         = RoundedCornerShape(4.dp)
+            shape         = RoundedCornerShape(12.dp)
         )
 
         OutlinedTextField(
@@ -365,7 +365,7 @@ private fun PageRangeInputRow(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine    = true,
             colors        = fieldColors,
-            shape         = RoundedCornerShape(4.dp)
+            shape         = RoundedCornerShape(12.dp)
         )
     }
 }

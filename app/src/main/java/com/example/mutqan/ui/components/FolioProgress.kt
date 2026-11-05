@@ -27,6 +27,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.ui.theme.FolioTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 private const val FillMs = 700
 
@@ -46,7 +50,9 @@ fun ProgressRing(
     content: @Composable () -> Unit = {}
 ) {
     val target = fraction.coerceIn(0f, 1f)
-    val shown by animateFloatAsState(target, tween(FillMs, easing = FastOutSlowInEasing), label = "ring")
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val shown by animateFloatAsState(if (entered) target else 0f, tween(FillMs, easing = FastOutSlowInEasing), label = "ring")
     val side = size.withFontScale(1.3f)
     Box(
         modifier = modifier
@@ -85,7 +91,9 @@ fun PageStrip(
     description: String? = null
 ) {
     val target = fraction.coerceIn(0f, 1f)
-    val shown by animateFloatAsState(target, tween(FillMs, easing = FastOutSlowInEasing), label = "strip")
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val shown by animateFloatAsState(if (entered) target else 0f, tween(FillMs, easing = FastOutSlowInEasing), label = "strip")
     val cells = segments.coerceAtLeast(1)
     Canvas(
         modifier = modifier

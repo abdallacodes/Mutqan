@@ -55,7 +55,7 @@ fun PalettePicker(selected: Palette, dark: Boolean, onSelect: (Palette) -> Unit)
         Palette.entries.forEach { palette ->
             val (bg, primary, accent) = paletteSwatch(palette, dark)
             val isSelected = palette == selected
-            val shape = RoundedCornerShape(4.dp)
+            val shape = RoundedCornerShape(12.dp)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier

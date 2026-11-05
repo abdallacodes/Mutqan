@@ -127,7 +127,7 @@ fun SavePassageSheet(
             Button(
                 onClick = { onSave(kind, tags, priority, note) },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(14.dp)
             ) {
                 Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Black)
             }

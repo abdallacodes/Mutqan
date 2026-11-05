@@ -73,6 +73,7 @@ import kotlin.math.roundToInt
 import com.example.mutqan.ui.components.PaperDialog
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperProgress
+import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -337,8 +338,8 @@ private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
 
     Surface(
         shape    = RoundedCornerShape(10.dp),
-        color    = MaterialTheme.colorScheme.surfaceVariant,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color    = FolioTheme.colors.folio,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -407,7 +408,7 @@ private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
 
     Surface(
         onClick  = onClick,
-        shape    = RoundedCornerShape(8.dp),
+        shape    = RoundedCornerShape(14.dp),
         color    = bgColor,
         border   = BorderStroke(
             width = 1.dp,
@@ -501,7 +502,7 @@ private fun QuickStatusDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                         .padding(12.dp)
                 ) {

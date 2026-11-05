@@ -94,6 +94,7 @@ import com.example.mutqan.ui.components.PageStrip
 import com.example.mutqan.ui.components.PrimaryButton
 import com.example.mutqan.ui.components.TonalButton
 import com.example.mutqan.ui.theme.FolioTheme
+import com.example.mutqan.ui.components.rememberHaptics
 
 private const val LATER_PREVIEW = 3
 
@@ -582,6 +583,7 @@ private fun WeakQuote(weak: WeakSuggestion, onOpen: () -> Unit, onDismiss: () ->
 private fun LogItemDialog(item: PlanItem, onConfirm: (RecallOutcome, Set<MistakeTag>) -> Unit, onDismiss: () -> Unit) {
     var outcome by remember { mutableStateOf(RecallOutcome.INDEPENDENT) }
     var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
+    val haptics = rememberHaptics()
     PaperDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_log_dialog_title, item.label())) },
@@ -596,7 +598,7 @@ private fun LogItemDialog(item: PlanItem, onConfirm: (RecallOutcome, Set<Mistake
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(outcome, tags) }) { Text(stringResource(R.string.home_btn_log)) } },
+        confirmButton = { TextButton(onClick = { haptics.confirm(); onConfirm(outcome, tags) }) { Text(stringResource(R.string.home_btn_log)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
     )
 }

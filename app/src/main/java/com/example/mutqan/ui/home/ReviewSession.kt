@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import com.example.mutqan.ui.components.Folio
 import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.theme.FolioTheme
+import com.example.mutqan.ui.components.rememberHaptics
 
 /**
  * Today's due portions one after another: each shows what it is, and a tap on how it went logs it and brings up
@@ -202,9 +203,10 @@ fun ReviewSession(
 /** One way it could have gone: a card, a tap logs it. Under the name, what it would do to the strength of the pages. */
 @Composable
 private fun OutcomeButton(label: String, caption: Pair<String, Color>?, onClick: () -> Unit) {
+    val haptics = rememberHaptics()
     Folio(
         modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-        onClick = onClick,
+        onClick = { haptics.confirm(); onClick() },
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Text(

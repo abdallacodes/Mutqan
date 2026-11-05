@@ -82,6 +82,7 @@ import java.util.Locale
 import java.util.TimeZone
 import com.example.mutqan.ui.components.PaperDialog
 import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ private fun SwipeToDismissLogItem(
                     .background(
                         color = if (triggered) DifficultyCritical.copy(alpha = 0.85f)
                                 else Color.Transparent,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(14.dp)
                     )
                     .padding(end = 20.dp),
                 contentAlignment = Alignment.CenterEnd
@@ -255,7 +256,7 @@ private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
     ) {
@@ -287,7 +288,7 @@ private fun HistoryLogItem(log: RevisionLog, onClick: () -> Unit) {
                 )
             }
             Surface(
-                shape  = RoundedCornerShape(4.dp),
+                shape  = RoundedCornerShape(12.dp),
                 color  = healthClr.copy(alpha = 0.12f),
                 border = BorderStroke(1.dp, healthClr.copy(alpha = 0.4f))
             ) {
@@ -400,7 +401,7 @@ private fun EditRevisionDialog(
                         isError         = editState.startError,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine      = true,
-                        shape           = RoundedCornerShape(8.dp),
+                        shape           = RoundedCornerShape(14.dp),
                         colors          = editFieldColors()
                     )
                     OutlinedTextField(
@@ -411,7 +412,7 @@ private fun EditRevisionDialog(
                         isError         = editState.endError,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine      = true,
-                        shape           = RoundedCornerShape(8.dp),
+                        shape           = RoundedCornerShape(14.dp),
                         colors          = editFieldColors()
                     )
                 }
@@ -454,9 +455,9 @@ private fun EditDateButton(millis: Long, onClick: () -> Unit) {
     val context = LocalContext.current
     Surface(
         onClick = onClick,
-        shape   = RoundedCornerShape(8.dp),
-        color   = Color.Transparent,
-        border  = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape   = RoundedCornerShape(14.dp),
+        color   = FolioTheme.colors.folio,
+        border  = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)

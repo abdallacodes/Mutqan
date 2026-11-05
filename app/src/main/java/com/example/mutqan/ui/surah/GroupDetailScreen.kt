@@ -104,7 +104,7 @@ fun GroupDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        shape    = RoundedCornerShape(8.dp),
+                        shape    = RoundedCornerShape(14.dp),
                         color    = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
                         border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                     ) {
@@ -270,7 +270,7 @@ private fun VerseRefCard(
             .height(IntrinsicSize.Min)
             .background(
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
     ) {
@@ -312,7 +312,7 @@ private fun VerseRefCard(
             }
 
             Surface(
-                shape  = RoundedCornerShape(4.dp),
+                shape  = RoundedCornerShape(12.dp),
                 color  = accentColor.copy(alpha = 0.10f),
                 border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
             ) {
@@ -366,7 +366,7 @@ private fun DetailSectionHeader(
         }
         if (count > 0) {
             Surface(
-                shape  = RoundedCornerShape(4.dp),
+                shape  = RoundedCornerShape(12.dp),
                 color  = accent.copy(alpha = 0.12f),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.4f))
             ) {

@@ -59,7 +59,7 @@ fun PeekDetailBottomSheet(
             Button(
                 onClick = onOpenInMushaf,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
@@ -91,7 +91,7 @@ private fun SnippetCard(
             .fillMaxWidth()
             .heightIn(min = 60.dp),
         color = backgroundColor,
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(14.dp)
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
             AyahText(ayahId = ayahId, size = 22.sp, maxLines = 1, textAlign = TextAlign.Right)

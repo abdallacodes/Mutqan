@@ -268,7 +268,7 @@ private fun SearchFiltersSection(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
                     label = { Text(stringResource(R.string.label_filter_surah)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = searchFieldColors()
                 )
                 ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
@@ -296,7 +296,7 @@ private fun SearchFiltersSection(
                     label = { Text(stringResource(R.string.label_juz_start)) },
                     placeholder = { Text("1") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = searchFieldColors()
                 )
                 OutlinedTextField(
@@ -306,7 +306,7 @@ private fun SearchFiltersSection(
                     label = { Text(stringResource(R.string.label_juz_end)) },
                     placeholder = { Text("30") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = searchFieldColors()
                 )
             }
@@ -386,7 +386,7 @@ private fun RandomAyahSection(
                             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
                             label = { Text(stringResource(R.string.scope_juz)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = juzExpanded) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = searchFieldColors()
                         )
                         ExposedDropdownMenu(expanded = juzExpanded, onDismissRequest = { juzExpanded = false }) {
@@ -412,7 +412,7 @@ private fun RandomAyahSection(
                             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
                             label = { Text(stringResource(R.string.scope_surah)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = searchFieldColors()
                         )
                         ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
@@ -433,7 +433,7 @@ private fun RandomAyahSection(
                             modifier = Modifier.weight(1f),
                             label = { Text(stringResource(R.string.label_start_page)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = searchFieldColors()
                         )
                         OutlinedTextField(
@@ -442,7 +442,7 @@ private fun RandomAyahSection(
                             modifier = Modifier.weight(1f),
                             label = { Text(stringResource(R.string.label_end_page)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = searchFieldColors()
                         )
                     }

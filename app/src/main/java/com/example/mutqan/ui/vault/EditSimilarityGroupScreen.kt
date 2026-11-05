@@ -186,7 +186,7 @@ fun EditSimilarityGroupScreen(
                     placeholder   = { Text(stringResource(R.string.group_desc_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine    = false,
                     maxLines      = 3,
-                    shape         = RoundedCornerShape(8.dp),
+                    shape         = RoundedCornerShape(14.dp),
                     colors        = fieldColors()
                 )
             }
@@ -208,7 +208,7 @@ fun EditSimilarityGroupScreen(
                     singleLine    = false,
                     minLines      = 3,
                     maxLines      = 8,
-                    shape         = RoundedCornerShape(8.dp),
+                    shape         = RoundedCornerShape(14.dp),
                     colors        = fieldColors()
                 )
             }
@@ -365,7 +365,7 @@ private fun SearchFiltersSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
             .padding(8.dp)
     ) {
         Row(
@@ -428,7 +428,7 @@ private fun SearchFiltersSection(
                         modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
                         label = { Text(stringResource(R.string.label_filter_surah)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = fieldColors()
                     )
                     ExposedDropdownMenu(expanded = surahExpanded, onDismissRequest = { surahExpanded = false }) {
@@ -454,7 +454,7 @@ private fun SearchFiltersSection(
                         label = { Text(stringResource(R.string.label_juz_start)) },
                         placeholder = { Text("1") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = fieldColors()
                     )
                     OutlinedTextField(
@@ -464,7 +464,7 @@ private fun SearchFiltersSection(
                         label = { Text(stringResource(R.string.label_juz_end)) },
                         placeholder = { Text("30") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = fieldColors()
                     )
                 }
@@ -528,7 +528,7 @@ private fun VersePicker(
                 label         = { Text(stringResource(R.string.label_surah)) },
                 trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded) },
                 singleLine    = true,
-                shape         = RoundedCornerShape(8.dp),
+                shape         = RoundedCornerShape(14.dp),
                 colors        = fieldColors()
             )
             ExposedDropdownMenu(
@@ -566,7 +566,7 @@ private fun VersePicker(
                 } else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine      = true,
-                shape           = RoundedCornerShape(8.dp),
+                shape           = RoundedCornerShape(14.dp),
                 colors          = fieldColors()
             )
             Button(
@@ -574,7 +574,7 @@ private fun VersePicker(
                 modifier = Modifier
                     .height(56.dp)
                     .width(80.dp),
-                shape    = RoundedCornerShape(8.dp),
+                shape    = RoundedCornerShape(14.dp),
                 enabled  = canAdd,
                 colors   = ButtonDefaults.buttonColors(
                     containerColor         = MaterialTheme.colorScheme.primary,
@@ -614,7 +614,7 @@ private fun VersePicker(
                 )
             },
             singleLine    = true,
-            shape         = RoundedCornerShape(8.dp),
+            shape         = RoundedCornerShape(14.dp),
             colors        = fieldColors()
         )
     }
@@ -633,9 +633,9 @@ private fun SearchResultRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
             .clickable(onClick = onPeek) // Peek on whole row tap
             .then(
                 Modifier.padding(0.dp) // keep border visible
@@ -698,7 +698,7 @@ private fun MemberRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

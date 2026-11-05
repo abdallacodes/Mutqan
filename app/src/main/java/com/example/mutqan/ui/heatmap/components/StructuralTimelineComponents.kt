@@ -267,7 +267,7 @@ fun SubjectRow(
                 Surface(
                     onClick = onClickAyah,
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -297,7 +297,7 @@ fun PageChip(
             .clickable { onClick() },
         color = Color.Transparent,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shape = RoundedCornerShape(4.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(

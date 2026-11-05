@@ -89,6 +89,7 @@ import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import kotlin.math.roundToInt
 import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.theme.FolioTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -352,9 +353,9 @@ private fun FolderCard(
 
     Surface(
         onClick  = onClick,
-        shape    = RoundedCornerShape(8.dp),
-        color    = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        shape    = RoundedCornerShape(14.dp),
+        color    = FolioTheme.colors.folio,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -529,9 +530,9 @@ private fun GroupCard(
 
     Surface(
         onClick  = onView,
-        shape    = RoundedCornerShape(8.dp),
-        color    = MaterialTheme.colorScheme.surfaceVariant,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape    = RoundedCornerShape(14.dp),
+        color    = FolioTheme.colors.folio,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -574,7 +575,7 @@ private fun GroupCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        shape  = RoundedCornerShape(4.dp),
+                        shape  = RoundedCornerShape(12.dp),
                         color  = MaterialTheme.colorScheme.background,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
@@ -586,7 +587,7 @@ private fun GroupCard(
                         )
                     }
                     Surface(
-                        shape  = RoundedCornerShape(4.dp),
+                        shape  = RoundedCornerShape(12.dp),
                         color  = strengthColor.copy(alpha = 0.12f),
                         border = BorderStroke(1.dp, strengthColor.copy(alpha = 0.4f))
                     ) {

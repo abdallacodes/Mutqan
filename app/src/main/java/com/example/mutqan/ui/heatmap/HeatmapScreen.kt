@@ -70,6 +70,7 @@ import com.example.mutqan.ui.components.HelpDialog
 import com.example.mutqan.ui.components.TopBarOverflowMenu
 import com.example.mutqan.ui.theme.*
 import kotlin.math.roundToInt
+import com.example.mutqan.ui.components.Folio
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -216,9 +217,7 @@ private fun StatCard(
     sublabel: String,
     valueColor: Color
 ) {
-    Column(modifier = modifier) {
-        Hairline()
-        Spacer(Modifier.height(10.dp))
+    Folio(modifier = modifier, contentPadding = PaddingValues(14.dp)) {
         Text(
             text     = value,
             style    = MaterialTheme.typography.displaySmall,
@@ -288,8 +287,8 @@ internal fun JuzCard(
 
     Surface(
         onClick  = onClick,
-        shape    = RoundedCornerShape(4.dp),
-        color    = Color.Transparent,
+        shape    = RoundedCornerShape(12.dp),
+        color    = FolioTheme.colors.folio,
         border   = BorderStroke(1.dp, borderColor),
         shadowElevation = 0.dp,
         modifier = Modifier
@@ -371,9 +370,9 @@ internal fun JuzCard(
 @Composable
 private fun JuzCardSkeleton(juzId: Int) {
     Surface(
-        shape    = RoundedCornerShape(4.dp),
-        color    = Color.Transparent,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape    = RoundedCornerShape(12.dp),
+        color    = FolioTheme.colors.folio,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 132.dp)

@@ -68,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.rememberHaptics
 import com.example.mutqan.ui.theme.FolioTheme
+import androidx.compose.runtime.LaunchedEffect
 
 /** One sitting of questions: a single kind in a row, or a daily set of ten mixed ones. */
 @Composable
@@ -198,14 +199,13 @@ internal fun QuizOption(
         else -> FolioTheme.colors.folio
     }
     val shape = FolioTheme.shapes.control
-    val haptics = rememberHaptics()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(fill, shape)
             .border(if (state == OptionState.CORRECT || state == OptionState.WRONG) 2.dp else 1.dp, accent, shape)
             .clip(shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = { haptics.tick(); onClick() })
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -357,6 +357,9 @@ private fun WhereBonus(q: WhereQuestion, state: QuizUiState, onAyah: (Int) -> Un
 
 @Composable
 internal fun Feedback(correct: Boolean) {
+    // The answer is told by touch as well as by words and colour.
+    val haptics = rememberHaptics()
+    LaunchedEffect(correct) { if (correct) haptics.confirm() else haptics.reject() }
     Text(
         text = stringResource(if (correct) R.string.quiz_correct else R.string.quiz_wrong),
         style = MaterialTheme.typography.headlineSmall,
