@@ -16,8 +16,8 @@ android {
         applicationId = "com.example.mutqan"
         minSdk = 24
         targetSdk = 36
-        versionCode = 60200
-        versionName = "6.2.0"
+        versionCode = 60300
+        versionName = "6.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
