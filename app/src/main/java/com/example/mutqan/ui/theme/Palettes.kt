@@ -84,6 +84,21 @@ private val graphiteDark = PaletteColors(
     primaryContainer = c(0x26323C), onPrimaryContainer = c(0xDCE6EE), tertiary = c(0xCDB26A), error = c(0xEE8D83)
 )
 
+/** Paper's colours in the same shape as the other palettes, for code that treats all six alike (tokens, contrast tests). */
+fun paperColors(dark: Boolean): PaletteColors = if (dark) {
+    PaletteColors(
+        bg = NightBg, surface = NightSurface, surfaceVariant = NightSurfaceVariant, ink = NightInk, inkSoft = NightInkSoft,
+        rule = NightRule, ruleSoft = NightRuleSoft, primary = NightGold, onPrimary = NightBg,
+        primaryContainer = NightGoldContainer, onPrimaryContainer = NightOnGoldContainer, tertiary = NightGold, error = NightError
+    )
+} else {
+    PaletteColors(
+        bg = PaperBg, surface = PaperSurface, surfaceVariant = PaperSurfaceVariant, ink = PaperInk, inkSoft = PaperInkSoft,
+        rule = PaperRule, ruleSoft = PaperRuleSoft, primary = PaperGreen, onPrimary = PaperBg,
+        primaryContainer = PaperGreenContainer, onPrimaryContainer = PaperOnGreenContainer, tertiary = PaperGoldText, error = PaperError
+    )
+}
+
 /** The colours of [palette], or null for Paper, which has its own hand-tuned schemes in Theme.kt. */
 fun paletteColors(palette: Palette, dark: Boolean): PaletteColors? = when (palette) {
     Palette.PAPER -> null

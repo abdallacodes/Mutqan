@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Debug builds only: every design-system component on one page. Start it with
+             adb shell am start -n com.example.mutqan/.ui.gallery.GalleryActivity
+             (extras: palette as a string, dark as a boolean). -->
+        <activity
+            android:name=".ui.gallery.GalleryActivity"
+            android:exported="false"
+            android:label="Folio gallery"
+            android:theme="@style/Theme.Mutqan" />
+    </application>
+
+</manifest>

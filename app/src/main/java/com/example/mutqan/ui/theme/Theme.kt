@@ -12,6 +12,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
@@ -117,7 +118,10 @@ fun MutqanTheme(
         }
     }
 
-    CompositionLocalProvider(LocalStatusColors provides statusColors(onLight = !dark)) {
+    CompositionLocalProvider(
+        LocalStatusColors provides statusColors(onLight = !dark),
+        LocalFolioColors provides remember(palette, dark) { folioColors(palette, dark) }
+    ) {
         MaterialTheme(
             colorScheme = paletteColors(palette, dark)?.toScheme(dark) ?: if (dark) paperDarkScheme else paperLightScheme,
             typography  = paperTypography(arabic),
