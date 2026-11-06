@@ -427,7 +427,7 @@ fun SettingsBottomSheet(
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    backupGate.require { viewModel.deleteAllData() }
+                    viewModel.deleteAllData()
                 }) { Text(stringResource(R.string.delete_all_confirm), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.btn_cancel)) } }

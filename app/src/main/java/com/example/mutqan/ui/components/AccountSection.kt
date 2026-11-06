@@ -37,11 +37,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
+import com.example.mutqan.domain.sync.Choice
 import com.example.mutqan.domain.sync.CloudSync
 import com.example.mutqan.domain.sync.FirstSync
 import com.example.mutqan.domain.sync.OtherDevice
 import com.example.mutqan.domain.sync.SyncOutcome
 import com.example.mutqan.domain.sync.SyncStatus
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private fun outcomeText(outcome: SyncOutcome): Int = when (outcome) {
@@ -75,58 +77,75 @@ fun AccountSection() {
     var firstSync by remember { mutableStateOf<FirstSync?>(null) }
     var otherDevice by remember { mutableStateOf<OtherDevice?>(null) }
     val displaced by cloud.displaced.collectAsState(initial = false)
-
-    val backupGate = rememberBackupGate()
+    val linked by cloud.linked.collectAsState(initial = false)
 
     /** Says in a message what the sync that just ended did or why it could not. */
     fun report() {
         val text = when (val s = cloud.status.value) {
             is SyncStatus.Done -> context.getString(outcomeText(s.outcome))
             is SyncStatus.Failed -> context.getString(R.string.sync_failed)
+            SyncStatus.CopyFailed -> context.getString(R.string.copy_failed)
+            SyncStatus.CloudGone -> context.getString(R.string.sync_cloud_gone)
             else -> null
         }
         if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
     }
 
+    /** Only what went wrong: when a join or a deletion works, the dialog of [SyncNoticeHost] says so, with where the copy is. */
+    fun reportProblem(joining: Boolean = false) {
+        val status = cloud.status.value
+        if (status is SyncStatus.Failed && joining) {
+            Toast.makeText(context, context.getString(R.string.sync_set_up_failed), Toast.LENGTH_LONG).show()
+        } else if (status !is SyncStatus.Done && status != SyncStatus.Idle) {
+            report()
+        }
+    }
+
     /** Syncs, then says in a message what it did or why it could not. */
-    fun runSync(replaceDevice: Boolean = false) {
+    fun runSync() {
         scope.launch {
-            cloud.syncNow(replaceDevice)
+            cloud.syncNow()
             report()
         }
     }
 
-    /** Erases this device's data and starts from the account's copy (or from nothing), then says what happened. */
-    fun runFresh() {
+    /** Joins the account the way the user chose. */
+    fun runJoin(choice: Choice) {
         scope.launch {
-            cloud.startFresh()
-            report()
+            cloud.enableSync(choice)
+            reportProblem(joining = true)
         }
     }
 
-    // A new account on this device with data on both sides asks first; everything else syncs straight away.
-    fun startSync() {
+    // Looks at both sides and changes nothing. A device with data asks which side wins; one with nothing just takes the account's data.
+    fun chooseData() {
         scope.launch {
             try {
-                val choice = cloud.firstSyncChoice()
-                if (choice != null) firstSync = choice else runSync()
+                val choice = cloud.setupChoice()
+                if (choice != null) firstSync = choice else runJoin(Choice.CLOUD_WINS)
             } catch (e: Exception) {
                 Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // An account works on one device at a time: signing in asks before taking it from another device.
+    // An account works on one device at a time: signing in asks before taking it from another device, then comes to the data.
+    fun setUpSync() {
+        scope.launch {
+            try {
+                val other = cloud.otherDeviceInUse()
+                if (other != null) otherDevice = other else chooseData()
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     fun afterSignIn() {
         scope.launch {
             try {
                 val other = cloud.otherDeviceInUse()
-                if (other != null) {
-                    otherDevice = other
-                } else {
-                    cloud.takeOver()
-                    startSync()
-                }
+                if (other != null) otherDevice = other else chooseData()
             } catch (e: Exception) {
                 cloud.signOut()
                 Toast.makeText(context, context.getString(R.string.account_sign_in_failed), Toast.LENGTH_LONG).show()
@@ -134,12 +153,12 @@ fun AccountSection() {
         }
     }
 
-    /** The user chose to use the account here: claim it, then sync. */
+    /** Another device had the account and took it over; the user chose to use it here again. */
     fun useHere() {
         scope.launch {
             try {
                 cloud.takeOver()
-                startSync()
+                if (cloud.linked.first()) runSync() else setUpSync()
             } catch (e: Exception) {
                 Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
             }
@@ -164,7 +183,7 @@ fun AccountSection() {
                 val activity = context.findActivity() ?: return@DataActionRow
                 scope.launch {
                     try {
-                        cloud.accounts.signIn(activity)
+                        cloud.signIn(activity)
                         if (cloud.accounts.account.value != null) afterSignIn()
                     } catch (e: Exception) {
                         Toast.makeText(context, context.getString(R.string.account_sign_in_failed), Toast.LENGTH_LONG).show()
@@ -188,8 +207,10 @@ fun AccountSection() {
             }
             val line = when (val s = status) {
                 SyncStatus.Syncing -> stringResource(R.string.sync_running)
-                is SyncStatus.Failed -> stringResource(R.string.sync_failed)
-                else -> lastSync?.let {
+                is SyncStatus.Failed -> stringResource(if (linked) R.string.sync_failed else R.string.sync_set_up_failed)
+                SyncStatus.CopyFailed -> stringResource(R.string.copy_failed)
+                SyncStatus.CloudGone -> stringResource(R.string.sync_cloud_gone)
+                else -> if (!linked) stringResource(R.string.sync_off) else lastSync?.let {
                     val now = System.currentTimeMillis()
                     val done = (status as? SyncStatus.Done)?.let { d -> stringResource(outcomeText(d.outcome)) + "\n" }.orEmpty()
                     // Under a minute DateUtils says "0 minutes ago".
@@ -200,7 +221,7 @@ fun AccountSection() {
             Text(
                 text = line,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (status is SyncStatus.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (status is SyncStatus.Failed || status == SyncStatus.CopyFailed || status == SyncStatus.CloudGone) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -214,16 +235,23 @@ fun AccountSection() {
                 )
                 PaperButton(stringResource(R.string.session_use_here), onClick = { useHere() }, modifier = Modifier.fillMaxWidth())
             }
-        } else {
+        } else if (linked) {
             DataActionRow(
                 label = stringResource(R.string.sync_now),
                 icon = Icons.Default.Sync,
-                onClick = { if (status != SyncStatus.Syncing) startSync() }
+                onClick = { if (status != SyncStatus.Syncing) runSync() }
             )
             DataActionRow(
                 label = stringResource(R.string.sync_delete_cloud),
                 icon = Icons.Default.CloudOff,
                 onClick = { confirmDelete = true }
+            )
+        } else {
+            // Signed in but not set up: nothing is sent or received until the user chooses how this device joins the account.
+            DataActionRow(
+                label = stringResource(R.string.sync_set_up),
+                icon = Icons.Default.Sync,
+                onClick = { if (status != SyncStatus.Syncing) setUpSync() }
             )
         }
         DataActionRow(
@@ -236,20 +264,17 @@ fun AccountSection() {
     firstSync?.let { choice ->
         FirstSyncDialog(
             choice = choice,
-            onMerge = {
+            onCloudWins = {
                 firstSync = null
-                runSync()
+                runJoin(Choice.CLOUD_WINS)
             },
-            // Erases the device's data, so a backup comes first; the question stays up until it is saved.
-            onReplace = {
-                backupGate.require {
-                    firstSync = null
-                    if (choice.cloudExists) runSync(replaceDevice = true) else runFresh()
-                }
+            onDeviceWins = {
+                firstSync = null
+                runJoin(Choice.DEVICE_WINS)
             },
             onCancel = {
                 firstSync = null
-                scope.launch { cloud.accounts.signOut() }
+                scope.launch { cloud.signOut() }
             }
         )
     }
@@ -259,7 +284,7 @@ fun AccountSection() {
             other = other,
             onUseHere = {
                 otherDevice = null
-                useHere()
+                chooseData()
             },
             onCancel = {
                 otherDevice = null
@@ -276,7 +301,10 @@ fun AccountSection() {
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
-                    backupGate.require { scope.launch { cloud.deleteCloudCopy() } }
+                    scope.launch {
+                        cloud.deleteCloudCopy()
+                        reportProblem()
+                    }
                 }) { Text(stringResource(R.string.sync_delete_confirm), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.btn_cancel)) } }
@@ -325,11 +353,12 @@ private fun OtherDeviceDialog(other: OtherDevice, onUseHere: () -> Unit, onCance
 }
 
 /**
- * Asked when an account that already has data in the cloud signs in on a device that has data too: keep both
- * (the safe choice, offered first), or let the account's data take the place of this device's.
+ * Asked when this device holds data as it joins an account: the cloud copy replaces the device's data, or the device's
+ * data replaces the cloud copy. There is no third way; whichever is chosen, a copy of what is replaced is saved on the
+ * phone first. Nothing is synced until one of the two is chosen and has worked.
  */
 @Composable
-private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: () -> Unit, onCancel: () -> Unit) {
+private fun FirstSyncDialog(choice: FirstSync, onCloudWins: () -> Unit, onDeviceWins: () -> Unit, onCancel: () -> Unit) {
     Dialog(onDismissRequest = {}) {
         Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
             Column(
@@ -364,36 +393,29 @@ private fun FirstSyncDialog(choice: FirstSync, onMerge: () -> Unit, onReplace: (
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                if (choice.otherAccount) {
-                    Text(
-                        text = stringResource(R.string.first_sync_other_account),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-
-                Spacer(Modifier.height(4.dp))
-                PaperButton(
-                    stringResource(if (choice.cloudExists) R.string.first_sync_merge else R.string.first_sync_upload),
-                    onClick = onMerge,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = stringResource(if (choice.cloudExists) R.string.first_sync_merge_hint else R.string.first_sync_upload_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
 
                 Spacer(Modifier.height(4.dp))
                 PaperOutlinedButton(
                     stringResource(if (choice.cloudExists) R.string.first_sync_replace else R.string.first_sync_fresh),
-                    onClick = onReplace,
+                    onClick = onCloudWins,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = stringResource(if (choice.cloudExists) R.string.first_sync_replace_hint else R.string.first_sync_fresh_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
+                )
+
+                Spacer(Modifier.height(4.dp))
+                PaperOutlinedButton(
+                    stringResource(if (choice.cloudExists) R.string.first_sync_overwrite else R.string.first_sync_upload),
+                    onClick = onDeviceWins,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(if (choice.cloudExists) R.string.first_sync_overwrite_hint else R.string.first_sync_upload_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (choice.cloudExists) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 PaperLink(

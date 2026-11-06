@@ -184,6 +184,11 @@ class BackupManager(private val context: Context) {
         }
     }
 
+    /** Removes everything the user has made, in one step; the settings stay. */
+    suspend fun clearUserData() {
+        db.withTransaction { dao.clearUserData() }
+    }
+
     /** Replaces everything the user has made with the contents of [root], a snapshot from [buildSnapshot] or a backup file. */
     suspend fun restoreSnapshot(root: JSONObject) {
             // Restoring it here and syncing it back would drop what this version does not know about.

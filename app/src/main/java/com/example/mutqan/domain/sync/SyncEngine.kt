@@ -11,11 +11,18 @@ class RemoteSnapshot(val version: Long, val text: String)
 interface SyncLocal {
     suspend fun snapshot(): String
     suspend fun apply(text: String)
+
+    /** Removes everything the user made on this device; the settings stay. */
+    suspend fun clear()
 }
 
 /** The cloud side. [push] succeeds only if the copy is still at [expectedVersion] and returns the new version, else null. */
 interface SyncRemote {
+    /** The cloud copy; throws [SignedInElsewhereException] when another device holds the account. */
     suspend fun fetch(): RemoteSnapshot?
+
+    /** The same read for looking only: it works whoever holds the account and changes nothing. */
+    suspend fun peek(): RemoteSnapshot?
     suspend fun push(text: String, expectedVersion: Long): Long?
 }
 
@@ -34,32 +41,62 @@ enum class SyncOutcome { NOTHING_TO_DO, PUSHED, PULLED, MERGED }
 
 class SyncConflictException : Exception("The cloud copy kept changing")
 
+/** [SyncEngine.sync] was asked for before the user chose how this device joins the account. */
+class NotLinkedException : Exception("This device has not been set up to sync with the account")
+
+/** The cloud copy this device synced with is gone: it was deleted on purpose, here or on another device. */
+class CloudCopyGoneException : Exception("The cloud copy was deleted")
+
 /** The account is in use on another device now, so this one must not read or change its cloud copy. */
 class SignedInElsewhereException : Exception("The account is in use on another device")
 
 /**
- * Brings this device and the cloud copy to the same state. It remembers what the two looked like after the last sync,
- * so it can tell which side changed: neither (nothing to do), only this device (push), only the cloud (pull), or both
- * (merge, then push).
+ * Keeps this device and the cloud copy at the same state, once the user has chosen how this device joins the account:
+ * either [replaceLocal] (the cloud copy wins) or [replaceCloud] (this device wins). Only those two leave the memory
+ * that makes a device "set up"; until then [sync] refuses and nothing moves in either direction.
+ *
+ * After that it remembers what the two looked like after the last sync, so it can tell which side changed: neither
+ * (nothing to do), only this device (push), only the cloud (pull), or both (merge, then push).
  */
 class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, private val memory: SyncMemory) {
 
     /**
-     * [recreateCloud] false (the automatic syncs): a cloud copy that this device had synced with and that is now gone
-     * was deleted on purpose, from here or from another device, so it is not uploaded again without being asked.
+     * A device that is set up and whose cloud copy has gone gets [CloudCopyGoneException]: the copy was deleted on
+     * purpose, from here or from another device, so it is not uploaded again without being asked.
      */
-    suspend fun sync(recreateCloud: Boolean = true): SyncOutcome {
+    suspend fun sync(): SyncOutcome {
+        if (memory.lastLocalHash() == null) throw NotLinkedException()
         repeat(ATTEMPTS) {
-            attempt(recreateCloud)?.let { return it }
+            attempt()?.let { return it }
         }
         throw SyncConflictException()
     }
 
-    /** Makes this device's data the cloud copy's, discarding what is on the device; with no cloud copy it is an ordinary sync. */
-    suspend fun replaceLocal(): SyncOutcome {
-        val cloud = remote.fetch() ?: return sync()
-        pull(cloud)
+    /**
+     * The user chose the cloud copy: this device's data is replaced by [cloud] (what the caller looked at and saved a
+     * copy of), or emptied when there is none. Only when that has worked is the device set up to sync.
+     */
+    suspend fun replaceLocal(cloud: RemoteSnapshot?): SyncOutcome {
+        if (cloud == null) {
+            local.clear()
+            val now = local.snapshot()
+            memory.remember(hash(now), 0, now)
+        } else {
+            pull(cloud)
+        }
         return SyncOutcome.PULLED
+    }
+
+    /**
+     * The user chose this device's data: the cloud copy is replaced by it. [seen] is the cloud copy the caller looked
+     * at and saved a copy of; if it changed since, nothing is replaced. Only when the push has worked is the device
+     * set up to sync.
+     */
+    suspend fun replaceCloud(seen: RemoteSnapshot?): SyncOutcome {
+        val text = local.snapshot()
+        val version = remote.push(text, seen?.version ?: 0) ?: throw SyncConflictException()
+        memory.remember(hash(text), version, text)
+        return SyncOutcome.PUSHED
     }
 
     private suspend fun pull(cloud: RemoteSnapshot) {
@@ -69,12 +106,12 @@ class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, p
     }
 
     /** One pass; null when the cloud copy changed under us and the pass must be repeated. */
-    private suspend fun attempt(recreateCloud: Boolean): SyncOutcome? {
+    private suspend fun attempt(): SyncOutcome? {
         val cloud = remote.fetch()
         val text = local.snapshot()
 
         if (cloud == null) {
-            if (!recreateCloud && memory.lastRemoteVersion() > 0) return SyncOutcome.NOTHING_TO_DO
+            if (memory.lastRemoteVersion() > 0) throw CloudCopyGoneException()
             // Nothing to keep in the cloud yet.
             if (isEmpty(text)) return SyncOutcome.NOTHING_TO_DO
             val version = remote.push(text, 0) ?: return null

@@ -194,8 +194,13 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[KEY_DISPLACED] = on }
     }
 
-    /** The account this device's data was last synced with, or null if it never was. */
+    /**
+     * The account this device is set up to sync with, or null: set only once the user has chosen how this device
+     * joins the account and that has worked, cleared by signing out and by anything that ends the link.
+     */
     suspend fun syncOwner(): String? = context.dataStore.data.first()[KEY_SYNC_UID]?.takeIf { it.isNotEmpty() }
+
+    val syncOwnerFlow: Flow<String?> = context.dataStore.data.map { prefs -> prefs[KEY_SYNC_UID]?.takeIf { it.isNotEmpty() } }
 
     /**
      * What the last sync with [uid]'s cloud copy left behind. Another account has no shared history, so for it
@@ -257,12 +262,26 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    /** Forgets what was synced, so the next sync treats this device as new to the account and merges instead of overwriting. */
+    /** Ends the link with the account: nothing syncs until the user chooses again how this device joins one. */
     suspend fun forgetSyncHistory() {
         context.dataStore.edit { prefs ->
             prefs.remove(KEY_SYNC_UID)
             prefs.remove(KEY_SYNC_HASH)
             prefs.remove(KEY_SYNC_VERSION)
+            prefs.remove(KEY_SYNC_TIME)
+        }
+        withContext(Dispatchers.IO) { baseFile().delete() }
+    }
+
+    /**
+     * Puts everything stored here back to how a first run finds it: settings, onboarding, the sync link, the lot.
+     * Only the installation id stays, so the account does not take this phone for a second device.
+     */
+    suspend fun resetToFreshInstall() {
+        context.dataStore.edit { prefs ->
+            val id = prefs[KEY_DEVICE_ID]
+            prefs.clear()
+            if (id != null) prefs[KEY_DEVICE_ID] = id
         }
         withContext(Dispatchers.IO) { baseFile().delete() }
     }

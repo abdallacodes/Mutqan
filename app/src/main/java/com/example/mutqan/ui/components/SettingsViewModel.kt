@@ -7,17 +7,16 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
-import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.domain.BackupManager
 import com.example.mutqan.domain.PasswordRequiredException
 import com.example.mutqan.domain.WrongPasswordException
+import com.example.mutqan.domain.sync.CloudSync
+import com.example.mutqan.domain.sync.SafetyCopyFailedException
 import com.example.mutqan.quran.DownloadState
 import com.example.mutqan.quran.MushafDownloadManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,8 +32,8 @@ sealed class BackupUiEvent {
 class SettingsViewModel(
     private val backupManager: BackupManager,
     private val downloadManager: MushafDownloadManager,
-    private val database: AppDatabase,
-    private val preferences: UserPreferencesRepository
+    private val preferences: UserPreferencesRepository,
+    private val cloud: CloudSync
 ) : ViewModel() {
 
     val appLockEnabled: StateFlow<Boolean> =
@@ -44,13 +43,18 @@ class SettingsViewModel(
         viewModelScope.launch { preferences.setAppLockEnabled(enabled) }
     }
 
-    /** Permanently deletes everything the user recorded on this device. */
+    /**
+     * Deletes everything on this device and takes the app back to how a fresh install is, after saving a copy of the
+     * data on the phone. The dialog that says it is done comes from [CloudSync.notice]; this only reports a failure,
+     * and then nothing has been deleted.
+     */
     fun deleteAllData() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { database.clearAllTables() }
-            // Otherwise the empty device would look like a change to push over the account's data.
-            preferences.forgetSyncHistory()
-            _events.emit(BackupUiEvent.Success(UiText(R.string.delete_all_done)))
+            try {
+                cloud.resetDevice()
+            } catch (e: SafetyCopyFailedException) {
+                _events.emit(BackupUiEvent.Error(UiText(R.string.copy_failed)))
+            }
         }
     }
 
@@ -97,8 +101,8 @@ class SettingsViewModelFactory(private val context: Context) : ViewModelProvider
         return SettingsViewModel(
             BackupManager(appContext),
             MushafDownloadManager(appContext),
-            AppDatabase.getInstance(appContext),
-            UserPreferencesRepository(appContext)
+            UserPreferencesRepository(appContext),
+            CloudSync.get(appContext)
         ) as T
     }
 }

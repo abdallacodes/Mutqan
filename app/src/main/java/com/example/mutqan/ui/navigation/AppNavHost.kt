@@ -47,6 +47,7 @@ import androidx.navigation.navArgument
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.ui.components.SettingsBottomSheet
+import com.example.mutqan.ui.components.SyncNoticeHost
 import com.example.mutqan.ui.coverage.CoverageScreen
 import com.example.mutqan.ui.heatmap.HeatmapScreen
 import com.example.mutqan.ui.heatmap.JuzDetailScreen
@@ -227,6 +228,18 @@ fun AppNavHost(
     val userPrefs  = remember { UserPreferencesRepository(context) }
     val isFirstRun by userPrefs.isFirstRun.collectAsState(initial = null)
     if (isFirstRun == null) return
+
+    // The device's data was deleted from Settings: the app starts over from onboarding, as after a first install.
+    val wasFirstRun = remember { mutableStateOf(isFirstRun) }
+    LaunchedEffect(isFirstRun) {
+        if (isFirstRun == true && wasFirstRun.value == false) {
+            navController.navigate(Routes.ONBOARDING) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+            }
+        }
+        wasFirstRun.value = isFirstRun
+    }
+    SyncNoticeHost()
 
     val startDestination = if (isFirstRun == true) Routes.ONBOARDING else Routes.HOME
 

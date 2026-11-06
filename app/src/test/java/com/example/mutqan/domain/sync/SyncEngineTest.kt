@@ -1,5 +1,6 @@
 package com.example.mutqan.domain.sync
 
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,6 +25,8 @@ class SyncEngineTest {
         fail("expected ${T::class.java.simpleName}")
     }
 
+    private fun runBlockingPeek(remote: FakeRemote) = runBlocking { remote.peek() }
+
     /** Two devices that have both synced [shared] with one account. */
     private fun synced(shared: String): Triple<FakeRemote, Device, Device> {
         val remote = FakeRemote()
@@ -37,21 +40,122 @@ class SyncEngineTest {
 
     // ── The basics ──────────────────────────────────────────────────────────
 
+    // ── Joining an account: the user chooses, and only then does anything sync ──
+
     @Test
-    fun `replacing takes the cloud copy and drops what the device had`() {
-        val remote = FakeRemote(RemoteSnapshot(4, data(7, 8))); val d = Device(remote, data(1))
-        assertEquals(SyncOutcome.PULLED, d.replace())
-        assertEquals(data(7, 8), d.text)
-        assertEquals(4L, d.memory.version)
-        assertEquals(0, remote.pushes)
+    fun `a device nobody has set up refuses to sync, whatever is on either side`() {
+        val cases = listOf(
+            FakeRemote(RemoteSnapshot(4, data(7, 8))) to data(1),   // data on both sides
+            FakeRemote() to data(1),                                // data on the device only
+            FakeRemote(RemoteSnapshot(4, data(7, 8))) to data(),    // data in the cloud only
+            FakeRemote(RemoteSnapshot(4, data(1))) to data(1)       // the very same data
+        )
+        for ((remote, text) in cases) {
+            val d = Device(remote, text, linked = false)
+            val before = remote.cloud
+            failsWith<NotLinkedException> { d.sync() }
+            assertEquals(text, d.text)
+            assertEquals(before, remote.cloud)
+            assertEquals(0, remote.pushes)
+            assertEquals(0, remote.fetches)
+            assertNull(d.memory.hash)
+        }
     }
 
     @Test
-    fun `replacing with no cloud copy pushes like a normal sync`() {
-        val remote = FakeRemote(); val d = Device(remote, data(1))
-        assertEquals(SyncOutcome.PUSHED, d.replace())
-        assertEquals(1L, remote.cloud?.version)
+    fun `choosing the cloud copy takes it and drops what the device had`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7, 8))); val d = Device(remote, data(1), linked = false)
+        assertEquals(SyncOutcome.PULLED, d.joinFromCloud())
+        assertEquals(data(7, 8), d.text)
+        assertEquals(4L, d.memory.version)
+        assertEquals(data(7, 8), d.memory.snapshot)
+        assertEquals(0, remote.pushes)
+        assertEquals(SyncOutcome.NOTHING_TO_DO, d.sync())
     }
+
+    @Test
+    fun `choosing the cloud copy when the account has none empties the device and sets it up`() {
+        val remote = FakeRemote(); val d = Device(remote, data(1), linked = false)
+        assertEquals(SyncOutcome.PULLED, d.joinFromCloud())
+        assertTrue(SyncEngine.isEmpty(d.text))
+        assertEquals(1, d.local.cleared)
+        assertEquals(0, remote.pushes)
+        assertNull(remote.cloud)
+        assertNotNull(d.memory.hash)
+        assertEquals(SyncOutcome.NOTHING_TO_DO, d.sync())
+        d.text = data(5)
+        assertEquals(SyncOutcome.PUSHED, d.sync())
+        assertEquals(setOf(5L), logsOf(remote.cloud!!.text))
+    }
+
+    @Test
+    fun `choosing the cloud copy keeps the device's settings when the account has none`() {
+        val remote = FakeRemote()
+        val d = Device(remote, snapshot(logs = listOf(L(1)), settings = mapOf("recitation_reciter" to "husary")), linked = false)
+        d.joinFromCloud()
+        assertEquals("husary", settingsOf(d.text)["recitation_reciter"])
+    }
+
+    @Test
+    fun `choosing this device replaces the cloud copy and does not merge with it`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7, 8))); val d = Device(remote, data(1), linked = false)
+        assertEquals(SyncOutcome.PUSHED, d.joinWithDevice())
+        assertEquals(setOf(1L), logsOf(remote.cloud!!.text))
+        assertEquals(data(1), d.text)
+        assertTrue(remote.cloud!!.version > 4)
+        assertEquals(remote.cloud!!.version, d.memory.version)
+        assertEquals(SyncOutcome.NOTHING_TO_DO, d.sync())
+    }
+
+    @Test
+    fun `choosing this device when the account has nothing makes the first copy`() {
+        val remote = FakeRemote(); val d = Device(remote, data(1), linked = false)
+        assertEquals(SyncOutcome.PUSHED, d.joinWithDevice())
+        assertEquals(data(1), remote.cloud?.text)
+        assertEquals(1L, d.memory.version)
+    }
+
+    @Test
+    fun `choosing this device refuses when the cloud copy changed after it was looked at`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7)))
+        val d = Device(remote, data(1), linked = false)
+        val seen = runBlockingPeek(remote)
+        remote.put(data(7, 9)) // another device pushed in between
+        failsWith<SyncConflictException> { runBlocking { SyncEngine(d.local, remote, d.memory).replaceCloud(seen) } }
+        assertEquals(setOf(7L, 9L), logsOf(remote.cloud!!.text))
+        assertNull(d.memory.hash)
+    }
+
+    @Test
+    fun `a replacement that cannot be written does not set the device up`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7))); val d = Device(remote, data(1), linked = false)
+        d.local.failNextApply = true
+        failsWith<IOException> { d.joinFromCloud() }
+        assertEquals(data(1), d.text)
+        assertNull(d.memory.hash)
+        failsWith<NotLinkedException> { d.sync() }
+    }
+
+    @Test
+    fun `a push that fails does not set the device up`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7))); val d = Device(remote, data(1), linked = false)
+        remote.failNextPush = true
+        failsWith<IOException> { d.joinWithDevice() }
+        assertEquals(setOf(7L), logsOf(remote.cloud!!.text))
+        assertNull(d.memory.hash)
+        failsWith<NotLinkedException> { d.sync() }
+    }
+
+    @Test
+    fun `an account held by another device cannot be replaced from here`() {
+        val remote = FakeRemote(RemoteSnapshot(4, data(7))); val d = Device(remote, data(1), linked = false)
+        remote.displaced = true
+        failsWith<SignedInElsewhereException> { d.joinWithDevice() }
+        assertEquals(setOf(7L), logsOf(remote.cloud!!.text))
+        assertNull(d.memory.hash)
+    }
+
+    // ── The basics ──────────────────────────────────────────────────────────
 
     @Test
     fun `the first sync with an empty cloud pushes`() {
@@ -103,27 +207,11 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `a device that is new to an account merges with what is there`() {
-        val remote = FakeRemote(RemoteSnapshot(4, data(1, 2))); val d = Device(remote, data(10))
-        assertEquals(SyncOutcome.MERGED, d.sync())
-        assertEquals(3, logCount(d.text))
-    }
-
-    @Test
-    fun `a fresh install takes the account's data without sending anything`() {
+    fun `an empty device that is set up takes the account's data without sending anything`() {
         val remote = FakeRemote(RemoteSnapshot(4, data(1, 2))); val d = Device(remote)
         assertEquals(SyncOutcome.PULLED, d.sync())
         assertEquals(setOf(1L, 2L), d.logs)
         assertEquals(0, remote.pushes)
-    }
-
-    @Test
-    fun `a device with data joins an account whose cloud copy is empty`() {
-        val remote = FakeRemote(RemoteSnapshot(1, snapshot())); val d = Device(remote, data(5))
-        assertEquals(SyncOutcome.MERGED, d.sync())
-        assertEquals(setOf(5L), JSONObject(remote.cloud!!.text).getJSONArray("revision_logs").let { a ->
-            (0 until a.length()).map { a.getJSONObject(it).getLong("timestamp") }.toSet()
-        })
     }
 
     @Test
@@ -270,20 +358,30 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `an automatic sync does not bring back a deleted cloud copy`() {
+    fun `a deleted cloud copy is not made again, by any sync`() {
         val remote = FakeRemote(); val d = Device(remote, data(1))
         d.sync()
         remote.delete()
-        assertEquals(SyncOutcome.NOTHING_TO_DO, d.sync(auto = true))
+        failsWith<CloudCopyGoneException> { d.sync() }
+        failsWith<CloudCopyGoneException> { d.sync() }
         assertNull(remote.cloud)
-        assertEquals(SyncOutcome.PUSHED, d.sync())
-        assertNotNull(remote.cloud)
+        assertEquals(1, remote.pushes)
+        assertEquals(data(1), d.text)
     }
 
     @Test
-    fun `an automatic sync still makes the first cloud copy`() {
+    fun `a device set up against an empty account makes the first cloud copy`() {
         val remote = FakeRemote(); val d = Device(remote, data(1))
-        assertEquals(SyncOutcome.PUSHED, d.sync(auto = true))
+        assertEquals(SyncOutcome.PUSHED, d.sync())
+    }
+
+    @Test
+    fun `after a deletion the user can start the cloud copy again by choosing this device`() {
+        val remote = FakeRemote(); val d = Device(remote, data(1))
+        d.sync()
+        remote.delete()
+        assertEquals(SyncOutcome.PUSHED, d.joinWithDevice())
+        assertEquals(setOf(1L), logsOf(remote.cloud!!.text))
     }
 
     @Test
@@ -291,7 +389,7 @@ class SyncEngineTest {
         val (remote, a, b) = synced(data(1, 2))
         remote.delete()
         a.text = data(1, 2, 9)
-        assertEquals(SyncOutcome.PUSHED, a.sync())
+        assertEquals(SyncOutcome.PUSHED, a.joinWithDevice())
         assertTrue(remote.cloud!!.version > b.memory.version)
         assertEquals(SyncOutcome.PULLED, b.sync())
         assertEquals(setOf(1L, 2L, 9L), b.logs)
@@ -301,7 +399,7 @@ class SyncEngineTest {
     fun `a deleted cloud copy started again while this device changed is merged`() {
         val (remote, a, b) = synced(data(1, 2))
         remote.delete()
-        a.text = data(1, 2, 9); a.sync()
+        a.text = data(1, 2, 9); a.joinWithDevice()
         b.text = data(1, 2, 7)
         assertEquals(SyncOutcome.MERGED, b.sync())
         assertEquals(setOf(1L, 2L, 7L, 9L), b.logs)
@@ -493,8 +591,8 @@ class SyncEngineTest {
 
     @Test
     fun `a replace keeps the new copy as what was last synced`() {
-        val remote = FakeRemote(RemoteSnapshot(3, data(7))); val d = Device(remote, data(1))
-        d.replace()
+        val remote = FakeRemote(RemoteSnapshot(3, data(7))); val d = Device(remote, data(1), linked = false)
+        d.joinFromCloud()
         assertEquals(data(7), d.memory.snapshot)
     }
 

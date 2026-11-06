@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.room.InvalidationTracker
 import com.example.mutqan.R
 import com.example.mutqan.data.UserPreferencesRepository
@@ -17,8 +19,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -32,13 +36,31 @@ sealed class SyncStatus {
     data object Syncing : SyncStatus()
     data class Done(val outcome: SyncOutcome) : SyncStatus()
     data class Failed(val message: String?) : SyncStatus()
+
+    /** A copy of the data could not be saved on the phone first, so nothing was replaced or deleted. */
+    data object CopyFailed : SyncStatus()
+
+    /** The cloud copy this device synced with is gone, so syncing from this device is off. */
+    data object CloudGone : SyncStatus()
 }
 
 /**
- * Signing in found an account that already has data in the cloud while this device has data of its own, so the
- * user has to say what happens to the two. [otherAccount]: the data on this device was last synced with a different account.
+ * Signing in found data on this device, so the user has to say which side wins before anything moves:
+ * [cloudExists] false means the account has nothing in the cloud (no copy, or an empty one).
  */
-data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val otherAccount: Boolean, val cloudExists: Boolean = true)
+data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val cloudExists: Boolean)
+
+/** How this device joins the account: the cloud copy replaces what is on the device, or the device replaces the cloud copy. */
+enum class Choice { CLOUD_WINS, DEVICE_WINS }
+
+enum class NoticeKind { SYNC_ON_CLOUD, SYNC_ON_DEVICE, CLOUD_DELETED, DEVICE_RESET }
+
+/**
+ * What the user is told once an override or a deletion is complete. [copy] is the file saved on the phone before
+ * anything changed, or null when there was nothing to keep; [cloudExisted] says whether the account had data (only
+ * [NoticeKind.SYNC_ON_CLOUD] needs it).
+ */
+data class SyncNotice(val kind: NoticeKind, val copy: SavedCopy?, val cloudExisted: Boolean = true)
 
 /** Another device the account is in use on; [lastActive] is when it last synced (millis), if known. */
 data class OtherDevice(val lastActive: Long?)
@@ -50,6 +72,7 @@ class CloudSync private constructor(context: Context) {
     private val lock = Mutex()
     private val prefs = UserPreferencesRepository(appContext)
     private val backup by lazy { BackupManager(appContext) }
+    private val copies by lazy { SafetyCopies(appContext) }
     private var pending: Job? = null
 
     val accounts = AccountManager(appContext)
@@ -63,6 +86,21 @@ class CloudSync private constructor(context: Context) {
 
     /** True when another device has taken the account over: syncing here is paused until the user decides. */
     val displaced = prefs.sessionDisplaced
+
+    /**
+     * True while this device is set up to sync with the signed-in account. It becomes true only when the user has
+     * chosen how the device joins the account ([enableSync]) and that has worked; until then nothing is synced.
+     */
+    val linked: Flow<Boolean> = combine(accounts.account, prefs.syncOwnerFlow) { account, owner -> account != null && owner == account.uid }
+
+    private val _notice = MutableStateFlow<SyncNotice?>(null)
+
+    /** The message for the user that follows an override or a deletion, until it is dismissed. */
+    val notice: StateFlow<SyncNotice?> = _notice
+
+    fun dismissNotice() {
+        _notice.value = null
+    }
 
     /** The other device this account is in use on, or null when it is free or already in use here. */
     suspend fun otherDeviceInUse(): OtherDevice? {
@@ -79,9 +117,28 @@ class CloudSync private constructor(context: Context) {
         prefs.setSessionDisplaced(false)
     }
 
+    /**
+     * Signs in. The link with any account is ended first, so that nothing syncs between the sign-in and the user's
+     * choice about the data (see [enableSync]).
+     */
+    suspend fun signIn(activity: Activity) {
+        lock.withLock { endLink() }
+        accounts.signIn(activity)
+    }
+
     suspend fun signOut() {
-        accounts.signOut()
+        lock.withLock {
+            endLink()
+            accounts.signOut()
+        }
+    }
+
+    /** Syncing stops until the user chooses again how this device joins an account; the data stays as it is. */
+    private suspend fun endLink() {
+        pending?.cancel()
+        prefs.forgetSyncHistory()
         prefs.setSessionDisplaced(false)
+        _status.value = SyncStatus.Idle
     }
 
     /** Another device took the account over: syncing here stops until the user decides, and the data here is kept. */
@@ -96,8 +153,8 @@ class CloudSync private constructor(context: Context) {
 
     /**
      * Keeps the cloud copy current without being asked: a sync when the app comes to the front and when it goes away,
-     * and one shortly after the data changes. Only for an account this device has already synced with; a new
-     * account first gets its choice from [firstSyncChoice].
+     * and one shortly after the data changes. Only while the device is linked to the signed-in account; a newly
+     * signed-in account first gets the user's choice ([setupChoice], [enableSync]).
      */
     fun startAutoSync(app: Application) {
         if (!isConfigured) return
@@ -143,56 +200,90 @@ class CloudSync private constructor(context: Context) {
     }
 
     /**
-     * Asks what to do when this account is new to this device but already has data in the cloud and the device has data
-     * too; null when there is nothing to decide (no cloud copy, nothing on the device, or this account was synced before).
+     * What the user has to decide when this device joins the signed-in account: null when the device holds nothing to
+     * lose, so the account's data is simply brought here ([enableSync] with [Choice.CLOUD_WINS]). It only looks;
+     * nothing is sent, received or changed.
      */
-    suspend fun firstSyncChoice(): FirstSync? {
+    suspend fun setupChoice(): FirstSync? {
         val account = accounts.account.value ?: return null
-        val owner = prefs.syncOwner()
-        if (owner == account.uid) return null
         return lock.withLock {
-            val cloud = try {
-                withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).fetch() }
-            } catch (e: SignedInElsewhereException) {
-                displacedHere(announce = false)
-                return@withLock null
-            }
+            val cloud = withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).peek() }
             val device = backup.buildSnapshot()
             if (SyncEngine.isEmpty(device.toString())) return@withLock null
-            // Data from another account would otherwise go into this account without a word.
-            if (cloud == null && owner == null) return@withLock null
+            val cloudHasData = cloud != null && !SyncEngine.isEmpty(cloud.text)
             FirstSync(
-                cloudEntries = cloud?.let { JSONObject(it.text).optJSONArray("revision_logs")?.length() } ?: 0,
+                cloudEntries = if (cloudHasData) JSONObject(cloud!!.text).optJSONArray("revision_logs")?.length() ?: 0 else 0,
                 deviceEntries = device.optJSONArray("revision_logs")?.length() ?: 0,
-                otherAccount = owner != null,
-                cloudExists = cloud != null
+                cloudExists = cloudHasData
             )
         }
     }
 
     /**
-     * Syncs; with [replaceDevice] this device's data is replaced by the cloud copy instead of being merged with it.
-     * An [auto] sync does not bring back a cloud copy that was deleted.
+     * Joins the signed-in account as the user chose, and only then turns syncing on. Before anything is replaced, a
+     * copy of what is about to be lost (this device's data, or the cloud copy) is saved on the phone and read back; if
+     * that fails nothing is changed. The device is linked to the account only after the replacement has fully worked,
+     * so a failure at any point leaves syncing off. When it is done, [notice] says what was kept and where.
      */
-    suspend fun syncNow(replaceDevice: Boolean = false, auto: Boolean = false) {
+    suspend fun enableSync(choice: Choice) {
+        val account = accounts.account.value ?: return
+        lock.withLock {
+            _status.value = SyncStatus.Syncing
+            _status.value = try {
+                val remote = FirestoreRemote(account.uid, prefs.deviceId())
+                val engine = engineFor(account.uid, remote)
+                val outcome = withTimeout(TIMEOUT_MS) {
+                    val cloud = remote.peek()
+                    val cloudHasData = cloud != null && !SyncEngine.isEmpty(cloud.text)
+                    when (choice) {
+                        Choice.CLOUD_WINS -> {
+                            val saved = copies.save(CopyReason.DEVICE_REPLACED, backup.buildSnapshot().toString())
+                            remote.claim()
+                            engine.replaceLocal(cloud).also { _notice.value = SyncNotice(NoticeKind.SYNC_ON_CLOUD, saved, cloudHasData) }
+                        }
+                        Choice.DEVICE_WINS -> {
+                            val saved = cloud?.let { copies.save(CopyReason.CLOUD_REPLACED, it.text) }
+                            remote.claim()
+                            engine.replaceCloud(cloud).also { _notice.value = SyncNotice(NoticeKind.SYNC_ON_DEVICE, saved) }
+                        }
+                    }
+                }
+                SyncStatus.Done(outcome).also { prefs.setLastSyncTime(System.currentTimeMillis()) }
+            } catch (e: SafetyCopyFailedException) {
+                SyncStatus.CopyFailed
+            } catch (e: TimeoutCancellationException) {
+                SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
+            } catch (e: SignedInElsewhereException) {
+                displacedHere(announce = false)
+                SyncStatus.Failed(appContext.getString(R.string.session_displaced))
+            } catch (e: Exception) {
+                SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    /**
+     * Syncs a device that is linked to the signed-in account; for any other it does nothing. If the cloud copy has been
+     * deleted the link ends and the copy is not made again; the user decides what happens next.
+     */
+    suspend fun syncNow(auto: Boolean = false) {
         val account = accounts.account.value ?: return
         if (prefs.isSessionDisplaced()) {
             if (!auto) _status.value = SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             return
         }
         lock.withLock {
+            // Checked again inside the lock: signing out or deleting data may have ended the link while this waited.
+            if (accounts.account.value?.uid != account.uid || prefs.syncOwner() != account.uid) return
             _status.value = SyncStatus.Syncing
             _status.value = try {
-                val engine = SyncEngine(
-                    local = object : SyncLocal {
-                        override suspend fun snapshot() = backup.buildSnapshot().toString()
-                        override suspend fun apply(text: String) = backup.restoreSnapshot(JSONObject(text))
-                    },
-                    remote = FirestoreRemote(account.uid, prefs.deviceId()),
-                    memory = prefs.syncMemoryFor(account.uid)
-                )
-                val outcome = withTimeout(TIMEOUT_MS) { if (replaceDevice) engine.replaceLocal() else engine.sync(recreateCloud = !auto) }
+                val outcome = withTimeout(TIMEOUT_MS) { engineFor(account.uid, FirestoreRemote(account.uid, prefs.deviceId())).sync() }
                 SyncStatus.Done(outcome).also { prefs.setLastSyncTime(System.currentTimeMillis()) }
+            } catch (e: CloudCopyGoneException) {
+                prefs.forgetSyncHistory()
+                SyncStatus.CloudGone
+            } catch (e: NotLinkedException) {
+                SyncStatus.Idle
             } catch (e: TimeoutCancellationException) {
                 SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
             } catch (e: SignedInElsewhereException) {
@@ -204,32 +295,70 @@ class CloudSync private constructor(context: Context) {
         }
     }
 
-    /** Erases the data on this device, then syncs: this account starts from what is in its cloud copy, or from nothing. */
-    suspend fun startFresh() {
-        lock.withLock {
-            withContext(Dispatchers.IO) { AppDatabase.getInstance(appContext).clearAllTables() }
-            prefs.forgetSyncHistory()
-        }
-        syncNow()
-    }
-
-    /** Removes this account's data from the cloud; the data on this device stays. */
+    /**
+     * Deletes everything this account has in the cloud, so that nothing is left there, after saving a copy of it on
+     * the phone. The data on this device stays; syncing is off until the user sets it up again. When it is done,
+     * [notice] says what was deleted and where the copy is.
+     */
     suspend fun deleteCloudCopy() {
         val account = accounts.account.value ?: return
         lock.withLock {
+            _status.value = SyncStatus.Syncing
             _status.value = try {
-                FirestoreRemote(account.uid, prefs.deviceId()).deleteAll()
-                // Automatic syncing stops until the next "Sync now", which starts a fresh copy.
-                prefs.forgetSyncHistory()
+                val remote = FirestoreRemote(account.uid, prefs.deviceId())
+                withTimeout(TIMEOUT_MS) {
+                    val saved = remote.peek()?.let { copies.save(CopyReason.CLOUD_DELETED, it.text) }
+                    remote.deleteAll()
+                    prefs.forgetSyncHistory()
+                    _notice.value = SyncNotice(NoticeKind.CLOUD_DELETED, saved)
+                }
                 SyncStatus.Idle
+            } catch (e: SafetyCopyFailedException) {
+                SyncStatus.CopyFailed
+            } catch (e: TimeoutCancellationException) {
+                SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
             } catch (e: SignedInElsewhereException) {
                 displacedHere(announce = false)
                 SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
-                SyncStatus.Failed(e.message)
+                SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
     }
+
+    /**
+     * Puts this device back to how it was when the app was first installed: the data and settings are gone, the account
+     * is signed out and nothing is linked, so the app asks nothing of the cloud. A copy of the data is saved on the
+     * phone first (a [SafetyCopyFailedException] means nothing was deleted). The cloud copy is not touched. When it is
+     * done, [notice] says what was deleted and where the copy is.
+     */
+    suspend fun resetDevice() {
+        lock.withLock {
+            val saved = copies.save(CopyReason.DEVICE_DELETED, backup.buildSnapshot().toString())
+            endLink()
+            accounts.signOut()
+            withContext(Dispatchers.IO) {
+                val db = AppDatabase.getInstance(appContext)
+                db.clearAllTables()
+                // A fresh install numbers its rows from 1.
+                runCatching { db.openHelper.writableDatabase.execSQL("DELETE FROM sqlite_sequence") }
+            }
+            prefs.resetToFreshInstall()
+            _notice.value = SyncNotice(NoticeKind.DEVICE_RESET, saved)
+        }
+        // Arabic is where a first run starts, whatever language the user had chosen.
+        withContext(Dispatchers.Main) { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar")) }
+    }
+
+    private fun engineFor(uid: String, remote: SyncRemote) = SyncEngine(
+        local = object : SyncLocal {
+            override suspend fun snapshot() = backup.buildSnapshot().toString()
+            override suspend fun apply(text: String) = backup.restoreSnapshot(JSONObject(text))
+            override suspend fun clear() = backup.clearUserData()
+        },
+        remote = remote,
+        memory = prefs.syncMemoryFor(uid)
+    )
 
     companion object {
         private const val CHANGE_DELAY_MS = 20_000L

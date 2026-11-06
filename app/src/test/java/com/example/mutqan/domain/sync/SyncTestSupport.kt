@@ -8,9 +8,17 @@ import java.io.IOException
 /** A device's data: all that [SyncLocal] needs is the text, and a way to fail like a database can. */
 internal class FakeLocal(var text: String) : SyncLocal {
     var applied = 0
+    var cleared = 0
     var failNextApply = false
 
     override suspend fun snapshot() = text
+
+    /** Like the real one: the data goes, the settings stay. */
+    override suspend fun clear() {
+        cleared++
+        val settings = JSONObject(text).optJSONObject("settings") ?: JSONObject()
+        text = JSONObject(emptyData()).put("settings", settings).toString()
+    }
     override suspend fun apply(text: String) {
         // The real one is a single transaction: when it fails nothing changes.
         if (failNextApply) { failNextApply = false; throw IOException("disk full") }
@@ -37,6 +45,11 @@ internal class FakeRemote(var cloud: RemoteSnapshot? = null) : SyncRemote {
         if (offline) throw IOException("offline")
         if (displaced) throw SignedInElsewhereException()
         fetches++
+        return cloud
+    }
+
+    override suspend fun peek(): RemoteSnapshot? {
+        if (offline) throw IOException("offline")
         return cloud
     }
 
@@ -67,14 +80,23 @@ internal class FakeMemory(var hash: String? = null, var version: Long = 0, var s
     }
 }
 
-/** One installation of the app syncing with [remote]. */
-internal class Device(val remote: FakeRemote, text: String = snapshot()) {
+/**
+ * One installation of the app syncing with [remote]. A [linked] device has already been set up by the user, as one that
+ * joined an account with nothing in it; an unlinked one has not, and joins with [joinFromCloud] or [joinWithDevice].
+ */
+internal class Device(val remote: FakeRemote, text: String = emptyData(), linked: Boolean = true) {
     val local = FakeLocal(text)
-    val memory = FakeMemory()
+    val memory = if (linked) FakeMemory(SyncEngine.hash(emptyData()), 0, emptyData()) else FakeMemory()
 
-    /** A sync the user asked for; [auto] is one the app started itself. */
-    fun sync(auto: Boolean = false): SyncOutcome = runBlocking { SyncEngine(local, remote, memory).sync(recreateCloud = !auto) }
-    fun replace(): SyncOutcome = runBlocking { SyncEngine(local, remote, memory).replaceLocal() }
+    private val engine get() = SyncEngine(local, remote, memory)
+
+    fun sync(): SyncOutcome = runBlocking { engine.sync() }
+
+    /** The user chose the cloud copy: it is looked at once, then it replaces this device's data. */
+    fun joinFromCloud(): SyncOutcome = runBlocking { engine.replaceLocal(remote.peek()) }
+
+    /** The user chose this device's data: it replaces the cloud copy that was looked at. */
+    fun joinWithDevice(): SyncOutcome = runBlocking { engine.replaceCloud(remote.peek()) }
 
     var text: String
         get() = local.text
@@ -105,6 +127,9 @@ internal fun snapshot(
     }))
     .put("settings", JSONObject().also { o -> settings.forEach { (k, v) -> o.put(k, v) } })
     .toString()
+
+/** A device with nothing on it. */
+internal fun emptyData() = snapshot()
 
 /** Logs at the given times, nothing else. */
 internal fun data(vararg timestamps: Long) = snapshot(logs = timestamps.map { L(it) })

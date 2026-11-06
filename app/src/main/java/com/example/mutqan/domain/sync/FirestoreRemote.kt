@@ -4,6 +4,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 
 /** The device an account is in use on, and when it last synced (millis), if known. */
@@ -22,10 +23,14 @@ class FirestoreRemote(
     private val meta get() = db.collection("users").document(uid)
     private val chunks get() = meta.collection("chunks")
 
-    override suspend fun fetch(): RemoteSnapshot? {
+    override suspend fun fetch(): RemoteSnapshot? = read(forThisDevice = true)
+
+    override suspend fun peek(): RemoteSnapshot? = read(forThisDevice = false)
+
+    private suspend fun read(forThisDevice: Boolean): RemoteSnapshot? {
         val doc = meta.get().await()
         if (!doc.exists()) return null
-        checkActive(doc)
+        if (forThisDevice) checkActive(doc)
         val version = doc.getLong("version") ?: return null
         val count = (doc.getLong("chunks") ?: 0L).toInt()
         if (count == 0) return null
@@ -87,15 +92,26 @@ class FirestoreRemote(
         if (active != null && active != deviceId) throw SignedInElsewhereException()
     }
 
-    /** Removes everything this account has in the cloud. */
+    /**
+     * Removes everything this account has in the cloud and checks, asking the server, that nothing is left. It deletes
+     * every piece found under the account, not just the ones the version document counts: a push that died half-way
+     * or an older build may have left others.
+     */
     suspend fun deleteAll() {
         val doc = meta.get().await()
         if (doc.exists()) checkActive(doc)
-        val count = (doc.getLong("chunks") ?: 0L).toInt()
-        val batch = db.batch()
-        for (i in 0 until count) batch.delete(chunks.document(chunkId(i)))
-        batch.delete(meta)
-        batch.commit().await()
+        val pieces = chunks.get().await().documents.map { it.reference }
+        // A batch holds 500 writes; the version document goes with the last, so one batch is the usual case.
+        val groups = pieces.chunked(BATCH_SIZE).ifEmpty { listOf(emptyList()) }
+        groups.forEachIndexed { i, group ->
+            val batch = db.batch()
+            group.forEach { batch.delete(it) }
+            if (i == groups.lastIndex) batch.delete(meta)
+            batch.commit().await()
+        }
+        check(!meta.get(Source.SERVER).await().exists() && chunks.limit(1).get(Source.SERVER).await().isEmpty) {
+            "Part of the cloud copy is still there"
+        }
     }
 
     private fun chunkId(i: Int) = "%04d".format(i)
@@ -103,5 +119,8 @@ class FirestoreRemote(
     private companion object {
         /** What the push transaction returns when another device holds the account. */
         const val DISPLACED = -2L
+
+        /** Deletes per batch, under Firestore's limit of 500. */
+        const val BATCH_SIZE = 400
     }
 }
