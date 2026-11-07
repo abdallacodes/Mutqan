@@ -567,11 +567,13 @@ fun MushafViewerScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    // The subject the user gave this part of the juz; a tap opens that juz's map.
+                    // The quarter of the juz being read and the subject the user gave it, if any; a tap opens that juz's map.
+                    // Always shown: with no subject it says what the tap leads to, which is where one is added.
                     val rubHere = quarterHere
-                    if (rubHere != null && subjectHere != null) {
+                    if (rubHere != null) {
                         Text(
-                            text     = stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere),
+                            text     = if (subjectHere != null) stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere)
+                                       else stringResource(R.string.mushaf_quarter_open, rubHere.quarterInJuz),
                             style    = MaterialTheme.typography.labelSmall,
                             color    = MaterialTheme.colorScheme.primary,
                             maxLines = 1,

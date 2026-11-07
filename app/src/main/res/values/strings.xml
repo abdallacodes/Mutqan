@@ -585,7 +585,7 @@
     <string name="nav_practice">تدرّب</string>
     <string name="nav_insights">متابعتي</string>
     <string name="practice_title">تدرّب</string>
-    <string name="practice_subtitle">تمارين لتثبيت الحفظ</string>
+    <string name="practice_subtitle">اختبارات وأدوات لتثبيت الحفظ</string>
     <string name="insights_title">متابعتي</string>
     <string name="insights_subtitle">أين وصلت وما سجّلته</string>
     <string name="insights_progress_desc">المحفوظ وما يُظهره تسميعك وانتظامك</string>
@@ -1218,4 +1218,11 @@
     <string name="pq_choices">مع خيارات</string>
     <string name="pq_skip">تخطَّ</string>
     <string name="pq_you_chose">اخترتَ: %1$s (صفحة %2$d)</string>
+
+    <string name="practice_section_quizzes">اختبارات</string>
+    <string name="practice_section_tools">أدوات</string>
+    <string name="ex_juzmap_title">خريطة الجزء</string>
+    <string name="ex_juzmap_desc">أرباع الجزء ومواضيعها، وأضعفها أولًا</string>
+    <string name="juz_pick_title">اختر جزءًا</string>
+    <string name="mushaf_quarter_open">الربع\u00A0%1$d · خريطة الجزء</string>
 </resources>

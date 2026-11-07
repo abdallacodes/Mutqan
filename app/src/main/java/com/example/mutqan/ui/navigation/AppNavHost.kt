@@ -751,6 +751,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
             onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
             onOpenPageQuiz   = { end -> navController.navigate(Routes.pageQuiz(end)) },
+            onOpenJuz        = { juz -> navController.navigate(Routes.juzDetail(juz)) },
             onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
             onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
             onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },

@@ -67,6 +67,7 @@ import androidx.compose.material.icons.rounded.Compare
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Shuffle
@@ -127,6 +128,7 @@ fun PracticeScreen(
     onOpenBoundaries: () -> Unit,
     onOpenPageEdges: () -> Unit,
     onOpenPageQuiz: (end: Boolean) -> Unit,
+    onOpenJuz: (Int) -> Unit,
     onOpenQuiz: (QuizMode) -> Unit,
     onRandomVerse: () -> Unit,
     onSimilarityTest: () -> Unit,
@@ -140,6 +142,7 @@ fun PracticeScreen(
     val scope by viewModel.scope.collectAsState()
     val preview by viewModel.preview.collectAsState()
     var choosing by remember { mutableStateOf(false) }
+    var pickingJuz by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
     OnTabReselected(Routes.PRACTICE) { scroll.animateScrollTo(0) }
 
@@ -154,6 +157,9 @@ fun PracticeScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scroll).padding(bottom = LocalDockInset.current)) {
+            // Quizzes: questions with an answer to check, and drills where you say the answer and rate yourself. The
+            // choice of pages is here because it is what they are drawn from.
+            SectionHeading(stringResource(R.string.practice_section_quizzes), first = true)
             ScopeRow(scope = scope, preview = preview, onClick = { choosing = true })
             DailyHero(
                 note = if (quizWeek > 0) stringResource(R.string.ex_this_week, quizWeek) else null,
@@ -172,22 +178,41 @@ fun PracticeScreen(
                 label = stringResource(R.string.practice_group_place),
                 tiles = listOf(
                     PracticeTile(Icons.Rounded.Place, R.string.ex_where_title, R.string.ex_where_desc) { onOpenQuiz(QuizMode.WHERE) },
-                    PracticeTile(Icons.Rounded.VerticalAlignTop, R.string.ex_boundaries_title, R.string.ex_boundaries_desc, if (week > 0) stringResource(R.string.ex_this_week, week) else null, onOpenBoundaries),
-                    PracticeTile(Icons.Rounded.Crop, R.string.ex_edges_title, R.string.ex_edges_desc, null, onOpenPageEdges),
                     PracticeTile(Icons.Rounded.VerticalAlignTop, R.string.ex_pstart_title, R.string.ex_pstart_desc) { onOpenPageQuiz(false) },
                     PracticeTile(Icons.Rounded.VerticalAlignBottom, R.string.ex_pend_title, R.string.ex_pend_desc) { onOpenPageQuiz(true) },
-                    PracticeTile(Icons.Rounded.Shuffle, R.string.ex_random_title, R.string.ex_random_desc, null, onRandomVerse)
+                    PracticeTile(Icons.Rounded.Flag, R.string.ex_boundaries_title, R.string.ex_boundaries_desc, if (week > 0) stringResource(R.string.ex_this_week, week) else null, onOpenBoundaries),
+                    PracticeTile(Icons.Rounded.Crop, R.string.ex_edges_title, R.string.ex_edges_desc, null, onOpenPageEdges)
                 )
             )
             TileGroup(
                 label = stringResource(R.string.practice_group_similar),
                 tiles = listOf(
-                    PracticeTile(Icons.Rounded.Compare, R.string.ex_similarity_title, R.string.ex_similarity_desc, null, onSimilarityTest),
-                    PracticeTile(Icons.Rounded.Bookmarks, R.string.vault_title, R.string.ex_vault_desc, null, onOpenVault)
+                    PracticeTile(Icons.Rounded.Compare, R.string.ex_similarity_title, R.string.ex_similarity_desc, null, onSimilarityTest)
+                )
+            )
+
+            // Tools: things to use rather than be tested on.
+            SectionHeading(stringResource(R.string.practice_section_tools))
+            TileGroup(
+                label = null,
+                tiles = listOf(
+                    PracticeTile(Icons.Rounded.Map, R.string.ex_juzmap_title, R.string.ex_juzmap_desc) { pickingJuz = true },
+                    PracticeTile(Icons.Rounded.Bookmarks, R.string.vault_title, R.string.ex_vault_desc, null, onOpenVault),
+                    PracticeTile(Icons.Rounded.Shuffle, R.string.ex_random_title, R.string.ex_random_desc, null, onRandomVerse)
                 )
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (pickingJuz) {
+        JuzPickerSheet(
+            onPick = { juz ->
+                pickingJuz = false
+                onOpenJuz(juz)
+            },
+            onDismiss = { pickingJuz = false }
+        )
     }
 
     if (choosing) {
@@ -197,6 +222,15 @@ fun PracticeScreen(
             onChange = viewModel::setScope,
             onDismiss = { choosing = false }
         )
+    }
+}
+
+/** The title of one of the screen's two parts, Quizzes and Tools. */
+@Composable
+private fun SectionHeading(title: String, first: Boolean = false) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter).padding(top = if (first) 8.dp else 32.dp)) {
+        Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        Hairline(Modifier.fillMaxWidth().padding(top = 8.dp))
     }
 }
 
@@ -241,8 +275,12 @@ private fun DailyHero(note: String?, onStart: () -> Unit) {
 
 /** A named group of exercises, two tiles to a row: each a raised card with an icon, so it reads as something to press. */
 @Composable
-private fun TileGroup(label: String, tiles: List<PracticeTile>) {
-    SectionLabel(label, Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 24.dp, bottom = 10.dp))
+private fun TileGroup(label: String?, tiles: List<PracticeTile>) {
+    if (label != null) {
+        SectionLabel(label, Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 24.dp, bottom = 10.dp))
+    } else {
+        Spacer(Modifier.height(14.dp))
+    }
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter),
         verticalArrangement = Arrangement.spacedBy(12.dp)
