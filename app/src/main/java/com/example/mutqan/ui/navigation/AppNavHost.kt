@@ -71,6 +71,7 @@ import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
 import com.example.mutqan.ui.insights.InsightsScreen
 import com.example.mutqan.ui.practice.PageBoundariesScreen
+import com.example.mutqan.ui.practice.PageQuizScreen
 import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.practice.QuizScreen
@@ -166,6 +167,7 @@ object Routes {
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
     const val PAGE_EDGES_OF_VERSE = "page_edges_of_verse"
+    const val PAGE_QUIZ = "page_quiz"
     const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
@@ -196,6 +198,7 @@ object Routes {
     fun root(rootId: Int)                        = "root/$rootId"
     fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
+    fun pageQuiz(end: Boolean)                   = "page_quiz/$end"
 }
 
 // ── Bottom nav items (built inside Composable to respect string resources) ────
@@ -277,6 +280,8 @@ fun AppNavHost(
 
     // Settings bottom sheet state — shared across all top-level screens
     var showSettingsSheet by remember { mutableStateOf(false) }
+    // Deleting the device's data starts the app over from onboarding; the sheet that did it must not stay open over it.
+    LaunchedEffect(isFirstRun) { if (isFirstRun == true) showSettingsSheet = false }
     if (showSettingsSheet) {
         SettingsBottomSheet(
             currentTheme  = currentTheme,
@@ -506,6 +511,16 @@ fun AppNavHost(
                 PageBoundariesScreen(fromVerse = true, onBack = { navController.popBackStack() })
             }
 
+            composable(
+                route     = "${Routes.PAGE_QUIZ}/{end}",
+                arguments = listOf(navArgument("end") { type = NavType.BoolType })
+            ) { entry ->
+                PageQuizScreen(
+                    end = entry.arguments?.getBoolean("end") ?: false,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             // ── Sub-screens (bottom bar hidden) ──────────────────────
 
             composable(
@@ -667,7 +682,8 @@ fun AppNavHost(
                     onBack      = { navController.popBackStack() },
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
                     onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) },
-                    onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
+                    onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) },
+                    onOpenJuz = { juz -> navController.navigate(Routes.juzDetail(juz)) }
                 )
             }
         }
@@ -734,6 +750,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
         Routes.PRACTICE -> PracticeScreen(
             onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
             onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
+            onOpenPageQuiz   = { end -> navController.navigate(Routes.pageQuiz(end)) },
             onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
             onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
             onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },

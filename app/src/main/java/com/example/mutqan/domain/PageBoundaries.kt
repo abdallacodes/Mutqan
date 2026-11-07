@@ -38,7 +38,16 @@ enum class ExerciseType(val code: Int) {
     AYAH_PAGE_END(11),
 
     /** A verse with its last words hidden, among verses that begin or close alike; pick the words that end it. */
-    QUIZ_FINISH(12);
+    QUIZ_FINISH(12),
+
+    /** Given how a hizb quarter ends, recall how the next one begins (the "joint" between two quarters). */
+    QUARTER_JOINT(13),
+
+    /** Given a page number, pick (or say) the verse that starts it. */
+    QUIZ_PAGE_START(14),
+
+    /** Given a page number, pick (or say) the verse that ends it. */
+    QUIZ_PAGE_END(15);
 
     companion object {
         fun fromCode(code: Int): ExerciseType? = entries.firstOrNull { it.code == code }
@@ -51,6 +60,9 @@ enum class ExerciseType(val code: Int) {
 
         /** Every page-edge exercise. */
         val PAGE_BOUNDARIES: List<ExerciseType> = FROM_PAGE + FROM_VERSE
+
+        /** The page-edge quiz: which verse starts, or ends, a page. */
+        val PAGE_QUIZ: List<ExerciseType> = listOf(QUIZ_PAGE_START, QUIZ_PAGE_END)
 
         /** The questions with a right answer the app can check. */
         val QUIZ: List<ExerciseType> = listOf(QUIZ_ENDING, QUIZ_NEXT, QUIZ_FINISH, QUIZ_ORDER, QUIZ_WHERE)

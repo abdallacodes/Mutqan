@@ -285,8 +285,6 @@
     <string name="onboarding_welcome_title">Welcome to %s</string>
 
     <!-- Structural Mode -->
-    <string name="mode_memory_health">Memory Health</string>
-    <string name="mode_structural_flow">Structural Flow</string>
     <string name="add_subject">Add Subject</string>
     <string name="edit_subjects">Edit Subjects</string>
     <string name="delete_subject_confirmation">Are you sure you want to delete this subject?</string>
@@ -1046,4 +1044,70 @@
         <item quantity="one">a full pass about every day</item>
         <item quantity="other">a full pass about every %d days</item>
     </plurals>
+
+    <!-- Add an ayah to a mutashabihat group, and the ayahs suggested for a group -->
+    <string name="peek_act_group">Group</string>
+    <string name="add_to_group_title">Add this ayah to a mutashabihat group</string>
+    <string name="add_to_group_new">New group</string>
+    <string name="add_to_group_name">Group name</string>
+    <string name="add_to_group_create">Create and add the ayah</string>
+    <string name="add_to_group_search">Search your groups</string>
+    <string name="add_to_group_empty">You have no groups yet. Start your first one with this ayah.</string>
+    <string name="add_to_group_row">%1$s · %2$s</string>
+    <string name="add_to_group_already">Ayah is in this group</string>
+    <string name="add_to_group_done">Ayah added to “%1$s”</string>
+    <string name="suggested_title">Suggested ayahs</string>
+    <string name="suggested_subtitle">Ayahs that resemble the ones in this group, closest first</string>
+    <string name="suggested_none">No suggestions for the ayahs in this group.</string>
+    <string name="suggested_more">Show more</string>
+    <string name="suggested_not_similar">Not similar</string>
+    <string name="suggested_add">Add to the group</string>
+    <plurals name="suggested_hits">
+        <item quantity="one">Resembles %d ayah of the group</item>
+        <item quantity="other">Resembles %d ayahs of the group</item>
+    </plurals>
+
+    <!-- Juz map (Structural Flow): quarter strip, quarter cards and the joint test -->
+    <string name="map_cd_tracked">Quarter %1$d, %2$d%%</string>
+    <string name="map_cd_untracked">Quarter %1$d, not revised yet</string>
+    <string name="map_weakest">Weakest quarter: quarter %1$d, %2$d%%</string>
+    <string name="map_weakest_go">Go to it</string>
+    <string name="map_hint">Revise a few pages of this juz and the strength of each quarter shows here.</string>
+    <string name="quarter_n">Quarter %d</string>
+    <string name="quarter_pages">p. %1$d–%2$d</string>
+    <string name="quarter_untracked">Not revised yet</string>
+    <string name="quarter_no_subjects">No subjects yet</string>
+    <string name="quarter_subjects_header">SUBJECTS</string>
+    <string name="quarter_pages_header">PAGES</string>
+    <string name="quarter_ends_with">ENDS WITH</string>
+    <string name="quarter_full">Juz %1$d · Quarter %2$d</string>
+    <string name="cd_expand_card">Open the quarter</string>
+    <string name="cd_collapse_card">Close the quarter</string>
+    <string name="joint_test_btn">Test the joint with the next quarter</string>
+    <string name="joint_title">Joint test</string>
+    <string name="joint_ends_with">%1$s ends with</string>
+    <string name="joint_how_begins">How does %1$s begin?</string>
+    <string name="mushaf_quarter_subject">Quarter\u00A0%1$d · %2$s</string>
+
+    <string name="damaged_title">The cloud copy is damaged</string>
+    <string name="damaged_body">Some pieces of the copy saved in your account are missing, so it can\u2019t be read or restored. To go on, this damaged copy is deleted and this device\u2019s data is uploaded in its place. Nothing is deleted or uploaded until you agree.</string>
+    <string name="damaged_confirm">Delete it and upload this device</string>
+    <string name="sync_cloud_damaged">The cloud copy is damaged, so this device changed nothing. Delete the cloud copy in Settings, then set up sync again; a copy of what is in it is saved on the phone first.</string>
+
+    <string name="ex_pstart_title">Which verse starts the page?</string>
+    <string name="ex_pstart_desc">Pick a page and choose its first verse among five; it goes on until you stop</string>
+    <string name="ex_pend_title">Which verse ends the page?</string>
+    <string name="ex_pend_desc">Pick a page and choose its last verse among five; it goes on until you stop</string>
+    <string name="pq_q_start">Which verse is first on this page?</string>
+    <string name="pq_q_end">Which verse is last on this page?</string>
+    <string name="pq_recall_start">Say the first verse on this page</string>
+    <string name="pq_recall_end">Say the last verse on this page</string>
+    <string name="pq_page">Page</string>
+    <string name="pq_go">Go</string>
+    <string name="pq_order_forward">In order</string>
+    <string name="pq_order_random">Random</string>
+    <string name="pq_order_stay">This page</string>
+    <string name="pq_choices">With choices</string>
+    <string name="pq_skip">Skip</string>
+    <string name="pq_you_chose">You chose: %1$s (page %2$d)</string>
 </resources>

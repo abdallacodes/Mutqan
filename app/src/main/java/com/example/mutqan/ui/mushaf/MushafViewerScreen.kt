@@ -129,6 +129,9 @@ import com.example.mutqan.domain.PageStability
 import com.example.mutqan.quran.MushafFontManager
 import com.example.mutqan.quran.MushafPageView
 import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.ui.components.UiText
+import com.example.mutqan.quran.QuranRub
+import com.example.mutqan.domain.QuarterMap
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
 import kotlinx.coroutines.Dispatchers
@@ -140,6 +143,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import com.example.mutqan.ui.topics.VerseTheme
@@ -209,7 +213,9 @@ fun MushafViewerScreen(
     onBack:      () -> Unit,
     onOpenSaved: () -> Unit = {},
     onOpenTafsir: (Int) -> Unit = {},
-    onOpenAudioStorage: () -> Unit = {}
+    onOpenAudioStorage: () -> Unit = {},
+    /** Opens the map of a juz (its quarters and the user's subjects). */
+    onOpenJuz: (Int) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -247,6 +253,7 @@ fun MushafViewerScreen(
     var peekWordId by remember { mutableIntStateOf(0) }
     var peekGroups by remember { mutableStateOf<List<AyahGroup>>(emptyList()) }
     var showSaveSheet by remember { mutableStateOf(false) }
+    var showGroupSheet by remember { mutableStateOf(false) }
 
     // Reading theme, orientation and the other per-reader choices.
     val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
@@ -281,6 +288,20 @@ fun MushafViewerScreen(
     val memorised by viewModel.coverage.collectAsState()
     val pageInfo by produceState<Pair<Int, Int>?>(null, currentPage) {
         value = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.let { it.juz to it.hizb } }
+    }
+    // The hizb quarter the page opens in, so the reader sees the subject the user gave that part of the juz.
+    val quarterHere by produceState<QuranRub?>(null, currentPage) {
+        value = withContext(Dispatchers.IO) {
+            val first = quran.ayahsOnPage(currentPage).firstOrNull() ?: return@withContext null
+            quran.rubs(first.juz).firstOrNull { it.number == first.rub }
+        }
+    }
+    val allSubjects by viewModel.subjects.collectAsState()
+    val subjectHere = remember(quarterHere, allSubjects, currentPage) {
+        quarterHere?.let { rub ->
+            val firstOnPage = quran.ayahsOnPage(currentPage).firstOrNull()?.id ?: rub.startAyahId
+            QuarterMap.subjectAt(rub, allSubjects, firstOnPage)
+        }
     }
     val quarterStarts by produceState(emptySet<Int>()) {
         value = withContext(Dispatchers.IO) {
@@ -546,6 +567,20 @@ fun MushafViewerScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                    // The subject the user gave this part of the juz; a tap opens that juz's map.
+                    val rubHere = quarterHere
+                    if (rubHere != null && subjectHere != null) {
+                        Text(
+                            text     = stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere),
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .clickable(role = Role.Button) { onOpenJuz(rubHere.juz) }
+                                .padding(top = 2.dp)
+                        )
+                    }
                 }
                 IconButton(onClick = { showRevised = true }) {
                     Icon(
@@ -752,6 +787,12 @@ fun MushafViewerScreen(
                     active = isMemorised
                 ),
                 PeekAction(
+                    icon = Icons.Default.Layers,
+                    label = stringResource(R.string.peek_act_group),
+                    onClick = { showGroupSheet = true },
+                    active = peekGroups.isNotEmpty()
+                ),
+                PeekAction(
                     icon = Icons.Default.AutoStories,
                     label = stringResource(R.string.peek_act_tafsir),
                     onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) }
@@ -763,6 +804,34 @@ fun MushafViewerScreen(
                 SimilarAyahsSection(target.verseId, onOpenMushaf = null)
             }
         )
+
+        if (showGroupSheet) {
+            val allGroups by viewModel.groups.collectAsState()
+            val ayahId = peekAyahId
+            AddToGroupSheet(
+                surah = target.surahId,
+                ayah = target.ayahNumber,
+                groups = allGroups,
+                memberOf = peekGroups.mapTo(HashSet()) { it.group.id },
+                onPick = { entry ->
+                    if (ayahId != null) coroutineScope.launch {
+                        viewModel.addToGroup(entry.group.id, ayahId)
+                        peekGroups = viewModel.groupsOfAyah(ayahId)
+                        showGroupSheet = false
+                        Toast.makeText(context, UiText(R.string.add_to_group_done, entry.group.description).asString(context), Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onCreate = { name ->
+                    if (ayahId != null) coroutineScope.launch {
+                        viewModel.createGroupWith(name, ayahId)
+                        peekGroups = viewModel.groupsOfAyah(ayahId)
+                        showGroupSheet = false
+                        Toast.makeText(context, UiText(R.string.add_to_group_done, name).asString(context), Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onDismiss = { showGroupSheet = false }
+            )
+        }
 
         if (showSaveSheet) {
             val ayahId = peekAyahId

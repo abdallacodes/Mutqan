@@ -58,10 +58,10 @@ class RecitationSources(private val context: Context) {
     /** The clip of [surah]:[ayah] (1-based within the surah), or null when this reciter has none. */
     fun clip(reciter: Reciter, surah: Int, ayah: Int): AudioClip? {
         val base = reciter.verseUrlBase
-        if (base != null) return AudioClip("$base%03d%03d.mp3".format(surah, ayah))
+        if (base != null) return AudioClip("$base%03d%03d.mp3".format(java.util.Locale.ROOT, surah, ayah))
         val surahs = timingsOf(reciter)
         val window = surahs.times[surah]?.getOrNull(ayah - 1) ?: return null
-        return AudioClip(surahs.urlPattern.format(surah), window[0].coerceAtLeast(0L), window[1])
+        return AudioClip(surahs.urlPattern.format(java.util.Locale.ROOT, surah), window[0].coerceAtLeast(0L), window[1])
     }
 }
 

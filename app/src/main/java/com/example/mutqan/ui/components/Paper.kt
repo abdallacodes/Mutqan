@@ -414,6 +414,9 @@ fun PaperDialog(
         Surface(
             shape = RoundedCornerShapeDialog,
             color = FolioTheme.colors.folio,
+            // A dialog is its own window: without this the content colour falls back to black, and any Text that sets its
+            // own style (so does not take the colour given below) is black on the dark folio.
+            contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = 8.dp,
             border = BorderStroke(1.dp, FolioTheme.colors.edge.copy(alpha = 0.6f))
         ) {

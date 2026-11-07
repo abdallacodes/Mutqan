@@ -283,8 +283,6 @@
     <string name="onboarding_welcome_title">أهلًا بك في %s</string>
 
     <!-- Structural Mode -->
-    <string name="mode_memory_health">جودة الحفظ</string>
-    <string name="mode_structural_flow">المخطط البنائي</string>
     <string name="add_subject">إضافة موضوع</string>
     <string name="edit_subjects">تعديل الموضوعات</string>
     <string name="delete_subject_confirmation">هل أنت متأكد من حذف هذا الموضوع؟</string>
@@ -1150,4 +1148,74 @@
         <item quantity="many">دورة كاملة كل %d يومًا تقريبًا</item>
         <item quantity="other">دورة كاملة كل %d يوم تقريبًا</item>
     </plurals>
+
+    <!-- Add an ayah to a mutashabihat group, and the ayahs suggested for a group -->
+    <string name="peek_act_group">مجموعة</string>
+    <string name="add_to_group_title">أضف الآية إلى مجموعة متشابهات</string>
+    <string name="add_to_group_new">مجموعة جديدة</string>
+    <string name="add_to_group_name">اسم المجموعة</string>
+    <string name="add_to_group_create">أنشئ وأضف الآية</string>
+    <string name="add_to_group_search">ابحث في مجموعاتك</string>
+    <string name="add_to_group_empty">لا توجد مجموعات بعد. أنشئ أولى مجموعاتك بهذه الآية.</string>
+    <string name="add_to_group_row">%1$s · %2$s</string>
+    <string name="add_to_group_already">الآية في هذه المجموعة</string>
+    <string name="add_to_group_done">أُضيفت الآية إلى «%1$s»</string>
+    <string name="suggested_title">آيات مقترحة</string>
+    <string name="suggested_subtitle">آيات تشبه ما في هذه المجموعة، الأقرب أولًا</string>
+    <string name="suggested_none">لا توجد اقتراحات لآيات هذه المجموعة.</string>
+    <string name="suggested_more">المزيد</string>
+    <string name="suggested_not_similar">ليست مشابهة</string>
+    <string name="suggested_add">أضف إلى المجموعة</string>
+    <plurals name="suggested_hits">
+        <item quantity="zero">تشبه %d من آيات المجموعة</item>
+        <item quantity="one">تشبه آية من المجموعة</item>
+        <item quantity="two">تشبه آيتين من المجموعة</item>
+        <item quantity="few">تشبه %d آيات من المجموعة</item>
+        <item quantity="many">تشبه %d آيةً من المجموعة</item>
+        <item quantity="other">تشبه %d آية من المجموعة</item>
+    </plurals>
+
+    <!-- Juz map (Structural Flow): quarter strip, quarter cards and the joint test -->
+    <string name="map_cd_tracked">الربع %1$d، %2$d٪</string>
+    <string name="map_cd_untracked">الربع %1$d، لم تُراجَع بعد</string>
+    <string name="map_weakest">أضعف ربع: الربع %1$d، %2$d٪</string>
+    <string name="map_weakest_go">اذهب إليه</string>
+    <string name="map_hint">راجع بعض صفحات هذا الجزء فتظهر قوة كل ربع هنا.</string>
+    <string name="quarter_n">الربع %d</string>
+    <string name="quarter_pages">ص %1$d–%2$d</string>
+    <string name="quarter_untracked">لم يُراجَع بعد</string>
+    <string name="quarter_no_subjects">لا مواضيع بعد</string>
+    <string name="quarter_subjects_header">المواضيع</string>
+    <string name="quarter_pages_header">الصفحات</string>
+    <string name="quarter_ends_with">ينتهي بـ</string>
+    <string name="quarter_full">الجزء %1$d · الربع %2$d</string>
+    <string name="cd_expand_card">افتح الربع</string>
+    <string name="cd_collapse_card">اطوِ الربع</string>
+    <string name="joint_test_btn">اختبر الوصل بالربع التالي</string>
+    <string name="joint_title">اختبار الوصل</string>
+    <string name="joint_ends_with">%1$s ينتهي بـ</string>
+    <string name="joint_how_begins">كيف يبدأ %1$s؟</string>
+    <string name="mushaf_quarter_subject">الربع\u00A0%1$d · %2$s</string>
+
+    <string name="damaged_title">نسخة السحابة تالفة</string>
+    <string name="damaged_body">بعض أجزاء النسخة المحفوظة في حسابك مفقودة، فلا يمكن قراءتها ولا استعادتها. للمتابعة تُحذف هذه النسخة التالفة وتُرفع بيانات هذا الجهاز مكانها. لا يُحذف ولا يُرفع شيء قبل أن توافق.</string>
+    <string name="damaged_confirm">احذف التالفة وارفع بيانات الجهاز</string>
+    <string name="sync_cloud_damaged">نسخة السحابة تالفة فلم يغيّر هذا الجهاز شيئًا. احذف النسخة السحابية من الإعدادات ثم فعّل المزامنة من جديد؛ تُحفظ نسخة من محتواها على الهاتف أولًا.</string>
+
+    <string name="ex_pstart_title">أي آية تبدأ بها الصفحة؟</string>
+    <string name="ex_pstart_desc">اختر صفحة، وتأتيك خمسة خيارات لأول آية فيها، بلا نهاية حتى تتوقف</string>
+    <string name="ex_pend_title">أي آية تنتهي بها الصفحة؟</string>
+    <string name="ex_pend_desc">اختر صفحة، وتأتيك خمسة خيارات لآخر آية فيها، بلا نهاية حتى تتوقف</string>
+    <string name="pq_q_start">ما أول آية في هذه الصفحة؟</string>
+    <string name="pq_q_end">ما آخر آية في هذه الصفحة؟</string>
+    <string name="pq_recall_start">اذكر أول آية في هذه الصفحة</string>
+    <string name="pq_recall_end">اذكر آخر آية في هذه الصفحة</string>
+    <string name="pq_page">الصفحة</string>
+    <string name="pq_go">اذهب</string>
+    <string name="pq_order_forward">بالترتيب</string>
+    <string name="pq_order_random">عشوائي</string>
+    <string name="pq_order_stay">هذه الصفحة</string>
+    <string name="pq_choices">مع خيارات</string>
+    <string name="pq_skip">تخطَّ</string>
+    <string name="pq_you_chose">اخترتَ: %1$s (صفحة %2$d)</string>
 </resources>

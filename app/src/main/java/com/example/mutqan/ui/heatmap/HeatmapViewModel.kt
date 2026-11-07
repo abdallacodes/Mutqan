@@ -5,7 +5,6 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.MemoryEngine
@@ -41,7 +40,6 @@ data class HeatmapUiState(
     val stats:        DashboardStats = DashboardStats(),
     val juzSummaries: List<JuzSummary> = emptyList(),
     val forecastDays: Int = 0,
-    val isStructuralMode: Boolean = false
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -49,8 +47,7 @@ data class HeatmapUiState(
 class HeatmapViewModel(
     private val dao: StudyDao,
     private val study: StudyRepository,
-    private val quran: QuranRepository,
-    private val prefs: StructuralPrefsRepository
+    private val quran: QuranRepository
 ) : ViewModel() {
 
     private val _juzToPages = MutableStateFlow<Map<Int, List<Int>>>(emptyMap())
@@ -69,9 +66,8 @@ class HeatmapViewModel(
     val uiState: StateFlow<HeatmapUiState> = combine(
         combine(study.revisionLogs(), study.coveredPages()) { logs, covered -> logs to covered },
         _juzToPages,
-        _forecastDays,
-        prefs.isStructuralMode
-    ) { logsAndCoverage, juzToPages, forecastDays, isStructuralMode ->
+        _forecastDays
+    ) { logsAndCoverage, juzToPages, forecastDays ->
         val (logs, covered) = logsAndCoverage
         try {
             // 1. Fetch similarity links for semantic interference
@@ -111,8 +107,7 @@ class HeatmapViewModel(
                 return@combine HeatmapUiState(
                     stats = stats, 
                     juzSummaries = emptyList(), 
-                    forecastDays = forecastDays,
-                    isStructuralMode = isStructuralMode
+                    forecastDays = forecastDays
                 )
             }
 
@@ -166,8 +161,7 @@ class HeatmapViewModel(
             HeatmapUiState(
                 stats = stats, 
                 juzSummaries = summaries, 
-                forecastDays = forecastDays,
-                isStructuralMode = isStructuralMode
+                forecastDays = forecastDays
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -181,12 +175,6 @@ class HeatmapViewModel(
             initialValue = HeatmapUiState()
         )
     
-    fun toggleStructuralMode(enabled: Boolean) {
-        viewModelScope.launch {
-            prefs.setStructuralMode(enabled)
-        }
-    }
-
     private val _selectedPage = MutableStateFlow<PageStability?>(null)
     val selectedPage: StateFlow<PageStability?> = _selectedPage.asStateFlow()
 
@@ -214,7 +202,6 @@ class HeatmapViewModelFactory(private val context: Context) : ViewModelProvider.
         HeatmapViewModel(
             AppDatabase.getInstance(context).studyDao(),
             StudyRepository.create(context),
-            QuranRepository.getInstance(context),
-            StructuralPrefsRepository(context)
+            QuranRepository.getInstance(context)
         ) as T
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
+import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.domain.AyahGroup
 import com.example.mutqan.domain.HifzCoverage
@@ -67,6 +68,22 @@ class MushafViewerViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = study.groupsOfAyah(ayahId)
+
+    /** The user's subjects (start ayah id to title), for showing the subject of the quarter being read. */
+    val subjects: StateFlow<List<Pair<Int, String>>> = dao.observeUserSubjectsBetween(1, Int.MAX_VALUE)
+        .map { list -> list.map { it.startAyahId to it.subjectText } }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** All the user's mutashabihat groups, newest first, for the "add to group" sheet. */
+    val groups: StateFlow<List<GroupWithCount>> = study.allGroupsWithMemberCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Puts the ayah into a group; false when it was already there. */
+    suspend fun addToGroup(groupId: Int, ayahId: Int): Boolean = study.addAyahToGroup(groupId, ayahId)
+
+    /** Starts a new group called [name] holding this ayah. */
+    suspend fun createGroupWith(name: String, ayahId: Int): Int = study.createGroupWith(name, ayahId)
 
     /** What the user has memorised, as merged ayah-id ranges. */
     val coverage: StateFlow<List<IntRange>> = study.coverage()

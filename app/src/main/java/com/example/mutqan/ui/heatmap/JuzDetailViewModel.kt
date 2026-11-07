@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.R
-import com.example.mutqan.data.StructuralPrefsRepository
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.UserSubjectEntity
+import com.example.mutqan.domain.ExerciseType
 import com.example.mutqan.domain.MemoryEngine
+import com.example.mutqan.domain.QuarterHealth
+import com.example.mutqan.domain.QuarterMap
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.domain.PassageState
@@ -40,16 +42,12 @@ class JuzDetailViewModel(
     private val dao:   StudyDao,
     private val study: StudyRepository,
     private val quran: QuranRepository,
-    private val prefs: StructuralPrefsRepository,
     private val sharingManager: StructuralSharingManager,
     val          juzId: Int
 ) : ViewModel() {
 
     private val _surahRange = MutableStateFlow<IntRange?>(null)
     val surahRange: StateFlow<IntRange?> = _surahRange.asStateFlow()
-
-    val isStructuralMode: StateFlow<Boolean> = prefs.isStructuralMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _events = MutableSharedFlow<SharingEvent>()
     val events: SharedFlow<SharingEvent> = _events
@@ -124,21 +122,54 @@ class JuzDetailViewModel(
     .flowOn(Dispatchers.Default)
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * The map: each of the juz's eight quarters with how well it is held, ready to draw. The cards, their subjects and
+     * the page strengths come from the two flows above.
+     */
+    val quarters: StateFlow<List<QuarterCardData>> = combine(timelineItems, pagesWithSurahs) { cards, pages ->
+        val byPage = pages.associateBy { it.stability.page }
+        cards.map { card ->
+            val inQuarter = card.pages.mapNotNull { byPage[it] }
+            QuarterCardData(
+                card = card,
+                health = QuarterMap.health(card.unit) { page -> byPage[page]?.stability?.takeIf { it.isTracked }?.score },
+                pages = inQuarter
+            )
+        }
+    }
+    .flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val _selectedPage = MutableStateFlow<PageSelection?>(null)
     val selectedPage: StateFlow<PageSelection?> = _selectedPage.asStateFlow()
-
-    private val _peekData = MutableStateFlow<PagePeekData?>(null)
-    val peekData: StateFlow<PagePeekData?> = _peekData.asStateFlow()
 
     private val _ayahPreview = MutableStateFlow<QuranAyah?>(null)
     val ayahPreview: StateFlow<QuranAyah?> = _ayahPreview.asStateFlow()
 
     fun onPageTap(page: Int, surahLabel: String, state: PassageState = PassageState.NOT_ASSESSED) {
-        if (isStructuralMode.value) {
-            peekPage(page)
-        } else {
-            _selectedPage.value = PageSelection(page, surahLabel, state)
+        _selectedPage.value = PageSelection(page, surahLabel, state)
+    }
+
+    // ── Joint test: the end of one quarter against the start of the next ──────
+
+    private val _joint = MutableStateFlow<JointTest?>(null)
+    val joint: StateFlow<JointTest?> = _joint.asStateFlow()
+
+    /** Opens the joint test for the end of [rub]; does nothing after the last quarter of the Quran. */
+    fun startJoint(rub: QuranRub) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val next = QuarterMap.following(rub, rubs, if (juzId < 30) quran.rubs(juzId + 1) else emptyList()) ?: return@launch
+            _joint.value = JointTest(rub, next)
         }
+    }
+
+    fun dismissJoint() { _joint.value = null }
+
+    /** Records how the joint went (apart from page revisions: it never changes a page's strength) and closes the test. */
+    fun finishJoint(outcome: RecallOutcome) {
+        val test = _joint.value ?: return
+        _joint.value = null
+        viewModelScope.launch { study.addExerciseResult(ExerciseType.QUARTER_JOINT, test.from.endPage, test.to.startPage, outcome) }
     }
 
     fun showAyahPreview(startAyahId: Int) {
@@ -150,14 +181,6 @@ class JuzDetailViewModel(
 
     fun dismissAyahPreview() { _ayahPreview.value = null }
 
-    private fun peekPage(pageNumber: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val ayahs = quran.ayahsOnPage(pageNumber)
-            if (ayahs.isNotEmpty()) _peekData.value = PagePeekData(pageNumber, ayahs.first().id, ayahs.last().id)
-        }
-    }
-
-    fun dismissPeek() { _peekData.value = null }
     fun dismissDialog() { _selectedPage.value = null }
 
     fun addSubject(text: String, startAyahId: Int) {
@@ -217,12 +240,15 @@ sealed class SharingEvent {
     data class Error(val message: UiText) : SharingEvent()
 }
 
-data class PagePeekData(
-    val pageNumber: Int,
-    /** The first and last ayah on the page (global ids). */
-    val firstAyahId: Int,
-    val lastAyahId: Int
+/** A quarter on the map: its card (subjects and ayahs), how well it is held, and its pages with their strength. */
+data class QuarterCardData(
+    val card: AnchorCardData,
+    val health: QuarterHealth,
+    val pages: List<PageWithSurahs>
 )
+
+/** A joint to test: [from] ends, and the user recalls how [to] begins. */
+data class JointTest(val from: QuranRub, val to: QuranRub)
 
 data class AnchorCardData(
     val unit: QuranRub,
@@ -246,7 +272,6 @@ class JuzDetailViewModelFactory(
             AppDatabase.getInstance(context).studyDao(),
             StudyRepository.create(context),
             QuranRepository.getInstance(context),
-            StructuralPrefsRepository(context),
             StructuralSharingManager(context),
             juzId
         ) as T

@@ -14,6 +14,7 @@ import com.example.mutqan.data.local.entity.RevisionLogEntity
 import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
+import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -334,6 +335,22 @@ class StudyRepository(
                 .mapNotNull { quran.ayahById(it) }
             AyahGroup(group, others)
         }
+    }
+
+    /** Puts [ayahId] into the group [groupId]; false when it was already there. */
+    suspend fun addAyahToGroup(groupId: Int, ayahId: Int): Boolean = withContext(Dispatchers.IO) {
+        if (dao.getMemberAyahIds(groupId).contains(ayahId)) false
+        else {
+            dao.insertSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = ayahId))
+            true
+        }
+    }
+
+    /** Starts a new, uncategorised group called [description] with [ayahId] as its first ayah; returns the group's id. */
+    suspend fun createGroupWith(description: String, ayahId: Int): Int = withContext(Dispatchers.IO) {
+        val id = dao.insertSimilarityGroup(SimilarityGroupEntity(description = description.trim())).toInt()
+        dao.insertSimilarityMember(SimilarityMemberEntity(groupId = id, verseId = ayahId))
+        id
     }
 
     // ── Memory engine / quiz ──────────────────────────────────────────────────

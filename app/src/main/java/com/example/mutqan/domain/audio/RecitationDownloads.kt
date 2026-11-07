@@ -83,10 +83,10 @@ class RecitationDownloads private constructor(context: Context) {
 
     private fun root(reciter: Reciter) = File(app.filesDir, "recitation/${reciter.id}")
 
-    private fun marker(reciter: Reciter, surah: Int) = File(root(reciter), "%03d.done".format(surah))
+    private fun marker(reciter: Reciter, surah: Int) = File(root(reciter), "%03d.done".format(java.util.Locale.ROOT, surah))
 
     private fun fileName(reciter: Reciter, surah: Int, ayah: Int) =
-        if (reciter.verseUrlBase != null) "%03d%03d.mp3".format(surah, ayah) else "%03d.mp3".format(surah)
+        if (reciter.verseUrlBase != null) "%03d%03d.mp3".format(java.util.Locale.ROOT, surah, ayah) else "%03d.mp3".format(java.util.Locale.ROOT, surah)
 
     private fun scanDownloaded(): Set<String> {
         val out = HashSet<String>()

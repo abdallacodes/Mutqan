@@ -4,6 +4,7 @@ import com.example.mutqan.quran.ArabicNormalization
 import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.quran.QuranSurah
 import com.example.mutqan.quran.QuranWord
 import kotlin.random.Random
 
@@ -109,6 +110,12 @@ object QuizText {
         return result
     }
 
+    /** The items of [lists] one from each in turn: the first of every list, then the second of every list, and so on. */
+    fun <T> interleave(lists: List<List<T>>): List<T> {
+        val longest = lists.maxOfOrNull { it.size } ?: 0
+        return (0 until longest).flatMap { i -> lists.mapNotNull { it.getOrNull(i) } }
+    }
+
     /** A shuffle of 0 until [n] that is not already in order (when n > 1). */
     fun shuffledOrder(n: Int, random: Random): List<Int> {
         val base = (0 until n).toList()
@@ -157,6 +164,9 @@ class QuizEngine(
         ExerciseType.QUIZ_TOPIC -> topic(ayahId)
         else -> null
     }
+
+    /** The 114 surahs, read once: the question needs their lengths and where they were revealed. */
+    private val surahTable: List<QuranSurah> by lazy { quran.surahs() }
 
     private fun wordsOf(a: QuranAyah): List<QuranWord> =
         quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }
@@ -352,21 +362,20 @@ class QuizEngine(
         val lookalikes = similar.similarTo(id)
         if (lookalikes.any { it.score >= IDENTICAL_SCORE }) return null
 
-        val surahs = arrayListOf(x.surah)
-        lookalikes.forEach { m -> quran.ayahById(m.ayahId)?.surah?.let { if (it !in surahs && surahs.size < 4) surahs += it } }
-        var guard = 0
-        while (surahs.size < 4 && guard++ < 30) {
-            val s = random.nextInt(1, 115)
-            if (s !in surahs) surahs += s
-        }
+        // The wrong surahs are ones this verse could be taken for: look-alikes first, then surahs like the right one in
+        // length and period (see SurahChoices), never a three-verse surah beside Al-Baqarah.
+        val table = surahTable
+        val answer = table.firstOrNull { it.id == x.surah } ?: return null
+        val resembling = lookalikes.filter { it.score >= LOOKALIKE_SURAH_SCORE }.mapNotNull { quran.ayahById(it.ayahId)?.surah }.distinct()
+        val surahs = listOf(x.surah) + SurahChoices.distractors(answer, table, resembling, WHERE_OPTIONS - 1, random)
 
-        val count = quran.surah(x.surah)?.versesCount ?: return null
+        val count = answer.versesCount
         val ayahs = linkedSetOf(x.ayah)
         for (d in listOf(1, -1, 2, -2, 3, -3)) {
             if (ayahs.size >= 4) break
             if (x.ayah + d in 1..count) ayahs += x.ayah + d
         }
-        guard = 0
+        var guard = 0
         while (ayahs.size < minOf(4, count) && guard++ < 30) ayahs += random.nextInt(1, count + 1)
 
         return WhereQuestion(
@@ -388,6 +397,8 @@ class QuizEngine(
         const val ORDER_COUNT = 4
         const val WHERE_WORDS = 22
         const val IDENTICAL_SCORE = 95
+        const val WHERE_OPTIONS = 5
+        const val LOOKALIKE_SURAH_SCORE = 60
         const val TOPIC_MIN_VERSES = 3
         const val TOPIC_MAX_VERSES = 150
         const val TOPIC_WORDS = 30

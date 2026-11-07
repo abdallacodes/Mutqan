@@ -72,6 +72,7 @@ import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -108,7 +109,7 @@ class PracticeViewModel(study: StudyRepository, private val prefs: UserPreferenc
 
     /** How many quiz questions were answered in the last seven days. */
     val quizThisWeek: StateFlow<Int> = study.exerciseCountsSince(System.currentTimeMillis() - WEEK_MS)
-        .map { counts -> ExerciseType.QUIZ.sumOf { counts[it] ?: 0 } }
+        .map { counts -> (ExerciseType.QUIZ + ExerciseType.PAGE_QUIZ).sumOf { counts[it] ?: 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 }
 
@@ -125,6 +126,7 @@ class PracticeViewModelFactory(private val context: Context) : ViewModelProvider
 fun PracticeScreen(
     onOpenBoundaries: () -> Unit,
     onOpenPageEdges: () -> Unit,
+    onOpenPageQuiz: (end: Boolean) -> Unit,
     onOpenQuiz: (QuizMode) -> Unit,
     onRandomVerse: () -> Unit,
     onSimilarityTest: () -> Unit,
@@ -172,6 +174,8 @@ fun PracticeScreen(
                     PracticeTile(Icons.Rounded.Place, R.string.ex_where_title, R.string.ex_where_desc) { onOpenQuiz(QuizMode.WHERE) },
                     PracticeTile(Icons.Rounded.VerticalAlignTop, R.string.ex_boundaries_title, R.string.ex_boundaries_desc, if (week > 0) stringResource(R.string.ex_this_week, week) else null, onOpenBoundaries),
                     PracticeTile(Icons.Rounded.Crop, R.string.ex_edges_title, R.string.ex_edges_desc, null, onOpenPageEdges),
+                    PracticeTile(Icons.Rounded.VerticalAlignTop, R.string.ex_pstart_title, R.string.ex_pstart_desc) { onOpenPageQuiz(false) },
+                    PracticeTile(Icons.Rounded.VerticalAlignBottom, R.string.ex_pend_title, R.string.ex_pend_desc) { onOpenPageQuiz(true) },
                     PracticeTile(Icons.Rounded.Shuffle, R.string.ex_random_title, R.string.ex_random_desc, null, onRandomVerse)
                 )
             )

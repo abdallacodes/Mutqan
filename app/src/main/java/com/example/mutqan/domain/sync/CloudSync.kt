@@ -42,13 +42,17 @@ sealed class SyncStatus {
 
     /** The cloud copy this device synced with is gone, so syncing from this device is off. */
     data object CloudGone : SyncStatus()
+
+    /** The cloud copy cannot be read (see [CloudCopyDamagedException]); this device changed nothing, in either direction. */
+    data object CloudDamaged : SyncStatus()
 }
 
 /**
  * Signing in found data on this device, so the user has to say which side wins before anything moves:
  * [cloudExists] false means the account has nothing in the cloud (no copy, or an empty one).
  */
-data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val cloudExists: Boolean)
+/** [cloudDamaged]: the account has a cloud copy whose pieces are missing, so it cannot be read; only replacing it works. */
+data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val cloudExists: Boolean, val cloudDamaged: Boolean = false)
 
 /** How this device joins the account: the cloud copy replaces what is on the device, or the device replaces the cloud copy. */
 enum class Choice { CLOUD_WINS, DEVICE_WINS }
@@ -207,7 +211,13 @@ class CloudSync private constructor(context: Context) {
     suspend fun setupChoice(): FirstSync? {
         val account = accounts.account.value ?: return null
         return lock.withLock {
-            val cloud = withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).peek() }
+            val cloud = try {
+                withTimeout(TIMEOUT_MS) { FirestoreRemote(account.uid, prefs.deviceId()).peek() }
+            } catch (e: CloudCopyDamagedException) {
+                android.util.Log.w("CloudSync", "The cloud copy is incomplete", e)
+                val here = backup.buildSnapshot()
+                return@withLock FirstSync(0, here.optJSONArray("revision_logs")?.length() ?: 0, cloudExists = false, cloudDamaged = true)
+            }
             val device = backup.buildSnapshot()
             if (SyncEngine.isEmpty(device.toString())) return@withLock null
             val cloudHasData = cloud != null && !SyncEngine.isEmpty(cloud.text)
@@ -233,7 +243,14 @@ class CloudSync private constructor(context: Context) {
                 val remote = FirestoreRemote(account.uid, prefs.deviceId())
                 val engine = engineFor(account.uid, remote)
                 val outcome = withTimeout(TIMEOUT_MS) {
-                    val cloud = remote.peek()
+                    val cloud = try {
+                        remote.peek()
+                    } catch (e: CloudCopyDamagedException) {
+                        // Nothing in a damaged copy can be read, so replacing it loses nothing; only replacing the cloud is offered for it.
+                        if (choice != Choice.DEVICE_WINS) throw e
+                        remote.deleteAll()
+                        null
+                    }
                     val cloudHasData = cloud != null && !SyncEngine.isEmpty(cloud.text)
                     when (choice) {
                         Choice.CLOUD_WINS -> {
@@ -257,6 +274,7 @@ class CloudSync private constructor(context: Context) {
                 displacedHere(announce = false)
                 SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
+                android.util.Log.w("CloudSync", "Sync did not finish", e)
                 SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
@@ -282,6 +300,9 @@ class CloudSync private constructor(context: Context) {
             } catch (e: CloudCopyGoneException) {
                 prefs.forgetSyncHistory()
                 SyncStatus.CloudGone
+            } catch (e: CloudCopyDamagedException) {
+                android.util.Log.w("CloudSync", "The cloud copy is damaged", e)
+                SyncStatus.CloudDamaged
             } catch (e: NotLinkedException) {
                 SyncStatus.Idle
             } catch (e: TimeoutCancellationException) {
@@ -290,6 +311,7 @@ class CloudSync private constructor(context: Context) {
                 displacedHere(announce = auto)
                 SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
+                android.util.Log.w("CloudSync", "Sync did not finish", e)
                 SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
@@ -307,7 +329,9 @@ class CloudSync private constructor(context: Context) {
             _status.value = try {
                 val remote = FirestoreRemote(account.uid, prefs.deviceId())
                 withTimeout(TIMEOUT_MS) {
-                    val saved = remote.peek()?.let { copies.save(CopyReason.CLOUD_DELETED, it.text) }
+                    // A damaged copy cannot be read, so there is nothing of it to keep; it can still be deleted.
+                    val readable = try { remote.peek() } catch (e: CloudCopyDamagedException) { null }
+                    val saved = readable?.let { copies.save(CopyReason.CLOUD_DELETED, it.text) }
                     remote.deleteAll()
                     prefs.forgetSyncHistory()
                     _notice.value = SyncNotice(NoticeKind.CLOUD_DELETED, saved)
@@ -321,6 +345,7 @@ class CloudSync private constructor(context: Context) {
                 displacedHere(announce = false)
                 SyncStatus.Failed(appContext.getString(R.string.session_displaced))
             } catch (e: Exception) {
+                android.util.Log.w("CloudSync", "Sync did not finish", e)
                 SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }

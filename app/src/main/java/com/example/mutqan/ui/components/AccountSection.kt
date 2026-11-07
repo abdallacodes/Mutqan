@@ -86,6 +86,7 @@ fun AccountSection() {
             is SyncStatus.Failed -> context.getString(R.string.sync_failed)
             SyncStatus.CopyFailed -> context.getString(R.string.copy_failed)
             SyncStatus.CloudGone -> context.getString(R.string.sync_cloud_gone)
+            SyncStatus.CloudDamaged -> context.getString(R.string.sync_cloud_damaged)
             else -> null
         }
         if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
@@ -124,7 +125,8 @@ fun AccountSection() {
                 val choice = cloud.setupChoice()
                 if (choice != null) firstSync = choice else runJoin(Choice.CLOUD_WINS)
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
+                android.util.Log.w("AccountSection", "Could not look at the cloud copy", e)
+                Toast.makeText(context, context.getString(R.string.sync_set_up_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -136,7 +138,8 @@ fun AccountSection() {
                 val other = cloud.otherDeviceInUse()
                 if (other != null) otherDevice = other else chooseData()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
+                android.util.Log.w("AccountSection", "Could not look at the account", e)
+                Toast.makeText(context, context.getString(R.string.sync_set_up_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -147,6 +150,7 @@ fun AccountSection() {
                 val other = cloud.otherDeviceInUse()
                 if (other != null) otherDevice = other else chooseData()
             } catch (e: Exception) {
+                android.util.Log.w("AccountSection", "Sign-in could not be completed", e)
                 cloud.signOut()
                 Toast.makeText(context, context.getString(R.string.account_sign_in_failed), Toast.LENGTH_LONG).show()
             }
@@ -160,7 +164,8 @@ fun AccountSection() {
                 cloud.takeOver()
                 if (cloud.linked.first()) runSync() else setUpSync()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.sync_failed), Toast.LENGTH_LONG).show()
+                android.util.Log.w("AccountSection", "Could not take the account back", e)
+                Toast.makeText(context, context.getString(if (linked) R.string.sync_failed else R.string.sync_set_up_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -210,6 +215,7 @@ fun AccountSection() {
                 is SyncStatus.Failed -> stringResource(if (linked) R.string.sync_failed else R.string.sync_set_up_failed)
                 SyncStatus.CopyFailed -> stringResource(R.string.copy_failed)
                 SyncStatus.CloudGone -> stringResource(R.string.sync_cloud_gone)
+                SyncStatus.CloudDamaged -> stringResource(R.string.sync_cloud_damaged)
                 else -> if (!linked) stringResource(R.string.sync_off) else lastSync?.let {
                     val now = System.currentTimeMillis()
                     val done = (status as? SyncStatus.Done)?.let { d -> stringResource(outcomeText(d.outcome)) + "\n" }.orEmpty()
@@ -221,7 +227,7 @@ fun AccountSection() {
             Text(
                 text = line,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (status is SyncStatus.Failed || status == SyncStatus.CopyFailed || status == SyncStatus.CloudGone) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (status is SyncStatus.Failed || status == SyncStatus.CopyFailed || status == SyncStatus.CloudGone || status == SyncStatus.CloudDamaged) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -261,7 +267,21 @@ fun AccountSection() {
         )
     }
 
-    firstSync?.let { choice ->
+    firstSync?.takeIf { it.cloudDamaged }?.let { choice ->
+        DamagedCopyDialog(
+            deviceEntries = choice.deviceEntries,
+            onReplace = {
+                firstSync = null
+                runJoin(Choice.DEVICE_WINS)
+            },
+            onCancel = {
+                firstSync = null
+                scope.launch { cloud.signOut() }
+            }
+        )
+    }
+
+    firstSync?.takeIf { !it.cloudDamaged }?.let { choice ->
         FirstSyncDialog(
             choice = choice,
             onCloudWins = {
@@ -350,6 +370,32 @@ private fun OtherDeviceDialog(other: OtherDevice, onUseHere: () -> Unit, onCance
             }
         }
     }
+}
+
+/**
+ * The account's cloud copy has pieces missing, so it cannot be read or restored. The only way on is to delete it and
+ * upload this device's data; nothing is deleted or uploaded until the user says so.
+ */
+@Composable
+private fun DamagedCopyDialog(deviceEntries: Int, onReplace: () -> Unit, onCancel: () -> Unit) {
+    PaperDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.damaged_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.damaged_body))
+                Text(
+                    text = stringResource(
+                        R.string.first_sync_device_count,
+                        pluralStringResource(R.plurals.count_revision_entries, deviceEntries, deviceEntries)
+                    ),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onReplace) { Text(stringResource(R.string.damaged_confirm), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.btn_cancel)) } }
+    )
 }
 
 /**

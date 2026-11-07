@@ -1,22 +1,8 @@
 package com.example.mutqan.ui.heatmap
 
-import com.example.mutqan.ui.components.PaperHeader
-import com.example.mutqan.ui.revision.OutcomePicker
-import com.example.mutqan.ui.revision.OutcomePreview
-import com.example.mutqan.ui.components.localizedLabel
-import com.example.mutqan.domain.RecallOutcome
-import com.example.mutqan.domain.MistakeTag
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,52 +17,69 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.entity.UserSubjectEntity
-import com.example.mutqan.ui.heatmap.components.AnchorCard
-import com.example.mutqan.ui.heatmap.components.AyahPreviewBottomSheet
-import com.example.mutqan.ui.heatmap.components.PeekDetailBottomSheet
-import com.example.mutqan.ui.heatmap.components.SubjectEditorDialog
-import com.example.mutqan.ui.theme.AmiriFontFamily
-import com.example.mutqan.ui.theme.DifficultyCritical
-import com.example.mutqan.ui.theme.DifficultyStruggled
-import kotlin.math.roundToInt
-import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.domain.MistakeTag
+import com.example.mutqan.domain.QuarterMap
+import com.example.mutqan.domain.RecallOutcome
+import com.example.mutqan.quran.QuranAyah
+import com.example.mutqan.ui.components.Folio
 import com.example.mutqan.ui.components.PaperButton
-import com.example.mutqan.ui.components.PaperProgress
-import com.example.mutqan.ui.theme.FolioTheme
+import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.ui.components.localizedLabel
+import com.example.mutqan.ui.heatmap.components.AyahPreviewBottomSheet
+import com.example.mutqan.ui.heatmap.components.QuarterCard
+import com.example.mutqan.ui.heatmap.components.QuarterJointSheet
+import com.example.mutqan.ui.heatmap.components.QuarterStrip
+import com.example.mutqan.ui.heatmap.components.SubjectEditorDialog
+import com.example.mutqan.ui.revision.OutcomePicker
+import com.example.mutqan.ui.revision.OutcomePreview
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The map of one juz: a strip of its eight hizb quarters coloured by how well each is held, with the weakest ringed, and
+ * a compact card per quarter that opens to its pages, the user's subjects and a test of the joint to the next quarter.
+ */
 @Composable
 fun JuzDetailScreen(
     juzId:       Int,
@@ -91,13 +93,11 @@ fun JuzDetailScreen(
     )
 
     val pages            by viewModel.pagesWithSurahs.collectAsState()
-    val timelineItems    by viewModel.timelineItems.collectAsState()
-    val isStructural     by viewModel.isStructuralMode.collectAsState()
+    val quarters         by viewModel.quarters.collectAsState()
     val surahRange       by viewModel.surahRange.collectAsState()
     val selectedPage     by viewModel.selectedPage.collectAsState()
-    val peekData         by viewModel.peekData.collectAsState()
     val ayahPreview      by viewModel.ayahPreview.collectAsState()
-    val isArabic         = LocalConfiguration.current.locales[0].language == "ar"
+    val joint            by viewModel.joint.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -122,8 +122,19 @@ fun JuzDetailScreen(
 
     var editingUnitId by remember { mutableStateOf<Int?>(null) }
     var editingSubject by remember { mutableStateOf<UserSubjectEntity?>(null) }
-    var editingAyahs by remember { mutableStateOf<List<com.example.mutqan.quran.QuranAyah>>(emptyList()) }
+    var editingAyahs by remember { mutableStateOf<List<QuranAyah>>(emptyList()) }
     var subjectToDelete by remember { mutableStateOf<UserSubjectEntity?>(null) }
+
+    // One quarter open at a time (by its number 1..240), so the list stays short.
+    var openQuarter by rememberSaveable { mutableStateOf<Int?>(null) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val weakest = remember(quarters) { QuarterMap.weakest(quarters.map { it.health }) }
+    fun focus(index: Int) {
+        val q = quarters.getOrNull(index) ?: return
+        openQuarter = q.card.unit.number
+        scope.launch { listState.animateScrollToItem(index + 1) } // the map is item 0
+    }
 
     val subtitle = surahRange?.let { range ->
         val from = "${range.first}. ${SurahData.nameOf(range.first)}"
@@ -165,82 +176,56 @@ fun JuzDetailScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            AnimatedContent(
-                targetState = isStructural,
-                transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
-                },
-                label = "mode_transition"
-            ) { structural ->
-                if (structural) {
-                    // ── Structural Flow View (Anchor Cards) ─────────────────
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(timelineItems) { cardData ->
-                            AnchorCard(
-                                data = cardData,
-                                onAddSubject = { 
-                                    editingUnitId = cardData.unit.number
-                                    editingAyahs = cardData.ayahsInQuarter
-                                    editingSubject = null
-                                },
-                                onEditSubject = { subject ->
-                                    editingUnitId = cardData.unit.number
-                                    editingAyahs = cardData.ayahsInQuarter
-                                    editingSubject = subject
-                                },
-                                onDeleteSubject = { subject ->
-                                    subjectToDelete = subject
-                                },
-                                onSubjectClick = { subject ->
-                                    viewModel.showAyahPreview(subject.startAyahId)
-                                },
-                                onPageClick = { pageNum ->
-                                    viewModel.onPageTap(pageNum, "")
-                                }
-                            )
-                        }
-                    }
-                } else {
-                    // ── Memory Health View ──────────────────────────────────
-                    LazyVerticalGrid(
-                        columns               = GridCells.Fixed(4),
-                        modifier              = Modifier.fillMaxSize(),
-                        contentPadding        = PaddingValues(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement   = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item(span = { GridItemSpan(4) }) {
-                            JuzHealthSummary(pages = pages)
-                        }
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(innerPadding).fillMaxSize()
+        ) {
+            item(key = "map") {
+                JuzMap(
+                    pages = pages,
+                    quarters = quarters,
+                    weakest = weakest,
+                    onSelect = ::focus
+                )
+            }
 
-                        if (pages.isEmpty()) {
-                            item(span = { GridItemSpan(4) }) {
-                                Box(
-                                    modifier         = Modifier.fillMaxWidth().padding(top = 64.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text  = stringResource(R.string.loading_pages),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        } else {
-                            items(pages, key = { it.stability.page }) { pwS ->
-                                PageTile(
-                                    pwS     = pwS,
-                                    onClick = { viewModel.onPageTap(pwS.stability.page, pwS.surahLabel, pwS.state) }
-                                )
-                            }
-                        }
+            if (quarters.isEmpty()) {
+                item(key = "loading") {
+                    Box(modifier = Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.loading_pages),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
+            }
+
+            itemsIndexed(quarters, key = { _, q -> q.card.unit.number }) { _, q ->
+                val unit = q.card.unit
+                QuarterCard(
+                    data = q,
+                    expanded = openQuarter == unit.number,
+                    onToggle = { openQuarter = if (openQuarter == unit.number) null else unit.number },
+                    onAddSubject = {
+                        editingUnitId = unit.number
+                        editingAyahs = q.card.ayahsInQuarter
+                        editingSubject = null
+                    },
+                    onEditSubject = { subject ->
+                        editingUnitId = unit.number
+                        editingAyahs = q.card.ayahsInQuarter
+                        editingSubject = subject
+                    },
+                    onDeleteSubject = { subject -> subjectToDelete = subject },
+                    onSubjectClick = { subject -> viewModel.showAyahPreview(subject.startAyahId) },
+                    onPageClick = { page ->
+                        viewModel.onPageTap(page.stability.page, page.surahLabel, page.state)
+                    },
+                    onTestJoint = if (unit.number < LAST_QUARTER) ({ viewModel.startJoint(unit) }) else null
+                )
             }
         }
     }
@@ -256,13 +241,11 @@ fun JuzDetailScreen(
         )
     }
 
-    peekData?.let { data ->
-        PeekDetailBottomSheet(
-            pageNumber = data.pageNumber,
-            firstAyahId = data.firstAyahId,
-            lastAyahId = data.lastAyahId,
-            onOpenInMushaf = { viewModel.dismissPeek(); onPageOpen(data.pageNumber) },
-            onDismiss = { viewModel.dismissPeek() }
+    joint?.let { test ->
+        QuarterJointSheet(
+            test = test,
+            onFinish = viewModel::finishJoint,
+            onDismiss = viewModel::dismissJoint
         )
     }
 
@@ -290,7 +273,7 @@ fun JuzDetailScreen(
                 editingUnitId = null
                 editingSubject = null
             },
-            onDismiss = { 
+            onDismiss = {
                 editingUnitId = null
                 editingSubject = null
             }
@@ -321,134 +304,61 @@ fun JuzDetailScreen(
     }
 }
 
-// ── Juz health summary ────────────────────────────────────────────────────────
+/** The 240th and last quarter of the Quran: nothing follows it, so it has no joint to test. */
+private const val LAST_QUARTER = 240
+
+// ── The map: the juz at a glance ─────────────────────────────────────────────
 
 @Composable
-private fun JuzHealthSummary(pages: List<PageWithSurahs>) {
-    if (pages.isEmpty()) return
+private fun JuzMap(
+    pages: List<PageWithSurahs>,
+    quarters: List<QuarterCardData>,
+    weakest: Int?,
+    onSelect: (Int) -> Unit
+) {
+    val tracked = pages.map { it.stability }.filter { it.isTracked }
+    val average = if (tracked.isEmpty()) 0f else tracked.map { it.score }.average().toFloat()
+    val worst = weakest?.let { quarters.getOrNull(it) }
 
-    val stabilities = pages.map { it.stability }
-    val tracked     = stabilities.filter { it.isTracked }
-    val avg         = if (tracked.isEmpty()) 0f
-                      else tracked.map { it.score }.average().toFloat()
-    val healthClr   = if (tracked.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                      else healthTextColor(avg)
-    val critical    = tracked.count { it.score < 0.25f }
-    val fading      = tracked.count { it.score in 0.25f..0.50f }
-
-    Surface(
-        shape    = RoundedCornerShape(10.dp),
-        color    = FolioTheme.colors.folio,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text          = stringResource(R.string.juz_health),
-                        style         = MaterialTheme.typography.labelSmall,
-                        fontWeight    = FontWeight.Bold,
-                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text       = if (tracked.isEmpty()) stringResource(R.string.no_revisions_juz)
-                                     else stringResource(
-                                         R.string.pages_tracked_summary,
-                                         (avg * 100).roundToInt(),
-                                         tracked.size,
-                                         stabilities.size
-                                     ),
-                        style      = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Black,
-                        color      = healthClr,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-                if (critical > 0 || fading > 0) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        if (critical > 0) {
-                            Text(
-                                text  = stringResource(R.string.count_critical, critical),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = DifficultyCritical
-                            )
-                        }
-                        if (fading > 0) {
-                            Text(
-                                text  = stringResource(R.string.count_fading, fading),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = DifficultyStruggled
-                            )
-                        }
-                    }
-                }
+    Folio(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
+                SectionLabel(stringResource(R.string.juz_health))
+                Text(
+                    text = if (tracked.isEmpty()) stringResource(R.string.no_revisions_juz)
+                    else stringResource(R.string.pages_tracked_summary, (average * 100).roundToInt(), tracked.size, pages.size),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = if (tracked.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else healthTextColor(average)
+                )
             }
 
-            if (tracked.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                PaperProgress(fraction = avg, color = healthClr)
+            if (quarters.isNotEmpty()) {
+                QuarterStrip(quarters = quarters, weakest = weakest, onSelect = onSelect)
             }
-        }
-    }
-}
 
-// ── Page tile ─────────────────────────────────────────────────────────────────
-
-@Composable
-private fun PageTile(pwS: PageWithSurahs, onClick: () -> Unit) {
-    val ps        = pwS.stability
-    val bgColor   = pageColor(ps)
-    val textColor = adaptiveTextColor(bgColor)
-    val dimColor  = textColor.copy(alpha = if (ps.isTracked) 0.65f else 0.40f)
-
-    Surface(
-        onClick  = onClick,
-        shape    = RoundedCornerShape(14.dp),
-        color    = bgColor,
-        border   = BorderStroke(
-            width = 1.dp,
-            color = if (ps.isTracked) textColor.copy(alpha = 0.10f)
-                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-        ),
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-    ) {
-        Column(
-            modifier            = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text      = pwS.surahLabel,
-                style     = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
-                color     = dimColor,
-                maxLines  = 1,
-                overflow  = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                lineHeight = 8.sp,
-                modifier  = Modifier.fillMaxWidth()
-            )
-            Text(
-                text       = "${ps.page}",
-                style      = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
-                fontWeight = FontWeight.Black,
-                color      = textColor,
-                fontFamily = FontFamily.Monospace,
-                textAlign  = TextAlign.Center,
-                modifier   = Modifier.fillMaxWidth()
-            )
-            Text(
-                text      = if (ps.isTracked) stringResource(R.string.percent_value, (ps.score * 100).roundToInt())
-                            else stringResource(R.string.untracked_dash),
-                style     = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                color     = dimColor,
-                textAlign = TextAlign.Center,
-                modifier  = Modifier.fillMaxWidth()
-            )
+            if (worst != null && weakest != null) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(
+                            R.string.map_weakest,
+                            worst.card.unit.quarterInJuz,
+                            ((worst.health.average ?: 0f) * 100).roundToInt()
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PaperLink(stringResource(R.string.map_weakest_go), onClick = { onSelect(weakest) })
+                }
+            } else if (quarters.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.map_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

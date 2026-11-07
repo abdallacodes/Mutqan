@@ -9,6 +9,10 @@ import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
+import com.example.mutqan.domain.GroupSuggestion
+import com.example.mutqan.domain.GroupSuggestions
+import com.example.mutqan.domain.SimilarData
+import com.example.mutqan.domain.SimilarLibrary
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
@@ -19,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -40,6 +46,9 @@ sealed interface AddVerseResult {
     data object AlreadyMember : AddVerseResult       // verse already in this group
     data object DescriptionRequired : AddVerseResult // must enter description before adding verse
 }
+
+/** An ayah proposed for the group, with where it is in the Quran. */
+data class SuggestedAyah(val suggestion: GroupSuggestion, val surah: Int, val ayah: Int)
 
 // ── UI State ──────────────────────────────────────────────────────────────────
 
@@ -68,7 +77,8 @@ data class EditGroupUiState(
 class EditGroupViewModel(
     private val dao: StudyDao,
     private val study: StudyRepository,
-    private val quran: QuranRepository
+    private val quran: QuranRepository,
+    private val similar: suspend () -> SimilarData
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditGroupUiState())
@@ -90,6 +100,34 @@ class EditGroupViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    private val dismissed = MutableStateFlow<Set<Int>>(emptySet())
+
+    /**
+     * Ayahs that resemble the ones already in the group, best first (the screen shows a few at a time). Empty until the
+     * group has its first ayah, and it re-ranks each time an ayah is added or set aside.
+     */
+    val suggestions: StateFlow<List<SuggestedAyah>> = combine(members, dismissed) { list, hidden -> list.map { it.verseId } to hidden }
+        .mapLatest { (ids, hidden) ->
+            if (ids.isEmpty()) emptyList()
+            else {
+                val index = quran.ayahIndex
+                GroupSuggestions.rank(similar(), ids, hidden)
+                    .filter { it.ayahId in index }
+                    .map { SuggestedAyah(it, index.surahOf(it.ayahId), index.ayahOf(it.ayahId)) }
+            }
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Puts a suggested ayah into the group. */
+    fun addSuggestion(ayahId: Int) {
+        val groupId = _savedGroupId.value ?: return
+        viewModelScope.launch { dao.insertSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = ayahId)) }
+    }
+
+    /** Hides a suggestion the user says is not similar; it stays hidden until the editor is closed. */
+    fun dismissSuggestion(ayahId: Int) = dismissed.update { it + ayahId }
 
     /**
      * Live Arabic text search results.
@@ -319,6 +357,7 @@ class EditGroupViewModelFactory(private val context: Context) : ViewModelProvide
         EditGroupViewModel(
             AppDatabase.getInstance(context).studyDao(),
             StudyRepository.create(context),
-            QuranRepository.getInstance(context)
+            QuranRepository.getInstance(context),
+            { SimilarLibrary.load(context.applicationContext) }
         ) as T
 }

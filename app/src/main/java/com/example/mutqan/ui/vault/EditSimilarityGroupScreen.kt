@@ -66,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -75,6 +76,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.ui.components.PaperSlider
 import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.PaperOutlinedButton
+import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.dao.MemberVerseRef
@@ -111,6 +115,8 @@ fun EditSimilarityGroupScreen(
     val uiState          by viewModel.uiState.collectAsState()
     val members          by viewModel.members.collectAsState()
     val searchResults    by viewModel.textSearchResults.collectAsState()
+    val suggestions      by viewModel.suggestions.collectAsState()
+    var suggestionsShown by remember { mutableIntStateOf(SUGGESTIONS_STEP) }
     val snackbarHost      = remember { SnackbarHostState() }
 
     // Peek state — non-null means the sheet is open for that verse
@@ -330,6 +336,45 @@ fun EditSimilarityGroupScreen(
                 }
             }
 
+            // ── Suggested ayahs: appear once the group holds one ayah ──────────
+            if (members.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    SectionLabel(stringResource(R.string.suggested_title))
+                    Text(
+                        text  = stringResource(R.string.suggested_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                if (suggestions.isEmpty()) {
+                    item {
+                        Text(
+                            text  = stringResource(R.string.suggested_none),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    items(suggestions.take(suggestionsShown), key = { "suggested_${it.suggestion.ayahId}" }) { item ->
+                        SuggestionRow(
+                            item      = item,
+                            onAdd     = { viewModel.addSuggestion(item.suggestion.ayahId) },
+                            onDismiss = { viewModel.dismissSuggestion(item.suggestion.ayahId) }
+                        )
+                    }
+                    if (suggestions.size > suggestionsShown) {
+                        item {
+                            PaperLink(
+                                text    = stringResource(R.string.suggested_more),
+                                onClick = { suggestionsShown += SUGGESTIONS_STEP }
+                            )
+                        }
+                    }
+                }
+            }
+
             item { Spacer(Modifier.height(32.dp)) }
         }
     }
@@ -341,6 +386,50 @@ fun EditSimilarityGroupScreen(
             onDismiss = { peekTarget = null },
             onOpenMushaf = onOpenMushaf
         )
+    }
+}
+
+// ── Suggested ayah ────────────────────────────────────────────────────────────
+
+/** How many suggestions show at first, and how many more each "show more" adds. */
+private const val SUGGESTIONS_STEP = 5
+
+@Composable
+private fun SuggestionRow(item: SuggestedAyah, onAdd: () -> Unit, onDismiss: () -> Unit) {
+    val s = item.suggestion
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                text       = stringResource(R.string.peek_group_ayah_ref, SurahData.nameOf(item.surah), item.ayah),
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color      = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text  = if (s.hits >= 2) pluralStringResource(R.plurals.suggested_hits, s.hits, s.hits)
+                        else stringResource(R.string.peek_similar_score, s.score),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+        AyahText(ayahId = s.ayahId, size = 22.sp, marked = s.matchedWords, markColor = MaterialTheme.colorScheme.primary)
+        Hairline()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PaperLink(stringResource(R.string.suggested_not_similar), onClick = onDismiss, soft = true)
+            PaperOutlinedButton(stringResource(R.string.suggested_add), onClick = onAdd)
+        }
     }
 }
 

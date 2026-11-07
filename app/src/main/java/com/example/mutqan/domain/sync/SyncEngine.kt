@@ -4,8 +4,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 
-/** The copy of the user's data kept in the cloud: [text] is a snapshot, [version] counts the pushes. */
-class RemoteSnapshot(val version: Long, val text: String)
+/**
+ * The copy of the user's data kept in the cloud: [text] is a snapshot, [version] counts the pushes. [fromPrevious] means
+ * the newest copy could not be read, so [text] is the one before it; only [SyncRemote.peek] ever gives that.
+ */
+class RemoteSnapshot(val version: Long, val text: String, val fromPrevious: Boolean = false)
 
 /** This device's data as snapshot text, and the way to replace it. */
 interface SyncLocal {
@@ -49,6 +52,13 @@ class CloudCopyGoneException : Exception("The cloud copy was deleted")
 
 /** The account is in use on another device now, so this one must not read or change its cloud copy. */
 class SignedInElsewhereException : Exception("The account is in use on another device")
+
+/**
+ * The cloud copy cannot be read: a piece of the [expected] is missing, the pieces do not decode, or the text does not
+ * match the length and checksum the version record holds ([reason] says which). [foundIds] are the pieces that exist.
+ */
+class CloudCopyDamagedException(val expected: Int, val foundIds: List<String>, val reason: String = "pieces are missing") :
+    Exception("The cloud copy is damaged ($reason): $expected pieces expected, the ids found are ${foundIds.take(10)} (${foundIds.size} in all)")
 
 /**
  * Keeps this device and the cloud copy at the same state, once the user has chosen how this device joins the account:
@@ -160,6 +170,6 @@ class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, p
         }
 
         fun hash(text: String): String =
-            MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+            MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 }

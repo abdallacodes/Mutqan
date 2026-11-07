@@ -105,81 +105,64 @@ fun HeatmapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // ── Mode Toggle ───────────────────────────────────
+                // ── Global Stats ───────────────────────────────────
                 item(span = { GridItemSpan(2) }) {
-                    PaperTabs(
-                        labels = listOf(
-                            stringResource(R.string.mode_memory_health),
-                            stringResource(R.string.mode_structural_flow)
-                        ),
-                        selectedIndex = if (uiState.isStructuralMode) 1 else 0,
-                        onSelect = { viewModel.toggleStructuralMode(it == 1) },
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value    = "${uiState.stats.revisionDebt}",
+                            label    = stringResource(R.string.stat_revision_debt),
+                            sublabel = stringResource(R.string.stat_debt_sublabel),
+                            valueColor = if (uiState.stats.revisionDebt > 5) DifficultyCritical else DifficultySmooth
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value    = stringResource(R.string.percent_value, (uiState.stats.stabilityIndex * 100).roundToInt()),
+                            label    = stringResource(R.string.stat_stability_index),
+                            sublabel = pluralStringResource(R.plurals.stat_pages_tracked, uiState.stats.trackedPages, uiState.stats.trackedPages),
+                            valueColor = healthTextColor(uiState.stats.stabilityIndex)
+                        )
+                    }
                 }
 
-                // ── Global Stats ───────────────────────────────────
-                if (!uiState.isStructuralMode) {
-                    item(span = { GridItemSpan(2) }) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            StatCard(
-                                modifier = Modifier.weight(1f),
-                                value    = "${uiState.stats.revisionDebt}",
-                                label    = stringResource(R.string.stat_revision_debt),
-                                sublabel = stringResource(R.string.stat_debt_sublabel),
-                                valueColor = if (uiState.stats.revisionDebt > 5) DifficultyCritical else DifficultySmooth
-                            )
-                            StatCard(
-                                modifier = Modifier.weight(1f),
-                                value    = stringResource(R.string.percent_value, (uiState.stats.stabilityIndex * 100).roundToInt()),
-                                label    = stringResource(R.string.stat_stability_index),
-                                sublabel = pluralStringResource(R.plurals.stat_pages_tracked, uiState.stats.trackedPages, uiState.stats.trackedPages),
-                                valueColor = healthTextColor(uiState.stats.stabilityIndex)
-                            )
-                        }
-                    }
-
-                    // ── Forecast Slider ─────────────────────────────────
-                    item(span = { GridItemSpan(2) }) {
-                        Surface(
-                            shape = RoundedCornerShape(0.dp),
-                            color = Color.Transparent,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        stringResource(R.string.stat_forecast_label),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        pluralStringResource(R.plurals.count_days, uiState.forecastDays, uiState.forecastDays),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                PaperSlider(
-                                    value = uiState.forecastDays.toFloat(),
-                                    onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
-                                    valueRange = 0f..30f,
-                                    steps = 30
+                // ── Forecast Slider ─────────────────────────────────
+                item(span = { GridItemSpan(2) }) {
+                    Surface(
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(R.string.stat_forecast_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    pluralStringResource(R.plurals.count_days, uiState.forecastDays, uiState.forecastDays),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            PaperSlider(
+                                value = uiState.forecastDays.toFloat(),
+                                onValueChange = { viewModel.onForecastChange(it.roundToInt()) },
+                                valueRange = 0f..30f,
+                                steps = 30
+                            )
                         }
                     }
                 }
 
                 // ── Legend ──────────────────────────────────────────
-                if (!uiState.isStructuralMode) {
-                    item(span = { GridItemSpan(2) }) {
-                        HeatmapLegend()
-                    }
+                item(span = { GridItemSpan(2) }) {
+                    HeatmapLegend()
                 }
 
                 // ── Juz Cards ───────────────────────────────────────
@@ -189,7 +172,6 @@ fun HeatmapScreen(
                     items(uiState.juzSummaries, key = { it.juzId }) { juz ->
                         JuzCard(
                             juz     = juz,
-                            isStructural = uiState.isStructuralMode,
                             onClick = { onJuzClick(juz.juzId) }
                         )
                     }
@@ -276,7 +258,6 @@ private fun LegendDot(color: Color, label: String, border: Boolean = false) {
 @Composable
 internal fun JuzCard(
     juz: JuzSummary, 
-    isStructural: Boolean = false,
     onClick: () -> Unit
 ) {
     val healthScore  = (juz.healthPercent / 100f).coerceIn(0f, 1f)
@@ -293,7 +274,7 @@ internal fun JuzCard(
         shadowElevation = 0.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = if (isStructural) 80.dp else 132.dp)
+            .heightIn(min = 132.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -315,54 +296,50 @@ internal fun JuzCard(
                     textAlign = TextAlign.Start,
                     maxLines = 1
                 )
-                if (!isStructural) {
-                    Column(
-                        modifier = Modifier.width(64.dp),
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Text(
-                            text = healthValue,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.End,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = stringResource(R.string.juz_meta_overall_health_label),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.End
-                        )
-                    }
+                Column(
+                    modifier = Modifier.width(64.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(
+                        text = healthValue,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.End,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = stringResource(R.string.juz_meta_overall_health_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End
+                    )
                 }
             }
 
-            if (!isStructural) {
-                Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(4.dp))
 
-                LinearProgressIndicator(
-                    progress   = { healthScore },
-                    modifier   = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp),
-                    color      = healthClr,
-                    trackColor = MaterialTheme.colorScheme.outlineVariant,
-                    strokeCap  = StrokeCap.Butt
-                )
+            LinearProgressIndicator(
+                progress   = { healthScore },
+                modifier   = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp),
+                color      = healthClr,
+                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                strokeCap  = StrokeCap.Butt
+            )
 
-                Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
-                Text(
-                    text = trackedLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 2.dp)
-                )
-            }
+            Text(
+                text = trackedLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 2.dp)
+            )
         }
     }
 }
