@@ -128,6 +128,7 @@ fun HomeScreen(
     onOpenCoverage: () -> Unit,
     onOpenProgress: () -> Unit,
     onOpenMushaf: (Int) -> Unit,
+    onOpenSavedWeak: () -> Unit,
     onLogRevision: () -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(LocalContext.current))
@@ -405,6 +406,15 @@ fun HomeScreen(
                         onOpen = { onOpenMushaf(weak.page) },
                         onDismiss = { viewModel.dismissSuggestion(weak.passage.id) }
                     )
+                }
+                // Only a few are shown; when there are more, other ones and the whole list are one tap away.
+                if (state.weakTotal > state.weak.size) {
+                    item(key = "weak-more") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            PaperLink(stringResource(R.string.home_weak_other), onClick = viewModel::showOtherWeak)
+                            PaperLink(stringResource(R.string.home_weak_all, state.weakTotal), onClick = onOpenSavedWeak)
+                        }
+                    }
                 }
             }
 

@@ -16,6 +16,7 @@ import com.example.mutqan.domain.PlanItem
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionPlan
 import com.example.mutqan.domain.RevisionPlanner
+import com.example.mutqan.domain.WeakRotation
 import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.StudyRepository
@@ -57,7 +58,9 @@ private data class Extras(
     val hidden: Set<Int>,
     val lastPage: Int?,
     val misses: List<PageMiss>,
-    val selfRated: Map<Int, PlanTier>
+    val selfRated: Map<Int, PlanTier>,
+    /** How many times the user asked for other weak passages today. */
+    val others: Int
 )
 
 @Immutable
@@ -67,7 +70,10 @@ data class HomeUiState(
     val hasCoverage: Boolean = false,
     val plan: RevisionPlan? = null,
     val today: TodayPlan? = null,
+    /** A few of the open weak passages, not all: [WEAK_SHOWN] at most, other ones each day. */
     val weak: List<WeakSuggestion> = emptyList(),
+    /** How many open weak passages there are in all, to offer the full list when it is longer than what is shown. */
+    val weakTotal: Int = 0,
     /** Pages missed at least twice in practice this week and not revised since. */
     val missed: List<MissedPage> = emptyList(),
     /** The Mushaf page the user last read, to offer "continue". */
@@ -82,6 +88,9 @@ class HomeViewModel(
 
     private val dismissed = MutableStateFlow<Set<Int>>(emptySet())
 
+    /** Counts the "show others" taps; the window's start is also moved by the day, so each day begins on other ones. */
+    private val others = MutableStateFlow(0)
+
     /** The local calendar day, re-read every minute while the screen is visible so it rolls over at midnight. */
     private val epochDay = flow {
         while (true) {
@@ -93,8 +102,11 @@ class HomeViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val misses = epochDay.flatMapLatest { study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS) }
 
-    private val extras = combine(epochDay, dismissed, preferences.lastMushafPage, misses, study.selfRatedStrength()) { day, hidden, last, missed, rated ->
-        Extras(day, hidden, last, missed, rated)
+    /** What the user did to the weak list on this screen: the ones put away, and how often other ones were asked for. */
+    private val weakView = combine(dismissed, others) { hidden, asked -> hidden to asked }
+
+    private val extras = combine(epochDay, weakView, preferences.lastMushafPage, misses, study.selfRatedStrength()) { day, view, last, missed, rated ->
+        Extras(day, view.first, last, missed, rated, view.second)
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -113,16 +125,20 @@ class HomeViewModel(
                 RevisionPlanner.todayPlan(it, items, lastRevised, states, day)
             }
         }
-        val weak = saved
-            .filter { it.kind == SavedKind.WEAK && !it.isResolved && it.id !in hidden }
-            .sortedWith(compareByDescending<SavedPassage> { it.priority }.thenByDescending { it.createdAt })
-            .mapNotNull(::describe)
-            .take(MAX_SUGGESTIONS)
+        val openWeak = saved.filter { it.kind == SavedKind.WEAK && !it.isResolved }
+        val weak = WeakRotation.pick(
+            items = openWeak
+                .filter { it.id !in hidden }
+                .sortedWith(compareByDescending<SavedPassage> { it.priority }.thenByDescending { it.createdAt }),
+            day = day,
+            others = extra.others,
+            size = WEAK_SHOWN
+        ).mapNotNull(::describe)
         val missed = extra.misses
             .filter { it.count >= MISS_MIN && lastRevised.getOrElse(it.page - 1) { 0L } < Math.floorDiv(it.lastTime + offsetAt(it.lastTime), 86_400_000L) }
             .take(MAX_SUGGESTIONS)
             .map { MissedPage(it.page, it.count) }
-        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, missed = missed, lastPage = lastPage)
+        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, weakTotal = openWeak.size, missed = missed, lastPage = lastPage)
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
@@ -141,9 +157,15 @@ class HomeViewModel(
         dismissed.update { it + id }
     }
 
+    /** Moves the weak window along to the next ones. */
+    fun showOtherWeak() {
+        others.update { it + 1 }
+    }
+
     private companion object {
         const val PAGES = 604
         const val MAX_SUGGESTIONS = 3
+        const val WEAK_SHOWN = 2
         const val SNIPPET_CHARS = 80
         const val CLOCK_TICK_MS = 60_000L
         const val MISS_MIN = 2

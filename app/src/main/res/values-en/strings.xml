@@ -1117,4 +1117,12 @@
     <string name="ex_juzmap_desc">The quarters of a juz and their subjects, weakest first</string>
     <string name="juz_pick_title">Pick a juz</string>
     <string name="mushaf_quarter_open">Quarter\u00A0%1$d · juz map</string>
+
+    <string name="mushaf_menu_listen">Listen</string>
+    <string name="mushaf_menu_study">Study</string>
+    <string name="mushaf_menu_page">Page</string>
+    <string name="mushaf_menu_group_ayahs">Ayah highlights</string>
+    <string name="mushaf_menu_fill_width">Fill the width in two-page view</string>
+    <string name="home_weak_other">Show others</string>
+    <string name="home_weak_all">All weak passages (%1$d)</string>
 </resources>

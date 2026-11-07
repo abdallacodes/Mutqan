@@ -56,9 +56,9 @@ import com.example.mutqan.ui.components.Folio
 /** Every bookmark and weak passage the user saved, filterable by type and tag. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
+fun SavedPassagesScreen(onBack: () -> Unit, onOpenMushaf: (Int) -> Unit, initialKind: SavedKind? = null) {
     val context = LocalContext.current
-    val viewModel: SavedPassagesViewModel = viewModel(factory = SavedPassagesViewModelFactory(context))
+    val viewModel: SavedPassagesViewModel = viewModel(factory = SavedPassagesViewModelFactory(context, initialKind))
     val state by viewModel.uiState.collectAsState()
     var editing by remember { mutableStateOf<SavedItem?>(null) }
 

@@ -1,13 +1,9 @@
 package com.example.mutqan.ui.mushaf
 
 import com.example.mutqan.quran.QuranAyah
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.contentDescription
 import com.example.mutqan.ui.theme.statusColors
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.ui.saved.SavePassageSheet
@@ -15,19 +11,14 @@ import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.data.SurahData
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material.icons.filled.Bookmarks
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,18 +64,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.FitScreen
-import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
 import com.example.mutqan.domain.audio.RecitationController
 import com.example.mutqan.quran.PaperLoading
 import com.example.mutqan.ui.audio.RecitationBar
 import com.example.mutqan.ui.audio.RecitationSheet
 import com.example.mutqan.ui.audio.rememberAskForNotifications
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -151,6 +137,9 @@ import com.example.mutqan.ui.topics.VerseTheme
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
 private const val TOTAL_SPREADS = 302
+
+/** The size of the bar's buttons: five of them share the bar with the page's name. */
+private val BAR_BUTTON = 44.dp
 
 // The page colours follow the reading theme (see MushafTheme), so night reading gets a dark page.
 private val MushafParchment: Color   @Composable get() = LocalMushafColors.current.bg
@@ -584,113 +573,35 @@ fun MushafViewerScreen(
                         )
                     }
                 }
-                IconButton(onClick = { showRevised = true }) {
+                IconButton(onClick = { showRevised = true }, modifier = Modifier.size(BAR_BUTTON)) {
                     Icon(
                         imageVector        = Icons.Filled.TaskAlt,
                         contentDescription = stringResource(R.string.mushaf_cd_revised),
                         tint               = MushafInk
                     )
                 }
-                IconButton(onClick = { coverOn = !coverOn; revealed = emptySet(); showHeader = false }) {
+                IconButton(onClick = { coverOn = !coverOn; revealed = emptySet(); showHeader = false }, modifier = Modifier.size(BAR_BUTTON)) {
                     Icon(
                         imageVector        = if (coverOn) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                         contentDescription = stringResource(if (coverOn) R.string.mushaf_cd_uncover else R.string.mushaf_cd_cover),
                         tint               = if (coverOn) MaterialTheme.colorScheme.primary else MushafInk
                     )
                 }
-                // The page is the subject; only the two things done while reading stay in the bar, the rest is in the menu.
-                Box {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(
-                            imageVector        = Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.mushaf_cd_menu),
-                            tint               = MushafInk
-                        )
-                    }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.audio_listen_page)) },
-                            leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
-                            onClick = {
-                                menuOpen = false
-                                coroutineScope.launch {
-                                    val first = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.id }
-                                    if (first != null) listenFrom(first, currentPage)
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.audio_sheet_title)) },
-                            leadingIcon = { Icon(Icons.Filled.Tune, null) },
-                            onClick = { menuOpen = false; showRecitationSheet = true }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(stringResource(
-                                    if (showGroupAyahs) R.string.mushaf_cd_hide_group_ayahs else R.string.mushaf_cd_show_group_ayahs
-                                ))
-                            },
-                            leadingIcon = { Icon(Icons.Filled.Highlight, null) },
-                            onClick = { showGroupAyahs = !showGroupAyahs; menuOpen = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.mushaf_cd_saved)) },
-                            leadingIcon = { Icon(Icons.Filled.Bookmarks, null) },
-                            onClick = { menuOpen = false; onOpenSaved() }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(stringResource(
-                                    if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page
-                                ))
-                            },
-                            leadingIcon = { Icon(if (useSpreadLayout) Icons.Filled.Article else Icons.Filled.MenuBook, null) },
-                            onClick = { useSpreadLayout = !useSpreadLayout; menuOpen = false }
-                        )
-                        if (useSpreadLayout) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(stringResource(
-                                        if (spreadFillWidth) R.string.mushaf_cd_spread_fit_page else R.string.mushaf_cd_spread_fill_width
-                                    ))
-                                },
-                                leadingIcon = { Icon(if (spreadFillWidth) Icons.Filled.FitScreen else Icons.Filled.OpenInFull, null) },
-                                onClick = { spreadFillWidth = !spreadFillWidth; menuOpen = false }
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.mushaf_rotate)) },
-                            leadingIcon = { if (rotateWithDevice) Icon(Icons.Filled.Check, null) },
-                            modifier = Modifier.semantics { toggleableState = ToggleableState(rotateWithDevice) },
-                            onClick = { coroutineScope.launch { prefs.setMushafRotate(!rotateWithDevice) }; menuOpen = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.mushaf_mark_page_memorised)) },
-                            leadingIcon = { Icon(Icons.Filled.Verified, null) },
-                            onClick = {
-                                menuOpen = false
-                                coroutineScope.launch {
-                                    viewModel.versesOfPage(currentPage)?.let { viewModel.setMemorised(it, true) }
-                                    Toast.makeText(context, pageMemorisedDone, Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        )
-                        HorizontalDivider()
-                        Text(
-                            text = stringResource(R.string.mushaf_page_colours),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                        MushafTheme.entries.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(option.labelRes)) },
-                                leadingIcon = { if (option == readingTheme) Icon(Icons.Filled.Check, null) },
-                                modifier = Modifier.semantics { selected = option == readingTheme },
-                                onClick = { coroutineScope.launch { prefs.setMushafTheme(option.name) }; menuOpen = false }
-                            )
-                        }
-                    }
+                // The two-page view is switched here, in the bar: it is changed as often as the cover is.
+                IconButton(onClick = { useSpreadLayout = !useSpreadLayout }, modifier = Modifier.size(BAR_BUTTON)) {
+                    Icon(
+                        imageVector        = Icons.Filled.MenuBook,
+                        contentDescription = stringResource(if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page),
+                        tint               = if (useSpreadLayout) MaterialTheme.colorScheme.primary else MushafInk
+                    )
+                }
+                // Everything else is in one sheet, in groups.
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(BAR_BUTTON)) {
+                    Icon(
+                        imageVector        = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.mushaf_cd_menu),
+                        tint               = MushafInk
+                    )
                 }
             }
         }
@@ -730,6 +641,37 @@ fun MushafViewerScreen(
                     .navigationBarsPadding()
             )
         }
+    }
+
+    if (menuOpen) {
+        MushafMenuSheet(
+            showGroupAyahs = showGroupAyahs,
+            twoPage = useSpreadLayout,
+            fillWidth = spreadFillWidth,
+            rotateWithDevice = rotateWithDevice,
+            theme = readingTheme,
+            onListen = {
+                menuOpen = false
+                coroutineScope.launch {
+                    val first = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.id }
+                    if (first != null) listenFrom(first, currentPage)
+                }
+            },
+            onRecitation = { menuOpen = false; showRecitationSheet = true },
+            onGroupAyahs = { showGroupAyahs = it },
+            onSaved = { menuOpen = false; onOpenSaved() },
+            onMarkMemorised = {
+                menuOpen = false
+                coroutineScope.launch {
+                    viewModel.versesOfPage(currentPage)?.let { viewModel.setMemorised(it, true) }
+                    Toast.makeText(context, pageMemorisedDone, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onFillWidth = { spreadFillWidth = it },
+            onRotate = { coroutineScope.launch { prefs.setMushafRotate(it) } },
+            onTheme = { coroutineScope.launch { prefs.setMushafTheme(it.name) }; menuOpen = false },
+            onDismiss = { menuOpen = false }
+        )
     }
 
     if (showRecitationSheet) RecitationSheet(

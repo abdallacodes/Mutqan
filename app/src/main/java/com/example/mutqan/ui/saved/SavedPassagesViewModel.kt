@@ -46,10 +46,12 @@ data class SavedUiState(
 
 class SavedPassagesViewModel(
     private val study: StudyRepository,
-    private val quran: QuranRepository
+    private val quran: QuranRepository,
+    /** The kind the list opens on; null shows everything. */
+    initialKind: SavedKind? = null
 ) : ViewModel() {
 
-    private val kindFilter = MutableStateFlow<SavedKind?>(null)
+    private val kindFilter = MutableStateFlow(initialKind)
     private val tagFilter = MutableStateFlow<Set<WeakTag>>(emptySet())
 
     val uiState: StateFlow<SavedUiState> = combine(study.savedPassages(), kindFilter, tagFilter) { all, kind, tags ->
@@ -111,8 +113,8 @@ class SavedPassagesViewModel(
     }
 }
 
-class SavedPassagesViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+class SavedPassagesViewModelFactory(private val context: Context, private val initialKind: SavedKind? = null) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SavedPassagesViewModel(StudyRepository.create(context), QuranRepository.getInstance(context)) as T
+        SavedPassagesViewModel(StudyRepository.create(context), QuranRepository.getInstance(context), initialKind) as T
 }

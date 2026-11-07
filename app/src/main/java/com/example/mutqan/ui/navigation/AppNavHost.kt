@@ -79,6 +79,7 @@ import com.example.mutqan.ui.root.RootScreen
 import com.example.mutqan.ui.tafsir.TafsirScreen
 import com.example.mutqan.ui.topics.TopicScreen
 import com.example.mutqan.domain.QuizMode
+import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.ui.vault.ReadyListScreen
 import com.example.mutqan.ui.vault.SimilarityTestScreen
 import androidx.compose.foundation.layout.width
@@ -186,6 +187,8 @@ object Routes {
     const val AUDIO_STORAGE     = "audio_storage"
     const val FEEDBACK          = "feedback"
     const val SAVED             = "saved"
+    /** The saved list opened on its weak passages, from Today's "all weak passages". */
+    const val SAVED_WEAK        = "saved_weak"
 
     fun editGroup(groupId: Int)                  = "edit_group?groupId=$groupId"
     fun editGroupNew(folderId: Int?)             = "edit_group?groupId=-1${folderId?.let { "&folderId=$it" } ?: ""}"
@@ -452,6 +455,14 @@ fun AppNavHost(
                 SavedPassagesScreen(
                     onBack = { navController.popBackStack() },
                     onOpenMushaf = { page -> navController.openMushaf(page) }
+                )
+            }
+
+            composable(Routes.SAVED_WEAK) {
+                SavedPassagesScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenMushaf = { page -> navController.openMushaf(page) },
+                    initialKind = SavedKind.WEAK
                 )
             }
 
@@ -735,6 +746,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenCoverage  = { navController.navigate(Routes.COVERAGE) },
             onOpenProgress  = { navController.navigate(Routes.PROGRESS) },
             onOpenMushaf    = { page -> navController.openMushaf(page) },
+            onOpenSavedWeak = { navController.navigate(Routes.SAVED_WEAK) },
             onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
             onSettingsClick = onSettingsClick
         )
