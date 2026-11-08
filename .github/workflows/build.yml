@@ -118,17 +118,35 @@ jobs:
             fi
           fi
 
+      # The file carries the app's name and version (Mutqan-6.5.5.apk), so downloads from different releases do not
+      # pile up as app-release (1).apk and say what they are. The in-app updater takes the release's .apk whatever it is called.
+      - name: Name the APK
+        id: apk
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::versionName was not found in app/build.gradle.kts."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::The tag $GITHUB_REF_NAME does not match versionName $VERSION in app/build.gradle.kts."
+            exit 1
+          fi
+          NAME="Mutqan-$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/$NAME"
+          echo "path=app/build/outputs/apk/release/$NAME" >> "$GITHUB_OUTPUT"
+
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Mutqan-Release-APK
-          path: app/build/outputs/apk/release/app-release.apk
+          path: ${{ steps.apk.outputs.path }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: ${{ steps.apk.outputs.path }}
           name: Mutqan ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           draft: false

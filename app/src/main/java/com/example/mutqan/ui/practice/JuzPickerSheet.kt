@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.practice
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,7 @@ private const val PER_ROW = 5
 @Composable
 fun JuzPickerSheet(onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background,

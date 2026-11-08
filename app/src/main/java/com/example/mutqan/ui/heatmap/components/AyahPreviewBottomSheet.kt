@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.heatmap.components
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -28,6 +29,7 @@ fun AyahPreviewBottomSheet(
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {

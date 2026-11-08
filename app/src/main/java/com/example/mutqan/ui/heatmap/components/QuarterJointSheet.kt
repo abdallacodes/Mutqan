@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.heatmap.components
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,7 @@ fun QuarterJointSheet(
     var revealed by rememberSaveable(test.from.number) { mutableStateOf(false) }
 
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface

@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.saved
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -57,6 +58,7 @@ fun SavePassageSheet(
     var note by remember(initial) { mutableStateOf(initial?.note ?: "") }
 
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface

@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.mushaf
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,7 +65,7 @@ fun AddToGroupSheet(
         if (q.isEmpty()) groups else groups.filter { it.group.description.contains(q, ignoreCase = true) }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
+    ModalBottomSheet(contentWindowInsets = FolioSheetInsets, onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = stringResource(R.string.add_to_group_title),

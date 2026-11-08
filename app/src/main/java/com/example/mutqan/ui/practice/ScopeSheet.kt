@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.practice
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -181,6 +182,7 @@ fun ScopeSheet(
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background,

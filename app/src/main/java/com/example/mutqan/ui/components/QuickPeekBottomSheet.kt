@@ -113,6 +113,7 @@ fun QuickPeekBottomSheet(
     val all = actions + listOfNotNull(mushafAction)
 
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,

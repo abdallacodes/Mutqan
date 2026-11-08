@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.mushaf
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
@@ -59,7 +60,7 @@ fun MushafJumpSheet(quran: QuranRepository, currentPage: Int, onGo: (Int) -> Uni
         value = withContext(Dispatchers.IO) { quran.surahs() to quran.pagesByJuz() }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
+    ModalBottomSheet(contentWindowInsets = FolioSheetInsets, onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = stringResource(R.string.mushaf_go_to),
@@ -137,7 +138,7 @@ fun MushafRevisedSheet(page: Int, onSave: (RecallOutcome, Set<MistakeTag>) -> Un
     var outcome by remember { mutableStateOf(RecallOutcome.INDEPENDENT) }
     var tags by remember { mutableStateOf(emptySet<MistakeTag>()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
+    ModalBottomSheet(contentWindowInsets = FolioSheetInsets, onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

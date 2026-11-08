@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.heatmap.components
 
+import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -108,6 +109,7 @@ fun SubjectEditorSheet(
     val chosen = ayahs.firstOrNull { it.id == selected }
 
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background,

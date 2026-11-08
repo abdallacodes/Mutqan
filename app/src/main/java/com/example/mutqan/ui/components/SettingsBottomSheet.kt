@@ -141,6 +141,7 @@ fun SettingsBottomSheet(
     }
 
     ModalBottomSheet(
+        contentWindowInsets = FolioSheetInsets,
         onDismissRequest  = onDismiss,
         sheetState        = sheetState,
         containerColor    = MaterialTheme.colorScheme.surface,

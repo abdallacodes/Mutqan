@@ -55,6 +55,12 @@ class UpdateReleaseTest {
     }
 
     @Test
+    fun `the apk may have any name`() {
+        val named = release(name = "Mutqan-6.5.3.apk", url = "https://github.com/abdallacodes/Mutqan/releases/download/v6.5.3/Mutqan-6.5.3.apk")
+        assertEquals("https://github.com/abdallacodes/Mutqan/releases/download/v6.5.3/Mutqan-6.5.3.apk", UpdateRelease.parseLatest(named)?.apkUrl)
+    }
+
+    @Test
     fun `a release with no digest still counts`() {
         assertNull(UpdateRelease.parseLatest(release(digest = "")).let { it?.sha256 })
         assertEquals("6.5.3", UpdateRelease.parseLatest(release(digest = ""))?.version)

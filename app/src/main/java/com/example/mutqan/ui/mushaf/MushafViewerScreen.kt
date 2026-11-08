@@ -104,6 +104,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -199,6 +200,9 @@ private val MushafSubjectTintB = Color(0x244FAE8B)
 private fun spreadRightPage(n: Int): Int? = (2 * n + 1).let { if (it > TOTAL_PAGES) null else it }
 private fun spreadLeftPage(n: Int):  Int? = (2 * n + 2).let { if (it > TOTAL_PAGES) null else it }
 
+/** The smallest width (dp) from which a screen counts as a tablet: the orientation is not locked there. */
+private const val LARGE_SCREEN_DP = 600
+
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity         -> this
     is ContextWrapper   -> baseContext.findActivity()
@@ -261,7 +265,9 @@ fun MushafViewerScreen(
     // Reading theme, orientation and the other per-reader choices.
     val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
     val themeName by prefs.mushafTheme.collectAsState(initial = "")
-    val rotateWithDevice by prefs.mushafRotate.collectAsState(initial = false)
+    // Null until the choice has been read, so the screen is not locked to one orientation on a guess and turned again.
+    val rotatePref by prefs.mushafRotate.collectAsState(initial = null)
+    val rotateWithDevice = rotatePref ?: false
     val appIsDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val readingTheme = MushafTheme.fromName(themeName)
     val colors = readingTheme.colors(appIsDark)
@@ -435,13 +441,18 @@ fun MushafViewerScreen(
         UserPreferencesRepository(context.applicationContext).setLastMushafPage(currentPage)
     }
 
-    LaunchedEffect(useSpreadLayout, rotateWithDevice) {
+    // A phone is held upright for one page or sideways for two; a tablet is left to turn as its owner holds it, because
+    // a lock there turns the screen away from how it is held (and, undone and redone with every restart of the screen,
+    // used to make it spin back and forth).
+    val largeScreen = LocalConfiguration.current.smallestScreenWidthDp >= LARGE_SCREEN_DP
+    LaunchedEffect(useSpreadLayout, rotatePref, largeScreen) {
         val act = context.findActivity() ?: return@LaunchedEffect
-        act.requestedOrientation = when {
-            rotateWithDevice -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        val wanted = when {
+            rotatePref == null || rotatePref == true || largeScreen -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             useSpreadLayout -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
+        if (act.requestedOrientation != wanted) act.requestedOrientation = wanted
     }
 
     // Reading: the screen stays on, and the system bars go away until the page is tapped for the bar.
@@ -475,8 +486,10 @@ fun MushafViewerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            context.findActivity()?.requestedOrientation =
-                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            val act = context.findActivity() ?: return@onDispose
+            // Turning the screen restarts the activity and so ends this composition too; letting go of the lock then
+            // would turn the screen back and the lock would turn it again, over and over.
+            if (!act.isChangingConfigurations) act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
