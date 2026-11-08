@@ -1154,4 +1154,8 @@
     <string name="update_failed_network">Couldn\'t connect. Check your internet and try again.</string>
     <string name="update_failed_file">The downloaded file is damaged. Try again.</string>
     <string name="update_failed_storage">Not enough space on the device.</string>
+
+    <string name="notice_title_merged">Changes merged</string>
+    <string name="notice_merged">The account was changed on another device and on this one, so the changes were combined: %1$d added and %2$d removed on this device.</string>
+    <string name="notice_copy_merged">A copy of this device\'s data from before the merge is saved on this phone:</string>
 </resources>

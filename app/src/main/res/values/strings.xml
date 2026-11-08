@@ -1262,4 +1262,8 @@
     <string name="update_failed_network">تعذّر الاتصال. تحقق من الإنترنت وحاول مجددًا.</string>
     <string name="update_failed_file">الملف الذي نُزِّل غير سليم. حاول مجددًا.</string>
     <string name="update_failed_storage">لا توجد مساحة كافية على الجهاز.</string>
+
+    <string name="notice_title_merged">تم دمج التغييرات</string>
+    <string name="notice_merged">تغيّرت بيانات الحساب على جهاز آخر وعلى هذا الجهاز معًا، فدُمجت التغييرات: أُضيف %1$d وأُزيل %2$d على هذا الجهاز.</string>
+    <string name="notice_copy_merged">حُفظت على هذا الهاتف نسخة من بيانات هذا الجهاز قبل الدمج:</string>
 </resources>

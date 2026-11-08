@@ -20,7 +20,8 @@ enum class CopyReason(val tag: String) {
     DEVICE_REPLACED("device-replaced"),
     CLOUD_REPLACED("cloud-replaced"),
     DEVICE_DELETED("device-deleted"),
-    CLOUD_DELETED("cloud-deleted")
+    CLOUD_DELETED("cloud-deleted"),
+    BEFORE_MERGE("before-merge")
 }
 
 /** A copy of the user's data saved on this phone; [where] is how to find it. */

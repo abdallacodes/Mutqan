@@ -27,13 +27,46 @@ object SnapshotMerge {
         keyed(local, remote, base, "saved_passages") {
             listOf(it.optInt("kind"), it.optInt("start_ayah_id"), it.optInt("end_ayah_id"), it.optInt("word_id")).joinToString("|")
         }?.let { out.put("saved_passages", it) }
-        keyed(local, remote, base, "user_subjects") { "${it.optString("subject_text")}|${it.optInt("start_ayah_id")}" }?.let { out.put("user_subjects", it) }
+        // A verse starts one subject, so the verse is what identifies it and the title is its value: a title changed on
+        // one side is taken, changed on both keeps this side's, and two titles can never end up on one verse.
+        keyed(local, remote, base, "user_subjects") { it.optInt("start_ayah_id").toString() }?.let { out.put("user_subjects", it) }
         keyed(local, remote, base, "page_strength") { it.optInt("page").toString() }?.let { out.put("page_strength", it) }
 
         coverage(local, remote, base)?.let { out.put("hifz_coverage", it) }
         vault(local, remote, base)?.forEach { (name, array) -> out.put(name, array) }
         settings(local, remote, base)?.let { out.put("settings", it) }
         return out
+    }
+
+    // ── What a merge changed ────────────────────────────────────────────────
+
+    /** How many entries a merge brought in or took out of this device's data. */
+    data class Report(val added: Int, val removed: Int) {
+        val isEmpty get() = added == 0 && removed == 0
+    }
+
+    private val countedTables = listOf("revision_logs", "exercise_results", "revision_plans", "saved_passages", "user_subjects", "page_strength")
+
+    /**
+     * What [after] has that [before] did not, and the other way round, over the tables whose entries stand on their own
+     * (not the vault, whose rows are renumbered by every merge, nor the memorised ranges). An entry whose value changed
+     * counts once as removed and once as added.
+     */
+    fun report(before: JSONObject, after: JSONObject): Report {
+        var added = 0
+        var removed = 0
+        for (name in countedTables) {
+            val b = canons(before, name)
+            val a = canons(after, name)
+            added += a.count { it !in b }
+            removed += b.count { it !in a }
+        }
+        return Report(added, removed)
+    }
+
+    private fun canons(side: JSONObject, name: String): Set<String> {
+        val array = side.optJSONArray(name) ?: return emptySet()
+        return (0 until array.length()).mapTo(HashSet()) { canon(array.getJSONObject(it)) }
     }
 
     // ── Entries ─────────────────────────────────────────────────────────────

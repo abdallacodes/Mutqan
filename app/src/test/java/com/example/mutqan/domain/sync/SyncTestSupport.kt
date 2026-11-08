@@ -11,7 +11,18 @@ internal class FakeLocal(var text: String) : SyncLocal {
     var cleared = 0
     var failNextApply = false
 
+    /** The copies kept before a merge, and whether keeping one fails. */
+    val copies = mutableListOf<String>()
+    var failCopy = false
+    var appliedBeforeCopy = false
+
     override suspend fun snapshot() = text
+
+    override suspend fun keepCopyBeforeMerge(text: String) {
+        if (failCopy) throw SafetyCopyFailedException(IOException("no space"))
+        appliedBeforeCopy = appliedBeforeCopy || applied > 0
+        copies += text
+    }
 
     /** Like the real one: the data goes, the settings stay. */
     override suspend fun clear() {

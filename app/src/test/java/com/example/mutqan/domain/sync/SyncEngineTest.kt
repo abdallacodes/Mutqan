@@ -207,6 +207,44 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `a merge keeps this device's data first and reports what it changed`() {
+        val remote = FakeRemote()
+        val local = FakeLocal(data(1))
+        val memory = FakeMemory(SyncEngine.hash(data(1)), 0, data(1))
+        remote.put(data(1, 3))
+        val mine = data(1, 2)
+        local.text = mine
+        val engine = SyncEngine(local, remote, memory)
+        assertEquals(SyncOutcome.MERGED, kotlinx.coroutines.runBlocking { engine.sync() })
+        assertEquals(listOf(mine), local.copies)
+        assertFalse("the copy must be made before the data changes", local.appliedBeforeCopy)
+        assertEquals(1, engine.lastMerge?.added)
+        assertEquals(0, engine.lastMerge?.removed)
+    }
+
+    @Test
+    fun `a merge that cannot keep its copy changes and sends nothing`() {
+        val (remote, a, b) = synced(data(1))
+        a.text = data(1, 2); a.sync()
+        b.text = data(1, 3)
+        b.local.failCopy = true
+        val pushes = remote.pushes
+        failsWith<SafetyCopyFailedException> { b.sync() }
+        assertEquals(pushes, remote.pushes)
+        assertEquals(data(1, 3), b.text)
+    }
+
+    @Test
+    fun `a pull or a push keeps no copy`() {
+        val (remote, a, b) = synced(data(1))
+        a.text = data(1, 2); a.sync()
+        assertEquals(SyncOutcome.PULLED, b.sync())
+        b.text = data(1, 2, 5)
+        assertEquals(SyncOutcome.PUSHED, b.sync())
+        assertTrue(b.local.copies.isEmpty())
+    }
+
+    @Test
     fun `an empty device that is set up takes the account's data without sending anything`() {
         val remote = FakeRemote(RemoteSnapshot(4, data(1, 2))); val d = Device(remote)
         assertEquals(SyncOutcome.PULLED, d.sync())

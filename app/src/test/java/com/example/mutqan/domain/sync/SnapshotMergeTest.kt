@@ -142,7 +142,7 @@ class SnapshotMergeTest {
     fun `saved passages subjects and page levels of both sides are kept`() {
         fun side(passage: Int, subject: String, page: Int, level: Int) = JSONObject()
             .put("saved_passages", JSONArray().put(JSONObject().put("kind", 1).put("start_ayah_id", passage).put("end_ayah_id", passage).put("id", 5)))
-            .put("user_subjects", JSONArray().put(JSONObject().put("subject_text", subject).put("start_ayah_id", 1)))
+            .put("user_subjects", JSONArray().put(JSONObject().put("subject_text", subject).put("start_ayah_id", if (subject == "a") 1 else 2)))
             .put("page_strength", JSONArray().put(JSONObject().put("page", page).put("level", level)))
         val merged = SnapshotMerge.merge(side(10, "a", 3, 1), side(20, "b", 3, 2))
         assertEquals(2, merged.getJSONArray("saved_passages").length())
@@ -171,9 +171,62 @@ class SnapshotMergeTest {
 
     @Test
     fun `a subject the other side removed is removed`() {
-        fun subjects(vararg texts: String) = JSONObject().put("user_subjects", JSONArray(texts.map { JSONObject().put("subject_text", it).put("start_ayah_id", 1) }))
+        fun subjects(vararg texts: String) = JSONObject().put("user_subjects", JSONArray(texts.mapIndexed { i, t -> JSONObject().put("subject_text", t).put("start_ayah_id", i + 1) }))
         val merged = SnapshotMerge.merge(subjects("a", "b"), subjects("a"), subjects("a", "b"))
         assertEquals(listOf("a"), names(merged.getJSONArray("user_subjects"), "subject_text"))
+    }
+
+    private fun subjectAt(verse: Int, title: String) = JSONObject().put("subject_text", title).put("start_ayah_id", verse)
+    private fun withSubjects(vararg rows: JSONObject) = JSONObject().put("user_subjects", JSONArray(rows.toList()))
+
+    @Test
+    fun `a subject renamed on the other side is renamed here, not repeated`() {
+        val base = withSubjects(subjectAt(5, "old"))
+        val merged = SnapshotMerge.merge(withSubjects(subjectAt(5, "old")), withSubjects(subjectAt(5, "new")), base)
+        assertEquals(listOf("new"), names(merged.getJSONArray("user_subjects"), "subject_text"))
+    }
+
+    @Test
+    fun `a subject renamed on both sides keeps this side's title, and only one is left`() {
+        val base = withSubjects(subjectAt(5, "old"))
+        val merged = SnapshotMerge.merge(withSubjects(subjectAt(5, "mine")), withSubjects(subjectAt(5, "theirs")), base)
+        assertEquals(listOf("mine"), names(merged.getJSONArray("user_subjects"), "subject_text"))
+    }
+
+    @Test
+    fun `two subjects started at one verse on the two sides leave one`() {
+        val merged = SnapshotMerge.merge(withSubjects(subjectAt(5, "mine")), withSubjects(subjectAt(5, "theirs")))
+        assertEquals(listOf("mine"), names(merged.getJSONArray("user_subjects"), "subject_text"))
+    }
+
+    @Test
+    fun `a subject at another verse on the other side is added`() {
+        val merged = SnapshotMerge.merge(withSubjects(subjectAt(5, "mine")), withSubjects(subjectAt(9, "theirs")))
+        assertEquals(listOf("mine", "theirs"), names(merged.getJSONArray("user_subjects"), "subject_text"))
+    }
+
+    // ── The report ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `the report counts what came in and what went out`() {
+        val before = snapshot(listOf(log(1, 1), log(2, 2)), listOf("p"))
+        val after = snapshot(listOf(log(2, 9), log(3, 3), log(4, 4)), listOf("p"))
+        val report = SnapshotMerge.report(before, after)
+        assertEquals(2, report.added)
+        assertEquals(1, report.removed)
+    }
+
+    @Test
+    fun `a merge that changes nothing has an empty report`() {
+        val side = snapshot(listOf(log(1, 1)), listOf("p"))
+        assertTrue(SnapshotMerge.report(side, JSONObject(side.toString())).isEmpty)
+    }
+
+    @Test
+    fun `a renamed subject counts once out and once in`() {
+        val report = SnapshotMerge.report(withSubjects(subjectAt(5, "old")), withSubjects(subjectAt(5, "new")))
+        assertEquals(1, report.added)
+        assertEquals(1, report.removed)
     }
 
     // ── Memorised ranges ────────────────────────────────────────────────────

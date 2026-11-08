@@ -17,6 +17,12 @@ interface SyncLocal {
 
     /** Removes everything the user made on this device; the settings stay. */
     suspend fun clear()
+
+    /**
+     * Keeps a copy of [text], this device's data, before a merge changes it. If the copy cannot be kept this throws and
+     * the merge does not happen.
+     */
+    suspend fun keepCopyBeforeMerge(text: String) {}
 }
 
 /** The cloud side. [push] succeeds only if the copy is still at [expectedVersion] and returns the new version, else null. */
@@ -70,12 +76,17 @@ class CloudCopyDamagedException(val expected: Int, val foundIds: List<String>, v
  */
 class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, private val memory: SyncMemory) {
 
+    /** What the last merge brought in and took out of this device's data; null if the last sync did not merge. */
+    var lastMerge: SnapshotMerge.Report? = null
+        private set
+
     /**
      * A device that is set up and whose cloud copy has gone gets [CloudCopyGoneException]: the copy was deleted on
      * purpose, from here or from another device, so it is not uploaded again without being asked.
      */
     suspend fun sync(): SyncOutcome {
         if (memory.lastLocalHash() == null) throw NotLinkedException()
+        lastMerge = null
         repeat(ATTEMPTS) {
             attempt()?.let { return it }
         }
@@ -151,7 +162,12 @@ class SyncEngine(private val local: SyncLocal, private val remote: SyncRemote, p
             else -> {
                 // The last synced data tells a deletion from something the other side never had.
                 val base = memory.lastSnapshot()?.let { runCatching { JSONObject(it) }.getOrNull() }
-                local.apply(SnapshotMerge.merge(JSONObject(text), JSONObject(cloud.text), base).toString())
+                val mine = JSONObject(text)
+                val combined = SnapshotMerge.merge(mine, JSONObject(cloud.text), base)
+                // A merge applies what the other device deleted or changed, so this device's data is kept first.
+                local.keepCopyBeforeMerge(text)
+                local.apply(combined.toString())
+                lastMerge = SnapshotMerge.report(mine, combined)
                 val merged = local.snapshot()
                 val version = remote.push(merged, cloud.version) ?: return null
                 memory.remember(hash(merged), version, merged)

@@ -57,14 +57,14 @@ data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val cloudExi
 /** How this device joins the account: the cloud copy replaces what is on the device, or the device replaces the cloud copy. */
 enum class Choice { CLOUD_WINS, DEVICE_WINS }
 
-enum class NoticeKind { SYNC_ON_CLOUD, SYNC_ON_DEVICE, CLOUD_DELETED, DEVICE_RESET }
+enum class NoticeKind { SYNC_ON_CLOUD, SYNC_ON_DEVICE, CLOUD_DELETED, DEVICE_RESET, MERGED }
 
 /**
  * What the user is told once an override or a deletion is complete. [copy] is the file saved on the phone before
  * anything changed, or null when there was nothing to keep; [cloudExisted] says whether the account had data (only
  * [NoticeKind.SYNC_ON_CLOUD] needs it).
  */
-data class SyncNotice(val kind: NoticeKind, val copy: SavedCopy?, val cloudExisted: Boolean = true)
+data class SyncNotice(val kind: NoticeKind, val copy: SavedCopy?, val cloudExisted: Boolean = true, val merge: SnapshotMerge.Report? = null)
 
 /** Another device the account is in use on; [lastActive] is when it last synced (millis), if known. */
 data class OtherDevice(val lastActive: Long?)
@@ -78,6 +78,10 @@ class CloudSync private constructor(context: Context) {
     private val backup by lazy { BackupManager(appContext) }
     private val copies by lazy { SafetyCopies(appContext) }
     private var pending: Job? = null
+
+    /** The copy a merge kept of this device's data, for the notice that follows it. */
+    @Volatile
+    private var keptCopy: SavedCopy? = null
 
     val accounts = AccountManager(appContext)
     val isConfigured: Boolean get() = accounts.isConfigured
@@ -295,8 +299,17 @@ class CloudSync private constructor(context: Context) {
             if (accounts.account.value?.uid != account.uid || prefs.syncOwner() != account.uid) return
             _status.value = SyncStatus.Syncing
             _status.value = try {
-                val outcome = withTimeout(TIMEOUT_MS) { engineFor(account.uid, FirestoreRemote(account.uid, prefs.deviceId())).sync() }
+                keptCopy = null
+                val engine = engineFor(account.uid, FirestoreRemote(account.uid, prefs.deviceId()))
+                val outcome = withTimeout(TIMEOUT_MS) { engine.sync() }
+                // Two devices changed the account: say what the merge did and where the copy of this device's data is.
+                val merge = engine.lastMerge
+                if (outcome == SyncOutcome.MERGED && merge != null && !merge.isEmpty) {
+                    _notice.value = SyncNotice(NoticeKind.MERGED, keptCopy, merge = merge)
+                }
                 SyncStatus.Done(outcome).also { prefs.setLastSyncTime(System.currentTimeMillis()) }
+            } catch (e: SafetyCopyFailedException) {
+                SyncStatus.CopyFailed
             } catch (e: CloudCopyGoneException) {
                 prefs.forgetSyncHistory()
                 SyncStatus.CloudGone
@@ -380,6 +393,9 @@ class CloudSync private constructor(context: Context) {
             override suspend fun snapshot() = backup.buildSnapshot().toString()
             override suspend fun apply(text: String) = backup.restoreSnapshot(JSONObject(text))
             override suspend fun clear() = backup.clearUserData()
+            override suspend fun keepCopyBeforeMerge(text: String) {
+                keptCopy = copies.save(CopyReason.BEFORE_MERGE, text)
+            }
         },
         remote = remote,
         memory = prefs.syncMemoryFor(uid)

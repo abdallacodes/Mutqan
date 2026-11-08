@@ -21,7 +21,7 @@ import com.example.mutqan.domain.sync.CloudSync
 import com.example.mutqan.domain.sync.NoticeKind
 
 /**
- * Says what just happened once a join, a cloud deletion or a device deletion is complete: what changed, that a copy of
+ * Says what just happened once a join, a merge, a cloud deletion or a device deletion is complete: what changed, that a copy of
  * what was replaced or deleted is saved on this phone (and where), and, for a join, that syncing is on. It lives at
  * the root of the app because the screen that started the action may be gone by then, as after deleting the device's data.
  */
@@ -36,17 +36,20 @@ fun SyncNoticeHost() {
         NoticeKind.SYNC_ON_CLOUD, NoticeKind.SYNC_ON_DEVICE -> R.string.notice_title_sync
         NoticeKind.CLOUD_DELETED -> R.string.notice_title_cloud_deleted
         NoticeKind.DEVICE_RESET -> R.string.notice_title_device_reset
+        NoticeKind.MERGED -> R.string.notice_title_merged
     }
-    val what = when (shown.kind) {
-        NoticeKind.SYNC_ON_CLOUD -> if (shown.cloudExisted) R.string.notice_sync_cloud else R.string.notice_sync_cloud_empty
-        NoticeKind.SYNC_ON_DEVICE -> R.string.notice_sync_device
-        NoticeKind.CLOUD_DELETED -> R.string.notice_cloud_deleted
-        NoticeKind.DEVICE_RESET -> R.string.notice_device_reset
+    val what: String = when (shown.kind) {
+        NoticeKind.SYNC_ON_CLOUD -> stringResource(if (shown.cloudExisted) R.string.notice_sync_cloud else R.string.notice_sync_cloud_empty)
+        NoticeKind.SYNC_ON_DEVICE -> stringResource(R.string.notice_sync_device)
+        NoticeKind.CLOUD_DELETED -> stringResource(R.string.notice_cloud_deleted)
+        NoticeKind.DEVICE_RESET -> stringResource(R.string.notice_device_reset)
+        NoticeKind.MERGED -> stringResource(R.string.notice_merged, shown.merge?.added ?: 0, shown.merge?.removed ?: 0)
     }
     val savedLine = when (shown.kind) {
         NoticeKind.SYNC_ON_CLOUD -> R.string.notice_copy_replaced_device
         NoticeKind.SYNC_ON_DEVICE -> R.string.notice_copy_replaced_cloud
         NoticeKind.CLOUD_DELETED, NoticeKind.DEVICE_RESET -> R.string.notice_copy_deleted
+        NoticeKind.MERGED -> R.string.notice_copy_merged
     }
 
     PaperDialog(
@@ -54,7 +57,7 @@ fun SyncNoticeHost() {
         title = { Text(stringResource(title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(what), style = MaterialTheme.typography.bodyMedium)
+                Text(what, style = MaterialTheme.typography.bodyMedium)
                 val copy = shown.copy
                 if (copy != null) {
                     Text(stringResource(savedLine), style = MaterialTheme.typography.bodyMedium)
