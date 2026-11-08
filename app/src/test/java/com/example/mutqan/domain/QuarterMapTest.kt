@@ -56,6 +56,29 @@ class QuarterMapTest {
     }
 
     @Test
+    fun `a subject covers its verses up to the next subject or the end of its quarter`() {
+        val quarters = listOf(rub(5, 20, 22), rub(6, 22, 24)) // ayahs 50..59 and 60..69
+        val spans = QuarterMap.subjectSpans(quarters, listOf(56 to "B", 52 to "A", 63 to "C"))
+        assertEquals(
+            listOf(SubjectSpan(52, 55, "A"), SubjectSpan(56, 59, "B"), SubjectSpan(63, 69, "C")),
+            spans
+        )
+    }
+
+    @Test
+    fun `verses before the first subject of a quarter, and subjects outside every quarter, are left out`() {
+        val quarters = listOf(rub(5, 20, 22))
+        assertEquals(listOf(SubjectSpan(55, 59, "A")), QuarterMap.subjectSpans(quarters, listOf(55 to "A", 99 to "elsewhere")))
+        assertEquals(emptyList<SubjectSpan>(), QuarterMap.subjectSpans(quarters, emptyList()))
+    }
+
+    @Test
+    fun `two subjects at one verse leave it to the later one`() {
+        val quarters = listOf(rub(5, 20, 22))
+        assertEquals(listOf(SubjectSpan(52, 59, "second")), QuarterMap.subjectSpans(quarters, listOf(52 to "first", 52 to "second")))
+    }
+
+    @Test
     fun `the following quarter crosses into the next juz and stops at the end`() {
         val juz1 = (1..8).map { rub(it, it, it) }
         val juz2 = (9..16).map { rub(it, it, it) }

@@ -8,6 +8,7 @@ import com.example.mutqan.data.SurahData
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.domain.AyahGroup
 import com.example.mutqan.domain.HifzCoverage
 import com.example.mutqan.domain.MistakeTag
@@ -69,11 +70,29 @@ class MushafViewerViewModel(
 
     suspend fun groupsOfAyah(ayahId: Int): List<AyahGroup> = study.groupsOfAyah(ayahId)
 
+    /** The user's subjects as stored, to edit the one that starts at a verse. */
+    val userSubjects: StateFlow<List<UserSubjectEntity>> = dao.observeUserSubjectsBetween(1, Int.MAX_VALUE)
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** The user's subjects (start ayah id to title), for showing the subject of the quarter being read. */
-    val subjects: StateFlow<List<Pair<Int, String>>> = dao.observeUserSubjectsBetween(1, Int.MAX_VALUE)
+    val subjects: StateFlow<List<Pair<Int, String>>> = userSubjects
         .map { list -> list.map { it.startAyahId to it.subjectText } }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** A subject called [text] that starts at [ayahId]; a verse that already starts one gets the new title instead. */
+    fun addSubject(text: String, ayahId: Int) {
+        viewModelScope.launch(Dispatchers.IO) { dao.saveUserSubject(text, ayahId) }
+    }
+
+    fun renameSubject(subject: UserSubjectEntity, text: String) {
+        viewModelScope.launch(Dispatchers.IO) { dao.saveUserSubject(text, subject.startAyahId, subject) }
+    }
+
+    fun deleteSubject(subject: UserSubjectEntity) {
+        viewModelScope.launch(Dispatchers.IO) { dao.deleteUserSubject(subject) }
+    }
 
     /** All the user's mutashabihat groups, newest first, for the "add to group" sheet. */
     val groups: StateFlow<List<GroupWithCount>> = study.allGroupsWithMemberCount()

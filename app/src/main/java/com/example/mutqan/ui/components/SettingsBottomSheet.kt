@@ -356,6 +356,7 @@ fun SettingsBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
             )
+            com.example.mutqan.ui.update.UpdateSettingsRow()
             Text(
                 text = stringResource(R.string.how_link),
                 style = MaterialTheme.typography.bodyMedium,

@@ -56,7 +56,6 @@ import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.QuarterMap
 import com.example.mutqan.domain.RecallOutcome
-import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.ui.components.Folio
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperDialog
@@ -68,7 +67,7 @@ import com.example.mutqan.ui.heatmap.components.AyahPreviewBottomSheet
 import com.example.mutqan.ui.heatmap.components.QuarterCard
 import com.example.mutqan.ui.heatmap.components.QuarterJointSheet
 import com.example.mutqan.ui.heatmap.components.QuarterStrip
-import com.example.mutqan.ui.heatmap.components.SubjectEditorDialog
+import com.example.mutqan.ui.heatmap.components.SubjectEditorSheet
 import com.example.mutqan.ui.revision.OutcomePicker
 import com.example.mutqan.ui.revision.OutcomePreview
 import kotlinx.coroutines.launch
@@ -122,7 +121,6 @@ fun JuzDetailScreen(
 
     var editingUnitId by remember { mutableStateOf<Int?>(null) }
     var editingSubject by remember { mutableStateOf<UserSubjectEntity?>(null) }
-    var editingAyahs by remember { mutableStateOf<List<QuranAyah>>(emptyList()) }
     var subjectToDelete by remember { mutableStateOf<UserSubjectEntity?>(null) }
 
     // One quarter open at a time (by its number 1..240), so the list stays short.
@@ -211,12 +209,10 @@ fun JuzDetailScreen(
                     onToggle = { openQuarter = if (openQuarter == unit.number) null else unit.number },
                     onAddSubject = {
                         editingUnitId = unit.number
-                        editingAyahs = q.card.ayahsInQuarter
                         editingSubject = null
                     },
                     onEditSubject = { subject ->
                         editingUnitId = unit.number
-                        editingAyahs = q.card.ayahsInQuarter
                         editingSubject = subject
                     },
                     onDeleteSubject = { subject -> subjectToDelete = subject },
@@ -258,26 +254,28 @@ fun JuzDetailScreen(
         )
     }
 
-    editingUnitId?.let {
-        SubjectEditorDialog(
-            ayahs = editingAyahs,
-            initialText = editingSubject?.subjectText ?: "",
-            initialAyahId = editingSubject?.startAyahId,
-            onSave = { text, startAyahId ->
-                val current = editingSubject
-                if (current == null) {
-                    viewModel.addSubject(text, startAyahId)
-                } else {
-                    viewModel.updateSubject(current, text, startAyahId)
+    editingUnitId?.let { unitNumber ->
+        val card = quarters.firstOrNull { it.card.unit.number == unitNumber }?.card
+        if (card != null) {
+            val editing = editingSubject
+            SubjectEditorSheet(
+                ayahs = card.ayahsInQuarter,
+                // The other subjects of this quarter: their verses cannot start this one as well.
+                taken = card.subjects
+                    .filter { it.entity.id != editing?.id }
+                    .associate { it.entity.startAyahId to it.entity.subjectText },
+                editing = editing,
+                onSave = { text, startAyahId ->
+                    viewModel.saveSubject(text, startAyahId, editing)
+                    editingUnitId = null
+                    editingSubject = null
+                },
+                onDismiss = {
+                    editingUnitId = null
+                    editingSubject = null
                 }
-                editingUnitId = null
-                editingSubject = null
-            },
-            onDismiss = {
-                editingUnitId = null
-                editingSubject = null
-            }
-        )
+            )
+        }
     }
 
     subjectToDelete?.let { subject ->

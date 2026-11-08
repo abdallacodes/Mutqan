@@ -50,10 +50,23 @@ import androidx.compose.ui.graphics.luminance
 
 /**
  * Covers the words of a page for reciting from memory: every ayah is drawn as grey bars in place of its words
- * unless its id (`QuranAyah.id`) is in [revealedAyahs].
+ * unless its id (`QuranAyah.id`) is in [revealedAyahs], or is shown in part, as [partial] says for it.
  */
-class PageCover(val revealedAyahs: Set<Int>) {
-    fun hides(ayahId: Int) = ayahId != 0 && ayahId !in revealedAyahs
+class PageCover(val revealedAyahs: Set<Int>, val partial: Map<Int, PartialReveal> = emptyMap()) {
+    /** Whether the word [wordId] of ayah [ayahId] is drawn as a bar instead of its glyph. */
+    fun hides(ayahId: Int, wordId: Int): Boolean {
+        if (ayahId == 0 || ayahId in revealedAyahs) return false
+        val part = partial[ayahId] ?: return true
+        return !part.shows(wordId)
+    }
+}
+
+/**
+ * An ayah shown in part while the rest stays covered: its first word ([firstWordId]) and, with [withLast], its last word
+ * ([lastWordId], the last one that is read, not the number marker) and the number marker that closes it.
+ */
+class PartialReveal(val firstWordId: Int, val lastWordId: Int, val withLast: Boolean) {
+    fun shows(wordId: Int) = wordId == firstWordId || (withLast && wordId >= lastWordId)
 }
 
 private sealed interface PageLoad {
@@ -279,7 +292,7 @@ private fun PageCanvas(
                 when (placed.line.type) {
                     MushafLineType.AYAH ->
                         for (word in placed.words) {
-                            if (cover?.hides(word.ayahId) != true) {
+                            if (cover?.hides(word.ayahId, word.wordId) != true) {
                                 native.drawText(word.glyph, word.x, placed.centerY + pageBaseline, pagePaint)
                             }
                             if (word.wordId in quarterStarts) {
@@ -312,7 +325,7 @@ private fun PageCanvas(
             val bar = ink.copy(alpha = 0.16f)
             for (placed in g.lines) {
                 for (word in placed.words) {
-                    if (!cover.hides(word.ayahId)) continue
+                    if (!cover.hides(word.ayahId, word.wordId)) continue
                     drawRoundRect(
                         color        = bar,
                         topLeft      = Offset(word.x, placed.centerY - g.lineHeight * 0.17f),

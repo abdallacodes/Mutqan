@@ -300,7 +300,6 @@
     <string name="error_folder_name_exists">Folder name already exists</string>
     <string name="subject_name_label">Subject name</string>
     <string name="subject_start_ayah_label">Start ayah</string>
-    <string name="subject_ayah_option">Ayah\u00A0%1$d (Surah\u00A0%2$d)</string>
     <string name="search_filters_title">SEARCH FILTERS</string>
     <string name="search_no_results_filtered">No results found with current filters</string>
     <string name="error_unknown">Unknown error</string>
@@ -1125,4 +1124,34 @@
     <string name="mushaf_menu_fill_width">Fill the width in two-page view</string>
     <string name="home_weak_other">Show others</string>
     <string name="home_weak_all">All weak passages (%1$d)</string>
+
+    <string name="mushaf_menu_subject_tint">Colour the subjects</string>
+
+    <string name="mushaf_subject_start_here">Start a subject here</string>
+    <string name="mushaf_subject_here">Subject starts here: %1$s</string>
+    <string name="mushaf_subject_starts_at">Starts at: %1$s</string>
+    <string name="mushaf_subject_saved">Subject saved</string>
+
+    <string name="mushaf_menu_reveal_steps">Reveal verses in steps</string>
+    <string name="mushaf_cover_hint_steps">Tap a verse: first word, then last word, then the whole verse</string>
+    <string name="subject_pick_start_hint">Choose the verse the subject starts at</string>
+
+    <string name="update_auto">Check for updates automatically</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_latest">You have the latest version</string>
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_available_body">It installs over this version and your data stays as it is.</string>
+    <string name="update_btn">Update now</string>
+    <string name="update_to">Update to version %1$s</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_ready">Downloaded. Tap Install to finish the update.</string>
+    <string name="update_install">Install</string>
+    <string name="update_install_version">Install version %1$s</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_allow_install">Allow the app to install apps, then come back and tap Install again</string>
+    <string name="update_install_failed">Couldn\'t open the installer</string>
+    <string name="update_failed_network">Couldn\'t connect. Check your internet and try again.</string>
+    <string name="update_failed_file">The downloaded file is damaged. Try again.</string>
+    <string name="update_failed_storage">Not enough space on the device.</string>
 </resources>

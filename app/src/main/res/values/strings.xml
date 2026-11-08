@@ -316,7 +316,6 @@
     <string name="error_folder_name_exists">اسم المجلد موجود بالفعل</string>
     <string name="subject_name_label">اسم الموضوع</string>
     <string name="subject_start_ayah_label">آية البداية</string>
-    <string name="subject_ayah_option">الآية\u00A0%1$d (سورة\u00A0%2$d)</string>
     <string name="search_filters_title">خيارات البحث</string>
     <string name="search_no_results_filtered">لا توجد نتائج بالمرشحات الحالية</string>
     <string name="error_unknown">خطأ غير معروف</string>
@@ -1233,4 +1232,34 @@
     <string name="mushaf_menu_fill_width">ملء العرض في عرض صفحتين</string>
     <string name="home_weak_other">غيرها</string>
     <string name="home_weak_all">كل المواضع الضعيفة (%1$d)</string>
+
+    <string name="mushaf_menu_subject_tint">تلوين المواضيع</string>
+
+    <string name="mushaf_subject_start_here">ابدأ موضوعًا هنا</string>
+    <string name="mushaf_subject_here">موضوع يبدأ هنا: %1$s</string>
+    <string name="mushaf_subject_starts_at">يبدأ من: %1$s</string>
+    <string name="mushaf_subject_saved">تم حفظ الموضوع</string>
+
+    <string name="mushaf_menu_reveal_steps">إظهار الآية على مراحل</string>
+    <string name="mushaf_cover_hint_steps">اضغط على آية: الكلمة الأولى، ثم الأخيرة، ثم الآية كلها</string>
+    <string name="subject_pick_start_hint">اختر الآية التي يبدأ منها الموضوع</string>
+
+    <string name="update_auto">التحقق تلقائيًا من وجود تحديث</string>
+    <string name="update_check">التحقق من وجود تحديث</string>
+    <string name="update_checking">جارٍ التحقق…</string>
+    <string name="update_latest">أنت على أحدث إصدار</string>
+    <string name="update_available">الإصدار %1$s متاح</string>
+    <string name="update_available_body">يُثبَّت فوق النسخة الحالية وتبقى بياناتك كما هي.</string>
+    <string name="update_btn">حدّث الآن</string>
+    <string name="update_to">التحديث إلى الإصدار %1$s</string>
+    <string name="update_downloading">جارٍ التنزيل… %1$d%%</string>
+    <string name="update_ready">تم التنزيل. اضغط «ثبّت» لإكمال التحديث.</string>
+    <string name="update_install">ثبّت</string>
+    <string name="update_install_version">تثبيت الإصدار %1$s</string>
+    <string name="update_retry">حاول مجددًا</string>
+    <string name="update_allow_install">اسمح للتطبيق بتثبيت التطبيقات، ثم ارجع واضغط «ثبّت» مرة أخرى</string>
+    <string name="update_install_failed">تعذّر فتح برنامج التثبيت</string>
+    <string name="update_failed_network">تعذّر الاتصال. تحقق من الإنترنت وحاول مجددًا.</string>
+    <string name="update_failed_file">الملف الذي نُزِّل غير سليم. حاول مجددًا.</string>
+    <string name="update_failed_storage">لا توجد مساحة كافية على الجهاز.</string>
 </resources>

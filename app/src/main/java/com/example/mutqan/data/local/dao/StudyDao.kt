@@ -18,6 +18,7 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.domain.SubjectRules
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -238,6 +239,28 @@ abstract class StudyDao {
 
     @Delete
     abstract suspend fun deleteUserSubject(subject: UserSubjectEntity)
+
+    @Query("SELECT * FROM user_subjects WHERE start_ayah_id = :ayahId LIMIT 1")
+    abstract suspend fun userSubjectStartingAt(ayahId: Int): UserSubjectEntity?
+
+    /**
+     * Saves a subject so a verse starts at most one: [replacing] is the subject being edited, null for a new one
+     * (see [SubjectRules.plan]).
+     */
+    @Transaction
+    open suspend fun saveUserSubject(text: String, ayahId: Int, replacing: UserSubjectEntity? = null) {
+        val plan = SubjectRules.plan(text, ayahId, userSubjectStartingAt(ayahId), replacing)
+        plan.delete?.let { deleteUserSubject(it) }
+        if (plan.write.id == 0) insertUserSubject(plan.write) else updateUserSubject(plan.write)
+    }
+
+    /** Adds the subjects of a shared file; a verse that already starts a subject keeps it. */
+    @Transaction
+    open suspend fun importUserSubjects(subjects: List<UserSubjectEntity>) {
+        for (subject in SubjectRules.onePerVerse(subjects)) {
+            if (userSubjectStartingAt(subject.startAyahId) == null) insertUserSubject(subject.copy(id = 0))
+        }
+    }
 
     // ─────────────────────────────────────────────────────────
     // Backup & Restore

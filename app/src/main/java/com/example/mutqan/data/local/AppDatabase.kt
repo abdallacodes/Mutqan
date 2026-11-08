@@ -38,7 +38,7 @@ import com.example.mutqan.quran.QuranRepository
         ExerciseResultEntity::class,
         PageStrengthEntity::class
     ],
-    version = 22,
+    version = 23,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -163,6 +163,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * A verse starts at most one subject: where several began at one verse, the newest stays, then the index on the
+         * start verse becomes unique.
+         */
+        val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DELETE FROM `user_subjects` WHERE `id` NOT IN (SELECT MAX(`id`) FROM `user_subjects` GROUP BY `start_ayah_id`)")
+                db.execSQL("DROP INDEX IF EXISTS `index_user_subjects_start_ayah_id`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_user_subjects_start_ayah_id` ON `user_subjects` (`start_ayah_id`)")
+            }
+        }
+
         /** Strength plans are set in pages a day per tier instead of days per tier. */
         /** How well the user says they know each page, as a starting point for the plan. */
         val MIGRATION_21_22 = object : Migration(21, 22) {
@@ -233,7 +245,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

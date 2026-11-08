@@ -52,7 +52,7 @@ class MigrationTest {
             it.execSQL("INSERT INTO vault_folders VALUES (1, 'Folder', NULL, 5)")
             it.execSQL("INSERT INTO similarity_groups VALUES (1, 'group', 0.6, 'notes', 1)")
             it.execSQL("INSERT INTO similarity_members VALUES (1, 262), (1, 7)")
-            it.execSQL("INSERT INTO user_subjects VALUES (1, 1, 'subject', 7, 3)")
+            it.execSQL("INSERT INTO user_subjects VALUES (1, 1, 'first', 7, 3), (2, 1, 'subject', 7, 3)")
             it.version = 13
         }
     }
@@ -117,6 +117,9 @@ class MigrationTest {
             assertEquals("subject", subject.subjectText)
             assertEquals(7, subject.startAyahId)
             assertEquals(3, subject.orderIndex)
+            // Two subjects began at verse 7; the newer one stayed, and a verse starts one subject from now on.
+            dao.saveUserSubject("renamed", 7)
+            assertEquals("renamed", dao.getAllUserSubjectsSync().single().subjectText)
 
             // Quran tables are gone.
             val tables = db.openHelper.readableDatabase

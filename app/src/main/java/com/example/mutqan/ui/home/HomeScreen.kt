@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +62,9 @@ import com.example.mutqan.domain.PlanOrder
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RecallOutcome
+import com.example.mutqan.domain.update.UpdateManager
+import com.example.mutqan.ui.update.UpdateCard
+import com.example.mutqan.ui.update.isOffered
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.HubRow
 import com.example.mutqan.ui.components.PaperButton
@@ -145,6 +149,11 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     OnTabReselected(Routes.HOME) { listState.animateScrollToItem(0) }
 
+    // A new version on GitHub is offered on this screen; the app looks at most twice a day.
+    val updates = remember(context) { UpdateManager.get(context) }
+    val updateState by updates.state.collectAsState()
+    LaunchedEffect(Unit) { updates.checkIfDue() }
+
     val sessionToday = state.today
     if (sessionOpen && sessionToday != null) {
         ReviewSession(
@@ -202,6 +211,9 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            if (updateState.isOffered) {
+                item(key = "update") { UpdateCard(updateState, updates) }
+            }
             val plan = state.plan
             val today = state.today
             when {

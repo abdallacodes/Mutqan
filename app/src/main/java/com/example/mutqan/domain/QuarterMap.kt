@@ -8,6 +8,9 @@ import com.example.mutqan.quran.QuranRub
  */
 data class QuarterHealth(val average: Float?, val tracked: Int, val total: Int)
 
+/** One subject the user gave and the verses it covers (global ayah ids, both ends included). */
+data class SubjectSpan(val startAyahId: Int, val endAyahId: Int, val title: String)
+
 /** The numbers behind the juz map: a strength per quarter, the one to look at first, and which quarter follows which. */
 object QuarterMap {
 
@@ -39,6 +42,25 @@ object QuarterMap {
     fun subjectAt(rub: QuranRub, subjects: List<Pair<Int, String>>, ayahId: Int): String? {
         val inQuarter = subjects.filter { it.first in rub.startAyahId..rub.endAyahId }.sortedBy { it.first }
         return (inQuarter.lastOrNull { it.first <= ayahId } ?: inQuarter.firstOrNull())?.second
+    }
+
+    /**
+     * The verses each subject covers, in Mushaf order: from the verse it starts at up to the verse before the next subject
+     * of the same quarter, or to the quarter's last verse. A subject never runs into the next quarter, and the verses of a
+     * quarter before its first subject belong to none. A subject that starts at the same verse as a later one is covered by
+     * it (it would have no verses). [subjects] are (start ayah id, title) pairs, in any order.
+     */
+    fun subjectSpans(rubs: List<QuranRub>, subjects: List<Pair<Int, String>>): List<SubjectSpan> {
+        val sorted = subjects.sortedBy { it.first }
+        val spans = ArrayList<SubjectSpan>()
+        for (rub in rubs.sortedBy { it.startAyahId }) {
+            val inQuarter = sorted.filter { it.first in rub.startAyahId..rub.endAyahId }
+            inQuarter.forEachIndexed { index, (start, title) ->
+                val end = if (index + 1 < inQuarter.size) inQuarter[index + 1].first - 1 else rub.endAyahId
+                if (end >= start) spans += SubjectSpan(start, end, title)
+            }
+        }
+        return spans
     }
 
     /** The quarter whose beginning joins the end of [rub]: the next one in [rubs] (this juz), else the first of [nextJuz]; null after the last of the Quran. */

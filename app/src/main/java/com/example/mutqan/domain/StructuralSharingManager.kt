@@ -78,7 +78,7 @@ class StructuralSharingManager(private val context: Context) {
                 )
             }
 
-            dao.insertUserSubjects(subjectsToInsert)
+            dao.importUserSubjects(subjectsToInsert)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

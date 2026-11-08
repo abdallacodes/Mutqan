@@ -23,7 +23,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Tune
@@ -62,6 +64,8 @@ import com.example.mutqan.ui.theme.FolioTheme
 @Composable
 fun MushafMenuSheet(
     showGroupAyahs: Boolean,
+    subjectTint: Boolean,
+    revealSteps: Boolean,
     twoPage: Boolean,
     fillWidth: Boolean,
     rotateWithDevice: Boolean,
@@ -69,6 +73,8 @@ fun MushafMenuSheet(
     onListen: () -> Unit,
     onRecitation: () -> Unit,
     onGroupAyahs: (Boolean) -> Unit,
+    onSubjectTint: (Boolean) -> Unit,
+    onRevealSteps: (Boolean) -> Unit,
     onSaved: () -> Unit,
     onMarkMemorised: () -> Unit,
     onFillWidth: (Boolean) -> Unit,
@@ -96,6 +102,10 @@ fun MushafMenuSheet(
             }
             Group(R.string.mushaf_menu_study) {
                 SwitchRow(Icons.Filled.Highlight, stringResource(R.string.mushaf_menu_group_ayahs), showGroupAyahs, onGroupAyahs)
+                FolioDivider(inset = DIVIDER_INSET)
+                SwitchRow(Icons.Filled.Palette, stringResource(R.string.mushaf_menu_subject_tint), subjectTint, onSubjectTint)
+                FolioDivider(inset = DIVIDER_INSET)
+                SwitchRow(Icons.Filled.LinearScale, stringResource(R.string.mushaf_menu_reveal_steps), revealSteps, onRevealSteps)
                 FolioDivider(inset = DIVIDER_INSET)
                 ActionRow(Icons.Filled.Bookmarks, stringResource(R.string.mushaf_cd_saved), onSaved)
                 FolioDivider(inset = DIVIDER_INSET)

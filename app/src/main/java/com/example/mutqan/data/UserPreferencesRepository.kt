@@ -27,6 +27,8 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_TAFSIR_SOURCE     = intPreferencesKey("tafsir_source")
         private val KEY_MUSHAF_THEME      = stringPreferencesKey("mushaf_theme")
         private val KEY_MUSHAF_ROTATE     = booleanPreferencesKey("mushaf_rotate")
+        private val KEY_MUSHAF_SUBJECTS   = booleanPreferencesKey("mushaf_subject_tint")
+        private val KEY_MUSHAF_REVEAL     = booleanPreferencesKey("mushaf_reveal_steps")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
@@ -89,6 +91,23 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafRotate(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_ROTATE] = on }
+    }
+
+    /** Whether the Mushaf tints the verses of the subjects the user gave the parts of each juz. On unless turned off. */
+    val mushafSubjectTint: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_MUSHAF_SUBJECTS] ?: true }
+
+    suspend fun setMushafSubjectTint(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_SUBJECTS] = on }
+    }
+
+    /**
+     * How a covered verse is shown when tapped: in steps (first word, then the last word too, then the whole verse) when
+     * on, the whole verse at once when off. Off unless turned on.
+     */
+    val mushafRevealSteps: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_MUSHAF_REVEAL] ?: false }
+
+    suspend fun setMushafRevealSteps(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_REVEAL] = on }
     }
 
     /** The reciter the reader chose (see Reciter); empty until they choose. */

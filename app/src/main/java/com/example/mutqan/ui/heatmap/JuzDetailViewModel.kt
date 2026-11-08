@@ -183,24 +183,9 @@ class JuzDetailViewModel(
 
     fun dismissDialog() { _selectedPage.value = null }
 
-    fun addSubject(text: String, startAyahId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.insertUserSubject(
-                UserSubjectEntity(
-                    subjectText = text,
-                    startAyahId = startAyahId,
-                    orderIndex = 0
-                )
-            )
-        }
-    }
-
-    fun updateSubject(entity: UserSubjectEntity, newText: String, newStartAyahId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.updateUserSubject(
-                entity.copy(subjectText = newText, startAyahId = newStartAyahId)
-            )
-        }
+    /** Saves a subject; [editing] is the one being changed, null for a new one. A verse keeps only one subject. */
+    fun saveSubject(text: String, startAyahId: Int, editing: UserSubjectEntity?) {
+        viewModelScope.launch(Dispatchers.IO) { dao.saveUserSubject(text, startAyahId, editing) }
     }
 
     fun deleteSubject(subject: UserSubjectEntity) {

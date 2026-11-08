@@ -9,11 +9,11 @@ import androidx.room.PrimaryKey
  * User-defined thematic anchor in the Quran.
  *
  * It belongs to the hizb quarter (`QuranRub`) that contains [startAyahId], so the unit is
- * derived from the ayah and never stored.
+ * derived from the ayah and never stored. A verse starts at most one subject (the index is unique).
  */
 @Entity(
     tableName = "user_subjects",
-    indices = [Index("start_ayah_id")]
+    indices = [Index("start_ayah_id", unique = true)]
 )
 data class UserSubjectEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
