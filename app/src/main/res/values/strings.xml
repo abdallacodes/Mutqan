@@ -1260,6 +1260,7 @@
     <string name="update_allow_install">اسمح للتطبيق بتثبيت التطبيقات، ثم ارجع واضغط «ثبّت» مرة أخرى</string>
     <string name="update_install_failed">تعذّر فتح برنامج التثبيت</string>
     <string name="update_failed_network">تعذّر الاتصال. تحقق من الإنترنت وحاول مجددًا.</string>
+    <string name="update_failed_server">GitHub لا يستجيب الآن. حاول مجددًا بعد قليل.</string>
     <string name="update_failed_file">الملف الذي نُزِّل غير سليم. حاول مجددًا.</string>
     <string name="update_failed_storage">لا توجد مساحة كافية على الجهاز.</string>
 

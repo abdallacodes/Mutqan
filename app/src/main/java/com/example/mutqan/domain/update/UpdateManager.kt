@@ -7,11 +7,13 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -29,7 +31,8 @@ import java.util.concurrent.TimeUnit
  */
 class UpdateManager private constructor(context: Context) {
 
-    enum class Problem { NETWORK, BAD_FILE, STORAGE }
+    /** [SERVER]: the connection works but GitHub does not give the answer or file (busy, or its rate limit is used up). */
+    enum class Problem { NETWORK, SERVER, BAD_FILE, STORAGE }
 
     sealed interface State {
         data object Idle : State
@@ -89,7 +92,7 @@ class UpdateManager private constructor(context: Context) {
         _state.value = State.Checking(quiet)
         scope.launch {
             try {
-                val info = fetchLatest()
+                val info = retrying { fetchLatest() }
                 prefs.edit().putLong(LAST_CHECK, System.currentTimeMillis()).apply()
                 if (info != null && UpdateRelease.isNewer(info.version, currentVersion)) {
                     _state.value = State.Available(info)
@@ -100,7 +103,8 @@ class UpdateManager private constructor(context: Context) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = if (quiet) State.Idle else State.Failed(Problem.NETWORK, null)
+                Log.w(TAG, "checking for an update failed", e)
+                _state.value = if (quiet) State.Idle else State.Failed(problemOf(e), null)
             }
         }
     }
@@ -119,19 +123,39 @@ class UpdateManager private constructor(context: Context) {
         _state.value = State.Downloading(info, 0f)
         scope.launch {
             try {
-                val file = fetchApk(info) { fraction -> _state.value = State.Downloading(info, fraction) }
+                val file = retrying { fetchApk(info) { fraction -> _state.value = State.Downloading(info, fraction) } }
                 _state.value = State.Ready(info, file)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: BadFileException) {
-                _state.value = State.Failed(Problem.BAD_FILE, info)
-            } catch (e: IOException) {
-                val full = e.message?.contains("ENOSPC") == true || e.message?.contains("No space", ignoreCase = true) == true
-                _state.value = State.Failed(if (full) Problem.STORAGE else Problem.NETWORK, info)
             } catch (e: Exception) {
-                _state.value = State.Failed(Problem.NETWORK, info)
+                Log.w(TAG, "downloading the update failed", e)
+                _state.value = State.Failed(problemOf(e), info)
             }
         }
+    }
+
+    /** Runs [block], and again after a pause when it failed in a way that may pass ([UpdateRelease.isTransient]): GitHub answers 504 now and then. */
+    private suspend fun <T> retrying(block: () -> T): T {
+        var attempt = 1
+        while (true) {
+            try {
+                return block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (attempt >= ATTEMPTS || e is BadFileException || !UpdateRelease.isTransient(e)) throw e
+                Log.w(TAG, "attempt $attempt failed, trying again", e)
+                delay(RETRY_PAUSE_MS * attempt)
+                attempt++
+            }
+        }
+    }
+
+    private fun problemOf(e: Exception): Problem = when {
+        e is BadFileException -> Problem.BAD_FILE
+        e is HttpAnswerException -> Problem.SERVER
+        e is IOException && (e.message?.contains("ENOSPC") == true || e.message?.contains("No space", ignoreCase = true) == true) -> Problem.STORAGE
+        else -> Problem.NETWORK
     }
 
     /** Whether Android lets this app start an install; when not, [allowInstalls] opens the setting. */
@@ -168,7 +192,7 @@ class UpdateManager private constructor(context: Context) {
             .build()
         client.newCall(request).execute().use { response ->
             if (response.code == 404) return null // no release yet
-            if (!response.isSuccessful) throw IOException("GitHub answered ${response.code}")
+            if (!response.isSuccessful) throw HttpAnswerException(response.code)
             return UpdateRelease.parseLatest(response.body?.string().orEmpty())
         }
     }
@@ -179,11 +203,12 @@ class UpdateManager private constructor(context: Context) {
         val target = File(dir, "Mutqan-${info.version}.apk")
         dir.listFiles()?.filter { it != target }?.forEach { it.delete() }
         if (target.isFile && matches(target, info, sha = null)) return target
-        val part = File(dir, "${target.name}.part")
+        // Still ends in .apk, so that checking it as a package does not depend on the name.
+        val part = File(dir, "part-${target.name}")
         val digest = MessageDigest.getInstance("SHA-256")
         val request = Request.Builder().url(info.apkUrl).header("User-Agent", "Mutqan-app").build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("GitHub answered ${response.code}")
+            if (!response.isSuccessful) throw HttpAnswerException(response.code)
             val body = response.body ?: throw IOException("empty answer")
             val total = body.contentLength().takeIf { it > 0 } ?: info.size
             var done = 0L
@@ -230,7 +255,11 @@ class UpdateManager private constructor(context: Context) {
         private const val APK_TYPE = "application/vnd.android.package-archive"
         private const val LAST_CHECK = "last_check"
         private const val AUTO_CHECK = "auto_check"
-        private const val CHECK_EVERY_MS = 12L * 60 * 60 * 1000
+        private const val TAG = "UpdateManager"
+        /** GitHub allows 60 unsigned requests an hour from one address; one check an hour from a phone is far below that. */
+        private const val CHECK_EVERY_MS = 60L * 60 * 1000
+        private const val ATTEMPTS = 3
+        private const val RETRY_PAUSE_MS = 2_000L
 
         @Volatile
         private var instance: UpdateManager? = null

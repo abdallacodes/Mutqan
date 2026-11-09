@@ -45,6 +45,7 @@ val State.isOffered: Boolean
 private fun problemText(problem: Problem): String = stringResource(
     when (problem) {
         Problem.NETWORK -> R.string.update_failed_network
+        Problem.SERVER -> R.string.update_failed_server
         Problem.BAD_FILE -> R.string.update_failed_file
         Problem.STORAGE -> R.string.update_failed_storage
     }

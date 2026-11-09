@@ -1,12 +1,32 @@
 package com.example.mutqan.domain.update
 
 import org.json.JSONObject
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 /** A release of the app on GitHub that has an APK: its version, where the APK is, how big it is and its SHA-256 (if GitHub gave one). */
 data class UpdateInfo(val version: String, val apkUrl: String, val size: Long, val sha256: String?)
 
+/** GitHub answered, but not with the file or release asked for (a 504 when it is struggling, a 403 when the rate limit is used up). */
+class HttpAnswerException(val code: Int) : IOException("GitHub answered $code")
+
 /** Reading GitHub's "latest release" answer, and comparing versions like 6.5.3. */
 object UpdateRelease {
+    /**
+     * Whether a failed request is worth sending again a moment later: GitHub being busy (5xx, 429) or the connection
+     * dropping or timing out. Not a missing release (404), a refusal (403, 401) or a full disk.
+     */
+    fun isTransient(e: Exception): Boolean = when (e) {
+        is HttpAnswerException -> e.code >= 500 || e.code == 429
+        is UnknownHostException -> false
+        is SocketTimeoutException, is ConnectException, is SocketException -> true
+        is IOException -> e.message?.contains("ENOSPC") != true && e.message?.contains("No space", ignoreCase = true) != true
+        else -> false
+    }
+
     /** "v6.5.3" or "6.5.3" as [6, 5, 3]; null when it is not dotted numbers (up to four). */
     fun parseVersion(text: String): List<Int>? {
         val parts = text.trim().removePrefix("v").removePrefix("V").split('.')

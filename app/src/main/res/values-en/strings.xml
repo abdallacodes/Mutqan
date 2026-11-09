@@ -1152,6 +1152,7 @@
     <string name="update_allow_install">Allow the app to install apps, then come back and tap Install again</string>
     <string name="update_install_failed">Couldn\'t open the installer</string>
     <string name="update_failed_network">Couldn\'t connect. Check your internet and try again.</string>
+    <string name="update_failed_server">GitHub is not answering right now. Try again in a moment.</string>
     <string name="update_failed_file">The downloaded file is damaged. Try again.</string>
     <string name="update_failed_storage">Not enough space on the device.</string>
 

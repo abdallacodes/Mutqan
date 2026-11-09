@@ -5,6 +5,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 class UpdateReleaseTest {
     private val sha = "bc34800c2a30b01e6f4dea4f6233290011138111558cd6dacde2395f9b4e66e7"
@@ -78,6 +82,21 @@ class UpdateReleaseTest {
         assertNull(UpdateRelease.parseLatest(release(name = "app.zip")))
         assertNull(UpdateRelease.parseLatest(release(url = "http://github.com/a/app-release.apk")))
         assertNull(UpdateRelease.parseLatest(release(url = "https://evil.example.com/app-release.apk")))
+    }
+
+    @Test
+    fun `a busy github is worth another try, a refusal or a full disk is not`() {
+        assertTrue(UpdateRelease.isTransient(HttpAnswerException(504)))
+        assertTrue(UpdateRelease.isTransient(HttpAnswerException(503)))
+        assertTrue(UpdateRelease.isTransient(HttpAnswerException(429)))
+        assertFalse(UpdateRelease.isTransient(HttpAnswerException(404)))
+        assertFalse(UpdateRelease.isTransient(HttpAnswerException(403)))
+        assertTrue(UpdateRelease.isTransient(SocketTimeoutException()))
+        assertTrue(UpdateRelease.isTransient(ConnectException()))
+        assertTrue(UpdateRelease.isTransient(IOException("unexpected end of stream")))
+        assertFalse(UpdateRelease.isTransient(UnknownHostException()))
+        assertFalse(UpdateRelease.isTransient(IOException("write failed: ENOSPC (No space left on device)")))
+        assertFalse(UpdateRelease.isTransient(IllegalStateException()))
     }
 
     @Test
