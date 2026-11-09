@@ -78,6 +78,12 @@ android {
     buildFeatures {
         compose = true
     }
+    bundle {
+        // The app switches its own language (Arabic first, English on request). With language splits Google Play
+        // installs the split of a newly chosen language, which restarts the app, and the first launch got stuck
+        // restarting. Both languages are tiny, so they stay in the base module.
+        language { enableSplit = false }
+    }
 }
 
 dependencies {
