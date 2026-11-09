@@ -1,6 +1,7 @@
 package com.example.mutqan.ui.coverage
 
 import androidx.compose.foundation.selection.toggleable
+import com.example.mutqan.ui.components.DialogSystemBars
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.quran.ArabicNormalization
@@ -208,7 +209,10 @@ fun CoverageScreen(onDone: () -> Unit) {
                 val open = juz in expandedJuz
                 Column(modifier = Modifier.fillMaxWidth()) {
                     // The level chips drop under the name when both don't fit on one line (large text).
-                    FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(LEVEL_ROW_GAP),
+                        itemVerticalAlignment = Alignment.CenterVertically
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -228,7 +232,7 @@ fun CoverageScreen(onDone: () -> Unit) {
                                     fontWeight = if (memorised) FontWeight.Bold else FontWeight.Normal,
                                     softWrap = false
                                 )
-                                if (row != null) Column(modifier = Modifier.widthIn(max = 140.dp)) { MixLine(row.mix) }
+                                if (row != null) MixLine(row.mix)
                             }
                         }
                         // A level is for a juz that is memorised; ticking one brings its levels in.
@@ -248,9 +252,11 @@ fun CoverageScreen(onDone: () -> Unit) {
                         }
                     }
                     if (row != null) {
+                        // Its text lines up with the juz name above (tick 24dp + gap 12dp, less the link's own 12dp inset).
                         PaperLink(
                             text = stringResource(if (open) R.string.coverage_hide_pages else R.string.coverage_show_pages),
                             onClick = { expandedJuz = if (open) expandedJuz - juz else expandedJuz + juz },
+                            modifier = Modifier.padding(start = 24.dp),
                             soft = true
                         )
                     }
@@ -284,7 +290,10 @@ fun CoverageScreen(onDone: () -> Unit) {
                 }
                 items(state.surahStrengths, key = { "surah-${it.surah}" }) { row ->
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(LEVEL_ROW_GAP),
+                            itemVerticalAlignment = Alignment.CenterVertically
+                        ) {
                             Column(modifier = Modifier.weight(1f).padding(vertical = 10.dp)) {
                                 Text(text = SurahData.nameOf(row.surah), style = MaterialTheme.typography.bodyLarge, softWrap = false)
                                 MixLine(row.mix)
@@ -402,6 +411,7 @@ private fun SurahPickerDialog(
         onDismissRequest = onDone,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        DialogSystemBars()
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
                 PaperHeader(
@@ -462,7 +472,13 @@ private fun SurahPickerDialog(
     }
 }
 
-/** Weak, fair and strong side by side; [selected] is the level the row's pages have, if they share one. */
+/** The space between a row's name and its level pills, and between the name and the pills when they drop under it. */
+private val LEVEL_ROW_GAP = 12.dp
+
+/**
+ * Weak, fair and strong side by side; [selected] is the level the row's pages have, if they share one. No tick in the
+ * pill: with one the chosen pill is wider than the others, and the pills would sit in a different place on every row.
+ */
 @Composable
 private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -474,7 +490,8 @@ private fun TierChips(selected: PlanTier?, onSelect: (PlanTier) -> Unit) {
             PaperChip(
                 selected = selected == tier,
                 onClick = { onSelect(tier) },
-                label = { Text(stringResource(label)) },
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                showCheck = false,
                 // As wide as the word, never narrower than 64dp: a fixed width split words at large text.
                 modifier = Modifier.widthIn(min = 64.dp).width(IntrinsicSize.Max)
             )
@@ -514,21 +531,26 @@ private fun mixCaption(mix: LevelMix): String {
     return parts.joinToString(" · ")
 }
 
-/** A thin bar split by how many pages are weak, fair and strong, and the same in words under it. */
+/**
+ * A thin bar split by how many pages are weak, fair and strong, and the same in words under it. The bar is as wide as
+ * the words (and never wider than the room it is given), so it cannot run on into the pills beside the row.
+ */
 @Composable
 private fun MixLine(mix: LevelMix) {
     if (mix.total == 0) return
-    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(4.dp)) {
-        listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
-            if (mix[tier] > 0) Box(Modifier.weight(mix[tier].toFloat()).fillMaxHeight().background(tier.color()))
+    Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(4.dp)) {
+            listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
+                if (mix[tier] > 0) Box(Modifier.weight(mix[tier].toFloat()).fillMaxHeight().background(tier.color()))
+            }
         }
+        Text(
+            text = mixCaption(mix),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
-    Text(
-        text = mixCaption(mix),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 2.dp)
-    )
 }
 
 /** All 604 pages as small squares, coloured by where each stands now; pages not memorised are only outlined. */
@@ -601,10 +623,14 @@ private fun JuzPages(
     }
 }
 
-/** Weak, fair, strong and "no level": what a tap on a page sets. */
+/**
+ * Weak, fair, strong and "no level": what a tap on a page sets. Each pill is as wide as its word, and they drop to a
+ * second line when they do not fit, so a word is never broken (equal shares broke "متوسط" in two next to its tick).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BrushChips(brush: Int?, onBrush: (Int?) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
             PlanTier.WEAK.code to R.string.strength_weak,
             PlanTier.FAIR.code to R.string.strength_fair,
@@ -614,8 +640,8 @@ private fun BrushChips(brush: Int?, onBrush: (Int?) -> Unit) {
             PaperChip(
                 selected = brush == code,
                 onClick = { onBrush(code) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.weight(1f)
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                showCheck = false
             )
         }
     }

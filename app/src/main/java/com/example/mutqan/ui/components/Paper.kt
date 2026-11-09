@@ -227,15 +227,19 @@ fun PaperTabs(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit,
     }
 }
 
-/** A choice that can be on or off, as a pill: filled and checked when on, outlined when off. */
+/**
+ * A choice that can be on or off, as a pill: filled and checked when on, outlined when off. [showCheck] false leaves the
+ * tick out, so the pill is the same width on or off: for rows of pills that line up one under another.
+ */
 @Composable
 fun PaperChip(
     selected: Boolean,
     onClick: () -> Unit,
     label: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showCheck: Boolean = true
 ) {
-    FilterPill(selected = selected, onClick = onClick, modifier = modifier, label = label)
+    FilterPill(selected = selected, onClick = onClick, modifier = modifier, showCheck = showCheck, label = label)
 }
 
 /** A slider with a rounded track, the filled part in the action colour and a round handle. */

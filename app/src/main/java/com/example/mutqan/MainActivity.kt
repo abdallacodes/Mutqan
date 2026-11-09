@@ -1,7 +1,10 @@
 package com.example.mutqan
 
 import android.app.KeyguardManager
+import android.app.LocaleManager
+import android.os.Build
 import android.os.Bundle
+import android.os.LocaleList
 import android.os.SystemClock
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,6 +50,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyArabicDefault()
         enableEdgeToEdge()
         val preferences = UserPreferencesRepository(applicationContext)
         setContent {
@@ -66,6 +70,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Android 13 and newer: while no language has been chosen, make it Arabic (older Android does this in MutqanApp).
+     * It is done here, in a running activity, because the system applies a language change to a started app and
+     * recreates the activity in it; set while the process was still starting, it was stored but the first screen
+     * stayed in the device's language. Checked on every start, as before.
+     */
+    private fun applyArabicDefault() {
+        if (Build.VERSION.SDK_INT < 33) return
+        val manager = getSystemService(LocaleManager::class.java) ?: return
+        if (manager.applicationLocales.isEmpty) manager.applicationLocales = LocaleList.forLanguageTags("ar")
     }
 
     override fun onStop() {

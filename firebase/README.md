@@ -5,7 +5,7 @@ repository; the app builds without it and then simply hides the Account section 
 
 1. Firebase console -> Add project (Analytics is not needed).
 2. Build -> Authentication -> Get started -> Sign-in method -> Google -> Enable, pick a support email, Save.
-3. Project settings -> Your apps -> Add app -> Android. Package name `com.example.mutqan`.
+3. Project settings -> Your apps -> Add app -> Android. Package name `com.mutqan.quran`.
 4. Add the SHA-1 of every key you install with: the debug key (`keytool -list -v -keystore ~/.android/debug.keystore
    -alias androiddebugkey -storepass android`) and the release key (`keytool -list -v -keystore release.keystore`).
 5. Download `google-services.json` and put it in `app/` (it is git-ignored). Download it again after adding a

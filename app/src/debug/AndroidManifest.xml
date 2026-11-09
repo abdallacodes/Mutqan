@@ -3,7 +3,7 @@
 
     <application>
         <!-- Debug builds only: every design-system component on one page. Start it with
-             adb shell am start -n com.example.mutqan/.ui.gallery.GalleryActivity
+             adb shell am start -n com.mutqan.quran/com.example.mutqan.ui.gallery.GalleryActivity
              (extras: palette as a string, dark as a boolean). -->
         <activity
             android:name=".ui.gallery.GalleryActivity"

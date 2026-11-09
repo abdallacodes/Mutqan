@@ -1,8 +1,10 @@
 # ==============================================================================
 # Mutqan Build & Test CI/CD Workflow
 # ==============================================================================
-# Pushing a tag like v1.0.1 (release.py does this) builds a signed release APK
-# and attaches it to a GitHub Release.
+# Pushing a tag like v1.0.1 (release.py does this) builds two things from one source:
+#   - the "direct" APK (with the in-app updater), attached to a GitHub Release;
+#   - the "play" app bundle (.aab, no updater, no permission to install packages), kept as a build artifact to
+#     upload to Google Play. It is signed with the same key, which Play takes as the upload key.
 #
 # Keystore Persistence Setup Instructions:
 # To prevent "App not installed" update failures caused by signature mismatches,
@@ -96,20 +98,35 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: ./gradlew :app:testDirectDebugUnitTest :app:testPlayDebugUnitTest :quran:testDebugUnitTest --stacktrace
 
-      - name: Build Release APK
+      - name: Build Release APK and Play bundle
         env:
           KEYSTORE_FILE: /home/runner/.android/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew :app:assembleDirectRelease :app:bundlePlayRelease --stacktrace
+
+      # Google Play does not let an app update itself any way but through Play, and asks for a declaration for the
+      # permission to install packages. The play build must never carry it, nor the provider that goes with it.
+      - name: Check the Play build has no updater
+        run: |
+          MANIFEST=$(find app/build/intermediates/merged_manifest/playRelease -name AndroidManifest.xml | head -1)
+          if [[ -z "$MANIFEST" ]]; then
+            echo "::error::The merged manifest of the play build was not found."
+            exit 1
+          fi
+          if grep -q "REQUEST_INSTALL_PACKAGES\|androidx.core.content.FileProvider" "$MANIFEST"; then
+            echo "::error::The play build asks to install packages or carries the updater's provider."
+            exit 1
+          fi
+          grep -q 'package="com.mutqan.quran"' "$MANIFEST" || { echo "::error::The play build has another package name."; exit 1; }
 
       - name: Verify APK Signature
         run: |
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | tee signer.txt
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/direct/release/app-direct-release.apk | tee signer.txt
           if grep -q "CN=Android Debug" signer.txt; then
             echo "::warning::The APK is signed with the debug key, not the release key."
             if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
@@ -118,9 +135,21 @@ jobs:
             fi
           fi
 
-      # The file carries the app's name and version (Mutqan-6.5.5.apk), so downloads from different releases do not
+      - name: Verify bundle signature
+        run: |
+          AAB=app/build/outputs/bundle/playRelease/app-play-release.aab
+          keytool -printcert -jarfile "$AAB" | tee bundle-signer.txt
+          if grep -q "CN=Android Debug" bundle-signer.txt; then
+            echo "::warning::The bundle is signed with the debug key, not the release key."
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo "::error::Refusing to publish a debug-signed bundle."
+              exit 1
+            fi
+          fi
+
+      # The files carry the app's name and version (Mutqan-6.5.5.apk), so downloads from different releases do not
       # pile up as app-release (1).apk and say what they are. The in-app updater takes the release's .apk whatever it is called.
-      - name: Name the APK
+      - name: Name the APK and the bundle
         id: apk
         run: |
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
@@ -133,14 +162,23 @@ jobs:
             exit 1
           fi
           NAME="Mutqan-$VERSION.apk"
-          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/$NAME"
-          echo "path=app/build/outputs/apk/release/$NAME" >> "$GITHUB_OUTPUT"
+          cp app/build/outputs/apk/direct/release/app-direct-release.apk "app/build/outputs/apk/direct/release/$NAME"
+          echo "path=app/build/outputs/apk/direct/release/$NAME" >> "$GITHUB_OUTPUT"
+          BUNDLE="Mutqan-$VERSION.aab"
+          cp app/build/outputs/bundle/playRelease/app-play-release.aab "app/build/outputs/bundle/playRelease/$BUNDLE"
+          echo "bundle=app/build/outputs/bundle/playRelease/$BUNDLE" >> "$GITHUB_OUTPUT"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Mutqan-Release-APK
           path: ${{ steps.apk.outputs.path }}
+
+      - name: Upload Play Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mutqan-Play-Bundle
+          path: ${{ steps.apk.outputs.bundle }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

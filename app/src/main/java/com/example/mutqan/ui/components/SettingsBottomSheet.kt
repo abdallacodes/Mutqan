@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.components
 
+import com.example.mutqan.ui.update.UpdateSettingsRow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
@@ -72,6 +73,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -86,6 +88,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Theme choices: follow the system, or Paper in its light or dark version ──────
+
+/** The privacy policy, a page of the project's GitHub Pages site (the `docs` folder of the repository). */
+private const val PRIVACY_URL = "https://abdallacodes.github.io/Mutqan/privacy.html"
 
 private val themeChoices = listOf(
     ThemeKey.AUTO to R.string.theme_auto,
@@ -357,7 +362,7 @@ fun SettingsBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
             )
-            com.example.mutqan.ui.update.UpdateSettingsRow()
+            UpdateSettingsRow()
             Text(
                 text = stringResource(R.string.how_link),
                 style = MaterialTheme.typography.bodyMedium,
@@ -375,6 +380,15 @@ fun SettingsBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth().clickable { onOpenAudioStorage() }.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp)
+            )
+            val uriHandler = LocalUriHandler.current
+            Text(
+                text = stringResource(R.string.privacy_link),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth()
+                    .clickable { runCatching { uriHandler.openUri(PRIVACY_URL) } }
+                    .heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp)
             )
             Text(
                 text = stringResource(R.string.settings_about_sources),

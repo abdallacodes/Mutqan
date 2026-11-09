@@ -37,6 +37,7 @@ fun SyncNoticeHost() {
         NoticeKind.CLOUD_DELETED -> R.string.notice_title_cloud_deleted
         NoticeKind.DEVICE_RESET -> R.string.notice_title_device_reset
         NoticeKind.MERGED -> R.string.notice_title_merged
+        NoticeKind.ACCOUNT_DELETED -> R.string.notice_title_account_deleted
     }
     val what: String = when (shown.kind) {
         NoticeKind.SYNC_ON_CLOUD -> stringResource(if (shown.cloudExisted) R.string.notice_sync_cloud else R.string.notice_sync_cloud_empty)
@@ -44,11 +45,12 @@ fun SyncNoticeHost() {
         NoticeKind.CLOUD_DELETED -> stringResource(R.string.notice_cloud_deleted)
         NoticeKind.DEVICE_RESET -> stringResource(R.string.notice_device_reset)
         NoticeKind.MERGED -> stringResource(R.string.notice_merged, shown.merge?.added ?: 0, shown.merge?.removed ?: 0)
+        NoticeKind.ACCOUNT_DELETED -> stringResource(R.string.notice_account_deleted)
     }
     val savedLine = when (shown.kind) {
         NoticeKind.SYNC_ON_CLOUD -> R.string.notice_copy_replaced_device
         NoticeKind.SYNC_ON_DEVICE -> R.string.notice_copy_replaced_cloud
-        NoticeKind.CLOUD_DELETED, NoticeKind.DEVICE_RESET -> R.string.notice_copy_deleted
+        NoticeKind.CLOUD_DELETED, NoticeKind.DEVICE_RESET, NoticeKind.ACCOUNT_DELETED -> R.string.notice_copy_deleted
         NoticeKind.MERGED -> R.string.notice_copy_merged
     }
 

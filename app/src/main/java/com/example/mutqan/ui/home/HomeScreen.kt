@@ -62,9 +62,7 @@ import com.example.mutqan.domain.PlanOrder
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RecallOutcome
-import com.example.mutqan.domain.update.UpdateManager
-import com.example.mutqan.ui.update.UpdateCard
-import com.example.mutqan.ui.update.isOffered
+import com.example.mutqan.ui.update.rememberUpdateOffer
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.HubRow
 import com.example.mutqan.ui.components.PaperButton
@@ -149,10 +147,8 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     OnTabReselected(Routes.HOME) { listState.animateScrollToItem(0) }
 
-    // A new version on GitHub is offered on this screen; the app looks at most twice a day.
-    val updates = remember(context) { UpdateManager.get(context) }
-    val updateState by updates.state.collectAsState()
-    LaunchedEffect(Unit) { updates.checkIfDue() }
+    // A new version is offered on this screen in the direct (GitHub) build; the Google Play build never has one.
+    val updateOffer = rememberUpdateOffer()
 
     val sessionToday = state.today
     if (sessionOpen && sessionToday != null) {
@@ -211,9 +207,7 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            if (updateState.isOffered) {
-                item(key = "update") { UpdateCard(updateState, updates) }
-            }
+            updateOffer?.let { offer -> item(key = "update") { offer() } }
             val plan = state.plan
             val today = state.today
             when {

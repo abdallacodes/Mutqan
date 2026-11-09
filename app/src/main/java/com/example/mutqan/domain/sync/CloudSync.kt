@@ -57,7 +57,7 @@ data class FirstSync(val cloudEntries: Int, val deviceEntries: Int, val cloudExi
 /** How this device joins the account: the cloud copy replaces what is on the device, or the device replaces the cloud copy. */
 enum class Choice { CLOUD_WINS, DEVICE_WINS }
 
-enum class NoticeKind { SYNC_ON_CLOUD, SYNC_ON_DEVICE, CLOUD_DELETED, DEVICE_RESET, MERGED }
+enum class NoticeKind { SYNC_ON_CLOUD, SYNC_ON_DEVICE, CLOUD_DELETED, DEVICE_RESET, MERGED, ACCOUNT_DELETED }
 
 /**
  * What the user is told once an override or a deletion is complete. [copy] is the file saved on the phone before
@@ -362,6 +362,44 @@ class CloudSync private constructor(context: Context) {
                 SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
             }
         }
+    }
+
+    /**
+     * Deletes the signed-in account for good: everything it has in the cloud, and then the account itself (Google Play
+     * requires an app with accounts to offer this). Google is asked to confirm first; a copy of the cloud data is saved
+     * on the phone before it is deleted. The data on this device stays and syncing ends. False when the user backed out
+     * of the Google confirmation; otherwise it ran, and [status] says if it failed (so it can be asked again: whatever
+     * was deleted before the failure stays deleted). When it worked, [notice] says what was deleted and where the copy is.
+     */
+    suspend fun deleteAccount(activity: Activity): Boolean {
+        if (accounts.account.value == null || !accounts.confirmIdentity(activity)) return false
+        val account = accounts.account.value ?: return false
+        lock.withLock {
+            _status.value = SyncStatus.Syncing
+            _status.value = try {
+                val remote = FirestoreRemote(account.uid, prefs.deviceId())
+                withTimeout(TIMEOUT_MS) {
+                    // A damaged copy cannot be read, so there is nothing of it to keep; it can still be deleted.
+                    val readable = try { remote.peek() } catch (e: CloudCopyDamagedException) { null }
+                    val saved = readable?.let { copies.save(CopyReason.CLOUD_DELETED, it.text) }
+                    // The user asked for this, so another device holding the account does not stop it.
+                    remote.claim()
+                    remote.deleteAll()
+                    endLink()
+                    accounts.deleteAccount()
+                    _notice.value = SyncNotice(NoticeKind.ACCOUNT_DELETED, saved)
+                }
+                SyncStatus.Idle
+            } catch (e: SafetyCopyFailedException) {
+                SyncStatus.CopyFailed
+            } catch (e: TimeoutCancellationException) {
+                SyncStatus.Failed(appContext.getString(R.string.sync_timeout))
+            } catch (e: Exception) {
+                android.util.Log.w("CloudSync", "The account was not deleted", e)
+                SyncStatus.Failed(e.message ?: e.javaClass.simpleName)
+            }
+        }
+        return true
     }
 
     /**

@@ -221,15 +221,15 @@
     <string name="mushaf_cd_spread_fit_page">Show full page in view</string>
 
     <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
-    <string name="onboarding_skip">Skip intro</string>
+    <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_get_started">Get started</string>
-    <string name="onboarding_slide1_title">Start with what you know</string>
-    <string name="onboarding_slide1_body">Tell the app which surahs or juz you have memorised. Your plan is built only from them, so you are never asked to revise what you have not learned.</string>
-    <string name="onboarding_slide2_title">A plan for every day</string>
-    <string name="onboarding_slide2_body">Today shows what to revise. When you finish, tap “I’ve finished revising” and say how it went. Choose a fixed amount, or let weak pages come back more often.</string>
-    <string name="onboarding_slide3_title">Read and look closer</string>
-    <string name="onboarding_slide3_body">The Quran tab opens the Mushaf page by page. Tap any verse to save it, mark it weak, or see the verses that look like it.</string>
+    <string name="onboarding_slide1_title">Say what you’ve memorised</string>
+    <string name="onboarding_slide1_body">Pick the surahs or juz you’ve memorised and rate each one: weak, fair or strong. The app will never ask you to revise something you haven’t learned.</string>
+    <string name="onboarding_slide2_title">Today’s review</string>
+    <string name="onboarding_slide2_body">The Today tab lists the pages that are due. Tap “Start review”, recall each page from memory before you reveal its text, then say how it went. Weak pages come back often, strong ones rarely.</string>
+    <string name="onboarding_slide3_title">Read the Mushaf</string>
+    <string name="onboarding_slide3_body">The Al Mushaf tab opens the Quran page by page. Press and hold any verse to listen to it, mark it or read its tafsir.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">Your Vault is Empty</string>
@@ -280,8 +280,8 @@
     <string name="btn_import_subjects">Import Subjects</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_lang_title">Interface language</string>
-    <string name="onboarding_lang_subtitle">You can change this anytime in Settings.</string>
+    <string name="onboarding_lang_title">App language</string>
+    <string name="onboarding_lang_subtitle">You can change it later in Settings.</string>
     <string name="onboarding_welcome_title">Welcome to %s</string>
 
     <!-- Structural Mode -->
@@ -372,7 +372,7 @@
     <string name="effect_practice">Reading only: it is recorded, but it does not change any page\'s strength.</string>
     <string name="settings_about">About</string>
     <string name="settings_about_version">%1$s · version %2$s</string>
-    <string name="settings_about_sources">The Quran resources in this app (text, Mushaf layout and fonts, word morphology, tafsir, topics and similar verses) come from the QUL project, the Quranic Universal Library.</string>
+    <string name="settings_about_sources">The Quran resources in this app (text, Mushaf layout and fonts, word morphology, tafsir, topics and similar verses) come from the QUL project, the Quranic Universal Library. Recitation audio is streamed from Tarteel’s servers, in the voices of the reciters named in the app.</string>
     <string name="coverage_strength_hint">Pick the juz you have memorised and how well you know each: weak, fair or strong. The plan starts from your estimate, then your revision history takes over once it shows how each page really holds.</string>
     <string name="strength_fair">Fair</string>
     <string name="strength_strong">Strong</string>
@@ -627,12 +627,12 @@
     <string name="plan_pause_hint">Nothing is asked of you until you turn it back on.</string>
     <string name="plan_unit_pages_a_day">pages a day</string>
     <string name="onboarding_page_of">%1$d / %2$d</string>
-    <string name="onboarding_slide4_title">Practise, then see how you are doing</string>
-    <string name="onboarding_slide4_body">Practice has exercises such as page boundaries and reciting from memory. Insights shows what is firm and what needs another look.</string>
-    <string name="onboarding_slide1_where">Today › Set what I have memorised</string>
-    <string name="onboarding_slide2_where">Today tab › Edit plan</string>
-    <string name="onboarding_slide3_where">Quran tab</string>
-    <string name="onboarding_slide4_where">Practice tab · Insights tab</string>
+    <string name="onboarding_slide4_title">Practise and track your progress</string>
+    <string name="onboarding_slide4_body">Practice has questions that test your memory, such as the next verse or putting verses in order. Insights shows what you’ve memorised and what needs revising.</string>
+    <string name="onboarding_slide1_where">Insights › What I’ve memorised</string>
+    <string name="onboarding_slide2_where">Today › Edit plan</string>
+    <string name="onboarding_slide3_where">Al Mushaf tab</string>
+    <string name="onboarding_slide4_where">Practice · Insights</string>
     <string name="quran_tab_surahs">Surahs</string>
     <string name="quran_tab_juz">Juz</string>
     <string name="quran_search_hint">Surah name, number or page</string>
@@ -741,6 +741,11 @@
     <string name="account_intro">Sign in with Google to keep your revision and memorisation the same on all your devices. Signing in does not start syncing: if this device has data you choose which copy stays, and a copy of what is replaced is saved on the phone. An account works on one device at a time.</string>
     <string name="account_sign_in">Sign in with Google</string>
     <string name="account_sign_in_failed">Sign-in didn\'t work. Check your internet connection and try again.</string>
+    <string name="account_delete">Delete my account</string>
+    <string name="account_delete_title">Delete your account?</string>
+    <string name="account_delete_body">This permanently deletes your account and everything it has in the cloud. It cannot be undone. The data on this phone is not touched. Google will ask you to confirm it is you, and a copy of what is in the cloud is saved on this phone first.</string>
+    <string name="account_delete_confirm">Delete account</string>
+    <string name="account_delete_failed">The account could not be deleted. Check your internet connection and try again.</string>
     <string name="account_sign_out">Sign out</string>
     <string name="sync_now">Sync now</string>
     <string name="sync_running">Syncing…</string>
@@ -872,6 +877,8 @@
     <string name="notice_sync_cloud">Your account\'s data replaced this device\'s data, and syncing is now on.</string>
     <string name="notice_sync_cloud_empty">Your account has no data, so this device is now empty like it, and syncing is now on.</string>
     <string name="notice_sync_device">This device\'s data replaced what was in your account, and syncing is now on.</string>
+    <string name="notice_title_account_deleted">Account deleted</string>
+    <string name="notice_account_deleted">Your account and everything it had in the cloud were deleted for good. Your data on this phone is kept, and syncing is off.</string>
     <string name="notice_cloud_deleted">Everything was deleted from the cloud, so your account is empty now. Your data on this device is kept, and syncing stays off until you set it up again.</string>
     <string name="notice_device_reset">All data and settings on this device were deleted, so the app is as it was when first installed, and you were signed out. What is in the cloud was not touched.</string>
     <string name="notice_copy_replaced_device">A copy of the device data that was replaced is saved on this phone:</string>
@@ -940,6 +947,7 @@
     <string name="audio_storage_manage">Manage</string>
     <string name="audio_storage_title">Recitation storage</string>
     <string name="audio_storage_subtitle">What you downloaded and what is kept while streaming</string>
+    <string name="privacy_link">Privacy policy</string>
     <string name="audio_storage_link">Manage recitation storage</string>
     <string name="audio_storage_empty">No recitations are downloaded.</string>
     <string name="audio_storage_cache">Streaming cache</string>

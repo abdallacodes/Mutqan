@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.mutqan"
+        applicationId = "com.mutqan.quran"
         minSdk = 24
         targetSdk = 36
         versionCode = 60506
@@ -62,6 +62,14 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+    // Two builds of one app. "play" is the Google Play bundle: no code that downloads or installs an APK, no permission to
+    // install packages (Play does not let an app update itself any other way than through Play). "direct" is the APK on
+    // GitHub, with the in-app updater (src/direct).
+    flavorDimensions += "store"
+    productFlavors {
+        create("direct") { dimension = "store" }
+        create("play") { dimension = "store" }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

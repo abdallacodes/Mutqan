@@ -41,6 +41,7 @@ import com.example.mutqan.domain.MistakeTag
 import com.example.mutqan.domain.PlanItem
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.PlanUnit
+import com.example.mutqan.ui.components.DialogSystemBars
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperChip
@@ -84,6 +85,7 @@ fun ReviewSession(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        DialogSystemBars()
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -74,6 +75,7 @@ fun AccountSection() {
     val status by cloud.status.collectAsState()
     val lastSync by cloud.lastSyncTime.collectAsState(initial = null)
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDeleteAccount by remember { mutableStateOf(false) }
     var firstSync by remember { mutableStateOf<FirstSync?>(null) }
     var otherDevice by remember { mutableStateOf<OtherDevice?>(null) }
     val displaced by cloud.displaced.collectAsState(initial = false)
@@ -265,6 +267,12 @@ fun AccountSection() {
             icon = Icons.AutoMirrored.Filled.Logout,
             onClick = { scope.launch { cloud.signOut() } }
         )
+        // Google Play requires that an account made in the app can be deleted in the app.
+        DataActionRow(
+            label = stringResource(R.string.account_delete),
+            icon = Icons.Default.PersonRemove,
+            onClick = { if (status != SyncStatus.Syncing) confirmDeleteAccount = true }
+        )
     }
 
     firstSync?.takeIf { it.cloudDamaged }?.let { choice ->
@@ -310,6 +318,37 @@ fun AccountSection() {
                 otherDevice = null
                 scope.launch { cloud.signOut() }
             }
+        )
+    }
+
+    if (confirmDeleteAccount) {
+        PaperDialog(
+            onDismissRequest = { confirmDeleteAccount = false },
+            title = { Text(stringResource(R.string.account_delete_title)) },
+            text = { Text(stringResource(R.string.account_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteAccount = false
+                    val activity = context.findActivity() ?: return@TextButton
+                    scope.launch {
+                        try {
+                            // False: the user backed out of the Google confirmation, so nothing happened.
+                            if (cloud.deleteAccount(activity)) {
+                                val result = cloud.status.value
+                                if (result == SyncStatus.CopyFailed) {
+                                    Toast.makeText(context, context.getString(R.string.copy_failed), Toast.LENGTH_LONG).show()
+                                } else if (result is SyncStatus.Failed) {
+                                    Toast.makeText(context, context.getString(R.string.account_delete_failed), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("AccountSection", "Could not confirm who is deleting the account", e)
+                            Toast.makeText(context, context.getString(R.string.account_delete_failed), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) { Text(stringResource(R.string.account_delete_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeleteAccount = false }) { Text(stringResource(R.string.btn_cancel)) } }
         )
     }
 

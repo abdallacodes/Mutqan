@@ -237,15 +237,15 @@
     <string name="mushaf_cd_spread_fit_page">إظهار الصفحة كاملة</string>
 
     <!-- ── Onboarding ─────────────────────────────────────────────────────── -->
-    <string name="onboarding_skip">تخطّي المقدّمة</string>
+    <string name="onboarding_skip">تخطّي</string>
     <string name="onboarding_next">التالي</string>
     <string name="onboarding_get_started">ابدأ الاستخدام</string>
-    <string name="onboarding_slide1_title">ابدأ بما تحفظ</string>
-    <string name="onboarding_slide1_body">حدّد السور أو الأجزاء التي حفظتها. تُبنى خطتك منها وحدها، فلا يُطلب منك مراجعة ما لم تحفظه بعد.</string>
-    <string name="onboarding_slide2_title">خطة لكل يوم</string>
-    <string name="onboarding_slide2_body">تعرض لك شاشة اليوم ما تراجعه. عند الانتهاء اضغط «أنهيتُ المراجعة» وأخبر التطبيق كيف جرت. اختر كمية ثابتة، أو دع الصفحات الضعيفة تعود أكثر.</string>
-    <string name="onboarding_slide3_title">اقرأ وتأمّل</string>
-    <string name="onboarding_slide3_body">يفتح تبويب القرآن المصحف صفحةً صفحة. اضغط على أي آية لحفظها، أو وسمها ضعيفة، أو رؤية الآيات المتشابهة معها.</string>
+    <string name="onboarding_slide1_title">حدّد ما حفظته</string>
+    <string name="onboarding_slide1_body">اختر السور أو الأجزاء التي حفظتها، وقدّر مستوى كل جزء: ضعيف أو متوسط أو قوي. ولن يطلب منك التطبيق مراجعة ما لم تحفظه.</string>
+    <string name="onboarding_slide2_title">مراجعة اليوم</string>
+    <string name="onboarding_slide2_body">تعرض شاشة اليوم الصفحات المستحقة. اضغط «ابدأ المراجعة» واستحضر كل صفحة من حفظك قبل أن تكشف نصها، ثم اختر كيف كانت. الصفحات الضعيفة تعود كثيرًا والقوية نادرًا.</string>
+    <string name="onboarding_slide3_title">اقرأ المصحف</string>
+    <string name="onboarding_slide3_body">يفتح تبويب المصحف صفحةً صفحة. اضغط مطولًا على أي آية لتسمع تلاوتها، أو تضع عليها علامة، أو تقرأ تفسيرها.</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────────── -->
     <string name="empty_vault_title">المخزن فارغ</string>
@@ -278,8 +278,8 @@
     <string name="label_groups_header">المجموعات</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_lang_title">لغة الواجهة</string>
-    <string name="onboarding_lang_subtitle">يمكنك تغييرها لاحقًا من الإعدادات في أي وقت.</string>
+    <string name="onboarding_lang_title">لغة التطبيق</string>
+    <string name="onboarding_lang_subtitle">يمكنك تغييرها لاحقًا من الإعدادات.</string>
     <string name="onboarding_welcome_title">أهلًا بك في %s</string>
 
     <!-- Structural Mode -->
@@ -388,7 +388,7 @@
     <string name="effect_practice">قراءة فقط: تُسجَّل ولا تغيّر مستوى أي صفحة.</string>
     <string name="settings_about">عن التطبيق</string>
     <string name="settings_about_version">%1$s · الإصدار %2$s</string>
-    <string name="settings_about_sources">موارد القرآن في التطبيق (النص وتخطيط المصحف وخطوطه والتحليل الصرفي والتفسير والمواضيع والآيات المتشابهة) مصدرها مشروع QUL، أي المكتبة القرآنية الشاملة (Quranic Universal Library).</string>
+    <string name="settings_about_sources">موارد القرآن في التطبيق (النص وتخطيط المصحف وخطوطه والتحليل الصرفي والتفسير والمواضيع والآيات المتشابهة) مصدرها مشروع QUL، أي المكتبة القرآنية الشاملة (Quranic Universal Library). وتُبثّ التلاوات الصوتية من خوادم Tarteel بأصوات القرّاء المذكورين في التطبيق.</string>
     <string name="coverage_strength_hint">اختر الأجزاء التي حفظتها ومستوى كل جزء: ضعيف أو متوسط أو قوي. تبني الخطة على تقديرك في البداية، ثم تحلّ محلّه سجلات التسميع حين تُظهر حال كل صفحة فعلًا.</string>
     <string name="strength_fair">متوسط</string>
     <string name="strength_strong">قوي</string>
@@ -663,12 +663,12 @@
     <string name="plan_pause_hint">لن يُطلب منك شيء حتى تعيد تشغيلها.</string>
     <string name="plan_unit_pages_a_day">صفحة يوميًا</string>
     <string name="onboarding_page_of">%1$d / %2$d</string>
-    <string name="onboarding_slide4_title">تدرّب ثم تابع تقدّمك</string>
-    <string name="onboarding_slide4_body">في تدرّب تمارين مثل حدود الصفحات والتسميع من الذاكرة. وفي متابعتي ترى ما رسخ وما يحتاج إلى نظرة.</string>
-    <string name="onboarding_slide1_where">اليوم ‹ تحديد المحفوظ</string>
-    <string name="onboarding_slide2_where">تبويب اليوم ‹ تعديل الخطة</string>
-    <string name="onboarding_slide3_where">تبويب القرآن</string>
-    <string name="onboarding_slide4_where">تبويب تدرّب · تبويب متابعتي</string>
+    <string name="onboarding_slide4_title">تدرّب وتابع تقدّمك</string>
+    <string name="onboarding_slide4_body">في تدرّب أسئلة تختبر حفظك، مثل الآية التالية وترتيب الآيات. وفي متابعتي ترى ما حفظته وما يحتاج إلى مراجعة.</string>
+    <string name="onboarding_slide1_where">متابعتي ‹ ما حفظته</string>
+    <string name="onboarding_slide2_where">اليوم ‹ تعديل الخطة</string>
+    <string name="onboarding_slide3_where">المصحف</string>
+    <string name="onboarding_slide4_where">تدرّب · متابعتي</string>
     <string name="quran_tab_surahs">السور</string>
     <string name="quran_tab_juz">الأجزاء</string>
     <string name="quran_search_hint">اسم السورة أو رقمها أو رقم الصفحة</string>
@@ -781,6 +781,11 @@
     <string name="account_intro">سجّل الدخول بحساب Google لتبقى مراجعتك ومحفوظك متطابقين على كل أجهزتك. لا تبدأ المزامنة بمجرد الدخول: إن كانت على هذا الجهاز بيانات فأنت تختار أي النسختين تبقى، وتُحفظ على الهاتف نسخة مما يُستبدل. ويعمل الحساب على جهاز واحد في كل مرة.</string>
     <string name="account_sign_in">تسجيل الدخول بحساب Google</string>
     <string name="account_sign_in_failed">تعذّر تسجيل الدخول. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.</string>
+    <string name="account_delete">حذف حسابي</string>
+    <string name="account_delete_title">حذف حسابك؟</string>
+    <string name="account_delete_body">يُحذف حسابك نهائيًا مع كل ما له في السحابة، ولا يمكن التراجع عن ذلك. تبقى بياناتك على هذا الهاتف كما هي. ستطلب منك Google تأكيد أنك صاحب الحساب، وتُحفظ أولًا نسخة مما في السحابة على هذا الهاتف.</string>
+    <string name="account_delete_confirm">احذف الحساب</string>
+    <string name="account_delete_failed">تعذّر حذف الحساب. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.</string>
     <string name="account_sign_out">تسجيل الخروج</string>
     <string name="sync_now">مزامنة الآن</string>
     <string name="sync_running">جارٍ المزامنة…</string>
@@ -912,6 +917,8 @@
     <string name="notice_sync_cloud">حلّت بيانات حسابك محل بيانات هذا الجهاز، والمزامنة تعمل الآن.</string>
     <string name="notice_sync_cloud_empty">ليس في حسابك بيانات، فصار هذا الجهاز فارغًا مثله، والمزامنة تعمل الآن.</string>
     <string name="notice_sync_device">حلّت بيانات هذا الجهاز محل ما في حسابك، والمزامنة تعمل الآن.</string>
+    <string name="notice_title_account_deleted">حُذف الحساب</string>
+    <string name="notice_account_deleted">حُذف حسابك وكل ما كان له في السحابة نهائيًا. بياناتك على هذا الهاتف باقية، والمزامنة متوقفة.</string>
     <string name="notice_cloud_deleted">حُذف كل شيء من السحابة، وحسابك فارغ الآن. بياناتك على هذا الجهاز باقية، والمزامنة متوقفة حتى تُعدّها من جديد.</string>
     <string name="notice_device_reset">حُذفت كل بيانات هذا الجهاز وإعداداته، فعاد التطبيق كما كان عند تثبيته أول مرة، وسُجّل خروجك من حسابك. لم يُمسّ ما في السحابة.</string>
     <string name="notice_copy_replaced_device">حُفظت على هذا الهاتف نسخة من بيانات الجهاز التي استُبدلت:</string>
@@ -984,6 +991,7 @@
     <string name="audio_storage_manage">إدارة</string>
     <string name="audio_storage_title">مساحة التلاوة</string>
     <string name="audio_storage_subtitle">ما حمّلته وما خُزّن أثناء الاستماع</string>
+    <string name="privacy_link">سياسة الخصوصية</string>
     <string name="audio_storage_link">إدارة مساحة التلاوة</string>
     <string name="audio_storage_empty">لا توجد تلاوات محمّلة.</string>
     <string name="audio_storage_cache">الذاكرة المؤقتة للبث</string>

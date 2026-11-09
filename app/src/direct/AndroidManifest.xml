@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the direct (GitHub) build has the in-app updater. The Google Play build must not ask for this permission or
+     carry this provider: Play does not let an app update itself any way but through Play. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- To hand the update the app downloads from its GitHub releases to the system installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <!-- Lets the system installer read the downloaded update. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_file_paths" />
+        </provider>
+    </application>
+
+</manifest>

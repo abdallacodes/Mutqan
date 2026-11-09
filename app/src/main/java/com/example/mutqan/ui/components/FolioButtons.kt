@@ -153,6 +153,7 @@ fun FilterPill(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showCheck: Boolean = true,
     label: @Composable () -> Unit
 ) {
     val colors = FolioTheme.colors
@@ -176,7 +177,7 @@ fun FilterPill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
+            if (selected && showCheck) Icon(Icons.Filled.Check, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
             androidx.compose.material3.ProvideTextStyle(
                 MaterialTheme.typography.labelLarge.copy(color = content, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
             ) { label() }

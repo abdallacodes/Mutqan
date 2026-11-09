@@ -46,23 +46,48 @@ class AccountManager(context: Context) {
         }
     }
 
-    /** Shows Google's account chooser. Returns normally when the user backs out; throws on a real failure. */
-    suspend fun signIn(activity: Activity) {
-        val clientId = webClientId ?: return
+    /** Shows Google's account chooser. Returns the ID token of the account picked, or null when the user backs out; throws on a real failure. */
+    private suspend fun googleIdToken(activity: Activity): String? {
+        val clientId = webClientId ?: return null
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(GetSignInWithGoogleOption.Builder(clientId).build())
             .build()
         val credential = try {
             CredentialManager.create(activity).getCredential(activity, request).credential
         } catch (_: GetCredentialCancellationException) {
-            return
+            return null
         }
         if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             throw IllegalStateException("Unexpected credential type")
         }
-        val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+        return GoogleIdTokenCredential.createFrom(credential.data).idToken
+    }
+
+    /** Shows Google's account chooser. Returns normally when the user backs out; throws on a real failure. */
+    suspend fun signIn(activity: Activity) {
+        val idToken = googleIdToken(activity) ?: return
         val result = FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
         result.user?.let { _account.value = it.toAccount() }
+    }
+
+    /**
+     * Asks Google again who the user is, before the account is deleted: Firebase deletes only an account that signed in
+     * a moment ago, and a deletion should be confirmed by the owner anyway. False when the user backs out; throws when
+     * the account picked is not the signed-in one, or on a real failure.
+     */
+    suspend fun confirmIdentity(activity: Activity): Boolean {
+        val user = FirebaseAuth.getInstance().currentUser ?: return false
+        val idToken = googleIdToken(activity) ?: return false
+        user.reauthenticate(GoogleAuthProvider.getCredential(idToken, null)).await()
+        return true
+    }
+
+    /** Deletes the signed-in account itself (its cloud data has to be gone already) and forgets the Google sign-in. */
+    suspend fun deleteAccount() {
+        if (!isConfigured) return
+        FirebaseAuth.getInstance().currentUser?.delete()?.await()
+        runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
+        _account.value = null
     }
 
     suspend fun signOut() {

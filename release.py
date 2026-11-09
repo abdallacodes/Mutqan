@@ -192,7 +192,7 @@ def main():
 
     print("========================================")
     print(f"🎉 Success! Released {next_tag} on branch '{branch}'.")
-    print("   GitHub Actions will now build and attach app-release.apk.")
+    print("   GitHub Actions will now build the APK (attached to the release) and the Play bundle (a build artifact).")
     print("========================================")
 
 
