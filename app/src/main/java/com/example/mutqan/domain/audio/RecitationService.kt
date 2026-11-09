@@ -18,10 +18,14 @@ class RecitationService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        session = MediaSession.Builder(this, RecitationPlayer.get(this).sessionPlayer).build()
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this).build().also { it.setSmallIcon(R.drawable.ic_recitation) }
         )
+        val created = MediaSession.Builder(this, RecitationPlayer.get(this).sessionPlayer).build()
+        session = created
+        // The app starts this service itself and never connects a media controller, so the service would not know the
+        // session and would neither show the notification nor move to the foreground. Adding it here is what does both.
+        addSession(created)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
