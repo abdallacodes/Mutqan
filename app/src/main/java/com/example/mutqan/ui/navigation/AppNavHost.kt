@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
@@ -364,7 +365,11 @@ fun AppNavHost(
         // On a tab the player sits in the floating dock's column instead, above the glass.
         bottomBar = {
             if (playback.active && !inMushaf && !showBottomBar) {
-                RecitationBar(state = playback, onOpenSettings = { showRecitationSheet = true })
+                RecitationBar(
+                    state = playback,
+                    onOpenSettings = { showRecitationSheet = true },
+                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
     ) { innerPadding ->
@@ -709,7 +714,12 @@ fun AppNavHost(
                     .onSizeChanged { dockHeightPx = it.height }
             ) {
                 if (playback.active) {
-                    RecitationBar(state = playback, onOpenSettings = { showRecitationSheet = true })
+                    // Above the dock's own fade, so the fade does not wash the foot of the card.
+                    RecitationBar(
+                        state = playback,
+                        onOpenSettings = { showRecitationSheet = true },
+                        modifier = Modifier.zIndex(1f).padding(horizontal = 16.dp)
+                    )
                 }
                 MutqanBottomBar(
                     currentRoute  = if (tabRoute != null) tabOrder[pagerState.targetPage] else currentRoute,

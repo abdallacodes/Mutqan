@@ -3,7 +3,6 @@ package com.example.mutqan.ui.practice
 import com.example.mutqan.ui.components.FolioSheetInsets
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,10 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -53,7 +49,6 @@ import com.example.mutqan.R
 import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PracticeScope
 import com.example.mutqan.domain.RecencyUnit
-import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperChip
 import com.example.mutqan.ui.components.PaperChoice
@@ -65,9 +60,7 @@ import com.example.mutqan.ui.theme.DifficultyCritical
 import com.example.mutqan.ui.theme.DifficultySmooth
 import com.example.mutqan.ui.theme.DifficultyStruggled
 import com.example.mutqan.ui.components.PaperDialog
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
-import com.example.mutqan.ui.components.Folio
 import com.example.mutqan.ui.theme.FolioTheme
 
 // ── Words for a choice ──────────────────────────────────────────────────────
@@ -113,45 +106,7 @@ fun scopeSummary(scope: PracticeScope): String {
     return "$reach · $levels"
 }
 
-// ── On the Practice list ────────────────────────────────────────────────────
-
-/** The choice of pages as a card on the Practice list: what it is in words, how many pages, and a way in to change it. */
-@Composable
-fun ScopeRow(scope: PracticeScope, preview: PracticeScope.Preview?, onClick: () -> Unit) {
-    Folio(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp),
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SectionLabel(stringResource(R.string.scope_row_title))
-                Text(
-                    text = scopeSummary(scope),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            if (preview != null) {
-                Text(
-                    text = pluralStringResource(R.plurals.scope_span_pages, preview.total, preview.total),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (preview.total == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-                )
-            }
-            Icon(
-                Icons.Default.Tune,
-                contentDescription = stringResource(R.string.scope_change),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
+// ── Under the title of an exercise ──────────────────────────────────────────
 
 /** Under the title of an exercise: which pages its questions come from, and a way back to change that. */
 @Composable

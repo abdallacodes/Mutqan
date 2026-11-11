@@ -593,6 +593,13 @@
     <string name="insights_history_desc">كل ما سجّلته من مراجعات</string>
     <string name="insights_coverage_desc">حدّد السور والصفحات التي تحفظها</string>
     <string name="insights_plan_desc">كم تراجع في اليوم وفي أي أيام</string>
+    <string name="progress_hero_tested">الصفحات المُختبرة: %1$d · لم تُختبر بعد: %2$d</string>
+    <string name="progress_hero_all_tested">كل ما حفظته جرى اختباره بالتسميع</string>
+    <string name="progress_map_title">خريطة الحفظ</string>
+    <string name="progress_map_open">لوحة الحفظ</string>
+    <string name="progress_map_desc">الأجزاء الثلاثون، ولكل جزء لون حالة صفحاته المحفوظة. اضغط لفتح لوحة الحفظ</string>
+    <string name="progress_week_title">هذا الأسبوع</string>
+    <string name="progress_organise_title">تنظيم الحفظ</string>
     <string name="ex_boundaries_title">حدود الصفحات</string>
     <string name="ex_boundaries_desc">أول الصفحة وآخرها وما قبلها وما بعدها</string>
     <string name="ex_this_week">هذا الأسبوع: %d</string>
@@ -681,6 +688,15 @@
     <string name="surah_madani">سورة مدنية</string>
     <string name="practice_daily_title">مجموعة اليوم</string>
     <string name="practice_daily_desc">10 أسئلة متنوعة، أغلبها من صفحاتك الأضعف</string>
+    <string name="practice_section_suggested">مقترح لك</string>
+    <string name="practice_section_most">الأكثر ممارسة</string>
+    <string name="practice_all_title">كل التمارين</string>
+    <string name="practice_all_desc">%1$d تمارين في %2$d مجموعات</string>
+    <string name="practice_first_question">أول أسئلة اليوم: %1$s</string>
+    <string name="practice_focus_weak_title">الصفحات التي تحتاج انتباهًا</string>
+    <string name="practice_focus_dev_title">الصفحات قيد التثبيت</string>
+    <string name="practice_focus_desc">%1$s، اختبرها الآن</string>
+    <string name="practice_focus_set_title">مجموعة التثبيت</string>
     <string name="ex_ending_title">أيّ الخاتمتين الصحيحة؟</string>
     <string name="ex_ending_desc">آيات متشابهة تبدأ بالكلام نفسه. اختر خاتمتها الصحيحة.</string>
     <string name="ex_next_title">الآية التالية</string>
@@ -954,6 +970,12 @@
     <string name="audio_play">تشغيل</string>
     <string name="audio_pause">إيقاف مؤقت</string>
     <string name="audio_stop">إيقاف التلاوة</string>
+    <string name="audio_verse_of">الآية %1$d من %2$d</string>
+    <string name="mushaf_tool_revised">راجعت</string>
+    <string name="mushaf_tool_cover">غطِّ</string>
+    <string name="mushaf_tool_uncover">اكشف</string>
+    <string name="mushaf_tool_two_page">صفحتان</string>
+    <string name="mushaf_tool_one_page">صفحة</string>
     <string name="audio_sheet_title">التلاوة</string>
     <string name="audio_reciter">القارئ</string>
     <string name="audio_repeat_each">تكرار كل آية</string>
@@ -1226,7 +1248,6 @@
     <string name="pq_skip">تخطَّ</string>
     <string name="pq_you_chose">اخترتَ: %1$s (صفحة %2$d)</string>
 
-    <string name="practice_section_quizzes">اختبارات</string>
     <string name="practice_section_tools">أدوات</string>
     <string name="ex_juzmap_title">خريطة الجزء</string>
     <string name="ex_juzmap_desc">أرباع الجزء ومواضيعها، وأضعفها أولًا</string>

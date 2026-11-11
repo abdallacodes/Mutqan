@@ -21,6 +21,13 @@ import java.util.TimeZone
 @Immutable
 data class AttentionJuz(val juz: Int, val pages: Int, val firstPage: Int)
 
+/** One juz on the map: how many of its pages are memorised, and how many of those are in each recall state. */
+@Immutable
+data class JuzMemory(val juz: Int, val covered: Int, val total: Int, val byState: Map<PassageState, Int>) {
+    /** The share of the juz that is memorised, 0 to 1. */
+    val share: Float get() = if (total == 0) 0f else covered.toFloat() / total
+}
+
 @Immutable
 data class ProgressUiState(
     val isLoaded: Boolean = false,
@@ -29,7 +36,9 @@ data class ProgressUiState(
     val stateCounts: Map<PassageState, Int> = emptyMap(),
     /** The last [WINDOW_DAYS] days, oldest first: true when something was revised that day. */
     val revisedDays: List<Boolean> = emptyList(),
-    val attention: List<AttentionJuz> = emptyList()
+    val attention: List<AttentionJuz> = emptyList(),
+    /** The thirty juz in order, for the map strip. */
+    val juzMap: List<JuzMemory> = emptyList()
 ) {
     val daysRevised: Int get() = revisedDays.count { it }
 }
@@ -58,7 +67,12 @@ class ProgressViewModel(private val study: StudyRepository) : ViewModel() {
             if (needing.isEmpty()) null else AttentionJuz(juz, needing.size, needing.min())
         }.sortedWith(compareByDescending<AttentionJuz> { it.pages }.thenBy { it.juz }).take(MAX_ATTENTION)
 
-        ProgressUiState(true, inCoverage.size, counts, days, attention)
+        val juzMap = geometry.juzPages.entries.sortedBy { it.key }.map { (juz, pages) ->
+            val memorised = pages.filter { it in inCoverage }
+            JuzMemory(juz, memorised.size, pages.size, memorised.groupingBy { states[it - 1] }.eachCount())
+        }
+
+        ProgressUiState(true, inCoverage.size, counts, days, attention, juzMap)
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())

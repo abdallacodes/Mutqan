@@ -1,6 +1,26 @@
 package com.example.mutqan.ui.audio
 
 import com.example.mutqan.ui.components.FolioSheetInsets
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import com.example.mutqan.quran.AyahIndex
+import com.example.mutqan.ui.theme.FolioTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
 import android.Manifest
@@ -121,15 +141,22 @@ fun playingSurah(state: RecitationPlayer.State): Int? {
     return if (state.active && id in index) index.surahOf(id) else null
 }
 
-/** The controls of the recitation under way: verse before and after, pause, the settings and stop. */
+/**
+ * The mini player: a floating card with the surah in display type, the verse and the settings under it, previous / pause /
+ * next, and a line along its foot for how far into the run the recitation is. The text opens the settings; a swipe
+ * sideways stops the recitation (the settings sheet has Stop too, and a screen reader is offered it as an action).
+ */
 @Composable
 fun RecitationBar(
     state: RecitationPlayer.State,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surfaceContainer,
+    container: Color = FolioTheme.colors.folio,
     ink: Color = MaterialTheme.colorScheme.onSurface,
-    muted: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    muted: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    accent: Color = MaterialTheme.colorScheme.primary,
+    onAccent: Color = MaterialTheme.colorScheme.onPrimary,
+    edge: Color = FolioTheme.colors.edge
 ) {
     val context = LocalContext.current
     val player = remember(context) { RecitationPlayer.get(context) }
@@ -139,65 +166,120 @@ fun RecitationBar(
     val speed by prefs.recitationSpeedPercent.collectAsState(initial = 100)
     val details = buildString {
         append(stringResource(Reciter.fromId(reciterId).nameRes))
-        if (speed != 100) append(" · ").append(speedLabel(speed))
         if (repeat > 1) append(" · ").append(stringResource(R.string.audio_times, repeat))
+        if (speed != 100) append(" · ").append(speedLabel(speed))
     }
-    Column(modifier = modifier.fillMaxWidth().background(background)) {
-    if (state.buffering) LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = muted, trackColor = Color.Transparent)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
+    val index = remember(context) { QuranRepository.getInstance(context).ayahIndex }
+    val id = state.ayahId
+    val surah = if (id != null && id in index) index.surahOf(id) else null
+    val verseLine = if (surah != null && id != null) {
+        stringResource(R.string.audio_verse_of, index.ayahOf(id), remember(surah) { versesIn(index, id) })
+    } else ""
+
+    // The line moves with the sound: it is read again while playing, and held still while paused.
+    val playing = state.playing
+    val fraction by produceState(initialValue = player.runFraction(), state.ayahId, playing) {
+        value = player.runFraction()
+        while (playing) {
+            delay(PROGRESS_TICK_MS)
+            value = player.runFraction()
+        }
+    }
+    val smooth by animateFloatAsState(fraction, animationSpec = tween(PROGRESS_TICK_MS.toInt(), easing = LinearEasing), label = "recitation-progress")
+
+    val dismiss = rememberSwipeToDismissBoxState(confirmValueChange = { target ->
+        if (target != SwipeToDismissBoxValue.Settled) player.stop()
+        true
+    })
+    val stopLabel = stringResource(R.string.audio_stop)
+    SwipeToDismissBox(state = dismiss, backgroundContent = {}, modifier = modifier) {
+        Surface(
+            shape = FolioTheme.shapes.card,
+            color = container,
+            border = BorderStroke(1.dp, edge),
+            shadowElevation = 6.dp,
             modifier = Modifier
-                .weight(1f)
-                .clickable(role = Role.Button, onClick = onOpenSettings)
-                .padding(vertical = 6.dp)
+                .fillMaxWidth()
+                .semantics { customActions = listOf(CustomAccessibilityAction(stopLabel) { player.stop(); true }) }
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.audio_settings), tint = muted, modifier = Modifier.size(16.dp))
-                Text(
-                    text = nowPlayingLabel(state.ayahId),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Text(
-                text = if (state.yourTurn) stringResource(R.string.audio_your_turn) else details,
-                style = MaterialTheme.typography.labelSmall,
-                color = muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        // Media controls keep their left-to-right order in Arabic, like the buttons of any player.
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = player::previous) {
-                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.audio_previous), tint = ink)
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.audio_settings), onClick = onOpenSettings)
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = surah?.let { SurahData.nameOf(it) }.orEmpty(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (verseLine.isNotEmpty()) {
+                            Text(text = verseLine, style = MaterialTheme.typography.bodySmall, color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(
+                            text = if (state.yourTurn) stringResource(R.string.audio_your_turn) else details,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (state.yourTurn) FontWeight.SemiBold else null,
+                            color = if (state.yourTurn) accent else muted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    // Media controls keep their left-to-right order in Arabic, like the buttons of any player.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = player::previous) {
+                                Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.audio_previous), tint = ink)
+                            }
+                            FilledIconButton(
+                                onClick = player::togglePause,
+                                modifier = Modifier.size(56.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(containerColor = accent, contentColor = onAccent)
+                            ) {
+                                Icon(
+                                    if (state.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = stringResource(if (state.playing) R.string.audio_pause else R.string.audio_play),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            IconButton(onClick = player::next) {
+                                Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.audio_next), tint = ink)
+                            }
+                        }
+                    }
                 }
-                IconButton(onClick = player::togglePause) {
-                    Icon(
-                        if (state.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(if (state.playing) R.string.audio_pause else R.string.audio_play),
-                        tint = ink
-                    )
-                }
-                IconButton(onClick = player::next) {
-                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.audio_next), tint = ink)
-                }
-                IconButton(onClick = player::stop) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.audio_stop), tint = muted)
+                // While the sound loads the line runs back and forth; after that it fills from the reading side.
+                val track = muted.copy(alpha = 0.22f)
+                if (state.buffering) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp), color = accent, trackColor = track)
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(track)) {
+                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(smooth).background(accent))
+                    }
                 }
             }
         }
     }
-    }
+}
+
+private const val PROGRESS_TICK_MS = 250L
+
+/** How many verses the surah of [id] has: the ids of a surah run on in order. */
+private fun versesIn(index: AyahIndex, id: Int): Int {
+    var last = id
+    while (last + 1 in index && index.surahOf(last + 1) == index.surahOf(id)) last++
+    return index.ayahOf(last)
 }
 
 /** "1.25×" for a speed given in percent. */
@@ -463,6 +545,8 @@ private fun NowPlaying(state: RecitationPlayer.State, player: RecitationPlayer) 
                 }
             }
         }
+        // The player card has no Stop of its own (a swipe stops it), so the way to stop with a tap is here.
+        TextButton(onClick = player::stop) { Text(stringResource(R.string.audio_stop)) }
     }
 }
 

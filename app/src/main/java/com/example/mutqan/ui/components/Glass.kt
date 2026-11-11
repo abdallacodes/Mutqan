@@ -41,7 +41,7 @@ val LocalDockInset = compositionLocalOf { 0.dp }
  * blurred. Blur needs Android 12; before it the panel is simply tinted so much that nothing needs to show through.
  */
 @Stable
-class GlassBackdrop internal constructor(internal val source: GraphicsLayer, internal val frost: GraphicsLayer) {
+class GlassBackdrop internal constructor(internal val source: GraphicsLayer) {
     internal var origin by mutableStateOf(Offset.Zero)
 
     val blurs: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -50,8 +50,7 @@ class GlassBackdrop internal constructor(internal val source: GraphicsLayer, int
 @Composable
 fun rememberGlassBackdrop(): GlassBackdrop {
     val source = rememberGraphicsLayer()
-    val frost = rememberGraphicsLayer()
-    return remember(source, frost) { GlassBackdrop(source, frost) }
+    return remember(source) { GlassBackdrop(source) }
 }
 
 /** Marks the content a [FrostedPanel] sees through. [background] is painted first so the blur has a colour to mix with. */
@@ -79,9 +78,11 @@ fun FrostedPanel(
     content: @Composable BoxScope.() -> Unit
 ) {
     var origin by remember { mutableStateOf(Offset.Zero) }
+    // Each pane blurs in a layer of its own: panes sharing one layer would all show whichever was recorded last.
+    val frost = rememberGraphicsLayer()
     val blurPx = with(LocalDensity.current) { blur.toPx() }
     SideEffect {
-        backdrop.frost.renderEffect = if (backdrop.blurs) BlurEffect(blurPx, blurPx, TileMode.Clamp) else null
+        frost.renderEffect = if (backdrop.blurs) BlurEffect(blurPx, blurPx, TileMode.Clamp) else null
     }
     Box(
         modifier = modifier
@@ -94,12 +95,12 @@ fun FrostedPanel(
             .onGloballyPositioned { origin = it.positionInRoot() }
             .drawBehind {
                 if (backdrop.blurs) {
-                    backdrop.frost.record(this, layoutDirection, IntSize(size.width.toInt(), size.height.toInt())) {
+                    frost.record(this, layoutDirection, IntSize(size.width.toInt(), size.height.toInt())) {
                         translate(left = backdrop.origin.x - origin.x, top = backdrop.origin.y - origin.y) {
                             drawLayer(backdrop.source)
                         }
                     }
-                    drawLayer(backdrop.frost)
+                    drawLayer(frost)
                 }
                 drawRect(tint)
                 drawRect(Brush.verticalGradient(listOf(sheen, Color.Transparent), endY = size.height * 0.65f))

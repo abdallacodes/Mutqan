@@ -49,10 +49,11 @@ private fun FolioButton(
     icon: ImageVector?,
     container: Color,
     content: Color,
-    raised: Boolean
+    raised: Boolean,
+    pill: Boolean
 ) {
     val source = remember { MutableInteractionSource() }
-    val shape = FolioTheme.shapes.control
+    val shape = if (pill) FolioTheme.shapes.pill else FolioTheme.shapes.control
     Button(
         onClick = onClick,
         modifier = modifier
@@ -79,17 +80,18 @@ private fun FolioButton(
     }
 }
 
-/** The main action of a screen: filled with the action colour. */
+/** The main action of a screen: filled with the action colour. [pill] makes it fully round, for the one action a tab leads with. */
 @Composable
 fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    pill: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
-    FolioButton(text, onClick, modifier, enabled, icon, colors.primary, colors.onPrimary, raised = true)
+    FolioButton(text, onClick, modifier, enabled, icon, colors.primary, colors.onPrimary, raised = true, pill = pill)
 }
 
 /** A second action beside the main one, or the main one where the page already has a stronger mark: filled with the tonal colour. */
@@ -102,7 +104,7 @@ fun TonalButton(
     icon: ImageVector? = null
 ) {
     val colors = FolioTheme.colors
-    FolioButton(text, onClick, modifier, enabled, icon, colors.tonal, colors.onTonal, raised = false)
+    FolioButton(text, onClick, modifier, enabled, icon, colors.tonal, colors.onTonal, raised = false, pill = false)
 }
 
 /** The action on a [HeroCard]: gold, with the hero colour as its label. */
@@ -112,10 +114,11 @@ fun HeroButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    pill: Boolean = false
 ) {
     val colors = FolioTheme.colors
-    FolioButton(text, onClick, modifier, enabled, icon, colors.heroAccent, colors.hero, raised = false)
+    FolioButton(text, onClick, modifier, enabled, icon, colors.heroAccent, colors.hero, raised = false, pill = pill)
 }
 
 /**

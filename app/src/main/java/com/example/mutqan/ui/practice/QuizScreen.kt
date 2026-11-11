@@ -86,11 +86,12 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             QuizMode.ORDER -> R.string.ex_order_title
             QuizMode.WHERE -> R.string.ex_where_title
             QuizMode.DAILY -> R.string.practice_daily_title
+            QuizMode.FOCUS -> R.string.practice_focus_set_title
         }
     )
     val subtitle = when {
         state.finished || state.question == null -> null
-        state.isDaily -> stringResource(R.string.quiz_progress, minOf(state.asked + if (state.answered) 0 else 1, QuizMode.DAILY_SIZE), QuizMode.DAILY_SIZE)
+        state.isSet -> stringResource(R.string.quiz_progress, minOf(state.asked + if (state.answered) 0 else 1, QuizMode.DAILY_SIZE), QuizMode.DAILY_SIZE)
         state.asked > 0 -> stringResource(R.string.quiz_score, state.right, state.asked)
         else -> null
     }
@@ -107,8 +108,8 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                 .padding(horizontal = PaperSpace.Gutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Which pages the questions come from, when that is not simply all of them.
-            scope?.takeIf { !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
+            // Which pages the questions come from, when that is not simply all of them (a focused set names its own pages).
+            scope?.takeIf { mode != QuizMode.FOCUS && !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
             val q = state.question
             when {
                 state.loading -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
@@ -138,7 +139,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                     if (state.answered) {
                         Feedback(state.correct)
                         PaperButton(
-                            text = stringResource(if (state.isDaily && state.asked >= QuizMode.DAILY_SIZE) R.string.quiz_see_results else R.string.quiz_next),
+                            text = stringResource(if (state.isSet && state.asked >= QuizMode.DAILY_SIZE) R.string.quiz_see_results else R.string.quiz_next),
                             onClick = viewModel::next
                         )
                         // The verse number is an extra: it is there to answer or to leave.
@@ -235,7 +236,7 @@ internal fun QuizOption(
 }
 
 @Composable
-private fun instruction(type: ExerciseType, kind: EndingKind? = null): String = stringResource(
+internal fun instruction(type: ExerciseType, kind: EndingKind? = null): String = stringResource(
     when (type) {
         ExerciseType.QUIZ_ENDING -> R.string.quiz_q_ending
         ExerciseType.QUIZ_NEXT -> R.string.quiz_q_next

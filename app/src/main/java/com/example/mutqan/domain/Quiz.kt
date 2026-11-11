@@ -68,14 +68,21 @@ data class WhereQuestion(
     val ayahOptions: List<Int>
 ) : QuizQuestion
 
-/** What a Practice entry asks: one kind of question, or a mixed set. */
+/**
+ * What a Practice entry asks: one kind of question, or a mixed set of ten. [FOCUS] is a set drawn only from the pages
+ * that most need it (see [FocusPages]), whatever choice of pages is saved.
+ */
 enum class QuizMode(val route: String, val type: ExerciseType?) {
     ENDING("ending", ExerciseType.QUIZ_ENDING),
     NEXT("next", ExerciseType.QUIZ_NEXT),
     FINISH("finish", ExerciseType.QUIZ_FINISH),
     ORDER("order", ExerciseType.QUIZ_ORDER),
     WHERE("where", ExerciseType.QUIZ_WHERE),
-    DAILY("daily", null);
+    DAILY("daily", null),
+    FOCUS("focus", null);
+
+    /** A set of [DAILY_SIZE] mixed questions rather than one kind in a row. */
+    val isSet: Boolean get() = type == null
 
     companion object {
         fun fromRoute(route: String?): QuizMode = entries.firstOrNull { it.route == route } ?: DAILY

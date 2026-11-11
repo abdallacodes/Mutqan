@@ -194,8 +194,9 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
     }
 }
 
+/** The colour of a recall state: shared by the evidence bar here and the memory map on the Progress tab. */
 @Composable
-private fun PassageState.tone(): Color = when (this) {
+internal fun PassageState.tone(): Color = when (this) {
     PassageState.NOT_ASSESSED -> MaterialTheme.colorScheme.outline
     PassageState.NEEDS_ATTENTION -> DifficultyCritical
     PassageState.DEVELOPING -> DifficultyStruggled

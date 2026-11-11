@@ -305,6 +305,18 @@ class RecitationPlayer private constructor(context: Context) {
 
     fun durationMs(): Long = exo.duration.takeIf { it != C.TIME_UNSET } ?: 0L
 
+    /**
+     * How far into the run the recitation is, from 0 to 1: the items already played plus the part of the one sounding.
+     * A verse set to repeat counts once per repetition, so the line moves as the sound does.
+     */
+    fun runFraction(): Float {
+        val total = owners.size
+        if (total == 0) return 0f
+        val length = exo.duration
+        val within = if (length > 0 && length != C.TIME_UNSET) (exo.currentPosition.toFloat() / length).coerceIn(0f, 1f) else 0f
+        return ((exo.currentMediaItemIndex + within) / total).coerceIn(0f, 1f)
+    }
+
     fun seekTo(positionMs: Long) {
         if (_state.value.active) exo.seekTo(positionMs.coerceAtLeast(0L))
     }

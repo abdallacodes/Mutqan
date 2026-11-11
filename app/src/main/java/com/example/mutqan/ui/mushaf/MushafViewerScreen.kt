@@ -1,6 +1,10 @@
 package com.example.mutqan.ui.mushaf
 
 import com.example.mutqan.quran.QuranAyah
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.ui.graphics.lerp
+import com.example.mutqan.ui.components.glassSource
+import com.example.mutqan.ui.components.rememberGlassBackdrop
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.contentDescription
 import com.example.mutqan.ui.theme.statusColors
@@ -493,6 +497,9 @@ fun MushafViewerScreen(
         }
     }
 
+    // What the floating capsules look through: the page, recorded once and drawn again, blurred, inside each of them.
+    val backdrop = rememberGlassBackdrop()
+
     // ── Root: full-bleed pager + floating chrome (no permanent top bar eating height)
     CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons) {
     Box(
@@ -500,6 +507,7 @@ fun MushafViewerScreen(
             .fillMaxSize()
             .background(MushafParchment)
     ) {
+        Box(Modifier.fillMaxSize().glassSource(backdrop, MushafParchment)) {
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 PaperLoading(color = MushafInk, delayMillis = 0)
@@ -570,64 +578,37 @@ fun MushafViewerScreen(
                 }
             }
         }
+        }
 
+        // The controls float. A capsule at the top holds the place and the menu, the quarter hangs under it, and the
+        // tools sit in a capsule at the bottom, where a thumb reaches. Nothing runs across the page: it shows around the
+        // capsules and, where the phone can blur, through them.
         AnimatedVisibility(
             visible  = showHeader,
-            enter    = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-            exit     = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+            enter    = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+            exit     = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 }),
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
         ) {
             val juzHizb = pageInfo?.let { stringResource(R.string.mushaf_juz_hizb, it.first, it.second) }
             val pageLine = listOfNotNull(juzHizb, pageBarLabel).joinToString(" · ")
-            // Opaque, so with large text the taller bar covers the page's own top line instead of mixing with it.
+            val rubHere = quarterHere
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MushafParchment)
                     .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier          = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint               = MushafInk
-                        )
-                    }
-                    // The name and place of the page; tapping it opens the jump sheet. The arrow says it is a button, and
-                    // the height keeps it a full finger tall however little text there is.
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                            .clickable(role = Role.Button) { showJump = true }
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text       = surahName.ifEmpty { pageBarLabel },
-                                style      = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color      = MushafInk,
-                                maxLines   = 1,
-                                overflow   = TextOverflow.Ellipsis,
-                                modifier   = Modifier.weight(1f, fill = false)
-                            )
-                            Icon(
-                                imageVector        = Icons.Filled.ArrowDropDown,
-                                contentDescription = null,
-                                tint               = MushafInkMuted,
-                                modifier           = Modifier.size(20.dp)
-                            )
-                        }
+                MushafTopCapsule(
+                    backdrop = backdrop,
+                    colors   = colors,
+                    title    = surahName.ifEmpty { pageBarLabel },
+                    onBack   = onBack,
+                    onTitle  = { showJump = true },
+                    onMenu   = { menuOpen = true },
+                    placeLine = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // How well each page in view is known, in the colour it has everywhere else.
                             val inView = if (useSpreadLayout) {
@@ -637,83 +618,24 @@ fun MushafViewerScreen(
                             // Two lines at most: with large text the page number wraps rather than being cut off.
                             Text(
                                 text     = pageLine,
-                                style    = MaterialTheme.typography.labelSmall,
+                                style    = MaterialTheme.typography.labelMedium,
                                 color    = MushafInkMuted,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                    // Everything else is in one sheet, in groups.
-                    IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(BAR_BUTTON)) {
-                        Icon(
-                            imageVector        = Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.mushaf_cd_menu),
-                            tint               = MushafInk
-                        )
-                    }
-                }
-                // The second row: the quarter being read with the subject the user gave it, if any (a tap opens that
-                // juz's map; with no subject it says where the tap leads, which is where one is added), and the three
-                // switches used while reading. Nothing is squeezed: the first row is the name's alone.
-                Row(
-                    modifier          = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val rubHere = quarterHere
-                    if (rubHere != null) {
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = BAR_BUTTON)
-                                .clickable(role = Role.Button) { onOpenJuz(rubHere.juz) }
-                                .padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text     = if (subjectHere != null) stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere)
-                                           else stringResource(R.string.mushaf_quarter_open, rubHere.quarterInJuz),
-                                style    = MaterialTheme.typography.labelLarge,
-                                color    = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            Icon(
-                                imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint               = MaterialTheme.colorScheme.primary,
-                                modifier           = Modifier.size(18.dp)
-                            )
-                        }
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                    }
-                    IconButton(onClick = { showRevised = true }, modifier = Modifier.size(BAR_BUTTON)) {
-                        Icon(
-                            imageVector        = Icons.Filled.TaskAlt,
-                            contentDescription = stringResource(R.string.mushaf_cd_revised),
-                            tint               = MushafInk
-                        )
-                    }
-                    IconButton(onClick = { coverOn = !coverOn; coverAgain(); showHeader = false }, modifier = Modifier.size(BAR_BUTTON)) {
-                        Icon(
-                            imageVector        = if (coverOn) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                            contentDescription = stringResource(if (coverOn) R.string.mushaf_cd_uncover else R.string.mushaf_cd_cover),
-                            tint               = if (coverOn) MaterialTheme.colorScheme.primary else MushafInk
-                        )
-                    }
-                    // The two-page view is switched here, in the bar: it is changed as often as the cover is.
-                    IconButton(onClick = { useSpreadLayout = !useSpreadLayout }, modifier = Modifier.size(BAR_BUTTON)) {
-                        Icon(
-                            imageVector        = Icons.Filled.MenuBook,
-                            contentDescription = stringResource(if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page),
-                            tint               = if (useSpreadLayout) MaterialTheme.colorScheme.primary else MushafInk
-                        )
-                    }
+                )
+                // The quarter with the subject the user gave it, if any; a tap opens that juz's map. With no subject it
+                // says where the tap leads, which is where one is added.
+                if (rubHere != null) {
+                    MushafQuarterChip(
+                        backdrop = backdrop,
+                        colors   = colors,
+                        label    = if (subjectHere != null) stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere)
+                                   else stringResource(R.string.mushaf_quarter_open, rubHere.quarterInJuz),
+                        onClick  = { onOpenJuz(rubHere.juz) }
+                    )
                 }
             }
         }
@@ -740,18 +662,76 @@ fun MushafViewerScreen(
             }
         }
 
-        if (playback.active) {
-            RecitationBar(
-                state = playback,
-                onOpenSettings = { showRecitationSheet = true },
-                background = MushafHeaderScrim,
-                ink = MushafInk,
-                muted = MushafInkMuted,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = if (coverOn) 48.dp else 0.dp)
-                    .navigationBarsPadding()
-            )
+        // The bottom: the tools while the bar is up, and the player card while a recitation is under way.
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = if (coverOn) 48.dp else 0.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+        ) {
+            AnimatedVisibility(
+                visible  = showHeader,
+                enter    = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                exit     = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+            ) {
+                val tools = buildList {
+                    add(MushafTool(
+                        icon = Icons.Filled.TaskAlt,
+                        label = stringResource(R.string.mushaf_tool_revised),
+                        description = stringResource(R.string.mushaf_cd_revised),
+                        active = false,
+                        onClick = { showRevised = true }
+                    ))
+                    add(MushafTool(
+                        icon = if (coverOn) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        label = stringResource(if (coverOn) R.string.mushaf_tool_uncover else R.string.mushaf_tool_cover),
+                        description = stringResource(if (coverOn) R.string.mushaf_cd_uncover else R.string.mushaf_cd_cover),
+                        active = coverOn,
+                        onClick = { coverOn = !coverOn; coverAgain(); showHeader = false }
+                    ))
+                    // The two-page view is switched here: it is changed as often as the cover is.
+                    add(MushafTool(
+                        icon = Icons.Filled.MenuBook,
+                        label = stringResource(if (useSpreadLayout) R.string.mushaf_tool_one_page else R.string.mushaf_tool_two_page),
+                        description = stringResource(if (useSpreadLayout) R.string.mushaf_cd_switch_one_page else R.string.mushaf_cd_switch_two_page),
+                        active = useSpreadLayout,
+                        onClick = { useSpreadLayout = !useSpreadLayout }
+                    ))
+                    // With a recitation under way its card has the controls, so there is nothing to start.
+                    if (!playback.active) {
+                        add(MushafTool(
+                            icon = Icons.Filled.Headphones,
+                            label = stringResource(R.string.peek_act_listen),
+                            description = stringResource(R.string.peek_act_listen),
+                            active = false,
+                            onClick = {
+                                coroutineScope.launch {
+                                    val first = withContext(Dispatchers.IO) { quran.ayahsOnPage(currentPage).firstOrNull()?.id }
+                                    if (first != null) listenFrom(first, currentPage)
+                                }
+                            }
+                        ))
+                    }
+                }
+                MushafToolCapsule(
+                    backdrop = backdrop,
+                    colors   = colors,
+                    tools    = tools,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+            if (playback.active) {
+                RecitationBar(
+                    state = playback,
+                    onOpenSettings = { showRecitationSheet = true },
+                    container = lerp(MushafParchment, MushafInk, 0.07f),
+                    ink = MushafInk,
+                    muted = MushafInkMuted,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
     }
 

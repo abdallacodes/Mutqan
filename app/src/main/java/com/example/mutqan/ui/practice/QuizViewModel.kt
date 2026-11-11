@@ -7,18 +7,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.ChoiceQuestion
 import com.example.mutqan.domain.ExerciseType
-import com.example.mutqan.data.UserPreferencesRepository
-import com.example.mutqan.domain.TopicLanguage
-import com.example.mutqan.domain.TopicsLibrary
+import com.example.mutqan.domain.FocusPages
 import com.example.mutqan.domain.OrderQuestion
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.domain.PassageStates
-import com.example.mutqan.domain.QuizEngine
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.domain.QuizQuestion
-import com.example.mutqan.domain.QuizText
 import com.example.mutqan.domain.RecallOutcome
-import com.example.mutqan.domain.SimilarLibrary
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.WhereQuestion
 import com.example.mutqan.quran.QuranRepository
@@ -30,7 +25,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
-import com.example.mutqan.domain.VerseClosingsLibrary
 
 @Immutable
 data class QuizUiState(
@@ -59,13 +53,14 @@ data class QuizUiState(
     /** Pages answered wrongly in this sitting, for the summary. */
     val missedPages: List<Int> = emptyList()
 ) {
-    val isDaily: Boolean get() = mode == QuizMode.DAILY
+    /** A set of ten mixed questions (the daily set or a focused one) rather than one kind in a row. */
+    val isSet: Boolean get() = mode.isSet
 }
 
 /**
- * Runs a sitting of quiz questions: one kind in a row, or a daily set of ten mixed ones. Pages are drawn
- * mostly from what is memorised, favouring pages that are weak or were missed recently. Each answer is
- * kept as an exercise result so Today can point at pages that keep going wrong.
+ * Runs a sitting of quiz questions: one kind in a row, or a set of ten mixed ones (the daily set, or a focused one on
+ * the weakest pages). The pages and the questions come from a [QuizPicker]. Each answer is kept as an exercise result so
+ * Today can point at pages that keep going wrong.
  */
 class QuizViewModel(
     private val mode: QuizMode,
@@ -77,12 +72,12 @@ class QuizViewModel(
     private val _state = MutableStateFlow(QuizUiState(mode = mode))
     val state: StateFlow<QuizUiState> = _state.asStateFlow()
 
-    private var engine: QuizEngine? = null
-    private var weights = IntArray(PAGES)
-    private val recent = ArrayDeque<Int>()
+    private var picker: QuizPicker? = null
     private val random = Random.Default
     private var schedule: List<ExerciseType> = emptyList()
-    private var scopeEmpty = false
+
+    /** The first question of the daily set, when the Practice screen already built it for its card. */
+    private var preset: DailyPreview.Held? = null
 
     init {
         start()
@@ -90,29 +85,16 @@ class QuizViewModel(
 
     private fun start() {
         _state.update { QuizUiState(mode = mode, hard = it.hard) }
-        recent.clear()
-        schedule = if (mode == QuizMode.DAILY) {
-            (ExerciseType.QUIZ + ExerciseType.QUIZ).shuffled(random).take(QuizMode.DAILY_SIZE)
-        } else emptyList()
+        preset = if (mode == QuizMode.DAILY) DailyPreview.take() else null
+        schedule = preset?.schedule
+            ?: if (mode.isSet) (ExerciseType.QUIZ + ExerciseType.QUIZ).shuffled(random).take(QuizMode.DAILY_SIZE) else emptyList()
         viewModelScope.launch(Dispatchers.Default) {
-            val covered = study.coveredPages().first()
-            val states = PassageStates.compute(study.revisionLogs().first())
-            val misses = study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS).first().map { it.page }.toSet()
-            val scope = UserPreferencesRepository(appContext).practiceScope.first()
-            val allowed = scope.pages(
-                covered, states, study.selfRatedStrength().first(), study.revisionLogs().first()
-            )
-            scopeEmpty = !scope.isAll && allowed.isEmpty()
-            weights = IntArray(PAGES) { i ->
-                val memorised = (i + 1) in allowed
-                if (!memorised) 0
-                else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
-            }
-            val language = TopicLanguage(arabicUi = appContext.resources.configuration.locales[0].language == "ar")
-            engine = QuizEngine(
-                quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext),
-                TopicsLibrary.load(appContext), language
-            )
+            val only = if (mode == QuizMode.FOCUS) {
+                FocusPages.pick(study.coveredPages().first(), PassageStates.compute(study.revisionLogs().first()))?.pages ?: emptySet()
+            } else null
+            val made = QuizPicker.create(appContext, study, quran, only, random)
+            preset?.let { made.markAsked(it.first.subject.page) }
+            picker = made
             loadNext()
         }
     }
@@ -126,7 +108,7 @@ class QuizViewModel(
 
     fun next() {
         val s = _state.value
-        if (s.isDaily && s.asked >= QuizMode.DAILY_SIZE) {
+        if (s.isSet && s.asked >= QuizMode.DAILY_SIZE) {
             _state.update { it.copy(finished = true) }
             return
         }
@@ -190,8 +172,13 @@ class QuizViewModel(
     // ── Choosing the next question ───────────────────────────────────────────
 
     private fun loadNext() {
-        val engine = engine ?: return
+        val picker = picker ?: return
         val s = _state.value
+        preset?.takeIf { s.asked == 0 }?.let {
+            preset = null
+            show(it.first)
+            return
+        }
         val wanted: List<ExerciseType> = when {
             mode.type != null -> listOf(mode.type)
             else -> {
@@ -200,49 +187,22 @@ class QuizViewModel(
             }
         }
         for (type in wanted) {
-            val q = tryBuild(engine, type, s.hard)
+            val q = picker.build(type, s.hard)
             if (q != null) {
-                _state.update {
-                    it.copy(
-                        loading = false, noMaterial = false, question = q, stage = 0, pickedOption = null,
-                        pickedSurah = null, pickedAyah = null, orderTaps = emptyList(), answered = false, correct = false
-                    )
-                }
+                show(q)
                 return
             }
         }
-        _state.update { it.copy(loading = false, noMaterial = true, scopeEmpty = scopeEmpty, question = null) }
+        _state.update { it.copy(loading = false, noMaterial = true, scopeEmpty = picker.scopeEmpty, question = null) }
     }
 
-    private fun tryBuild(engine: QuizEngine, type: ExerciseType, hard: Boolean): QuizQuestion? {
-        repeat(TRIES) {
-            val page = pickPage() ?: return null
-            val ayahs = quran.ayahsOnPage(page)
-            if (ayahs.isEmpty()) return@repeat
-            val q = engine.build(type, ayahs.random(random).id, hard)
-            if (q != null) {
-                recent.addLast(page)
-                while (recent.size > RECENT_PAGES) recent.removeFirst()
-                return q
-            }
+    private fun show(q: QuizQuestion) {
+        _state.update {
+            it.copy(
+                loading = false, noMaterial = false, question = q, stage = 0, pickedOption = null,
+                pickedSurah = null, pickedAyah = null, orderTaps = emptyList(), answered = false, correct = false
+            )
         }
-        return null
-    }
-
-    private fun pickPage(): Int? {
-        val w = IntArray(PAGES) { i -> if (i + 1 in recent) 0 else weights[i] }
-        val index = QuizText.weightedPick(w, random) ?: QuizText.weightedPick(weights, random)
-        return index?.plus(1)
-    }
-
-    private companion object {
-        const val PAGES = 604
-        const val BASE_WEIGHT = 2
-        const val WEAK_BONUS = 6
-        const val MISS_BONUS = 4
-        const val TRIES = 60
-        const val RECENT_PAGES = 8
-        const val MISS_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
     }
 }
 
