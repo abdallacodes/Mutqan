@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -201,7 +202,9 @@ internal fun PassageState.tone(): Color = when (this) {
     PassageState.NEEDS_ATTENTION -> DifficultyCritical
     PassageState.DEVELOPING -> DifficultyStruggled
     PassageState.RELIABLE -> DifficultySmooth
-    PassageState.STABLE_OVER_TIME -> MaterialTheme.colorScheme.primary
+    // The strongest state is the reliable teal pushed toward the ink: next to it in the map, so it must not be
+    // the app's accent (green on Paper, which looks the same as the teal).
+    PassageState.STABLE_OVER_TIME -> lerp(DifficultySmooth, MaterialTheme.colorScheme.onBackground, 0.5f)
 }
 
 /** A thin bar split by share of memorised pages in each state. */

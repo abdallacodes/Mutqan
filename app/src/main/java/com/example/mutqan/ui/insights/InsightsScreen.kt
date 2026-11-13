@@ -245,8 +245,9 @@ private val STACK = listOf(
 @Composable
 private fun MemoryMap(juz: List<JuzMemory>, counts: Map<PassageState, Int>, onClick: () -> Unit) {
     val track = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-    // Memorised and not yet tested is a pale tint of the accent, apart from the grey track of what is not memorised.
-    val untested = MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+    // Memorised and not yet tested is a mid grey: neutral, so it is never taken for one of the coloured states (the
+    // accent is gold on Paper, which sat too close to amber), and plainly apart from the faint track of what is not memorised.
+    val untested = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.50f)
     val tones = PassageState.entries.associateWith { if (it == PassageState.NOT_ASSESSED) untested else it.tone() }
     val description = stringResource(R.string.progress_map_desc)
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {

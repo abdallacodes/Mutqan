@@ -2,6 +2,8 @@ package com.example.mutqan.ui.mushaf
 
 import com.example.mutqan.quran.QuranAyah
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.ui.graphics.lerp
 import com.example.mutqan.ui.components.glassSource
 import com.example.mutqan.ui.components.rememberGlassBackdrop
@@ -296,6 +298,9 @@ fun MushafViewerScreen(
 
     // Cover mode: the text is hidden for reciting from memory, and a tap reveals one verse.
     var coverOn by rememberSaveable { mutableStateOf(false) }
+    // While covered a tap goes to the verse, so the page cannot bring the bars or send them away: a button does, and a
+    // small one stays to bring them back. The cover bar always shows with the capsules, so there is always a way to hide them.
+    var coverBarsHidden by rememberSaveable { mutableStateOf(false) }
     var revealed by remember { mutableStateOf(emptySet<Int>()) }
     // With "reveal in steps" on, a tap shows a verse a step at a time; these are the verses shown in part so far.
     var partial by remember { mutableStateOf(emptyMap<Int, PartialReveal>()) }
@@ -640,8 +645,10 @@ fun MushafViewerScreen(
             }
         }
 
-        // While the text is covered a bar stays at the bottom: what to do, and the way out.
-        if (coverOn) {
+        // While the text is covered a bar stays at the bottom: what to do, and the way out. It can be tucked away
+        // with everything else; it comes back with the capsules.
+        val coverBarShown = coverOn && (!coverBarsHidden || showHeader)
+        if (coverBarShown) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -659,6 +666,13 @@ fun MushafViewerScreen(
                 )
                 TextButton(onClick = { coverAgain() }) { Text(stringResource(R.string.mushaf_cover_again)) }
                 TextButton(onClick = { coverOn = false; coverAgain() }) { Text(stringResource(R.string.mushaf_cd_uncover)) }
+                IconButton(onClick = { coverBarsHidden = true; showHeader = false }) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.mushaf_cd_hide_bars),
+                        tint = MushafInkMuted
+                    )
+                }
             }
         }
 
@@ -667,10 +681,22 @@ fun MushafViewerScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(bottom = if (coverOn) 48.dp else 0.dp)
+                .padding(bottom = if (coverBarShown) 48.dp else 0.dp)
                 .navigationBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
+            // The bars are away while the text is covered: one small button brings back the cover bar.
+            if (coverOn && !coverBarShown) {
+                MushafGlass(backdrop, colors, CircleShape, Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)) {
+                    IconButton(onClick = { coverBarsHidden = false }, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowUp,
+                            contentDescription = stringResource(R.string.mushaf_cd_show_bars),
+                            tint = colors.ink
+                        )
+                    }
+                }
+            }
             AnimatedVisibility(
                 visible  = showHeader,
                 enter    = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
@@ -689,7 +715,7 @@ fun MushafViewerScreen(
                         label = stringResource(if (coverOn) R.string.mushaf_tool_uncover else R.string.mushaf_tool_cover),
                         description = stringResource(if (coverOn) R.string.mushaf_cd_uncover else R.string.mushaf_cd_cover),
                         active = coverOn,
-                        onClick = { coverOn = !coverOn; coverAgain(); showHeader = false }
+                        onClick = { coverOn = !coverOn; coverAgain(); showHeader = false; coverBarsHidden = false }
                     ))
                     // The two-page view is switched here: it is changed as often as the cover is.
                     add(MushafTool(

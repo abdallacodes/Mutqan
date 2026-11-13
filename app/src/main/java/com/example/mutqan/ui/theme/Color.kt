@@ -34,14 +34,17 @@ val NightOnGoldContainer       = Color(0xFFF0D9A0)
 val NightSage                  = Color(0xFF7FB9A3)
 val NightError                 = Color(0xFFE9897F)
 
-// ── Status colours: good (sage), fair (ochre), weak (terracotta) ──────────────
-// Used for text as well as for marks, so each comes in two versions: soft pastels on dark backgrounds and deeper
-// shades of the same hues on light ones. Both pass 4.5:1 on every palette's background, surface and surface variant.
+// ── Status colours: good (teal), fair (amber), weak (crimson) ─────────────────
+// Used for text as well as for marks, so each comes in two versions: lighter on dark backgrounds and deeper shades of
+// the same hues on light ones. Both pass 4.5:1 on every palette's background, surface and surface variant.
+// The three hues sit far apart (about 190, 65 and 5 degrees on the colour wheel) and differ in lightness too, so they
+// stay apart for readers who cannot tell red from green; the earlier sage, ochre and terracotta were all muted warm-ish
+// tones of one lightness and looked alike. StatusColorsTest keeps the contrast and the distance.
 
 class StatusColors(val good: Color, val fair: Color, val weak: Color)
 
-val StatusOnLight = StatusColors(good = Color(0xFF41674C), fair = Color(0xFF815512), weak = Color(0xFF9E3F2E))
-val StatusOnDark  = StatusColors(good = Color(0xFF7FAE8C), fair = Color(0xFFD2A94A), weak = Color(0xFFD27665))
+val StatusOnLight = StatusColors(good = Color(0xFF076B6C), fair = Color(0xFF8A5206), weak = Color(0xFF830F3D))
+val StatusOnDark  = StatusColors(good = Color(0xFF2DB9BD), fair = Color(0xFFF2CB62), weak = Color(0xFFDB6F63))
 
 /** The status colours for text and marks on a light ([onLight]) or a dark background. */
 fun statusColors(onLight: Boolean): StatusColors = if (onLight) StatusOnLight else StatusOnDark

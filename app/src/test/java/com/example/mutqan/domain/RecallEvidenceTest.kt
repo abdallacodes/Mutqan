@@ -65,6 +65,24 @@ class RecallEvidenceTest {
     // ── Passage states ────────────────────────────────────────────────────────
 
     @Test
+    fun `of two attempts on the same day the one recorded last decides`() {
+        val midnight = 20_000 * day
+        fun same(outcome: RecallOutcome, recordedAt: Long) = RevisionLog(
+            startPage = 1, endPage = 1, timestamp = recordedAt, manualStability = outcome.quality,
+            dateMillis = midnight, outcome = outcome
+        )
+        val independentFirst = same(RecallOutcome.INDEPENDENT, midnight + 1_000)
+        val unableAfter = same(RecallOutcome.UNABLE, midnight + 2_000)
+        // The database lists newest first, whatever the order the dates tie in.
+        assertEquals(PassageState.NEEDS_ATTENTION, stateOfPage1(unableAfter, independentFirst))
+        assertEquals(PassageState.NEEDS_ATTENTION, stateOfPage1(independentFirst, unableAfter))
+        // And the other way round the page has recovered.
+        val unableFirst = same(RecallOutcome.UNABLE, midnight + 1_000)
+        val independentAfter = same(RecallOutcome.INDEPENDENT, midnight + 2_000)
+        assertEquals(PassageState.DEVELOPING, stateOfPage1(independentAfter, unableFirst))
+    }
+
+    @Test
     fun `a page nobody has tried to recall is not assessed`() {
         assertEquals(PassageState.NOT_ASSESSED, stateOfPage1())
         assertEquals(PassageState.NOT_ASSESSED, stateOfPage1(log(1, RecallOutcome.PRACTICE_ONLY, 1)))

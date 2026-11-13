@@ -26,8 +26,11 @@ object PassageStates {
     const val STABLE_SPAN_DAYS = 30
     private const val MS_PER_DAY = 86_400_000L
 
-    /** An attempt at one page: when it happened and what it showed. */
-    private class Attempt(val day: Long, val time: Long, val outcome: RecallOutcome)
+    /**
+     * An attempt at one page: the day it counts for, [time] (that day, as the reader dated it), when it was really
+     * recorded ([stamp]) and what it showed.
+     */
+    private class Attempt(val day: Long, val time: Long, val stamp: Long, val outcome: RecallOutcome)
 
     /**
      * The state of each page (index 0 = page 1) from [logs]. Practice-only logs are ignored. A
@@ -38,7 +41,7 @@ object PassageStates {
         for (log in logs) {
             if (!log.outcome.isRecallAttempt) continue
             val time = if (log.dateMillis > 0L) log.dateMillis else log.timestamp
-            val attempt = Attempt(day = time / MS_PER_DAY, time = time, outcome = log.outcome)
+            val attempt = Attempt(day = time / MS_PER_DAY, time = time, stamp = log.timestamp, outcome = log.outcome)
             val start = log.startPage.coerceIn(1, totalPages)
             val end = log.endPage.coerceIn(start, totalPages)
             for (page in start..end) attempts[page - 1].add(attempt)
@@ -48,7 +51,10 @@ object PassageStates {
 
     private fun stateOf(all: List<Attempt>): PassageState {
         if (all.isEmpty()) return PassageState.NOT_ASSESSED
-        val attempts = all.sortedBy { it.time }
+        // Dated logs are often picked by day only, so two attempts on one day tie on time. The order they were
+        // recorded in then decides which is the last; the database lists newest first, so a plain stable sort would
+        // take the older one as the last.
+        val attempts = all.sortedWith(compareBy<Attempt>({ it.time }, { it.stamp }))
         val last = attempts.last()
         val lastThree = attempts.takeLast(3)
 

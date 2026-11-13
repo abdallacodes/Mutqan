@@ -844,6 +844,8 @@
     <string name="mushaf_cd_uncover">Show the text</string>
     <string name="mushaf_cover_hint">Tap a verse to reveal it</string>
     <string name="mushaf_cover_again">Cover all</string>
+    <string name="mushaf_cd_hide_bars">Hide the bars</string>
+    <string name="mushaf_cd_show_bars">Show the bars</string>
     <string name="mushaf_rotate">Rotate with the device</string>
     <string name="mushaf_page_colours">Page colours</string>
     <string name="mushaf_theme_auto">Match the app</string>

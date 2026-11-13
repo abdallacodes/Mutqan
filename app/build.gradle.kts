@@ -50,6 +50,14 @@ android {
     }
 
     buildTypes {
+        // A test build that sits beside the real app on a phone, with its own data (and, see the bottom of this file,
+        // without Firebase, so it cannot reach anyone's cloud copy): ./gradlew :app:installDirectDebug -PsideBySide
+        debug {
+            if (providers.gradleProperty("sideBySide").isPresent) {
+                applicationIdSuffix = ".test"
+                versionNameSuffix = "-test"
+            }
+        }
         release {
             signingConfig = if (releaseKeystore != null) {
                 signingConfigs.getByName("release")
@@ -128,6 +136,7 @@ dependencies {
 
 // Accounts and cloud sync need a Firebase project. Its google-services.json is not in the repository
 // (it is git-ignored); without it the app still builds and runs, and the account section stays hidden.
-if (file("google-services.json").exists()) {
+// A side-by-side test build has another package name, which the file does not list, and it must not sign in anyway.
+if (file("google-services.json").exists() && !providers.gradleProperty("sideBySide").isPresent) {
     apply(plugin = "com.google.gms.google-services")
 }

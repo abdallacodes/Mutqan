@@ -884,6 +884,8 @@
     <string name="mushaf_cd_uncover">إظهار النص</string>
     <string name="mushaf_cover_hint">اضغط على آية لإظهارها</string>
     <string name="mushaf_cover_again">أخفِ الكل</string>
+    <string name="mushaf_cd_hide_bars">إخفاء الأشرطة</string>
+    <string name="mushaf_cd_show_bars">إظهار الأشرطة</string>
     <string name="mushaf_rotate">التدوير مع الجهاز</string>
     <string name="mushaf_page_colours">ألوان الصفحة</string>
     <string name="mushaf_theme_auto">حسب التطبيق</string>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug builds say so on the home screen, so a test build beside the real app is not mistaken for it. -->
+    <string name="app_name">متقن (تجربة)</string>
+</resources>
