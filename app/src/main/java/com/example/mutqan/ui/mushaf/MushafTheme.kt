@@ -39,9 +39,11 @@ private val sepia = MushafColors(
     bg = Color(0xFFF0E2C3), ink = Color(0xFF3B2D1A), muted = Color(0xFF7A6A50),
     scrim = Color(0xE8F0E2C3), spine = Color(0x145C4A2A), dark = false
 )
+// A warm charcoal, a step lighter than the app's own dark screens: the first night page, a cool near-black (0xFF111315),
+// read as black beside them.
 private val night = MushafColors(
-    bg = Color(0xFF111315), ink = Color(0xFFD9D3C5), muted = Color(0xFF8F8A7E),
-    scrim = Color(0xE8111315), spine = Color(0x14FFFFFF), dark = true
+    bg = Color(0xFF282521), ink = Color(0xFFD9D3C5), muted = Color(0xFF8F8A7E),
+    scrim = Color(0xE8282521), spine = Color(0x14FFFFFF), dark = true
 )
 
 fun MushafTheme.colors(appIsDark: Boolean): MushafColors = when (this) {
