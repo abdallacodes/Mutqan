@@ -51,12 +51,15 @@ class RecitationController private constructor(context: Context) {
         return true
     }
 
-    /** Plays the verses of [pages] one page after another, as today's review asks for them. */
-    suspend fun playPages(pages: Collection<Int>) {
+    /**
+     * Plays the verses of [pages] one page after another in the order given: today's review in the order Today shows
+     * it, from the portion to review now. It used to sort them into the Quran's order, so it began with whichever of
+     * today's pages came first in the Quran (2026-11-20, user).
+     */
+    suspend fun playPages(pages: List<Int>) {
         val s = settings()
         val index = quran.ayahIndex
-        val wanted = pages.toSortedSet()
-        val ids = (1..TOTAL_AYAHS).filter { it in index && index.firstPageOf(it) in wanted }
+        val ids = RecitationRange.ofPages(pages, TOTAL_AYAHS, { it in index }, index::firstPageOf)
         ids.firstOrNull()?.let { start(RecitationRun.Listed(ids), it, s) }
     }
 

@@ -104,6 +104,22 @@ sealed interface RecitationRun {
 object RecitationRange {
 
     /**
+     * The verses of [pages] in the order given, a page at a time (each verse on the page it begins on), each page once:
+     * today's review is played in the order Today shows it, the portion to review now first, not in the Quran's order.
+     */
+    fun ofPages(pages: List<Int>, total: Int, isVerse: (Int) -> Boolean, firstPageOf: (Int) -> Int): List<Int> {
+        val wanted = pages.distinct()
+        val onPage = HashMap<Int, MutableList<Int>>()
+        val set = wanted.toHashSet()
+        for (id in 1..total) {
+            if (!isVerse(id)) continue
+            val page = firstPageOf(id)
+            if (page in set) onPage.getOrPut(page) { ArrayList() } += id
+        }
+        return wanted.flatMap { onPage[it].orEmpty() }
+    }
+
+    /**
      * The verses to play when starting at [start]: through the end of the page the starting verse is on (or [page],
      * if later), or to the end of the surah when [toSurahEnd]. [total] is the number of verses in the Quran.
      */

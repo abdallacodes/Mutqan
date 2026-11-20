@@ -69,4 +69,11 @@ class RecitationRangeTest {
         assertEquals(listOf(3, 8, 9), run(review, 3, toSurahEnd = false))
         assertEquals(emptyList<Int>(), run(review, 5, toSurahEnd = false))
     }
+
+    @Test
+    fun `today's pages play in the order shown, the portion to review now first, each page once`() {
+        // Today shows page 3 first, then pages 1 and 2 (and 3 again, in a portion that overlaps).
+        val ids = RecitationRange.ofPages(listOf(3, 1, 2, 3), 10, { it in 1..10 }, { page[it] })
+        assertEquals(listOf(8, 9, 10, 1, 2, 3, 4, 5, 6, 7), ids)
+    }
 }

@@ -325,6 +325,7 @@ fun HomeScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
+                                // In the order shown: the portion to review now first, then the rest down the list.
                                 val reviewPages = today.due.flatMap { it.startPage..it.endPage }
                                 FlowRow(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     PaperLink(
