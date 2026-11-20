@@ -33,9 +33,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.R
-import com.example.mutqan.domain.PlanOrder
-import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
+import com.example.mutqan.domain.SmartPlan
+import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.Hairline
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.components.PaperChip
@@ -83,7 +83,12 @@ fun PlanScreen(onBack: () -> Unit) {
                     ) {
                         Text(
                             text = when {
-                                state.byStrength -> pluralStringResource(R.plurals.plan_strength_total, state.dailyTotal, state.dailyTotal)
+                                state.hifzPages == 0 -> stringResource(R.string.plan_preview_empty)
+                                state.byStrength -> stringResource(
+                                    R.string.home_plan_line_smart,
+                                    pluralStringResource(R.plurals.home_plan_smart_pages, state.pagesPerDay, state.pagesPerDay),
+                                    pluralStringResource(R.plurals.home_plan_smart_cycle, state.smartCycle, state.smartCycle)
+                                )
                                 state.itemCount == 0 -> stringResource(R.string.plan_preview_empty)
                                 else -> stringResource(
                                     R.string.plan_preview,
@@ -123,32 +128,26 @@ fun PlanScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // By strength first: the app chooses the pages; a fixed rotation is for following a teacher's order.
             Step(1, stringResource(R.string.plan_step_kind))
-            PaperChoice(
-                title = stringResource(R.string.plan_mode_fixed),
-                description = stringResource(R.string.plan_mode_fixed_desc),
-                selected = !state.byStrength,
-                onClick = { viewModel.setByStrength(false) }
-            )
             PaperChoice(
                 title = stringResource(R.string.plan_mode_strength),
                 description = stringResource(R.string.plan_mode_strength_desc),
                 selected = state.byStrength,
                 onClick = { viewModel.setByStrength(true) }
             )
+            PaperChoice(
+                title = stringResource(R.string.plan_mode_fixed),
+                description = stringResource(R.string.plan_mode_fixed_desc),
+                selected = !state.byStrength,
+                onClick = { viewModel.setByStrength(false) }
+            )
 
-            Step(2, stringResource(R.string.plan_step_amount))
             if (state.byStrength) {
-                listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG).forEach { tier ->
-                    TierRow(
-                        tier = tier,
-                        perDay = state.pagesOf(tier),
-                        pages = state.tierCounts[tier] ?: 0,
-                        cycleDays = state.cycleOf(tier),
-                        onChange = { viewModel.setTierPages(tier, it) }
-                    )
-                }
+                Step(2, stringResource(R.string.plan_smart_question))
+                PagesPerDay(state, viewModel::setPagesPerDay)
             } else {
+                Step(2, stringResource(R.string.plan_step_amount))
                 Hint(stringResource(R.string.plan_label_templates))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Template(stringResource(R.string.plan_template_juz1)) { viewModel.applyTemplate(PlanUnit.JUZ, 1) }
@@ -188,20 +187,6 @@ fun PlanScreen(onBack: () -> Unit) {
                     max = PlanViewModel.maxAmount(state.unit)
                 )
 
-                Spacer(Modifier.height(8.dp))
-                Hint(stringResource(R.string.plan_label_order))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PaperChip(
-                        selected = state.order == PlanOrder.ROTATION,
-                        onClick = { viewModel.setOrder(PlanOrder.ROTATION) },
-                        label = { Text(stringResource(R.string.plan_order_rotation)) }
-                    )
-                    PaperChip(
-                        selected = state.order == PlanOrder.WEAKEST_FIRST,
-                        onClick = { viewModel.setOrder(PlanOrder.WEAKEST_FIRST) },
-                        label = { Text(stringResource(R.string.plan_order_weakest)) }
-                    )
-                }
             }
 
             Step(3, stringResource(R.string.plan_label_rest))
@@ -258,53 +243,73 @@ private fun Step(number: Int, title: String) {
 }
 
 /**
- * One strength tier: its name and how many pages it holds, how long one pass takes at the chosen pace,
- * and a stepper for the pages a day it gets.
+ * How many pages a day, for the plan by strength: the steps for this hifz as chips (the last, every page every week,
+ * starred), a stepper for any other number, a good start to take, and what the choice gives: how often the whole hifz
+ * comes around, and the weak pages.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TierRow(tier: PlanTier, perDay: Int, pages: Int, cycleDays: Int, onChange: (Int) -> Unit) {
-    Folio(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+private fun PagesPerDay(state: PlanUiState, onChange: (Int) -> Unit) {
+    if (state.hifzPages == 0) {
+        Hint(stringResource(R.string.plan_preview_empty))
+        return
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        state.steps.forEach { pages ->
+            PaperChip(
+                selected = state.pagesPerDay == pages,
+                onClick = { onChange(pages) },
+                label = { Text(if (pages == state.weeklyPages) stringResource(R.string.plan_smart_week_chip, pages) else pages.toString()) }
+            )
+        }
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        PaperStepper(value = state.pagesPerDay, onChange = onChange, min = 1, max = SmartPlan.MAX_PAGES)
+        Text(stringResource(R.string.plan_unit_pages_a_day), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (state.pagesPerDay != state.goodStart) {
+        PaperLink(
+            text = pluralStringResource(R.plurals.plan_smart_good_start, state.goodStart, state.goodStart),
+            onClick = { onChange(state.goodStart) },
+            soft = true
+        )
+    }
+    Folio(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(
+            text = stringResource(
+                R.string.plan_smart_cycle_line,
+                pluralStringResource(R.plurals.plan_smart_hifz, state.hifzPages, state.hifzPages),
+                pluralStringResource(R.plurals.plan_smart_every, state.smartCycle, state.smartCycle)
+            ),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (state.weakEvery > 0) {
             Text(
-                text = stringResource(
-                    when (tier) {
-                        PlanTier.WEAK -> R.string.plan_tier_weak
-                        PlanTier.FAIR -> R.string.plan_tier_fair
-                        PlanTier.STRONG -> R.string.plan_tier_strong
-                    }
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Hint(
-                when {
-                    pages == 0 -> stringResource(R.string.plan_tier_empty)
-                    perDay == 0 -> stringResource(R.string.plan_tier_off, pluralStringResource(R.plurals.plan_tier_pages, pages, pages))
-                    else -> stringResource(
-                        R.string.plan_tier_cycle,
-                        pluralStringResource(R.plurals.plan_tier_pages, pages, pages),
-                        pluralStringResource(R.plurals.plan_tier_every_days, cycleDays, cycleDays)
-                    )
-                }
+                text = pluralStringResource(R.plurals.plan_smart_weak_every, state.weakEvery, state.weakEvery),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            PaperStepper(value = perDay, onChange = onChange, min = 0, max = 100)
+        if (state.weeklyPages > 0 && state.pagesPerDay >= state.weeklyPages) {
             Text(
-                text = stringResource(R.string.plan_unit_pages_a_day),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                text = stringResource(R.string.plan_smart_week_goal),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
-    }
+    // A lot to begin with: a word for keeping it up.
+    if (!state.isExisting && state.pagesPerDay > BIG_START) Hint(stringResource(R.string.plan_smart_big_note))
 }
+
+/** Above this many pages a day, a new plan is told that starting lower and growing is easier to keep. */
+private const val BIG_START = 40
 
 @Composable
 private fun Hint(text: String) {

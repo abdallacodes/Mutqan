@@ -472,9 +472,6 @@
     <string name="plan_template_pages10">10 صفحات يوميًا</string>
     <string name="plan_label_unit">وحدة المراجعة</string>
     <string name="plan_label_rest">أيام الراحة</string>
-    <string name="plan_label_order">ترتيب المستحق</string>
-    <string name="plan_order_rotation">الأقدم مراجعةً أولًا</string>
-    <string name="plan_order_weakest">الأضعف أولًا</string>
     <string name="plan_label_paused">إيقاف الخطة مؤقتًا</string>
     <string name="plan_preview">%1$s · %2$s</string>
     <string name="plan_preview_empty">حدّد ما حفظته أولًا حتى تُبنى الخطة.</string>
@@ -505,18 +502,6 @@
     <string name="cd_ready_list">القائمة الجاهزة</string>
     <string name="plan_mode_fixed">كمية ثابتة</string>
     <string name="plan_mode_strength">حسب القوة</string>
-    <string name="plan_tier_weak">صفحات ضعيفة</string>
-    <string name="plan_tier_fair">صفحات متوسطة</string>
-    <string name="plan_tier_strong">صفحات قوية</string>
-    <string name="plan_tier_empty">لا صفحات هنا الآن</string>
-    <plurals name="plan_strength_total">
-        <item quantity="zero">المجموع: %d صفحة يوميًا</item>
-        <item quantity="one">المجموع: صفحة واحدة يوميًا</item>
-        <item quantity="two">المجموع: صفحتان يوميًا</item>
-        <item quantity="few">المجموع: %d صفحات يوميًا</item>
-        <item quantity="many">المجموع: %d صفحةً يوميًا</item>
-        <item quantity="other">المجموع: %d صفحة يوميًا</item>
-    </plurals>
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
     <string name="home_tier_strong">قوية · تعود نادرًا</string>
@@ -633,20 +618,10 @@
     <string name="coverage_surah_picker_hint">اضغط على السورة التي تحفظها كاملة</string>
     <string name="coverage_surah_search">ابحث عن سورة بالاسم أو الرقم</string>
     <string name="coverage_surah_partly">جزء منها</string>
-    <string name="plan_tier_cycle">%1$s · %2$s</string>
-    <string name="plan_tier_off">%1$s · غير مضمَّنة في الخطة</string>
     <string name="home_progress_today">تمّ %1$d من %2$d اليوم</string>
     <string name="home_btn_revised">أنهيتُ المراجعة</string>
     <string name="home_later_title">لاحقًا اليوم</string>
     <string name="home_plan_title">خطتك</string>
-    <plurals name="home_plan_line_strength">
-        <item quantity="zero">نحو %d صفحة يوميًا</item>
-        <item quantity="one">نحو صفحة واحدة يوميًا</item>
-        <item quantity="two">نحو صفحتين يوميًا</item>
-        <item quantity="few">نحو %d صفحات يوميًا</item>
-        <item quantity="many">نحو %d صفحةً يوميًا</item>
-        <item quantity="other">نحو %d صفحة يوميًا</item>
-    </plurals>
     <plurals name="home_plan_line_fixed">
         <item quantity="zero">دورة كاملة في نحو %d يوم</item>
         <item quantity="one">دورة كاملة في نحو يوم واحد</item>
@@ -664,11 +639,65 @@
     <string name="plan_step_amount">كم في اليوم؟</string>
     <string name="plan_step_pause">الإيقاف</string>
     <string name="plan_mode_fixed_desc">الكمية نفسها كل يوم، تؤخذ بالتتابع من كل ما حفظت.</string>
-    <string name="plan_mode_strength_desc">الصفحات الضعيفة تعود كثيرًا والقوية نادرًا. أنت تحدد عدد الصفحات يوميًا لكل فئة.</string>
+    <string name="plan_mode_strength_desc">تختار عدد الصفحات يوميًا فقط، والتطبيق يختارها لك كل يوم: الضعيفة تعود أكثر، والقوية أقل، في موضعين متصلين على الأكثر.</string>
     <string name="plan_label_amount_each_day">الكمية في اليوم</string>
     <string name="plan_rest_hint">اضغط على الأيام التي لا تراجع فيها.</string>
     <string name="plan_pause_hint">لن يُطلب منك شيء حتى تعيد تشغيلها.</string>
     <string name="plan_unit_pages_a_day">صفحة يوميًا</string>
+    <string name="plan_smart_question">كم صفحة تستطيع أن تراجع كل يوم؟</string>
+    <string name="plan_smart_week_chip">★ %d</string>
+    <plurals name="plan_smart_good_start">
+        <item quantity="zero">بداية مناسبة: %d صفحة يوميًا</item>
+        <item quantity="one">بداية مناسبة: صفحة واحدة يوميًا</item>
+        <item quantity="two">بداية مناسبة: صفحتان يوميًا</item>
+        <item quantity="few">بداية مناسبة: %d صفحات يوميًا</item>
+        <item quantity="many">بداية مناسبة: %d صفحةً يوميًا</item>
+        <item quantity="other">بداية مناسبة: %d صفحة يوميًا</item>
+    </plurals>
+    <string name="plan_smart_cycle_line">%1$s %2$s</string>
+    <plurals name="plan_smart_hifz">
+        <item quantity="zero">حفظك (%d صفحة)</item>
+        <item quantity="one">حفظك (صفحة واحدة)</item>
+        <item quantity="two">حفظك (صفحتان)</item>
+        <item quantity="few">حفظك (%d صفحات)</item>
+        <item quantity="many">حفظك (%d صفحةً)</item>
+        <item quantity="other">حفظك (%d صفحة)</item>
+    </plurals>
+    <plurals name="plan_smart_every">
+        <item quantity="zero">يتكرر كل %d يوم</item>
+        <item quantity="one">يتكرر كل يوم</item>
+        <item quantity="two">يتكرر كل يومين</item>
+        <item quantity="few">يتكرر كل %d أيام</item>
+        <item quantity="many">يتكرر كل %d يومًا</item>
+        <item quantity="other">يتكرر كل %d يوم</item>
+    </plurals>
+    <plurals name="plan_smart_weak_every">
+        <item quantity="zero">والصفحات الضعيفة كل %d يوم</item>
+        <item quantity="one">والصفحات الضعيفة كل يوم</item>
+        <item quantity="two">والصفحات الضعيفة كل يومين</item>
+        <item quantity="few">والصفحات الضعيفة كل %d أيام</item>
+        <item quantity="many">والصفحات الضعيفة كل %d يومًا</item>
+        <item quantity="other">والصفحات الضعيفة كل %d يوم</item>
+    </plurals>
+    <string name="plan_smart_week_goal">★ كل صفحة كل أسبوع: الهدف الذهبي</string>
+    <string name="plan_smart_big_note">البدء بقليل ثم الزيادة أسهل في الثبات.</string>
+    <string name="home_plan_line_smart">%1$s · %2$s</string>
+    <plurals name="home_plan_smart_pages">
+        <item quantity="zero">%d صفحة يوميًا</item>
+        <item quantity="one">صفحة واحدة يوميًا</item>
+        <item quantity="two">صفحتان يوميًا</item>
+        <item quantity="few">%d صفحات يوميًا</item>
+        <item quantity="many">%d صفحةً يوميًا</item>
+        <item quantity="other">%d صفحة يوميًا</item>
+    </plurals>
+    <plurals name="home_plan_smart_cycle">
+        <item quantity="zero">حفظك كله كل %d يوم</item>
+        <item quantity="one">حفظك كله كل يوم</item>
+        <item quantity="two">حفظك كله كل يومين</item>
+        <item quantity="few">حفظك كله كل %d أيام</item>
+        <item quantity="many">حفظك كله كل %d يومًا</item>
+        <item quantity="other">حفظك كله كل %d يوم</item>
+    </plurals>
     <string name="onboarding_page_of">%1$d / %2$d</string>
     <string name="onboarding_slide4_title">تدرّب وتابع تقدّمك</string>
     <string name="onboarding_slide4_body">في تدرّب أسئلة تختبر حفظك، مثل الآية التالية وترتيب الآيات. وفي متابعتي ترى ما حفظته وما يحتاج إلى مراجعة.</string>
@@ -1164,22 +1193,6 @@
         <item quantity="few">دورة كاملة في نحو %d أيام</item>
         <item quantity="many">دورة كاملة في نحو %d يومًا</item>
         <item quantity="other">دورة كاملة في نحو %d يوم</item>
-    </plurals>
-    <plurals name="plan_tier_pages">
-        <item quantity="zero">%d صفحة في هذه الفئة</item>
-        <item quantity="one">صفحة واحدة في هذه الفئة</item>
-        <item quantity="two">صفحتان في هذه الفئة</item>
-        <item quantity="few">%d صفحات في هذه الفئة</item>
-        <item quantity="many">%d صفحةً في هذه الفئة</item>
-        <item quantity="other">%d صفحة في هذه الفئة</item>
-    </plurals>
-    <plurals name="plan_tier_every_days">
-        <item quantity="zero">دورة كاملة كل %d يوم تقريبًا</item>
-        <item quantity="one">دورة كاملة كل يوم تقريبًا</item>
-        <item quantity="two">دورة كاملة كل يومين تقريبًا</item>
-        <item quantity="few">دورة كاملة كل %d أيام تقريبًا</item>
-        <item quantity="many">دورة كاملة كل %d يومًا تقريبًا</item>
-        <item quantity="other">دورة كاملة كل %d يوم تقريبًا</item>
     </plurals>
 
     <!-- Add an ayah to a mutashabihat group, and the ayahs suggested for a group -->

@@ -22,8 +22,8 @@ enum class PlanOrder(val code: Int) {
     WEAKEST_FIRST(1),
 
     /**
-     * Pages are sorted into [PlanTier]s by how well they hold, and each tier comes around at
-     * its own pace; unit and amount per day are not used.
+     * Pages a day ([RevisionPlan.amountPerDay]) chosen by how well each page holds: weak pages come around more often
+     * than strong ones, in at most two stretches a day (see [SmartPlan]); the unit is not used.
      */
     BY_STRENGTH(2);
 
@@ -62,17 +62,14 @@ data class RevisionPlan(
     val order: PlanOrder = PlanOrder.ROTATION,
     val paused: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    /** For [PlanOrder.BY_STRENGTH]: pages a day the user wants from each tier (0 = leave the tier out). */
-    val strongPages: Int = DEFAULT_STRONG_PAGES,
-    val fairPages: Int = DEFAULT_FAIR_PAGES,
-    val weakPages: Int = DEFAULT_WEAK_PAGES
+    /**
+     * Pages a day for each tier, from the first plans by strength (the user gave one number per tier); a plan read with
+     * them takes their sum as its pages a day, and is saved with them at 0 (see [fromEntity]).
+     */
+    val strongPages: Int = 0,
+    val fairPages: Int = 0,
+    val weakPages: Int = 0
 ) {
-    fun pagesOf(tier: PlanTier): Int = when (tier) {
-        PlanTier.STRONG -> strongPages
-        PlanTier.FAIR -> fairPages
-        PlanTier.WEAK -> weakPages
-    }.coerceAtLeast(0)
-
     fun toEntity() = RevisionPlanEntity(
         id = id,
         name = name.trim(),
@@ -88,23 +85,22 @@ data class RevisionPlan(
     )
 
     companion object {
-        const val DEFAULT_STRONG_PAGES = 4
-        const val DEFAULT_FAIR_PAGES = 6
-        const val DEFAULT_WEAK_PAGES = 10
-
-        fun fromEntity(e: RevisionPlanEntity) = RevisionPlan(
-            id = e.id,
-            name = e.name,
-            unit = PlanUnit.fromCode(e.unit),
-            amountPerDay = e.amountPerDay.coerceAtLeast(1),
-            restDays = (1..7).filterTo(LinkedHashSet()) { e.restDays and (1 shl (it - 1)) != 0 },
-            order = PlanOrder.fromCode(e.order),
-            paused = e.paused != 0,
-            createdAt = e.createdAt,
-            strongPages = e.strongPages.coerceAtLeast(0),
-            fairPages = e.fairPages.coerceAtLeast(0),
-            weakPages = e.weakPages.coerceAtLeast(0)
-        )
+        fun fromEntity(e: RevisionPlanEntity): RevisionPlan {
+            val order = PlanOrder.fromCode(e.order)
+            // A plan by strength from before one number: its pages a day for the three tiers become its pages a day.
+            val tiers = e.strongPages.coerceAtLeast(0) + e.fairPages.coerceAtLeast(0) + e.weakPages.coerceAtLeast(0)
+            val converted = order == PlanOrder.BY_STRENGTH && tiers > 0
+            return RevisionPlan(
+                id = e.id,
+                name = e.name,
+                unit = if (order == PlanOrder.BY_STRENGTH) PlanUnit.PAGE else PlanUnit.fromCode(e.unit),
+                amountPerDay = (if (converted) tiers else e.amountPerDay).coerceAtLeast(1),
+                restDays = (1..7).filterTo(LinkedHashSet()) { e.restDays and (1 shl (it - 1)) != 0 },
+                order = order,
+                paused = e.paused != 0,
+                createdAt = e.createdAt
+            )
+        }
     }
 }
 
@@ -114,8 +110,10 @@ data class PlanItem(
     val number: Int,
     val startPage: Int,
     val endPage: Int,
-    /** Set for strength-based plans, where a portion is a run of pages from one tier. */
-    val tier: PlanTier? = null
+    /** Set for plans by strength when all the pages of the stretch are of one tier. */
+    val tier: PlanTier? = null,
+    /** For plans by strength: what the stretch holds and when it was last revised, for "why it is due". */
+    val why: PlanWhy? = null
 )
 
 /** Pages of each juz (1..30) and the page span of each surah (index 0 = surah 1), for building items. */
@@ -225,10 +223,6 @@ object RevisionPlanner {
         )
     }
 
-    /** Days one pass over [pageCount] pages takes at [pagesPerDay] a day; 0 when there is nothing to do. */
-    fun tierCycleDays(pageCount: Int, pagesPerDay: Int): Int =
-        if (pageCount <= 0 || pagesPerDay <= 0) 0 else (pageCount + pagesPerDay - 1) / pagesPerDay
-
     /**
      * The tier of a page: its recall history decides once it has a failed attempt or reliable recall; until then
      * (unassessed, or too little to judge) it keeps the level the user gave it, fair when they gave none.
@@ -255,59 +249,6 @@ object RevisionPlanner {
             }
         }
         return tiers
-    }
-
-    /**
-     * Today for a [PlanOrder.BY_STRENGTH] plan. The user chooses how many pages a day each tier gets
-     * (never more than the tier has); of those, the pages revised longest ago are due (never-revised
-     * first), minus what today's logs already cover. Neighbouring pages are joined into one portion,
-     * weak tier first.
-     */
-    fun strengthToday(
-        plan: RevisionPlan,
-        covered: BooleanArray?,
-        pageLastRevised: LongArray,
-        passageStates: Array<PassageState>,
-        today: Long,
-        selfRated: Map<Int, PlanTier> = emptyMap()
-    ): TodayPlan {
-        val restDay = isoWeekday(today) in plan.restDays
-        val tiers = tierPages(covered, passageStates, selfRated)
-        val due = ArrayList<PlanItem>()
-        val done = ArrayList<PlanItem>()
-        var daily = 0
-        for (tier in listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG)) {
-            val pages = tiers.getValue(tier)
-            val quota = minOf(plan.pagesOf(tier), pages.size)
-            daily += quota
-            val (doneToday, rest) = pages.partition { pageLastRevised[it - 1] == today }
-            done += runs(doneToday, tier)
-            val slots = if (plan.paused || restDay) 0 else (quota - doneToday.size).coerceAtLeast(0)
-            val picked = rest.sortedWith(compareBy<Int> { pageLastRevised[it - 1] }.thenBy { it }).take(slots)
-            due += runs(picked.sorted(), tier)
-        }
-        return TodayPlan(
-            itemCount = tiers.values.sumOf { it.size },
-            done = done,
-            due = due,
-            isRestDay = restDay,
-            isPaused = plan.paused,
-            cycleDays = PlanTier.entries.maxOf { tier -> tierCycleDays(tiers.getValue(tier).size, plan.pagesOf(tier)) },
-            dailyPages = daily
-        )
-    }
-
-    /** Joins consecutive page numbers (ascending) into portions. */
-    private fun runs(pages: List<Int>, tier: PlanTier): List<PlanItem> {
-        val out = ArrayList<PlanItem>()
-        var i = 0
-        while (i < pages.size) {
-            var j = i
-            while (j + 1 < pages.size && pages[j + 1] == pages[j] + 1) j++
-            out += PlanItem(PlanUnit.PAGE, pages[i], pages[i], pages[j], tier)
-            i = j + 1
-        }
-        return out
     }
 
     private fun weaknessRank(state: PassageState): Int = when (state) {

@@ -459,7 +459,11 @@ fun HomeScreen(
                     PlanSummary(
                         name = plan.name,
                         line = if (plan.order == PlanOrder.BY_STRENGTH) {
-                            pluralStringResource(R.plurals.home_plan_line_strength, today.dailyPages, today.dailyPages)
+                            stringResource(
+                                R.string.home_plan_line_smart,
+                                pluralStringResource(R.plurals.home_plan_smart_pages, today.dailyPages, today.dailyPages),
+                                pluralStringResource(R.plurals.home_plan_smart_cycle, today.cycleDays, today.cycleDays)
+                            )
                         } else {
                             pluralStringResource(R.plurals.home_plan_line_fixed, today.cycleDays, today.cycleDays)
                         },

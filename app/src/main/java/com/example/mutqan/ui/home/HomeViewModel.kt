@@ -16,6 +16,7 @@ import com.example.mutqan.domain.PlanItem
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionPlan
 import com.example.mutqan.domain.RevisionPlanner
+import com.example.mutqan.domain.SmartPlan
 import com.example.mutqan.domain.WeakRotation
 import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.domain.SavedPassage
@@ -119,7 +120,7 @@ class HomeViewModel(
             val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
             else PassageStates.compute(logs)
             if (it.order == PlanOrder.BY_STRENGTH) {
-                RevisionPlanner.strengthToday(it, covered, lastRevised, states, day, extra.selfRated)
+                SmartPlan.today(it, covered, lastRevised, states, day, extra.selfRated)
             } else {
                 val items = RevisionPlanner.buildItems(it.unit, covered, study.planGeometry())
                 RevisionPlanner.todayPlan(it, items, lastRevised, states, day)

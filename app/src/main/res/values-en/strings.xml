@@ -456,9 +456,6 @@
     <string name="plan_template_pages10">10 pages a day</string>
     <string name="plan_label_unit">Revision unit</string>
     <string name="plan_label_rest">Rest days</string>
-    <string name="plan_label_order">Order of what is due</string>
-    <string name="plan_order_rotation">Longest ago first</string>
-    <string name="plan_order_weakest">Weakest first</string>
     <string name="plan_label_paused">Pause this plan</string>
     <string name="plan_preview">%1$s · %2$s</string>
     <string name="plan_preview_empty">Set what you have memorised first so the plan can be built.</string>
@@ -489,14 +486,6 @@
     <string name="cd_ready_list">Ready list</string>
     <string name="plan_mode_fixed">Fixed amount</string>
     <string name="plan_mode_strength">By strength</string>
-    <string name="plan_tier_weak">Weak pages</string>
-    <string name="plan_tier_fair">Fair pages</string>
-    <string name="plan_tier_strong">Strong pages</string>
-    <string name="plan_tier_empty">No pages here right now</string>
-    <plurals name="plan_strength_total">
-        <item quantity="one">Total: %d page a day</item>
-        <item quantity="other">Total: %d pages a day</item>
-    </plurals>
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
     <string name="home_tier_strong">Strong · comes around rarely</string>
@@ -605,16 +594,10 @@
     <string name="coverage_surah_picker_hint">Tap each surah you know in full</string>
     <string name="coverage_surah_search">Search a surah by name or number</string>
     <string name="coverage_surah_partly">Partly</string>
-    <string name="plan_tier_cycle">%1$s · %2$s</string>
-    <string name="plan_tier_off">%1$s · left out of the plan</string>
     <string name="home_progress_today">%1$d of %2$d done today</string>
     <string name="home_btn_revised">I’ve finished revising</string>
     <string name="home_later_title">Later today</string>
     <string name="home_plan_title">Your plan</string>
-    <plurals name="home_plan_line_strength">
-        <item quantity="one">About %d page a day</item>
-        <item quantity="other">About %d pages a day</item>
-    </plurals>
     <plurals name="home_plan_line_fixed">
         <item quantity="one">A full cycle takes about %d day</item>
         <item quantity="other">A full cycle takes about %d days</item>
@@ -628,11 +611,41 @@
     <string name="plan_step_amount">How much each day?</string>
     <string name="plan_step_pause">Pause</string>
     <string name="plan_mode_fixed_desc">The same amount every day, taken in turn from everything you have memorised.</string>
-    <string name="plan_mode_strength_desc">Weak pages come back often, strong ones rarely. You choose the pages a day for each group.</string>
+    <string name="plan_mode_strength_desc">You choose only how many pages a day. The app picks them each day: weak pages come back more often, strong ones less, in at most two connected stretches.</string>
     <string name="plan_label_amount_each_day">Amount each day</string>
     <string name="plan_rest_hint">Tap the days you do not revise.</string>
     <string name="plan_pause_hint">Nothing is asked of you until you turn it back on.</string>
     <string name="plan_unit_pages_a_day">pages a day</string>
+    <string name="plan_smart_question">How many pages can you revise every day?</string>
+    <string name="plan_smart_week_chip">★ %d</string>
+    <plurals name="plan_smart_good_start">
+        <item quantity="one">A good start: %d page a day</item>
+        <item quantity="other">A good start: %d pages a day</item>
+    </plurals>
+    <string name="plan_smart_cycle_line">%1$s %2$s</string>
+    <plurals name="plan_smart_hifz">
+        <item quantity="one">Your hifz (%d page)</item>
+        <item quantity="other">Your hifz (%d pages)</item>
+    </plurals>
+    <plurals name="plan_smart_every">
+        <item quantity="one">comes around every day</item>
+        <item quantity="other">comes around every %d days</item>
+    </plurals>
+    <plurals name="plan_smart_weak_every">
+        <item quantity="one">and weak pages every day</item>
+        <item quantity="other">and weak pages every %d days</item>
+    </plurals>
+    <string name="plan_smart_week_goal">★ Every page every week: the golden goal</string>
+    <string name="plan_smart_big_note">Starting lower and growing is easier to keep.</string>
+    <string name="home_plan_line_smart">%1$s · %2$s</string>
+    <plurals name="home_plan_smart_pages">
+        <item quantity="one">%d page a day</item>
+        <item quantity="other">%d pages a day</item>
+    </plurals>
+    <plurals name="home_plan_smart_cycle">
+        <item quantity="one">your hifz every day</item>
+        <item quantity="other">your hifz every %d days</item>
+    </plurals>
     <string name="onboarding_page_of">%1$d / %2$d</string>
     <string name="onboarding_slide4_title">Practise and track your progress</string>
     <string name="onboarding_slide4_body">Practice has questions that test your memory, such as the next verse or putting verses in order. Insights shows what you’ve memorised and what needs revising.</string>
@@ -1068,14 +1081,6 @@
     <plurals name="plan_preview_cycle">
         <item quantity="one">a full cycle takes about %d day</item>
         <item quantity="other">a full cycle takes about %d days</item>
-    </plurals>
-    <plurals name="plan_tier_pages">
-        <item quantity="one">%d page in this group</item>
-        <item quantity="other">%d pages in this group</item>
-    </plurals>
-    <plurals name="plan_tier_every_days">
-        <item quantity="one">a full pass about every day</item>
-        <item quantity="other">a full pass about every %d days</item>
     </plurals>
 
     <!-- Add an ayah to a mutashabihat group, and the ayahs suggested for a group -->

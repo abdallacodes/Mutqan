@@ -12,6 +12,8 @@ import com.example.mutqan.domain.PlanTier
 import com.example.mutqan.domain.PlanUnit
 import com.example.mutqan.domain.RevisionPlan
 import com.example.mutqan.domain.RevisionPlanner
+import com.example.mutqan.domain.SmartPlan
+import kotlin.math.roundToInt
 import com.example.mutqan.domain.StudyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,34 +30,40 @@ data class PlanUiState(
     val unit: PlanUnit = PlanUnit.JUZ,
     val amount: Int = 1,
     val restDays: Set<Int> = emptySet(),
-    val order: PlanOrder = PlanOrder.ROTATION,
+    val order: PlanOrder = PlanOrder.BY_STRENGTH,
     val paused: Boolean = false,
     /** Portions in the memorised coverage at the chosen unit; 0 when nothing is memorised yet. */
     val itemCount: Int = 0,
-    val strongPages: Int = RevisionPlan.DEFAULT_STRONG_PAGES,
-    val fairPages: Int = RevisionPlan.DEFAULT_FAIR_PAGES,
-    val weakPages: Int = RevisionPlan.DEFAULT_WEAK_PAGES,
+    /** Pages a day of the plan by strength (kept apart from the fixed plan's amount, so switching back and forth keeps both). */
+    val pagesPerDay: Int = 5,
     /** Memorised pages in each strength tier right now. */
     val tierCounts: Map<PlanTier, Int> = emptyMap()
 ) {
     val byStrength: Boolean get() = order == PlanOrder.BY_STRENGTH
 
-    /** Pages a day the user chose for a tier. */
-    fun pagesOf(tier: PlanTier): Int = when (tier) {
-        PlanTier.STRONG -> strongPages
-        PlanTier.FAIR -> fairPages
-        PlanTier.WEAK -> weakPages
-    }
-
-    /** Pages a day a tier really gives: what was chosen, but never more than the tier has. */
-    fun dailyOf(tier: PlanTier): Int = minOf(pagesOf(tier), tierCounts[tier] ?: 0)
-
-    /** Days one pass over a tier takes at the chosen pace. */
-    fun cycleOf(tier: PlanTier): Int = RevisionPlanner.tierCycleDays(tierCounts[tier] ?: 0, pagesOf(tier))
-
-    val dailyTotal: Int get() = PlanTier.entries.sumOf(::dailyOf)
-
     val cycleDays: Int get() = RevisionPlanner.cycleDays(itemCount, amount)
+
+    /** Memorised pages. */
+    val hifzPages: Int get() = tierCounts.values.sum()
+
+    private val weighted: Int get() = SmartPlan.weighted(tierCounts)
+
+    /** Pages a day for every page every week: the golden goal, and the last step. */
+    val weeklyPages: Int get() = SmartPlan.weeklyPages(weighted, restDays)
+
+    /** The pages a day offered as steps for this hifz. */
+    val steps: List<Int> get() = SmartPlan.steps(weeklyPages)
+
+    /** A modest amount to start with: only a hint. */
+    val goodStart: Int get() = SmartPlan.goodStart(hifzPages, weeklyPages)
+
+    /** Days for the whole hifz to come around at the chosen pages a day (a strong page's interval). */
+    val smartCycle: Int get() = SmartPlan.cycleDays(weighted, pagesPerDay, restDays).roundToInt()
+
+    /** Days for a weak page to come around; 0 when there are no weak pages. */
+    val weakEvery: Int get() =
+        if ((tierCounts[PlanTier.WEAK] ?: 0) == 0) 0
+        else SmartPlan.intervalDays(PlanTier.WEAK, SmartPlan.cycleDays(weighted, pagesPerDay, restDays)).roundToInt().coerceAtLeast(1)
 }
 
 /** Creates or edits the user's revision plan (one plan for now). */
@@ -77,21 +85,24 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
             tierCounts = RevisionPlanner.tierPages(covered, PassageStates.compute(study.revisionLogs().first()), study.selfRatedStrength().first())
                 .mapValues { it.value.size }
             val plan = existing
-            _uiState.value = if (plan == null) PlanUiState(isLoaded = true, amount = 1, tierCounts = tierCounts)
-            else PlanUiState(
-                isLoaded = true,
-                isExisting = true,
-                name = plan.name,
-                unit = plan.unit,
-                amount = plan.amountPerDay,
-                restDays = plan.restDays,
-                order = plan.order,
-                paused = plan.paused,
-                strongPages = plan.strongPages,
-                fairPages = plan.fairPages,
-                weakPages = plan.weakPages,
-                tierCounts = tierCounts
-            )
+            val fresh = PlanUiState(isLoaded = true, amount = 1, tierCounts = tierCounts)
+            val start = fresh.goodStart
+            _uiState.value = if (plan == null) fresh.copy(pagesPerDay = start)
+            else {
+                val byStrength = plan.order == PlanOrder.BY_STRENGTH
+                PlanUiState(
+                    isLoaded = true,
+                    isExisting = true,
+                    name = plan.name,
+                    unit = if (byStrength) PlanUnit.JUZ else plan.unit,
+                    amount = if (byStrength) 1 else plan.amountPerDay,
+                    restDays = plan.restDays,
+                    order = plan.order,
+                    paused = plan.paused,
+                    pagesPerDay = if (byStrength) plan.amountPerDay else start,
+                    tierCounts = tierCounts
+                )
+            }
             recount()
         }
     }
@@ -120,15 +131,8 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
         it.copy(order = if (on) PlanOrder.BY_STRENGTH else if (it.byStrength) PlanOrder.ROTATION else it.order)
     }
 
-    /** Sets the pages a day of a tier; 0 leaves the tier out of the plan. */
-    fun setTierPages(tier: PlanTier, pages: Int) = _uiState.update {
-        val value = pages.coerceIn(0, MAX_TIER_PAGES)
-        when (tier) {
-            PlanTier.WEAK -> it.copy(weakPages = value)
-            PlanTier.FAIR -> it.copy(fairPages = value)
-            PlanTier.STRONG -> it.copy(strongPages = value)
-        }
-    }
+    /** Sets the pages a day of the plan by strength. */
+    fun setPagesPerDay(pages: Int) = _uiState.update { it.copy(pagesPerDay = pages.coerceIn(1, SmartPlan.MAX_PAGES)) }
 
     fun setPaused(paused: Boolean) = _uiState.update { it.copy(paused = paused) }
 
@@ -145,15 +149,12 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
                 RevisionPlan(
                     id = existing?.id ?: 0,
                     name = s.name.ifBlank { defaultName },
-                    unit = s.unit,
-                    amountPerDay = s.amount,
+                    unit = if (s.byStrength) PlanUnit.PAGE else s.unit,
+                    amountPerDay = if (s.byStrength) s.pagesPerDay else s.amount,
                     restDays = s.restDays,
                     order = s.order,
                     paused = s.paused,
-                    createdAt = existing?.createdAt ?: System.currentTimeMillis(),
-                    strongPages = s.strongPages,
-                    fairPages = s.fairPages,
-                    weakPages = s.weakPages
+                    createdAt = existing?.createdAt ?: System.currentTimeMillis()
                 )
             )
             onDone()
@@ -170,7 +171,6 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 
     companion object {
         private const val MAX_NAME = 40
-        private const val MAX_TIER_PAGES = 100
 
         fun maxAmount(unit: PlanUnit): Int = when (unit) {
             PlanUnit.JUZ -> 10
