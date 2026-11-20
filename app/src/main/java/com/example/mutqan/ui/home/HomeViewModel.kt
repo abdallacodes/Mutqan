@@ -16,6 +16,10 @@ import com.example.mutqan.domain.PlanItem
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.domain.RevisionPlan
 import com.example.mutqan.domain.RevisionPlanner
+import com.example.mutqan.domain.AdviceMemory
+import com.example.mutqan.domain.PlanAdvice
+import com.example.mutqan.domain.PlanAdvisor
+import kotlin.math.roundToInt
 import com.example.mutqan.domain.SmartPlan
 import com.example.mutqan.domain.WeakRotation
 import com.example.mutqan.domain.SavedKind
@@ -50,6 +54,13 @@ data class WeakSuggestion(
     val ayahId: Int
 )
 
+/**
+ * A suggestion to change the plan's pages a day, with how often the whole hifz comes around now ([cycleNow] days) and
+ * would with the suggested amount ([cycleThen]).
+ */
+@Immutable
+data class AdviceCard(val advice: PlanAdvice, val cycleNow: Int, val cycleThen: Int)
+
 /** A page where practice questions keep going wrong. */
 @Immutable
 data class MissedPage(val page: Int, val count: Int)
@@ -78,13 +89,15 @@ data class HomeUiState(
     /** Pages missed at least twice in practice this week and not revised since. */
     val missed: List<MissedPage> = emptyList(),
     /** The Mushaf page the user last read, to offer "continue". */
-    val lastPage: Int? = null
+    val lastPage: Int? = null,
+    /** A suggestion to change the pages a day of a plan by strength, now and then (see PlanAdvisor). */
+    val advice: AdviceCard? = null
 )
 
 class HomeViewModel(
     private val study: StudyRepository,
     private val quran: QuranRepository,
-    preferences: UserPreferencesRepository
+    private val preferences: UserPreferencesRepository
 ) : ViewModel() {
 
     private val dismissed = MutableStateFlow<Set<Int>>(emptySet())
@@ -110,15 +123,17 @@ class HomeViewModel(
         Extras(day, view.first, last, missed, rated, view.second)
     }
 
+    private val extrasAndAdvice = combine(extras, preferences.planAdviceMemory) { extra, memory -> extra to memory }
+
     val uiState: StateFlow<HomeUiState> = combine(
-        study.plans(), study.revisionLogs(), study.coveredPages(), study.savedPassages(), extras
-    ) { plans, logs, covered, saved, extra ->
+        study.plans(), study.revisionLogs(), study.coveredPages(), study.savedPassages(), extrasAndAdvice
+    ) { plans, logs, covered, saved, (extra, memory) ->
         val (day, hidden, lastPage) = extra
         val plan = plans.firstOrNull()
         val lastRevised = RevisionPlanner.lastRevisedDays(logs, ::offsetAt)
+        val states = if (plan == null || plan.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
+        else PassageStates.compute(logs)
         val today = plan?.let {
-            val states = if (it.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
-            else PassageStates.compute(logs)
             if (it.order == PlanOrder.BY_STRENGTH) {
                 SmartPlan.today(it, covered, lastRevised, states, day, extra.selfRated)
             } else {
@@ -126,6 +141,9 @@ class HomeViewModel(
                 RevisionPlanner.todayPlan(it, items, lastRevised, states, day)
             }
         }
+        val advice = if (plan != null && today != null && plan.order == PlanOrder.BY_STRENGTH) {
+            advise(plan, today, logs, covered, states, extra.selfRated, memory, day)
+        } else null
         val openWeak = saved.filter { it.kind == SavedKind.WEAK && !it.isResolved }
         val weak = WeakRotation.pick(
             items = openWeak
@@ -139,10 +157,63 @@ class HomeViewModel(
             .filter { it.count >= MISS_MIN && lastRevised.getOrElse(it.page - 1) { 0L } < Math.floorDiv(it.lastTime + offsetAt(it.lastTime), 86_400_000L) }
             .take(MAX_SUGGESTIONS)
             .map { MissedPage(it.page, it.count) }
-        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, weakTotal = openWeak.size, missed = missed, lastPage = lastPage)
+        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, weakTotal = openWeak.size, missed = missed, lastPage = lastPage, advice = advice)
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    /** Whether to suggest a higher or lower number of pages a day today (see PlanAdvisor). */
+    private fun advise(
+        plan: RevisionPlan,
+        today: TodayPlan,
+        logs: List<com.example.mutqan.domain.RevisionLog>,
+        covered: BooleanArray?,
+        states: Array<PassageState>,
+        selfRated: Map<Int, PlanTier>,
+        memory: AdviceMemory,
+        day: Long
+    ): AdviceCard? {
+        if (covered == null) return null
+        // Before any change was recorded, the amount counts from the day the plan was made.
+        val known = if (memory.amountSince > 0L) memory
+        else memory.copy(amountSince = Math.floorDiv(plan.createdAt + offsetAt(plan.createdAt), 86_400_000L))
+        val tiers = RevisionPlanner.tierPages(covered, states, selfRated)
+        val weakNow = tiers.getValue(PlanTier.WEAK).size
+        val before = logs.filter { RevisionPlanner.logDay(it, ::offsetAt) <= day - PlanAdvisor.WINDOW }
+        val weakBefore = RevisionPlanner.tierPages(covered, PassageStates.compute(before), selfRated).getValue(PlanTier.WEAK).size
+        val weighted = SmartPlan.weighted(tiers.mapValues { it.value.size })
+        val pagesByDay = PlanAdvisor.pagesByDay(logs, covered, day - 2L * PlanAdvisor.WINDOW - 7, ::offsetAt)
+        val advice = PlanAdvisor.advise(
+            amount = plan.amountPerDay,
+            restDays = plan.restDays,
+            paused = plan.paused,
+            today = day,
+            memory = known,
+            pagesOn = { pagesByDay[it] ?: 0 },
+            weakNow = weakNow,
+            weakBefore = weakBefore,
+            weekly = SmartPlan.weeklyPages(weighted, plan.restDays)
+        ) ?: return null
+        return AdviceCard(advice, today.cycleDays, SmartPlan.cycleDays(weighted, advice.to, plan.restDays).roundToInt())
+    }
+
+    /** Takes a suggestion: the plan's pages a day become the suggested ones. */
+    fun takeAdvice(card: AdviceCard) {
+        val plan = uiState.value.plan ?: return
+        val day = localEpochDay()
+        viewModelScope.launch {
+            study.savePlan(plan.copy(amountPerDay = card.advice.to))
+            preferences.setPlanAmountSet(day, triedFrom = if (card.advice.kind == PlanAdvice.Kind.MORE) card.advice.from else 0)
+            preferences.setPlanAdviceAnswered(day)
+        }
+    }
+
+    /** Puts a suggestion off: none for a while, and no more offers to go back from an amount being tried. */
+    fun notNowAdvice(card: AdviceCard) {
+        viewModelScope.launch {
+            preferences.setPlanAdviceAnswered(localEpochDay(), keepTrying = card.advice.kind != PlanAdvice.Kind.BACK)
+        }
+    }
 
     private fun describe(p: SavedPassage): WeakSuggestion? {
         val first = quran.ayahById(p.startAyahId) ?: return null

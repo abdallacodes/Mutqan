@@ -95,6 +95,7 @@ import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.PageStrip
 import com.example.mutqan.ui.components.PrimaryButton
 import com.example.mutqan.ui.components.TonalButton
+import com.example.mutqan.domain.PlanAdvice
 import com.example.mutqan.ui.theme.FolioTheme
 import com.example.mutqan.ui.components.rememberHaptics
 
@@ -427,6 +428,13 @@ fun HomeScreen(
                 }
             }
 
+            // Now and then, a suggestion to change the plan's pages a day; only ever a suggestion.
+            state.advice?.let { card ->
+                item(key = "advice") {
+                    PlanAdviceCard(card, onTry = { viewModel.takeAdvice(card) }, onNotNow = { viewModel.notNowAdvice(card) })
+                }
+            }
+
             if (state.weak.isNotEmpty()) {
                 item {
                     SectionLabel(stringResource(R.string.home_weak_title), Modifier.padding(top = 10.dp))
@@ -565,6 +573,59 @@ private fun PlanSummary(name: String, line: String, onEdit: () -> Unit) {
                 }
                 PaperLink(stringResource(R.string.home_btn_edit_plan), onClick = onEdit)
             }
+        }
+    }
+}
+
+/**
+ * A suggestion to change the plan's pages a day: what the app saw, what would change (how often the whole hifz comes
+ * around), and the choice. Taken, the plan changes; it can be changed back any time in the plan.
+ */
+@Composable
+private fun PlanAdviceCard(card: AdviceCard, onTry: () -> Unit, onNotNow: () -> Unit) {
+    val advice = card.advice
+    Folio(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp)) {
+        Text(
+            text = stringResource(
+                when (advice.kind) {
+                    PlanAdvice.Kind.MORE -> R.string.plan_advice_more_title
+                    PlanAdvice.Kind.LESS -> R.string.plan_advice_less_title
+                    PlanAdvice.Kind.BACK -> R.string.plan_advice_back_title
+                }
+            ),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        val saw = when (advice.kind) {
+            PlanAdvice.Kind.MORE ->
+                if (advice.beyond > 0) pluralStringResource(R.plurals.plan_advice_beyond, advice.beyond, advice.beyond)
+                else stringResource(R.string.plan_advice_kept, advice.keptUp, advice.of)
+            PlanAdvice.Kind.LESS -> stringResource(R.string.plan_advice_less_saw, advice.keptUp, advice.of)
+            PlanAdvice.Kind.BACK -> stringResource(R.string.plan_advice_back_saw)
+        }
+        val change = stringResource(
+            R.string.plan_advice_change,
+            pluralStringResource(R.plurals.home_plan_smart_pages, advice.to, advice.to),
+            pluralStringResource(R.plurals.plan_advice_every_days, card.cycleThen, card.cycleThen),
+            pluralStringResource(R.plurals.plan_advice_every_days, card.cycleNow, card.cycleNow)
+        )
+        Text(
+            text = "$saw $change",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+        Row(
+            modifier = Modifier.padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TonalButton(
+                text = if (advice.kind == PlanAdvice.Kind.BACK) pluralStringResource(R.plurals.plan_advice_back_btn, advice.to, advice.to)
+                       else pluralStringResource(R.plurals.plan_advice_try, advice.to, advice.to),
+                onClick = onTry
+            )
+            PaperLink(stringResource(R.string.plan_advice_not_now), onClick = onNotNow, soft = true)
         }
     }
 }

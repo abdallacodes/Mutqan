@@ -1,6 +1,7 @@
 package com.example.mutqan.ui.home
 
 import android.content.Context
+import com.example.mutqan.data.UserPreferencesRepository
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -67,7 +68,10 @@ data class PlanUiState(
 }
 
 /** Creates or edits the user's revision plan (one plan for now). */
-class PlanViewModel(private val study: StudyRepository) : ViewModel() {
+class PlanViewModel(
+    private val study: StudyRepository,
+    private val preferences: UserPreferencesRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlanUiState())
     val uiState: StateFlow<PlanUiState> = _uiState
@@ -144,7 +148,11 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 
     fun save(defaultName: String, onDone: () -> Unit) {
         val s = _uiState.value
+        val before = existing
         viewModelScope.launch {
+            // A new number of pages a day: suggestions to change it count from today (see PlanAdvisor).
+            val changed = s.byStrength && (before == null || before.order != PlanOrder.BY_STRENGTH || before.amountPerDay != s.pagesPerDay)
+            if (changed) preferences.setPlanAmountSet(localEpochDay())
             study.savePlan(
                 RevisionPlan(
                     id = existing?.id ?: 0,
@@ -183,5 +191,9 @@ class PlanViewModel(private val study: StudyRepository) : ViewModel() {
 class PlanViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        PlanViewModel(StudyRepository.create(context)) as T
+        PlanViewModel(StudyRepository.create(context), UserPreferencesRepository(context.applicationContext)) as T
 }
+
+/** Today's local calendar day, as days since 1970-01-01. */
+internal fun localEpochDay(now: Long = System.currentTimeMillis()): Long =
+    Math.floorDiv(now + java.util.TimeZone.getDefault().getOffset(now), 86_400_000L)

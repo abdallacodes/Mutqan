@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.mutqan.domain.PracticeScope
+import com.example.mutqan.domain.AdviceMemory
 import com.example.mutqan.domain.sync.SyncMemory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -37,6 +38,10 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_MUSHAF_BARS       = booleanPreferencesKey("mushaf_bars_shown")
         private val KEY_MUSHAF_COVER      = booleanPreferencesKey("mushaf_cover")
         private val KEY_MUSHAF_COVER_BARS = booleanPreferencesKey("mushaf_cover_bars_hidden")
+        private val KEY_PLAN_AMOUNT_SINCE = longPreferencesKey("plan_amount_since")
+        private val KEY_PLAN_ANSWERED     = longPreferencesKey("plan_advice_answered")
+        private val KEY_PLAN_TRIED_FROM   = intPreferencesKey("plan_tried_from")
+        private val KEY_PLAN_TRIED_ON     = longPreferencesKey("plan_tried_on")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
@@ -138,6 +143,33 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafReadingLamp(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_LAMP] = on }
+    }
+
+    /** What the app remembers of its suggestions to change the plan's pages a day (see PlanAdvisor). */
+    val planAdviceMemory: Flow<AdviceMemory> = context.dataStore.data.map { prefs ->
+        AdviceMemory(
+            amountSince = prefs[KEY_PLAN_AMOUNT_SINCE] ?: 0L,
+            lastAnswered = prefs[KEY_PLAN_ANSWERED] ?: 0L,
+            triedFrom = prefs[KEY_PLAN_TRIED_FROM] ?: 0,
+            triedOn = prefs[KEY_PLAN_TRIED_ON] ?: 0L
+        )
+    }
+
+    /** The plan's pages a day were set on [day] (by the user, or a suggestion taken; [triedFrom] the amount before a higher one tried, else 0). */
+    suspend fun setPlanAmountSet(day: Long, triedFrom: Int = 0) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_PLAN_AMOUNT_SINCE] = day
+            prefs[KEY_PLAN_TRIED_FROM] = triedFrom
+            prefs[KEY_PLAN_TRIED_ON] = if (triedFrom > 0) day else 0L
+        }
+    }
+
+    /** A suggestion was answered on [day]; [keepTrying] false also stops offering to go back from a higher amount tried. */
+    suspend fun setPlanAdviceAnswered(day: Long, keepTrying: Boolean = true) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_PLAN_ANSWERED] = day
+            if (!keepTrying) prefs[KEY_PLAN_TRIED_FROM] = 0
+        }
     }
 
     /** How the reader left the Mushaf view (see [MushafViewerState]), so it opens again the same way. */

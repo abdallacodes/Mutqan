@@ -727,6 +727,46 @@
         <item quantity="many">حفظك كله كل %d يومًا</item>
         <item quantity="other">حفظك كله كل %d يوم</item>
     </plurals>
+    <string name="plan_advice_more_title">مستعد لزيادة قليلة؟</string>
+    <string name="plan_advice_less_title">مقدار أخف؟</string>
+    <string name="plan_advice_back_title">العودة إلى المقدار السابق؟</string>
+    <string name="plan_advice_kept">التزمت في %1$d من آخر %2$d يومًا.</string>
+    <plurals name="plan_advice_beyond">
+        <item quantity="zero">تراجع مؤخرًا نحو %d صفحة يوميًا.</item>
+        <item quantity="one">تراجع مؤخرًا نحو صفحة واحدة يوميًا.</item>
+        <item quantity="two">تراجع مؤخرًا نحو صفحتين يوميًا.</item>
+        <item quantity="few">تراجع مؤخرًا نحو %d صفحات يوميًا.</item>
+        <item quantity="many">تراجع مؤخرًا نحو %d صفحةً يوميًا.</item>
+        <item quantity="other">تراجع مؤخرًا نحو %d صفحة يوميًا.</item>
+    </plurals>
+    <string name="plan_advice_less_saw">أتممت %1$d من آخر %2$d يومًا. القليل الدائم خير من الكثير المنقطع.</string>
+    <string name="plan_advice_back_saw">كان المقدار الجديد صعبًا هذا الأسبوع.</string>
+    <string name="plan_advice_change">مع %1$s يتكرر حفظك كله %2$s بدل %3$s.</string>
+    <plurals name="plan_advice_every_days">
+        <item quantity="zero">كل %d يوم</item>
+        <item quantity="one">كل يوم</item>
+        <item quantity="two">كل يومين</item>
+        <item quantity="few">كل %d أيام</item>
+        <item quantity="many">كل %d يومًا</item>
+        <item quantity="other">كل %d يوم</item>
+    </plurals>
+    <plurals name="plan_advice_try">
+        <item quantity="zero">جرّب %d صفحة يوميًا</item>
+        <item quantity="one">جرّب صفحة واحدة يوميًا</item>
+        <item quantity="two">جرّب صفحتين يوميًا</item>
+        <item quantity="few">جرّب %d صفحات يوميًا</item>
+        <item quantity="many">جرّب %d صفحةً يوميًا</item>
+        <item quantity="other">جرّب %d صفحة يوميًا</item>
+    </plurals>
+    <plurals name="plan_advice_back_btn">
+        <item quantity="zero">عُد إلى %d صفحة يوميًا</item>
+        <item quantity="one">عُد إلى صفحة واحدة يوميًا</item>
+        <item quantity="two">عُد إلى صفحتين يوميًا</item>
+        <item quantity="few">عُد إلى %d صفحات يوميًا</item>
+        <item quantity="many">عُد إلى %d صفحةً يوميًا</item>
+        <item quantity="other">عُد إلى %d صفحة يوميًا</item>
+    </plurals>
+    <string name="plan_advice_not_now">ليس الآن</string>
     <string name="onboarding_page_of">%1$d / %2$d</string>
     <string name="onboarding_slide4_title">تدرّب وتابع تقدّمك</string>
     <string name="onboarding_slide4_body">في تدرّب أسئلة تختبر حفظك، مثل الآية التالية وترتيب الآيات. وفي متابعتي ترى ما حفظته وما يحتاج إلى مراجعة.</string>

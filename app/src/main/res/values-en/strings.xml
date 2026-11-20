@@ -663,6 +663,30 @@
         <item quantity="one">your hifz every day</item>
         <item quantity="other">your hifz every %d days</item>
     </plurals>
+    <string name="plan_advice_more_title">Ready for a little more?</string>
+    <string name="plan_advice_less_title">A lighter amount?</string>
+    <string name="plan_advice_back_title">Back to the previous amount?</string>
+    <string name="plan_advice_kept">You kept up %1$d of the last %2$d days.</string>
+    <plurals name="plan_advice_beyond">
+        <item quantity="one">You have been revising about %d page a day.</item>
+        <item quantity="other">You have been revising about %d pages a day.</item>
+    </plurals>
+    <string name="plan_advice_less_saw">You finished %1$d of the last %2$d days. A little kept up beats a lot left off.</string>
+    <string name="plan_advice_back_saw">The new amount was hard to keep this week.</string>
+    <string name="plan_advice_change">With %1$s your hifz would come around %2$s instead of %3$s.</string>
+    <plurals name="plan_advice_every_days">
+        <item quantity="one">every day</item>
+        <item quantity="other">every %d days</item>
+    </plurals>
+    <plurals name="plan_advice_try">
+        <item quantity="one">Try %d page a day</item>
+        <item quantity="other">Try %d pages a day</item>
+    </plurals>
+    <plurals name="plan_advice_back_btn">
+        <item quantity="one">Back to %d page a day</item>
+        <item quantity="other">Back to %d pages a day</item>
+    </plurals>
+    <string name="plan_advice_not_now">Not now</string>
     <string name="onboarding_page_of">%1$d / %2$d</string>
     <string name="onboarding_slide4_title">Practise and track your progress</string>
     <string name="onboarding_slide4_body">Practice has questions that test your memory, such as the next verse or putting verses in order. Insights shows what you’ve memorised and what needs revising.</string>
