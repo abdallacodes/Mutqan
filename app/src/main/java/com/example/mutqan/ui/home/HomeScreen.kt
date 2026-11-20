@@ -110,6 +110,30 @@ fun PlanItem.label(): String = when (unit) {
     PlanUnit.SURAH -> SurahData.nameOf(number)
 }
 
+/**
+ * Why a portion is due, for a plan by strength: what it holds ("weak", or "3 weak pages" in a mixed stretch) and when it
+ * was last revised ("revised 9 days ago", "not revised yet"). Without that, the tier alone, or nothing.
+ */
+@Composable
+internal fun PlanItem.whyText(): String? {
+    val why = why ?: return tier?.hint()
+    val total = why.weak + why.fair + why.strong
+    val what = when {
+        why.weak == total -> stringResource(R.string.home_why_weak)
+        why.fair == total -> stringResource(R.string.home_why_fair)
+        why.strong == total -> stringResource(R.string.home_why_strong)
+        why.weak > 0 -> pluralStringResource(R.plurals.home_why_weak_pages, why.weak, why.weak)
+        else -> pluralStringResource(R.plurals.home_why_fair_pages, why.fair, why.fair)
+    }
+    val days = why.daysAgo
+    val whenText = when {
+        days == null -> stringResource(R.string.home_why_never)
+        days <= 0 -> stringResource(R.string.home_why_today)
+        else -> pluralStringResource(R.plurals.home_why_days_ago, days, days)
+    }
+    return "$what · $whenText"
+}
+
 @Composable
 internal fun PlanTier.hint(): String = stringResource(
     when (this) {
@@ -262,9 +286,9 @@ fun HomeScreen(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
-                                first.tier?.let { tier ->
+                                first.whyText()?.let { why ->
                                     Text(
-                                        text = tier.hint(),
+                                        text = why,
                                         style = MaterialTheme.typography.labelLarge,
                                         color = accent
                                     )
@@ -571,7 +595,7 @@ private fun PortionRow(portion: PlanItem, done: Boolean, onOpen: () -> Unit, onL
                 color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
             )
             val sub = when {
-                portion.tier != null -> portion.tier.hint()
+                portion.why != null || portion.tier != null -> portion.whyText()
                 portion.unit != PlanUnit.PAGE -> stringResource(R.string.pages_range, portion.startPage, portion.endPage)
                 else -> null
             }

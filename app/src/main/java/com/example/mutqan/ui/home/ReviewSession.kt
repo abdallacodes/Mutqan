@@ -143,8 +143,8 @@ fun ReviewSession(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        current.tier?.let {
-                            Text(it.hint(), style = MaterialTheme.typography.labelLarge, color = FolioTheme.colors.heroAccent)
+                        current.whyText()?.let {
+                            Text(it, style = MaterialTheme.typography.labelLarge, color = FolioTheme.colors.heroAccent)
                         }
                     }
                     PaperOutlinedButton(

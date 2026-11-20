@@ -505,6 +505,35 @@
     <string name="home_tier_weak">ضعيفة · تعود كثيرًا</string>
     <string name="home_tier_fair">متوسطة</string>
     <string name="home_tier_strong">قوية · تعود نادرًا</string>
+    <string name="home_why_weak">ضعيفة</string>
+    <string name="home_why_fair">متوسطة</string>
+    <string name="home_why_strong">قوية</string>
+    <plurals name="home_why_weak_pages">
+        <item quantity="zero">%d صفحة ضعيفة</item>
+        <item quantity="one">صفحة ضعيفة واحدة</item>
+        <item quantity="two">صفحتان ضعيفتان</item>
+        <item quantity="few">%d صفحات ضعيفة</item>
+        <item quantity="many">%d صفحةً ضعيفة</item>
+        <item quantity="other">%d صفحة ضعيفة</item>
+    </plurals>
+    <plurals name="home_why_fair_pages">
+        <item quantity="zero">%d صفحة متوسطة</item>
+        <item quantity="one">صفحة متوسطة واحدة</item>
+        <item quantity="two">صفحتان متوسطتان</item>
+        <item quantity="few">%d صفحات متوسطة</item>
+        <item quantity="many">%d صفحةً متوسطة</item>
+        <item quantity="other">%d صفحة متوسطة</item>
+    </plurals>
+    <plurals name="home_why_days_ago">
+        <item quantity="zero">آخر مراجعة قبل %d يوم</item>
+        <item quantity="one">آخر مراجعة أمس</item>
+        <item quantity="two">آخر مراجعة قبل يومين</item>
+        <item quantity="few">آخر مراجعة قبل %d أيام</item>
+        <item quantity="many">آخر مراجعة قبل %d يومًا</item>
+        <item quantity="other">آخر مراجعة قبل %d يوم</item>
+    </plurals>
+    <string name="home_why_never">لم تُراجَع بعد</string>
+    <string name="home_why_today">رُوجعت اليوم</string>
     <string name="ready_tab_phrases">عبارات مشتركة</string>
     <string name="ready_tab_similar">آيات متشابهة</string>
     <string name="ready_list_similar_subtitle">مجموعات جاهزة من الآيات المتشابهة</string>

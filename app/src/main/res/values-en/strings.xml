@@ -489,6 +489,23 @@
     <string name="home_tier_weak">Weak · comes around often</string>
     <string name="home_tier_fair">Fair</string>
     <string name="home_tier_strong">Strong · comes around rarely</string>
+    <string name="home_why_weak">Weak</string>
+    <string name="home_why_fair">Fair</string>
+    <string name="home_why_strong">Strong</string>
+    <plurals name="home_why_weak_pages">
+        <item quantity="one">%d weak page</item>
+        <item quantity="other">%d weak pages</item>
+    </plurals>
+    <plurals name="home_why_fair_pages">
+        <item quantity="one">%d fair page</item>
+        <item quantity="other">%d fair pages</item>
+    </plurals>
+    <plurals name="home_why_days_ago">
+        <item quantity="one">revised yesterday</item>
+        <item quantity="other">revised %d days ago</item>
+    </plurals>
+    <string name="home_why_never">not revised yet</string>
+    <string name="home_why_today">revised today</string>
     <string name="ready_tab_phrases">Shared phrases</string>
     <string name="ready_tab_similar">Similar ayahs</string>
     <string name="ready_list_similar_subtitle">Ready groups of similar ayahs</string>
