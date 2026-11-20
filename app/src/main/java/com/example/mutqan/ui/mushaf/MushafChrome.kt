@@ -27,7 +27,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.example.mutqan.R
 import com.example.mutqan.ui.components.FrostedPanel
 import com.example.mutqan.ui.components.GlassBackdrop
+import com.example.mutqan.ui.components.GlassLook
 
 /** One of the tools in the capsule at the bottom of the page: a word under an icon, and what a screen reader says. */
 internal class MushafTool(
@@ -54,12 +54,19 @@ internal class MushafTool(
 )
 
 /**
- * Whether the controls float over the desk of the book view rather than over the page. The desk is dark, and through
- * frosted glass it would take the contrast from the controls' text, so there the panes are nearly solid page colour.
+ * Whether the controls float over something dark rather than over the page: the desk of the book view, or the room
+ * under the reading lamp. Through thin glass the dark would take the contrast from the controls' text, so there the
+ * glass is tinted more ([DARK_COVER]), still glass.
  */
 internal val LocalMushafGlassSolid = staticCompositionLocalOf { false }
 
-/** A pane of the controls floating over the page: the page's own colour, frosted where the phone can blur, tinted where it cannot. */
+/** How much of the page colour covers the blur over the dark desk or room: enough for the text, the blur still showing. */
+internal const val DARK_COVER = 0.74f
+
+/**
+ * A pane of the controls floating over the page: the glass of the app's dock (see GlassLook), in the page's own colour;
+ * tinted where the phone cannot blur.
+ */
 @Composable
 internal fun MushafGlass(
     backdrop: GlassBackdrop,
@@ -72,9 +79,9 @@ internal fun MushafGlass(
     FrostedPanel(
         backdrop = backdrop,
         shape = shape,
-        tint = colors.bg.copy(alpha = if (backdrop.blurs && !solid) 0.66f else 0.96f),
-        sheen = Color.White.copy(alpha = if (colors.dark) 0.04f else 0.22f),
-        rim = Brush.verticalGradient(listOf(colors.ink.copy(alpha = 0.20f), colors.ink.copy(alpha = 0.08f))),
+        tint = GlassLook.tint(colors.bg, backdrop.blurs, if (solid) DARK_COVER else GlassLook.COVER),
+        sheen = GlassLook.sheen(colors.dark),
+        rim = GlassLook.rim(colors.dark),
         shadow = if (colors.dark) Color.Black else colors.ink,
         modifier = modifier,
         content = content

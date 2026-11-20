@@ -4,8 +4,8 @@ import com.example.mutqan.quran.QuranAyah
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.ui.graphics.lerp
 import com.example.mutqan.ui.components.glassSource
+import com.example.mutqan.ui.components.GlassLook
 import com.example.mutqan.ui.components.rememberGlassBackdrop
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.contentDescription
@@ -982,13 +982,16 @@ fun MushafViewerScreen(
                 )
             }
             if (playback.active) {
+                // Glass like the bars above it, in the page's colour.
                 RecitationBar(
                     state = playback,
                     onOpenSettings = { showRecitationSheet = true },
-                    container = lerp(MushafParchment, MushafInk, 0.07f),
+                    container = MushafParchment,
                     ink = MushafInk,
                     muted = MushafInkMuted,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp),
+                    backdrop = backdrop,
+                    glassCover = if (bookOn || lampOn) DARK_COVER else GlassLook.COVER
                 )
             }
         }

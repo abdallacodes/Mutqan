@@ -1,6 +1,10 @@
 package com.example.mutqan.ui.audio
 
 import com.example.mutqan.ui.components.FolioSheetInsets
+import com.example.mutqan.ui.components.FrostedPanel
+import com.example.mutqan.ui.components.GlassBackdrop
+import com.example.mutqan.ui.components.GlassLook
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
@@ -145,6 +149,8 @@ fun playingSurah(state: RecitationPlayer.State): Int? {
  * The mini player: a floating card with the surah in display type, the verse and the settings under it, previous / pause /
  * next, and a line along its foot for how far into the run the recitation is. The text opens the settings; a swipe
  * sideways stops the recitation (the settings sheet has Stop too, and a screen reader is offered it as an action).
+ * Given a [backdrop] it is glass like the dock (see GlassLook), [container] laid over the blurred screen ([glassCover]
+ * of it); without one it is a plain card.
  */
 @Composable
 fun RecitationBar(
@@ -156,7 +162,9 @@ fun RecitationBar(
     muted: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     accent: Color = MaterialTheme.colorScheme.primary,
     onAccent: Color = MaterialTheme.colorScheme.onPrimary,
-    edge: Color = FolioTheme.colors.edge
+    edge: Color = FolioTheme.colors.edge,
+    backdrop: GlassBackdrop? = null,
+    glassCover: Float = GlassLook.COVER
 ) {
     val context = LocalContext.current
     val player = remember(context) { RecitationPlayer.get(context) }
@@ -193,11 +201,11 @@ fun RecitationBar(
     })
     val stopLabel = stringResource(R.string.audio_stop)
     SwipeToDismissBox(state = dismiss, backgroundContent = {}, modifier = modifier) {
-        Surface(
-            shape = FolioTheme.shapes.card,
-            color = container,
-            border = BorderStroke(1.dp, edge),
-            shadowElevation = 6.dp,
+        RecitationCard(
+            backdrop = backdrop,
+            container = container,
+            edge = edge,
+            cover = glassCover,
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { customActions = listOf(CustomAccessibilityAction(stopLabel) { player.stop(); true }) }
@@ -271,6 +279,35 @@ fun RecitationBar(
             }
         }
     }
+}
+
+/** The player's card: glass over [backdrop] like the dock, or a plain card where there is nothing to look through. */
+@Composable
+private fun RecitationCard(
+    backdrop: GlassBackdrop?,
+    container: Color,
+    edge: Color,
+    cover: Float,
+    modifier: Modifier,
+    content: @Composable () -> Unit
+) {
+    val shape = FolioTheme.shapes.card
+    if (backdrop == null) {
+        Surface(shape = shape, color = container, border = BorderStroke(1.dp, edge), shadowElevation = 6.dp, modifier = modifier) {
+            content()
+        }
+        return
+    }
+    val dark = container.luminance() < 0.5f
+    FrostedPanel(
+        backdrop = backdrop,
+        shape = shape,
+        tint = GlassLook.tint(container, backdrop.blurs, cover),
+        sheen = GlassLook.sheen(dark),
+        rim = GlassLook.rim(dark),
+        shadow = if (dark) Color.Black else FolioTheme.colors.shadow,
+        modifier = modifier
+    ) { content() }
 }
 
 private const val PROGRESS_TICK_MS = 250L

@@ -137,6 +137,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import com.example.mutqan.ui.components.FrostedPanel
+import com.example.mutqan.ui.components.GlassLook
 import com.example.mutqan.ui.theme.FolioTheme
 import com.example.mutqan.ui.components.GlassBackdrop
 import com.example.mutqan.ui.components.LocalDockInset
@@ -368,7 +369,8 @@ fun AppNavHost(
                 RecitationBar(
                     state = playback,
                     onOpenSettings = { showRecitationSheet = true },
-                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)
+                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                    backdrop = backdrop
                 )
             }
         }
@@ -718,7 +720,8 @@ fun AppNavHost(
                     RecitationBar(
                         state = playback,
                         onOpenSettings = { showRecitationSheet = true },
-                        modifier = Modifier.zIndex(1f).padding(horizontal = 16.dp)
+                        modifier = Modifier.zIndex(1f).padding(horizontal = 16.dp),
+                        backdrop = backdrop
                     )
                 }
                 MutqanBottomBar(
@@ -868,11 +871,9 @@ private fun MutqanBottomBar(
     val dark = scheme.background.luminance() < 0.5f
     val folio = FolioTheme.colors
     val colors = DockColors(
-        tint   = folio.folio.copy(alpha = if (backdrop.blurs) 0.50f else 0.96f),
-        sheen  = Color.White.copy(alpha = if (dark) 0.07f else 0.34f),
-        rim    = Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = if (dark) 0.30f else 0.95f), Color.White.copy(alpha = if (dark) 0.06f else 0.30f))
-        ),
+        tint   = GlassLook.tint(folio.folio, backdrop.blurs),
+        sheen  = GlassLook.sheen(dark),
+        rim    = GlassLook.rim(dark),
         pill   = scheme.primary,
         onPill = scheme.onPrimary,
         idle   = scheme.onSurface.copy(alpha = 0.72f)

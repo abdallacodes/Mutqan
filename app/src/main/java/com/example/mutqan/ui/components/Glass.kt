@@ -109,3 +109,21 @@ fun FrostedPanel(
         content = content
     )
 }
+
+/**
+ * The glass of every floating control, so they all look like the dock: its colour laid thin over the blurred screen
+ * behind ([cover] of it; nearly all where the phone cannot blur), a soft white sheen across the top and a bright white
+ * rim, both dimmer on a dark colour.
+ */
+object GlassLook {
+    /** How much of the tint covers the blur on the app's own screens and over a light page. */
+    const val COVER = 0.50f
+
+    fun tint(base: Color, blurs: Boolean, cover: Float = COVER): Color = base.copy(alpha = if (blurs) cover else 0.96f)
+
+    fun sheen(dark: Boolean): Color = Color.White.copy(alpha = if (dark) 0.07f else 0.34f)
+
+    fun rim(dark: Boolean): Brush = Brush.verticalGradient(
+        listOf(Color.White.copy(alpha = if (dark) 0.30f else 0.95f), Color.White.copy(alpha = if (dark) 0.06f else 0.30f))
+    )
+}
