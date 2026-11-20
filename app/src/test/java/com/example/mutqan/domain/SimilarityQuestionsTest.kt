@@ -20,15 +20,19 @@ class SimilarityQuestionsTest {
     }
 
     @Test
-    fun `finish offers the ending of each verse that shares the opening`() {
+    fun `finish stops where the most lookalikes part and offers how each goes on`() {
         val verse = w("one two three red fish today")
         val others = listOf(w("one two three blue fish today"), w("one two nine green"))
         val set = SimilarityQuestions.finish(verse, others, Random(1))!!
-        assertTrue(set.lead.plain.contains("three"))
-        // Only the lookalike that shares the whole opening ("one two three") is a rival.
-        assertEquals(2, set.options.size)
-        assertTrue(set.options[set.correct].plain.startsWith("red"))
-        assertTrue(set.options.any { it.plain.startsWith("blue") })
+        // Both lookalikes share "one two" and go on differently from there; only one shares "one two three".
+        assertTrue(set.lead.plain.contains("two"))
+        assertTrue(!set.lead.plain.contains("three"))
+        assertEquals(3, set.options.size)
+        assertTrue(set.options[set.correct].plain.startsWith("three red"))
+        assertTrue(set.options.any { it.plain.startsWith("three blue") })
+        assertTrue(set.options.any { it.plain.startsWith("nine") })
+        // No option carries an ellipsis.
+        assertTrue(set.options.none { it.plain.contains("…") })
     }
 
     @Test

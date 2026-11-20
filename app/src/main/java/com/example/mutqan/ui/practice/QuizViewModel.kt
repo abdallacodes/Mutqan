@@ -146,7 +146,7 @@ class QuizViewModel(
         if (s.answered || index in s.orderTaps) return
         _state.update { it.copy(orderTaps = it.orderTaps + index) }
         val q = _state.value.question as? OrderQuestion ?: return
-        if (_state.value.orderTaps.size == q.shuffled.size) answer(_state.value.orderTaps == q.correctOrder)
+        if (_state.value.orderTaps.size == q.shuffled.size) answer(q.isRight(_state.value.orderTaps))
     }
 
     fun clearOrder() {

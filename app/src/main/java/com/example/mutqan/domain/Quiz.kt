@@ -57,7 +57,21 @@ data class OrderQuestion(
     val ayahNumbers: List<Int>,
     /** Global ids of the verses in the true order, to open them in the Mushaf. */
     val ayahIds: List<Int>
-) : QuizQuestion
+) : QuizQuestion {
+    /**
+     * Whether [taps] (indices into [shuffled], in the order tapped) put the verses in their true order. It is the order of
+     * what is shown that counts, so verses that look the same (Ar-Rahman's refrain) can go either way round: they were
+     * once graded by place, and the right order could be marked wrong.
+     */
+    fun isRight(taps: List<Int>): Boolean =
+        taps.size == correctOrder.size && taps.indices.all { QuizText.sameText(shuffled[taps[it]], shuffled[correctOrder[it]]) }
+
+    /** Whether verse [index] of [shuffled] was tapped into a place where it, or a verse that looks the same, belongs. */
+    fun placedRight(taps: List<Int>, index: Int): Boolean {
+        val at = taps.indexOf(index)
+        return at in correctOrder.indices && QuizText.sameText(shuffled[index], shuffled[correctOrder[at]])
+    }
+}
 
 /** Name the surah of [text], then (if right) its verse number. */
 data class WhereQuestion(
@@ -116,6 +130,132 @@ object QuizText {
         }
         return result
     }
+
+    /** Where two verses share a stretch of words: the stretch in each, 1-based and inclusive. */
+    data class SharedRun(val inA: IntRange, val inB: IntRange) {
+        val length: Int get() = inA.last - inA.first + 1
+    }
+
+    /**
+     * The stretch of words verse [a] and verse [b] share, word for word ([a] and [b] are their words, each normalized:
+     * no diacritics or pause signs): the longest of at least [least] words or, when [hint] is given (the look-alike data's
+     * own range in [a]), the longest that overlaps it. The data's ranges are only a hint: they match loosely (Al-Kahf 50's
+     * "كان من" for Al-Baqarah 34's "وكان من"), and a choice cut where one of them ends can start in the middle of a phrase.
+     */
+    fun sharedRun(a: List<String>, b: List<String>, hint: IntRange? = null, least: Int = 2): SharedRun? {
+        var best: SharedRun? = null
+        var bestOnHint = false
+        var previous = IntArray(b.size + 1)
+        var current = IntArray(b.size + 1)
+        for (i in 1..a.size) {
+            for (j in 1..b.size) {
+                val length = if (a[i - 1].isNotEmpty() && a[i - 1] == b[j - 1]) previous[j - 1] + 1 else 0
+                current[j] = length
+                if (length < least) continue
+                val run = SharedRun((i - length + 1)..i, (j - length + 1)..j)
+                val onHint = hint != null && run.inA.first <= hint.last && hint.first <= run.inA.last
+                if (best == null || (onHint && !bestOnHint) || (onHint == bestOnHint && length > best.length)) {
+                    best = run
+                    bestOnHint = onHint
+                }
+            }
+            val done = previous
+            previous = current
+            current = done
+        }
+        return best
+    }
+
+    /** A look-alike going on from where a question stops: which one ([index] into those given), after [from] of its words. */
+    data class Branch(val index: Int, val from: Int)
+
+    /** Where a question stops ([cut]: how many of the verse's words it shows) and the look-alikes going on from there. */
+    data class Parting(val cut: Int, val branches: List<Branch>)
+
+    /**
+     * Where a question about [verse] and its look-alikes stops, so that every choice goes on from the words shown. Each of
+     * [others] (a look-alike's normalized words, and the stretch it shares with the verse) counts at a cut when it shares
+     * at least the [shared] words up to it, and goes on from its word matching the cut. Of the cuts [allowed], the one
+     * with the most look-alikes going on differently (from the verse and from each other), the earliest of equals.
+     * Closest first: those sharing the most past the cut, as Taha 116 shares "أبى" with Al-Baqarah 34 and stops there.
+     * A question once stopped where one look-alike parted, Taha's a word later than the rest, and the other endings did
+     * not follow the words shown.
+     */
+    fun parting(verse: List<String>, others: List<Pair<List<String>, SharedRun>>, allowed: (Int) -> Boolean, shared: Int): Parting? {
+        var best: Parting? = null
+        for (cut in others.map { it.second.inA.last }.distinct().sorted()) {
+            if (!allowed(cut)) continue
+            val seen = hashSetOf(verse.drop(cut).joinToString(" "))
+            val branches = others.indices
+                .filter { others[it].second.let { run -> run.inA.first <= cut - shared + 1 && run.inA.last >= cut } }
+                .sortedWith(compareByDescending<Int> { others[it].second.inA.last }.thenByDescending { others[it].second.length })
+                .mapNotNull { i ->
+                    val (words, run) = others[i]
+                    val from = run.inB.last - (run.inA.last - cut)
+                    val goesOn = words.drop(from).joinToString(" ")
+                    if (goesOn.isEmpty() || !seen.add(goesOn)) null else Branch(i, from)
+                }
+            if (branches.isNotEmpty() && (best == null || branches.size > best.branches.size)) best = Parting(cut, branches)
+        }
+        return best
+    }
+
+    /** Whether a reader may pause after [word]: it carries a pause sign (not "do not stop", nor the breathless sakta). */
+    fun pauses(word: QuranWord): Boolean = word.hafs.any { it in PAUSE_SIGNS }
+
+    /** Whether two spans read the same once diacritics are ignored. */
+    fun sameText(a: MushafSpan, b: MushafSpan): Boolean = normalize(a.plain) == normalize(b.plain)
+
+    /**
+     * What a choice shows of [words], from their start (a verse's opening, or what it goes on with): all of them when the
+     * verse ends within [most]; else up to the last pause sign within [most], when that leaves at least [least]; else the
+     * first [fallback]. Never an ellipsis: one choice with "…" among choices without stands out from them (the right one,
+     * in one "next verse" question in sixteen).
+     */
+    fun phrase(words: List<QuranWord>, most: Int, fallback: Int, least: Int = 3): MushafSpan {
+        if (words.size <= most) return MushafSpan.of(words)
+        val pause = (most - 1 downTo least - 1).firstOrNull { pauses(words[it]) }
+        return MushafSpan.of(words.take(if (pause != null) pause + 1 else fallback))
+    }
+
+    /**
+     * What a choice shows of [words] from their end (how a verse closes): all of them when the verse has at most [most];
+     * else from just after the earliest pause sign among its last [most], when that leaves at least [least]; else the last
+     * [fallback]. Never an ellipsis, as with [phrase].
+     */
+    fun phraseEnd(words: List<QuranWord>, most: Int, fallback: Int, least: Int = 3): MushafSpan {
+        if (words.size <= most) return MushafSpan.of(words)
+        val pause = (words.size - most - 1 until words.size - least).firstOrNull { it >= 0 && pauses(words[it]) }
+        return MushafSpan.of(if (pause != null) words.drop(pause + 1) else words.takeLast(fallback))
+    }
+
+    /**
+     * The verses of an order question as shown: a verse of up to [whole] words whole, a longer one by its first [words]
+     * and an ellipsis; and more of them wherever two would look the same (Al-Baqarah 68 and 70 share their first eight
+     * words), until they differ or are whole. Verses the same word for word stay the same; see [OrderQuestion.isRight].
+     */
+    fun orderTexts(verses: List<List<QuranWord>>, words: Int, whole: Int): List<MushafSpan> {
+        val plain = verses.map { v -> v.map { normalize(it.hafs) } }
+        val shown = IntArray(verses.size) { if (verses[it].size > whole) words else verses[it].size }
+        while (true) {
+            var grew = false
+            for (same in verses.indices.groupBy { plain[it].take(shown[it]) }.values) {
+                if (same.size < 2) continue
+                for (i in same) if (shown[i] < verses[i].size) {
+                    shown[i]++
+                    grew = true
+                }
+            }
+            if (!grew) break
+        }
+        return verses.indices.map { i ->
+            MushafSpan.of(verses[i].take(shown[i])) + if (shown[i] < verses[i].size) MushafSpan.More else MushafSpan.Empty
+        }
+    }
+
+    // The small high signs for: may stop (sad-lam-alef), better to stop (qaf-lam-alef), must stop (meem), may stop (jeem),
+    // stop at one of the two (three dots).
+    private val PAUSE_SIGNS = setOf('\u06D6', '\u06D7', '\u06D8', '\u06DA', '\u06DB')
 
     /** The items of [lists] one from each in turn: the first of every list, then the second of every list, and so on. */
     fun <T> interleave(lists: List<List<T>>): List<T> {
@@ -205,27 +345,41 @@ class QuizEngine(
         )
     }
 
-    /** A verse that shares its beginning with others: which ending belongs to this one? */
-    private fun ending(id: Int): QuizQuestion? {
-        val x = quran.ayahById(id) ?: return null
-        val matches = similar.similarTo(id).filter { it.matchedWords.isNotEmpty() }.take(6)
-        if (matches.isEmpty()) return null
-        val xWords = wordsOf(x)
+    /** A look-alike of a verse: its words, the same normalized, and the stretch it shares with the verse. */
+    private class Lookalike(val words: List<QuranWord>, val plain: List<String>, val run: QuizText.SharedRun)
 
-        val range = matches.shuffled(random).firstNotNullOfOrNull { m ->
-            longest(similar.similarTo(m.ayahId).firstOrNull { it.ayahId == id }?.matchedWords.orEmpty())
-        }?.takeIf { it.last in 3 until xWords.size } ?: return null
+    private fun plainOf(words: List<QuranWord>): List<String> = words.map { QuizText.normalize(it.hafs) }
 
-        val correct = QuizText.opening(xWords.drop(range.last), ENDING_WORDS)
-        val distractors = matches.mapNotNull { m ->
+    /**
+     * The look-alikes of [x] (whose normalized words are [xPlain]) and the stretch each shares with it, found by comparing
+     * the words: the look-alike data only hints where (see [QuizText.sharedRun]).
+     */
+    private fun lookalikes(x: QuranAyah, xPlain: List<String>): List<Lookalike> =
+        similar.similarTo(x.id).filter { it.matchedWords.isNotEmpty() }.take(LOOKALIKES).mapNotNull { m ->
             val y = quran.ayahById(m.ayahId) ?: return@mapNotNull null
             val yWords = wordsOf(y)
-            val yRange = longest(m.matchedWords) ?: return@mapNotNull null
-            if (yRange.last >= yWords.size) null else QuizText.opening(yWords.drop(yRange.last), ENDING_WORDS)
+            val yPlain = plainOf(yWords)
+            val hint = longest(similar.similarTo(m.ayahId).firstOrNull { it.ayahId == x.id }?.matchedWords.orEmpty())
+            QuizText.sharedRun(xPlain, yPlain, hint, least = SHARED)?.let { Lookalike(yWords, yPlain, it) }
         }
-        return finish(
-            ExerciseType.QUIZ_ENDING, x, QuizText.tail(xWords.take(range.last), 10), correct, distractors, x, showRef = true
-        )
+
+    /**
+     * A verse that shares words with others and goes on differently: which ending is this one's? The question stops
+     * where they part, the same word for all of them, so every choice goes on from the words shown (see
+     * [QuizText.parting]); each choice runs to the end of its verse or to a pause sign.
+     */
+    private fun ending(id: Int): QuizQuestion? {
+        val x = quran.ayahById(id) ?: return null
+        val xWords = wordsOf(x)
+        val xPlain = plainOf(xWords)
+        val others = lookalikes(x, xPlain)
+        if (others.isEmpty()) return null
+        val parting = QuizText.parting(xPlain, others.map { it.plain to it.run }, { it in SHARED until xWords.size }, SHARED)
+            ?: return null
+        val cut = parting.cut
+        val correct = QuizText.phrase(xWords.drop(cut), ENDING_MOST, ENDING_WORDS)
+        val distractors = parting.branches.map { QuizText.phrase(others[it.index].words.drop(it.from), ENDING_MOST, ENDING_WORDS) }
+        return finish(ExerciseType.QUIZ_ENDING, x, QuizText.tail(xWords.take(cut), 10), correct, distractors, x, showRef = true)
     }
 
     /** Which opening belongs to the verse after this one? Distractors are what follows its look-alikes. */
@@ -235,14 +389,18 @@ class QuizEngine(
         val xWords = wordsOf(x)
         if (xWords.size < 2) return null
 
-        val correct = QuizText.opening(wordsOf(n), NEXT_WORDS)
+        fun opening(a: QuranAyah) = QuizText.phrase(wordsOf(a), NEXT_MOST, NEXT_WORDS)
+        val correct = opening(n)
         val distractors = arrayListOf<MushafSpan>()
+        // What follows each look-alike, in its own surah: after the last verse of a surah comes another surah's first
+        // (Sad 1 was offered after Al-Fatiha 2, for As-Saffat 182).
         similar.similarTo(id).take(5).forEach { m ->
-            quran.ayahById(m.ayahId + 1)?.let { distractors += QuizText.opening(wordsOf(it), NEXT_WORDS) }
+            val y = quran.ayahById(m.ayahId) ?: return@forEach
+            quran.ayahById(m.ayahId + 1)?.takeIf { it.surah == y.surah }?.let { distractors += opening(it) }
         }
         repeat(8) {
             val other = quran.ayahById(id + random.nextInt(-40, 41))
-            if (other != null && other.id != n.id && other.id != id) distractors += QuizText.opening(wordsOf(other), NEXT_WORDS)
+            if (other != null && other.id != n.id && other.id != id) distractors += opening(other)
         }
         return finish(
             ExerciseType.QUIZ_NEXT, x, QuizText.tail(xWords, if (hard) 4 else 22), correct, distractors, n, showRef = true
@@ -265,31 +423,22 @@ class QuizEngine(
         }
     }
 
-    /** A look-alike that opens with the same words as the verse: where they stop being the same, in each of the two. */
-    private class Divergence(val ayahId: Int, val inVerse: IntRange, val inOther: IntRange)
-
-    /** The verse with its last words hidden, where look-alikes that open the same way end differently. */
+    /**
+     * The verse with its last words hidden, where look-alikes that open the same way end differently. It stops where they
+     * part, the same word for all of them (see [QuizText.parting]), so every choice goes on from the words shown.
+     */
     private fun sameStartOtherEnd(x: QuranAyah, words: List<QuranWord>): ChoiceQuestion? {
-        // The shared opening: a stretch of at least three words that starts within the first few.
-        fun opening(ranges: List<IntRange>) =
-            ranges.filter { it.first <= START_WITHIN && it.last - it.first >= 2 }.maxByOrNull { it.last - it.first }
-
-        val found = similar.similarTo(x.id).filter { it.matchedWords.isNotEmpty() }.take(LOOKALIKES).mapNotNull { m ->
-            val other = opening(m.matchedWords) ?: return@mapNotNull null
-            val mine = opening(similar.similarTo(m.ayahId).firstOrNull { it.ayahId == x.id }?.matchedWords.orEmpty())
-                ?: return@mapNotNull null
-            Divergence(m.ayahId, mine, other)
-        }
+        // Look-alikes that open the same way: they share a stretch of at least three words starting within the first few
+        // of both.
+        val plain = plainOf(words)
+        val others = lookalikes(x, plain).filter { it.run.inA.first <= START_WITHIN && it.run.inB.first <= START_WITHIN }
+        if (others.isEmpty()) return null
         // What is hidden is what follows the shared opening, and it is the end of the verse: only a few words.
-        val chosen = found.filter { words.size - it.inVerse.last in 1..MAX_HIDDEN }.randomOrNull(random) ?: return null
-        val cut = chosen.inVerse.last
+        val parting = QuizText.parting(plain, others.map { it.plain to it.run }, { words.size - it in 1..MAX_HIDDEN }, SHARED)
+            ?: return null
+        val cut = parting.cut
         val hidden = words.size - cut
-
-        // Look-alikes that stop being the same at the same word come first: they differ only in the ending.
-        val distractors = found.sortedBy { if (it.inVerse.last == cut) 0 else 1 }.mapNotNull { d ->
-            val y = quran.ayahById(d.ayahId) ?: return@mapNotNull null
-            wordsOf(y).drop(d.inOther.last).take(hidden).takeIf { it.isNotEmpty() }?.let { MushafSpan.of(it) }
-        }
+        val distractors = parting.branches.map { MushafSpan.of(others[it.index].words.drop(it.from).take(hidden)) }
         return finish(
             ExerciseType.QUIZ_FINISH, x, QuizText.tail(words.take(cut), FINISH_SHOWN) + MushafSpan.Blank,
             MushafSpan.of(words.drop(cut)), distractors, x, showRef = true, kind = EndingKind.LOOKALIKE
@@ -346,10 +495,7 @@ class QuizEngine(
         val first = quran.ayahById(id) ?: return null
         val ayahs = (0 until ORDER_COUNT).map { quran.ayahById(id + it) ?: return null }
         if (ayahs.any { it.surah != first.surah }) return null
-        val texts = ayahs.map { a ->
-            val w = wordsOf(a)
-            if (w.size > 9) QuizText.opening(w, 8) else MushafSpan.of(w)
-        }
+        val texts = QuizText.orderTexts(ayahs.map { wordsOf(it) }, words = ORDER_WORDS, whole = ORDER_WHOLE)
         val perm = QuizText.shuffledOrder(ORDER_COUNT, random)
         return OrderQuestion(
             type = ExerciseType.QUIZ_ORDER,
@@ -395,8 +541,17 @@ class QuizEngine(
     }
 
     private companion object {
+        /** A choice of the ending question: to the end of its verse or a pause sign within [ENDING_MOST], else this many words. */
         const val ENDING_WORDS = 5
+        const val ENDING_MOST = 7
+        /** The least words a look-alike shares with the verse up to where the question stops. */
+        const val SHARED = 3
+        /** A choice of the next-verse question: to a pause sign within [NEXT_MOST] words, else this many. */
         const val NEXT_WORDS = 6
+        const val NEXT_MOST = 8
+        /** An order question shows a verse of up to [ORDER_WHOLE] words whole, a longer one by its first [ORDER_WORDS]. */
+        const val ORDER_WORDS = 8
+        const val ORDER_WHOLE = 9
         const val FINISH_SHOWN = 12
         const val START_WITHIN = 3
         const val MAX_HIDDEN = 5

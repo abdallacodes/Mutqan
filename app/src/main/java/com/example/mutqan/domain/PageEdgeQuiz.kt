@@ -42,7 +42,9 @@ data class PageEdgeQuestion(
 /**
  * Builds the page-edge question. The wrong choices are verses that are really near the right one, so only knowing the
  * page tells them apart: the other verses on it, the verses either side of it, look-alikes of the right verse, and verses
- * from pages close by. Each choice is cut to [SHOWN] words: the first ones for a page's start, the last ones for its end.
+ * from pages close by. Each choice shows a verse's first words for a page's start and its last for its end, cut where a
+ * reader would pause (see [QuizText.phrase]), and never with an ellipsis: one choice with "…" among choices without stood
+ * out, the right one in about one question in thirty.
  */
 class PageEdgeQuiz(
     private val quran: QuranRepository,
@@ -86,7 +88,7 @@ class PageEdgeQuiz(
     private fun wordsOf(a: QuranAyah): List<QuranWord> = quran.wordsOfAyah(a.surah, a.ayah).filter { !it.isEnd }
 
     private fun shown(a: QuranAyah, end: Boolean): MushafSpan =
-        wordsOf(a).let { if (end) QuizText.tail(it, SHOWN) else QuizText.opening(it, SHOWN) }
+        wordsOf(a).let { if (end) QuizText.phraseEnd(it, SHOWN_MOST, SHOWN) else QuizText.phrase(it, SHOWN_MOST, SHOWN) }
 
     private fun ref(a: QuranAyah) = QuizRef(a.surah, a.ayah, a.firstPage, a.id)
 
@@ -94,6 +96,7 @@ class PageEdgeQuiz(
         const val PAGES = 604
         const val OPTIONS = 5
         const val SHOWN = 6
+        const val SHOWN_MOST = 8
         private const val NEAR_PAGES = 4
         private const val NEAR_TRIES = 8
     }

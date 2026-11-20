@@ -288,7 +288,7 @@ private fun OrderBody(q: OrderQuestion, state: QuizUiState, onTap: (Int) -> Unit
         val tapped = state.orderTaps.indexOf(i)
         val optionState = when {
             !state.answered -> OptionState.PLAIN
-            state.orderTaps.getOrNull(q.correctOrder.indexOf(i)) == i -> OptionState.CORRECT
+            q.placedRight(state.orderTaps, i) -> OptionState.CORRECT
             else -> OptionState.WRONG
         }
         QuizOption(
