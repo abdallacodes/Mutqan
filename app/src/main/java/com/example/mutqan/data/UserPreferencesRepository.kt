@@ -31,6 +31,12 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_MUSHAF_REVEAL     = booleanPreferencesKey("mushaf_reveal_steps")
         private val KEY_MUSHAF_BOOK       = booleanPreferencesKey("mushaf_book_view")
         private val KEY_MUSHAF_LAMP       = booleanPreferencesKey("mushaf_reading_lamp")
+        private val KEY_MUSHAF_TWO_PAGE   = booleanPreferencesKey("mushaf_two_page")
+        private val KEY_MUSHAF_FILL_WIDTH = booleanPreferencesKey("mushaf_fill_width")
+        private val KEY_MUSHAF_GROUP_TINT = booleanPreferencesKey("mushaf_group_ayahs")
+        private val KEY_MUSHAF_BARS       = booleanPreferencesKey("mushaf_bars_shown")
+        private val KEY_MUSHAF_COVER      = booleanPreferencesKey("mushaf_cover")
+        private val KEY_MUSHAF_COVER_BARS = booleanPreferencesKey("mushaf_cover_bars_hidden")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
@@ -132,6 +138,29 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafReadingLamp(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_LAMP] = on }
+    }
+
+    /** How the reader left the Mushaf view (see [MushafViewerState]), so it opens again the same way. */
+    val mushafViewerState: Flow<MushafViewerState> = context.dataStore.data.map { prefs ->
+        MushafViewerState(
+            twoPage = prefs[KEY_MUSHAF_TWO_PAGE] ?: false,
+            fillWidth = prefs[KEY_MUSHAF_FILL_WIDTH] ?: true,
+            groupAyahs = prefs[KEY_MUSHAF_GROUP_TINT] ?: true,
+            barsShown = prefs[KEY_MUSHAF_BARS] ?: false,
+            cover = prefs[KEY_MUSHAF_COVER] ?: false,
+            coverBarsHidden = prefs[KEY_MUSHAF_COVER_BARS] ?: false
+        )
+    }
+
+    suspend fun setMushafViewerState(state: MushafViewerState) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MUSHAF_TWO_PAGE] = state.twoPage
+            prefs[KEY_MUSHAF_FILL_WIDTH] = state.fillWidth
+            prefs[KEY_MUSHAF_GROUP_TINT] = state.groupAyahs
+            prefs[KEY_MUSHAF_BARS] = state.barsShown
+            prefs[KEY_MUSHAF_COVER] = state.cover
+            prefs[KEY_MUSHAF_COVER_BARS] = state.coverBarsHidden
+        }
     }
 
     /** The reciter the reader chose (see Reciter); empty until they choose. */
@@ -341,3 +370,17 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 }
+
+/**
+ * How the reader left the Mushaf view: two pages or one, two pages filling the width, the verses of look-alike groups
+ * tinted, the bars shown, cover mode and its bars hidden. Each used to start over on every opening (2026-11-20, the user:
+ * "I need to get back to the state I left it last time").
+ */
+data class MushafViewerState(
+    val twoPage: Boolean = false,
+    val fillWidth: Boolean = true,
+    val groupAyahs: Boolean = true,
+    val barsShown: Boolean = false,
+    val cover: Boolean = false,
+    val coverBarsHidden: Boolean = false
+)

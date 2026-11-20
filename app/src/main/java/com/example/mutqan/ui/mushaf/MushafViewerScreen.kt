@@ -147,6 +147,8 @@ import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mutqan.data.MushafViewerState
+import kotlinx.coroutines.flow.first
 import com.example.mutqan.ui.components.PaperOutlinedButton
 import androidx.compose.foundation.layout.Arrangement
 import com.example.mutqan.ui.components.PeekAction
@@ -250,6 +252,18 @@ fun MushafViewerScreen(
     val quran  = remember(context) { QuranRepository.getInstance(context) }
     val fonts  = remember(context) { MushafFontManager.getInstance(context) }
 
+    // Reading theme, orientation and the other per-reader choices.
+    val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
+    // How the reader left the Mushaf view (two pages, the bars, the verse tints, cover mode), read once before anything is
+    // shown, so it opens as it was instead of changing a moment later (two pages also turns the screen).
+    var left by remember { mutableStateOf<MushafViewerState?>(null) }
+    LaunchedEffect(prefs) { left = prefs.mushafViewerState.first() }
+    val start = left
+    if (start == null) {
+        Box(Modifier.fillMaxSize().background(MushafParchment))
+        return
+    }
+
     // Tracks the \"primary\" Mushaf page for the top bar; persists across rotations.
     var currentPage by rememberSaveable { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
 
@@ -258,22 +272,22 @@ fun MushafViewerScreen(
     var activePage by remember { mutableIntStateOf(startPage.coerceIn(1, TOTAL_PAGES)) }
 
     // Chrome hidden by default so pages use the full display; tap toggles.
-    var showHeader  by remember { mutableStateOf(false) }
+    var showHeader  by remember { mutableStateOf(start.barsShown) }
 
     // Pager scroll is locked when the user has zoomed in.
     var currentScale by remember { mutableFloatStateOf(1f) }
 
     // Two-page spread vs single page — user-controlled (not tied to orientation).
-    var useSpreadLayout by rememberSaveable { mutableStateOf(false) }
+    var useSpreadLayout by rememberSaveable { mutableStateOf(start.twoPage) }
 
     // Spread only: each page uses full column width (taller than viewport); scroll vertically.
-    var spreadFillWidth by rememberSaveable { mutableStateOf(true) }
+    var spreadFillWidth by rememberSaveable { mutableStateOf(start.fillWidth) }
 
     // Tint ayahs that belong to a mutashabihat group or were saved; tapping a tinted ayah, or
     // long-pressing any ayah, opens a quick peek where it can be bookmarked or marked weak.
     val groupAyahs by viewModel.mutashabihatAyahs.collectAsState()
     val savedPassages by viewModel.savedPassages.collectAsState()
-    var showGroupAyahs by rememberSaveable { mutableStateOf(true) }
+    var showGroupAyahs by rememberSaveable { mutableStateOf(start.groupAyahs) }
     var peekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
     var peekAyahId by remember { mutableStateOf<Int?>(null) }
     var peekWordId by remember { mutableIntStateOf(0) }
@@ -281,8 +295,6 @@ fun MushafViewerScreen(
     var showSaveSheet by remember { mutableStateOf(false) }
     var showGroupSheet by remember { mutableStateOf(false) }
 
-    // Reading theme, orientation and the other per-reader choices.
-    val prefs = remember(context) { UserPreferencesRepository(context.applicationContext) }
     val themeName by prefs.mushafTheme.collectAsState(initial = "")
     // Null until the choice has been read, so the screen is not locked to one orientation on a guess and turned again.
     val rotatePref by prefs.mushafRotate.collectAsState(initial = null)
@@ -310,10 +322,16 @@ fun MushafViewerScreen(
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
 
     // Cover mode: the text is hidden for reciting from memory, and a tap reveals one verse.
-    var coverOn by rememberSaveable { mutableStateOf(false) }
+    var coverOn by rememberSaveable { mutableStateOf(start.cover) }
     // While covered a tap goes to the verse, so the page cannot bring the bars or send them away: a button does, and a
     // small one stays to bring them back. The cover bar always shows with the capsules, so there is always a way to hide them.
-    var coverBarsHidden by rememberSaveable { mutableStateOf(false) }
+    var coverBarsHidden by rememberSaveable { mutableStateOf(start.coverBarsHidden) }
+    // Kept as they change, for the next opening.
+    LaunchedEffect(useSpreadLayout, spreadFillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden) {
+        prefs.setMushafViewerState(
+            MushafViewerState(useSpreadLayout, spreadFillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden)
+        )
+    }
     var revealed by remember { mutableStateOf(emptySet<Int>()) }
     // With "reveal in steps" on, a tap shows a verse a step at a time; these are the verses shown in part so far.
     var partial by remember { mutableStateOf(emptyMap<Int, PartialReveal>()) }
