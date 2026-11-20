@@ -44,6 +44,7 @@ import com.example.mutqan.quran.MUSHAF_PAGE_ASPECT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
@@ -85,6 +86,16 @@ internal object BookFrame {
 
     /** The paper of a left-hand page: where every leaf lies before it turns. */
     fun sheet(width: Float, height: Float, density: Density): Rect = layout(2, width, height, density).face
+
+    /**
+     * The least height, in whole pixels, for a page area [width] wide in which the page takes the whole width it is
+     * given (see [layout]): taller than the screen held sideways, so the page is seen in part and scrolled down.
+     */
+    fun heightToFill(width: Float, density: Density): Int = with(density) {
+        val middle = MIDDLE_WIDTH.toPx()
+        val faceWidth = max(width - (DESK + RIM + EDGES).toPx(), middle + 1f)
+        ceil((faceWidth - middle) / MUSHAF_PAGE_ASPECT + 2f * (RIM + DESK_ABOVE).toPx()).toInt() + 1
+    }
 
     fun layout(page: Int, width: Float, height: Float, density: Density): BookLayout = with(density) {
         val middle = MIDDLE_WIDTH.toPx()

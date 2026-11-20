@@ -69,7 +69,13 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import kotlin.math.abs
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.unit.Density
+import com.example.mutqan.quran.MUSHAF_PAGE_ASPECT
+import kotlin.math.ceil
+import kotlin.math.max
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -271,8 +277,8 @@ fun MushafViewerScreen(
     // Two-page spread vs single page — user-controlled (not tied to orientation).
     var useSpreadLayout by rememberSaveable { mutableStateOf(start.twoPage) }
 
-    // Spread only: each page uses full column width (taller than viewport); scroll vertically.
-    var spreadFillWidth by rememberSaveable { mutableStateOf(start.fillWidth) }
+    // With the screen held sideways: the pages take the whole width (taller than the screen) and the view scrolls down them.
+    var fillWidth by rememberSaveable { mutableStateOf(start.fillWidth) }
 
     // Tint ayahs that belong to a mutashabihat group or were saved; tapping a tinted ayah, or
     // long-pressing any ayah, opens a quick peek where it can be bookmarked or marked weak.
@@ -318,9 +324,9 @@ fun MushafViewerScreen(
     // small one stays to bring them back. The cover bar always shows with the capsules, so there is always a way to hide them.
     var coverBarsHidden by rememberSaveable { mutableStateOf(start.coverBarsHidden) }
     // Kept as they change, for the next opening.
-    LaunchedEffect(useSpreadLayout, spreadFillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden) {
+    LaunchedEffect(useSpreadLayout, fillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden) {
         prefs.setMushafViewerState(
-            MushafViewerState(useSpreadLayout, spreadFillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden)
+            MushafViewerState(useSpreadLayout, fillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden)
         )
     }
     var revealed by remember { mutableStateOf(emptySet<Int>()) }
@@ -502,7 +508,10 @@ fun MushafViewerScreen(
     // A phone is held upright for one page or sideways for two; a tablet is left to turn as its owner holds it, because
     // a lock there turns the screen away from how it is held (and, undone and redone with every restart of the screen,
     // used to make it spin back and forth).
-    val largeScreen = LocalConfiguration.current.smallestScreenWidthDp >= LARGE_SCREEN_DP
+    val configuration = LocalConfiguration.current
+    val largeScreen = configuration.smallestScreenWidthDp >= LARGE_SCREEN_DP
+    // Held sideways the pages can fill the width (a switch in the menu).
+    val sideways = configuration.screenWidthDp > configuration.screenHeightDp
     LaunchedEffect(useSpreadLayout, rotatePref, largeScreen) {
         val act = context.findActivity() ?: return@LaunchedEffect
         val wanted = when {
@@ -648,81 +657,108 @@ fun MushafViewerScreen(
                 }
 
                 // In the book view the desk lies under all the pages and stays where it is: the book moves over it, and
-                // is seen smaller on it while a leaf turns, larger when zoomed in.
+                // is seen smaller on it while a leaf turns, larger when zoomed in, higher up when scrolled down.
                 if (bookOn) BookDesk(bookLook)
 
-                Box(
+                BoxWithConstraints(
                     Modifier
                         .fillMaxSize()
-                        .pageZoom(zoom, onTap = { showHeader = !showHeader })
+                        .then(
+                            if (paperTurn) Modifier
+                                .systemGestureExclusion { place ->
+                                    val height = place.size.height.toFloat()
+                                    Rect(0f, height - turnCorner.height, turnCorner.width, height)
+                                }
+                                .systemGestureExclusion { place ->
+                                    val width = place.size.width.toFloat()
+                                    val height = place.size.height.toFloat()
+                                    Rect(width - turnCorner.width, height - turnCorner.height, width, height)
+                                }
+                            else Modifier
+                        )
                 ) {
-                    // USER REQUIREMENT:
-                    // Swiping LEFT always moves to PREV page.
-                    // Swiping RIGHT always moves to NEXT page.
-                    // This is achieved by forcing LTR layout and using reverseLayout = true.
-                    val spreadFling = rememberSpreadFling(pagerState, if (paperTurn) paperSettle else spring<Float>(stiffness = Spring.StiffnessMediumLow))
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, LocalAyahMarks provides marks) {
-                        HorizontalPager(
-                            state                   = pagerState,
-                            // The two-page book: two pages side by side, and the pages of the next spread ready to turn.
-                            pageSize                = if (bookSpread) HalfPage else PageSize.Fill,
-                            reverseLayout           = true,
-                            beyondViewportPageCount = if (bookSpread) 2 else 1,
-                            flingBehavior           = when {
-                                bookSpread -> spreadFling
-                                paperTurn  -> PagerDefaults.flingBehavior(state = pagerState, snapAnimationSpec = paperSettle)
-                                else       -> PagerDefaults.flingBehavior(state = pagerState)
-                            },
-                            // Zoomed in, a finger moves the page instead of turning it.
-                            userScrollEnabled       = !zoomed,
-                            verticalAlignment       = Alignment.CenterVertically,
-                            modifier                = Modifier
-                                .fillMaxSize()
-                                .then(
-                                    if (paperTurn) Modifier
-                                        .systemGestureExclusion { place ->
-                                            val height = place.size.height.toFloat()
-                                            Rect(0f, height - turnCorner.height, turnCorner.width, height)
-                                        }
-                                        .systemGestureExclusion { place ->
-                                            val width = place.size.width.toFloat()
-                                            val height = place.size.height.toFloat()
-                                            Rect(width - turnCorner.width, height - turnCorner.height, width, height)
-                                        }
-                                    else Modifier
-                                )
-                                // Watches where the finger holds the page, for the paper turn; it takes nothing from the page.
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull() ?: continue
-                                            if (change.pressed && size.height > 0) grip.floatValue = (change.position.y / size.height).coerceIn(0f, 1f)
+                    // Filling the width is for a screen held sideways, where a page fitted to the height is small: the
+                    // pages take the whole width and the view scrolls down them, both pages of two together.
+                    val fill = fillWidth && maxWidth > maxHeight
+                    val pagesHeight = if (fill) {
+                        max(constraints.maxHeight, pagesHeightToFill(constraints.maxWidth, bookOn, bookSpread, useSpreadLayout, density))
+                    } else constraints.maxHeight
+                    val fillScroll = remember(fill) { ScrollState(0) }
+                    // The zoom's gestures run on from the first composition, so they read the scroll as it is now.
+                    val scrollNow by rememberUpdatedState(if (fill) fillScroll else null)
+                    // Another page is read from its top.
+                    LaunchedEffect(pagerState.settledPage) { if (fillScroll.value > 0) fillScroll.animateScrollTo(0) }
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .pageZoom(
+                                zoom,
+                                onTap = { showHeader = !showHeader },
+                                // Zoomed in, a finger that takes the page to its top or bottom edge goes on down the pages.
+                                overflow = { left -> scrollNow?.dispatchRawDelta(-left.y / zoom.scale) }
+                            )
+                    ) {
+                        // USER REQUIREMENT:
+                        // Swiping LEFT always moves to PREV page.
+                        // Swiping RIGHT always moves to NEXT page.
+                        // This is achieved by forcing LTR layout and using reverseLayout = true.
+                        val spreadFling = rememberSpreadFling(pagerState, if (paperTurn) paperSettle else spring<Float>(stiffness = Spring.StiffnessMediumLow))
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, LocalAyahMarks provides marks) {
+                            HorizontalPager(
+                                state                   = pagerState,
+                                // The two-page book: two pages side by side, and the pages of the next spread ready to turn.
+                                pageSize                = if (bookSpread) HalfPage else PageSize.Fill,
+                                reverseLayout           = true,
+                                beyondViewportPageCount = if (bookSpread) 2 else 1,
+                                flingBehavior           = when {
+                                    bookSpread -> spreadFling
+                                    paperTurn  -> PagerDefaults.flingBehavior(state = pagerState, snapAnimationSpec = paperSettle)
+                                    else       -> PagerDefaults.flingBehavior(state = pagerState)
+                                },
+                                // Zoomed in, a finger moves the page instead of turning it.
+                                userScrollEnabled       = !zoomed,
+                                verticalAlignment       = Alignment.CenterVertically,
+                                modifier                = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (fill) Modifier.verticalScroll(fillScroll).height(with(density) { pagesHeight.toDp() })
+                                        else Modifier.fillMaxHeight()
+                                    )
+                                    // Watches where the finger holds the page, for the paper turn; it takes nothing from the page.
+                                    .pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull() ?: continue
+                                                if (change.pressed && size.height > 0) grip.floatValue = (change.position.y / size.height).coerceIn(0f, 1f)
+                                            }
                                         }
                                     }
+                            ) { pageIndex ->
+                                if (useSpreadLayout && !bookSpread) {
+                                    SpreadView(
+                                        rightPage  = spreadRightPage(pageIndex),
+                                        leftPage   = spreadLeftPage(pageIndex),
+                                        activePage = activePage,
+                                        quran      = quran,
+                                        fonts      = fonts,
+                                        onTap      = { showHeader = !showHeader }
+                                    )
+                                } else {
+                                    val page = pageIndex + 1
+                                    SinglePageView(
+                                        page     = page,
+                                        quran    = quran,
+                                        fonts    = fonts,
+                                        onTap    = { showHeader = !showHeader },
+                                        book     = if (bookOn) bookLook else null,
+                                        modifier = if (paperTurn) {
+                                            Modifier.leafTurn(
+                                                pagerState, pageIndex, { grip.floatValue }, paperLook,
+                                                book = bookOn, spread = bookSpread, drawBack = !fill
+                                            )
+                                        } else Modifier
+                                    )
                                 }
-                        ) { pageIndex ->
-                            if (useSpreadLayout && !bookSpread) {
-                                SpreadView(
-                                    spreadFillWidth = spreadFillWidth,
-                                    rightPage       = spreadRightPage(pageIndex),
-                                    leftPage        = spreadLeftPage(pageIndex),
-                                    activePage      = activePage,
-                                    quran           = quran,
-                                    fonts           = fonts,
-                                    onTap           = { showHeader = !showHeader }
-                                )
-                            } else {
-                                val page = pageIndex + 1
-                                SinglePageView(
-                                    page     = page,
-                                    quran    = quran,
-                                    fonts    = fonts,
-                                    onTap    = { showHeader = !showHeader },
-                                    book     = if (bookOn) bookLook else null,
-                                    modifier = if (paperTurn) {
-                                        Modifier.leafTurn(pagerState, pageIndex, { grip.floatValue }, paperLook, book = bookOn, spread = bookSpread)
-                                    } else Modifier
-                                )
                             }
                         }
                     }
@@ -912,8 +948,8 @@ fun MushafViewerScreen(
             showGroupAyahs = showGroupAyahs,
             subjectTint = subjectTintOn,
             revealSteps = revealSteps,
-            twoPage = useSpreadLayout,
-            fillWidth = spreadFillWidth,
+            fillWidth = fillWidth,
+            sideways = sideways,
             rotateWithDevice = rotateWithDevice,
             bookView = bookPref,
             readingLamp = lampOn,
@@ -937,7 +973,7 @@ fun MushafViewerScreen(
                     Toast.makeText(context, pageMemorisedDone, Toast.LENGTH_SHORT).show()
                 }
             },
-            onFillWidth = { spreadFillWidth = it },
+            onFillWidth = { fillWidth = it },
             onRotate = { coroutineScope.launch { prefs.setMushafRotate(it) } },
             onBookView = { coroutineScope.launch { prefs.setMushafBookView(it) } },
             onReadingLamp = { coroutineScope.launch { prefs.setMushafReadingLamp(it) } },
@@ -1196,22 +1232,15 @@ private fun SinglePageView(
 
 @Composable
 private fun SpreadView(
-    spreadFillWidth:  Boolean,
-    rightPage:        Int?,
-    leftPage:         Int?,
-    activePage:       Int,
-    quran:            QuranRepository,
-    fonts:            MushafFontManager,
+    rightPage:  Int?,
+    leftPage:   Int?,
+    activePage: Int,
+    quran:      QuranRepository,
+    fonts:      MushafFontManager,
     /** What a screen reader's tap does (a finger's tap is taken by the zoom over the pages, see PageZoom). */
-    onTap:            () -> Unit,
-    modifier:         Modifier = Modifier
+    onTap:      () -> Unit,
+    modifier:   Modifier = Modifier
 ) {
-    // One shared offset so both pages move together in fill-width scroll mode.
-    val spreadSharedScroll = remember(leftPage, rightPage) { ScrollState(0) }
-    LaunchedEffect(spreadFillWidth) {
-        spreadSharedScroll.scrollTo(0)
-    }
-
     // Right page first: the order they are read in.
     val description = rememberPageDescription(quran, listOfNotNull(rightPage, leftPage))
     val toggleLabel = stringResource(R.string.mushaf_cd_toggle_bar)
@@ -1241,20 +1270,14 @@ private fun SpreadView(
                         .clipToBounds()
                 ) {
                     if (leftPage != null) {
-                        PageImage(
-                            page                     = leftPage,
-                            quran                    = quran,
-                            fonts                    = fonts,
-                            fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
-                            modifier                 = Modifier.fillMaxSize()
-                        )
+                        PageImage(page = leftPage, quran = quran, fonts = fonts, modifier = Modifier.fillMaxSize())
                     }
                 }
 
                 // Hairline “spine” — pages sit closer like an open book
                 Box(
                     Modifier
-                        .width(0.5.dp)
+                        .width(SPINE_WIDTH)
                         .fillMaxHeight()
                         .background(MushafSpineLine)
                 )
@@ -1268,13 +1291,7 @@ private fun SpreadView(
                         .clipToBounds()
                 ) {
                     if (rightPage != null) {
-                        PageImage(
-                            page                     = rightPage,
-                            quran                    = quran,
-                            fonts                    = fonts,
-                            fillWidthVerticalScroll  = if (spreadFillWidth) spreadSharedScroll else null,
-                            modifier                 = Modifier.fillMaxSize()
-                        )
+                        PageImage(page = rightPage, quran = quran, fonts = fonts, modifier = Modifier.fillMaxSize())
                     }
                 }
             }
@@ -1290,9 +1307,13 @@ private fun SpreadView(
         )
     }
 
-    // The numbers under the pages, in the same left-to-right order as the pages.
+    // The numbers under the pages, in the same left-to-right order; a fixed height, so the height the pages need to fill
+    // the width is known (see pagesHeightToFill).
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(SPREAD_NUMBERS_HEIGHT),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             listOf(leftPage, rightPage).forEach { page ->
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     if (page != null) SpreadPageNumber(page = page, active = page == activePage)
@@ -1303,6 +1324,23 @@ private fun SpreadView(
     }
 }
 
+/**
+ * The height of the page area in which the pages take the whole of a screen [width] wide, in pixels: one page, the two
+ * plain pages side by side with their numbers under them, or the open book (one page of it, or both).
+ */
+private fun pagesHeightToFill(width: Int, book: Boolean, bookSpread: Boolean, twoPage: Boolean, density: Density): Int =
+    with(density) {
+        when {
+            // The pager gives each page of the open book half the width.
+            bookSpread -> BookFrame.heightToFill((width / 2).toFloat(), density)
+            book       -> BookFrame.heightToFill(width.toFloat(), density)
+            twoPage    -> ceil((width - SPINE_WIDTH.toPx()) / 2f / MUSHAF_PAGE_ASPECT + SPREAD_NUMBERS_HEIGHT.toPx()).toInt()
+            else       -> ceil(width / MUSHAF_PAGE_ASPECT).toInt()
+        }
+    }
+
+private val SPINE_WIDTH = 0.5.dp
+private val SPREAD_NUMBERS_HEIGHT = 30.dp
 private val GUTTER_WIDTH = 28.dp
 
 
@@ -1332,54 +1370,29 @@ private fun SpreadPageNumber(page: Int, active: Boolean, modifier: Modifier = Mo
 
 @Composable
 private fun PageImage(
-    page:                    Int,
-    quran:                   QuranRepository,
-    fonts:                   MushafFontManager,
-    modifier:                Modifier = Modifier,
-    /** Spread “fill width” mode: page uses full column width; scroll to see full height. */
-    fillWidthVerticalScroll: ScrollState? = null
+    page:     Int,
+    quran:    QuranRepository,
+    fonts:    MushafFontManager,
+    modifier: Modifier = Modifier
 ) {
     val marks = LocalAyahMarks.current
 
     Box(
-        modifier          = modifier
-            .background(MushafParchment),
-        contentAlignment  = if (fillWidthVerticalScroll != null) Alignment.TopCenter else Alignment.Center
+        modifier         = modifier.background(MushafParchment),
+        contentAlignment = Alignment.Center
     ) {
-        if (fillWidthVerticalScroll != null) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(fillWidthVerticalScroll)
-                    .padding(horizontal = 8.dp, vertical = 10.dp)
-            ) {
-                MushafPageView(
-                    page     = page,
-                    quran    = quran,
-                    fonts    = fonts,
-                    ink      = MushafInk,
-                    modifier = Modifier.fillMaxWidth(),
-                    highlights = marks?.highlights.orEmpty(),
-                    onWordTap  = marks?.let { m -> { wordId, ayahId -> wordTap(m, wordId, ayahId) } },
-                    onWordLongPress = marks?.let { m -> { wordId, ayahId -> wordLongPress(m, wordId, ayahId) } },
-                    cover = marks?.cover,
-                    quarterStarts = marks?.quarterStarts.orEmpty()
-                )
-            }
-        } else {
-            MushafPageView(
-                page     = page,
-                quran    = quran,
-                fonts    = fonts,
-                ink      = MushafInk,
-                modifier = Modifier.fillMaxSize(),
-                highlights = marks?.highlights.orEmpty(),
-                onWordTap  = marks?.let { m -> { wordId, ayahId -> wordTap(m, wordId, ayahId) } },
-                onWordLongPress = marks?.let { m -> { wordId, ayahId -> wordLongPress(m, wordId, ayahId) } },
-                cover = marks?.cover,
-                quarterStarts = marks?.quarterStarts.orEmpty()
-            )
-        }
+        MushafPageView(
+            page     = page,
+            quran    = quran,
+            fonts    = fonts,
+            ink      = MushafInk,
+            modifier = Modifier.fillMaxSize(),
+            highlights = marks?.highlights.orEmpty(),
+            onWordTap  = marks?.let { m -> { wordId, ayahId -> wordTap(m, wordId, ayahId) } },
+            onWordLongPress = marks?.let { m -> { wordId, ayahId -> wordLongPress(m, wordId, ayahId) } },
+            cover = marks?.cover,
+            quarterStarts = marks?.quarterStarts.orEmpty()
+        )
         LocalPageRibbons.current[page]?.let { ribbon ->
             Icon(
                 imageVector = Icons.Filled.Bookmark,

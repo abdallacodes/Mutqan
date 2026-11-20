@@ -69,8 +69,9 @@ fun MushafMenuSheet(
     showGroupAyahs: Boolean,
     subjectTint: Boolean,
     revealSteps: Boolean,
-    twoPage: Boolean,
     fillWidth: Boolean,
+    /** The screen is held sideways, where a page fitted to the height is small and can fill the width instead. */
+    sideways: Boolean,
     rotateWithDevice: Boolean,
     bookView: Boolean,
     readingLamp: Boolean,
@@ -123,8 +124,8 @@ fun MushafMenuSheet(
                 // The book is both views: one page of the open book, or the whole of it with two pages.
                 SwitchRow(Icons.Filled.AutoStories, stringResource(R.string.mushaf_menu_book_view), bookView, onBookView)
                 FolioDivider(inset = DIVIDER_INSET)
-                // Filling the width is for the plain two pages; the book is always seen whole.
-                if (twoPage && !bookView) {
+                // Filling the width is for a screen held sideways, in every view: larger text, scrolled down.
+                if (sideways) {
                     SwitchRow(Icons.Filled.OpenInFull, stringResource(R.string.mushaf_menu_fill_width), fillWidth, onFillWidth)
                     FolioDivider(inset = DIVIDER_INSET)
                 }

@@ -2,7 +2,10 @@ package com.example.mutqan.ui.mushaf
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
+import com.example.mutqan.quran.MUSHAF_PAGE_ASPECT
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PageZoomTest {
@@ -66,4 +69,19 @@ class PageZoomTest {
         assertEquals(Offset.Zero, backShift)
     }
 
+    @Test
+    fun `filling the width, the open book takes the whole width it is given`() {
+        // A phone held sideways: 2424 × 1080 pixels at 2.625 pixels a dp.
+        val density = Density(2.625f)
+        val width = 2424f
+        for (w in listOf(width, width / 2f)) {
+            val height = BookFrame.heightToFill(w, density)
+            assertTrue(height > 1080)
+            val face = BookFrame.layout(78, w, height.toFloat(), density).face
+            val widest = BookFrame.layout(78, w, 100_000f, density).face
+            // As wide as with all the height in the world, at the printed page's shape.
+            assertEquals(widest.width, face.width, 0.5f)
+            assertEquals(MUSHAF_PAGE_ASPECT, (face.width - 28f * 2.625f) / face.height, 0.003f)
+        }
+    }
 }

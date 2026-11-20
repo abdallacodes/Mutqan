@@ -231,7 +231,9 @@ internal class PaperLook(val dark: Boolean, val page: Color = if (dark) Color(0x
  * as a page of a book on a desk ([BookPage]): only the paper turns, the book stays where it lies, and while the leaf
  * goes over the view draws back until the whole open book is in sight, then comes in on the new page (the desk behind
  * the pager stays as it is). With [spread] (the two-page view, see BookSpread) that whole open book is what is always in
- * sight, two pages side by side, and the leaf turns over it with the view staying where it is.
+ * sight, two pages side by side, and the leaf turns over it with the view staying where it is. Without [drawBack] the
+ * one-page book does not draw back either (its page fills the width and runs on below the screen, so the middle of the
+ * page, which the view would draw back toward, may be out of sight).
  */
 internal fun Modifier.leafTurn(
     state: PagerState,
@@ -239,7 +241,8 @@ internal fun Modifier.leafTurn(
     grip: () -> Float,
     look: PaperLook,
     book: Boolean = false,
-    spread: Boolean = false
+    spread: Boolean = false,
+    drawBack: Boolean = true
 ): Modifier = this
     // The pages of a turn lie in the order of their parts, which depends on the way the turn goes.
     .layout { measurable, constraints ->
@@ -275,7 +278,7 @@ internal fun Modifier.leafTurn(
                         else this@onDrawWithContent.drawContent()
                     }
                 }
-                drawPart(part, grip(), look, sheet, book, leaf, spread)
+                drawPart(part, grip(), look, sheet, book, leaf, spread, drawBack)
             }
         }
     }
@@ -292,7 +295,8 @@ private fun PagerState.partOf(page: Int, book: Boolean, spread: Boolean): LeafTu
     LeafTurn.partOf(page, if (spread) LeafTurn.spreadScroll(scroll) else scroll, settledPage, landing = book)
 
 private fun ContentDrawScope.drawPart(
-    part: LeafTurn.Part, grip: Float, look: PaperLook, sheet: Rect, book: Boolean, leaf: GraphicsLayer, spread: Boolean
+    part: LeafTurn.Part, grip: Float, look: PaperLook, sheet: Rect, book: Boolean, leaf: GraphicsLayer, spread: Boolean,
+    drawBack: Boolean
 ) {
     val w = size.width
     val h = size.height
@@ -301,7 +305,7 @@ private fun ContentDrawScope.drawPart(
     val frame = if (spread) 2f * w else w
     val middle = Offset(frame / 2f, h / 2f)
     // With both pages in sight there is nothing to draw back for.
-    val zoom = if (spread) 1f else LeafTurn.zoom(part.progress, if (book) BOOK_TURN_ZOOM else 0f)
+    val zoom = if (spread || !drawBack) 1f else LeafTurn.zoom(part.progress, if (book) BOOK_TURN_ZOOM else 0f)
     // Inside the frame the book may be seen smaller, with more of it in view (past the binding, the page the leaf comes
     // down on) and the desk around.
     clipRect(0f, 0f, frame, h) {

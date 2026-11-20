@@ -1262,7 +1262,7 @@
     <string name="mushaf_menu_study">للمراجعة</string>
     <string name="mushaf_menu_page">الصفحة</string>
     <string name="mushaf_menu_group_ayahs">تمييز الآيات</string>
-    <string name="mushaf_menu_fill_width">ملء العرض في عرض صفحتين</string>
+    <string name="mushaf_menu_fill_width">ملء عرض الشاشة (خطّ أكبر، مع التمرير)</string>
     <string name="home_weak_other">غيرها</string>
     <string name="home_weak_all">كل المواضع الضعيفة (%1$d)</string>
 

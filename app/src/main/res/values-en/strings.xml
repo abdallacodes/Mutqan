@@ -1154,7 +1154,7 @@
     <string name="mushaf_menu_study">Study</string>
     <string name="mushaf_menu_page">Page</string>
     <string name="mushaf_menu_group_ayahs">Ayah highlights</string>
-    <string name="mushaf_menu_fill_width">Fill the width in two-page view</string>
+    <string name="mushaf_menu_fill_width">Fill the screen width (larger text, scroll down)</string>
     <string name="home_weak_other">Show others</string>
     <string name="home_weak_all">All weak passages (%1$d)</string>
 
