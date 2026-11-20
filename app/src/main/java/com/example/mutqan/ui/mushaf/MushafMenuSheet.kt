@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Light
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.LinearScale
@@ -72,6 +73,7 @@ fun MushafMenuSheet(
     fillWidth: Boolean,
     rotateWithDevice: Boolean,
     bookView: Boolean,
+    readingLamp: Boolean,
     theme: MushafTheme,
     onListen: () -> Unit,
     onRecitation: () -> Unit,
@@ -83,6 +85,7 @@ fun MushafMenuSheet(
     onFillWidth: (Boolean) -> Unit,
     onRotate: (Boolean) -> Unit,
     onBookView: (Boolean) -> Unit,
+    onReadingLamp: (Boolean) -> Unit,
     onTheme: (MushafTheme) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -125,6 +128,8 @@ fun MushafMenuSheet(
                     SwitchRow(Icons.Filled.OpenInFull, stringResource(R.string.mushaf_menu_fill_width), fillWidth, onFillWidth)
                     FolioDivider(inset = DIVIDER_INSET)
                 }
+                SwitchRow(Icons.Filled.Light, stringResource(R.string.mushaf_menu_reading_lamp), readingLamp, onReadingLamp)
+                FolioDivider(inset = DIVIDER_INSET)
                 SwitchRow(Icons.Filled.ScreenRotation, stringResource(R.string.mushaf_rotate), rotateWithDevice, onRotate)
                 FolioDivider(inset = DIVIDER_INSET)
                 ThemeChoice(theme, onTheme)

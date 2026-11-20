@@ -334,7 +334,9 @@ fun MushafViewerScreen(
     val paperTurn = bookOn && !animationsOff
     val paperLook = remember(colors) { PaperLook(colors.dark, colors.bg) }
     val densityValue = LocalDensity.current.density
-    val bookLook = remember(colors, paperLook, densityValue) { BookLook(colors, paperLook, densityValue) }
+    // As if read in a dark room by a warm reading lamp, in any page colour and any view (see ReadingLamp).
+    val lampOn by prefs.mushafReadingLamp.collectAsState(initial = false)
+    val bookLook = remember(colors, paperLook, densityValue, lampOn) { BookLook(colors, paperLook, densityValue, lit = lampOn) }
     // How high the finger holds the page, 0 at the top to 1 at the bottom: it decides which corner lifts first. Low by
     // default, where a thumb takes a page.
     val grip = remember { mutableFloatStateOf(0.75f) }
@@ -509,10 +511,10 @@ fun MushafViewerScreen(
         onDispose { view.keepScreenOn = false }
     }
     val window = context.findActivity()?.window
-    DisposableEffect(window, showHeader, colors.dark, bookOn) {
+    DisposableEffect(window, showHeader, colors.dark, bookOn, lampOn) {
         val controller = window?.let { WindowCompat.getInsetsController(it, view) }
         // In the book view the bar lies over the dark desk, not over the page.
-        controller?.isAppearanceLightStatusBars = !colors.dark && !bookOn
+        controller?.isAppearanceLightStatusBars = !colors.dark && !bookOn && !lampOn
         if (showHeader) {
             controller?.show(WindowInsetsCompat.Type.systemBars())
         } else {
@@ -545,13 +547,14 @@ fun MushafViewerScreen(
     val backdrop = rememberGlassBackdrop()
 
     // ── Root: full-bleed pager + floating chrome (no permanent top bar eating height)
-    CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons, LocalMushafGlassSolid provides bookOn) {
+    CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons, LocalMushafGlassSolid provides (bookOn || lampOn)) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MushafParchment)
     ) {
-        Box(Modifier.fillMaxSize().glassSource(backdrop, MushafParchment)) {
+        // The lamp's light falls on what the glass sees too, so the bars frost the lit page.
+        Box(Modifier.fillMaxSize().glassSource(backdrop, MushafParchment).then(if (lampOn) Modifier.readingLamp() else Modifier)) {
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 PaperLoading(color = MushafInk, delayMillis = 0)
@@ -897,6 +900,7 @@ fun MushafViewerScreen(
             fillWidth = spreadFillWidth,
             rotateWithDevice = rotateWithDevice,
             bookView = bookPref,
+            readingLamp = lampOn,
             theme = readingTheme,
             onListen = {
                 menuOpen = false
@@ -920,6 +924,7 @@ fun MushafViewerScreen(
             onFillWidth = { spreadFillWidth = it },
             onRotate = { coroutineScope.launch { prefs.setMushafRotate(it) } },
             onBookView = { coroutineScope.launch { prefs.setMushafBookView(it) } },
+            onReadingLamp = { coroutineScope.launch { prefs.setMushafReadingLamp(it) } },
             onTheme = { coroutineScope.launch { prefs.setMushafTheme(it.name) }; menuOpen = false },
             onDismiss = { menuOpen = false }
         )

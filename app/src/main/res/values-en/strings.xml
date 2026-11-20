@@ -847,6 +847,7 @@
     <string name="mushaf_cd_hide_bars">Hide the bars</string>
     <string name="mushaf_cd_show_bars">Show the bars</string>
     <string name="mushaf_menu_book_view">Book view</string>
+    <string name="mushaf_menu_reading_lamp">Reading lamp</string>
     <string name="mushaf_rotate">Rotate with the device</string>
     <string name="mushaf_page_colours">Page colours</string>
     <string name="mushaf_theme_auto">Match the app</string>

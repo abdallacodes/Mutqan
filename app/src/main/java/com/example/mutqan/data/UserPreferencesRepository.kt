@@ -30,6 +30,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_MUSHAF_SUBJECTS   = booleanPreferencesKey("mushaf_subject_tint")
         private val KEY_MUSHAF_REVEAL     = booleanPreferencesKey("mushaf_reveal_steps")
         private val KEY_MUSHAF_BOOK       = booleanPreferencesKey("mushaf_book_view")
+        private val KEY_MUSHAF_LAMP       = booleanPreferencesKey("mushaf_reading_lamp")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
@@ -121,6 +122,16 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafBookView(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_BOOK] = on }
+    }
+
+    /**
+     * Whether the Mushaf is shown as if read in a dark room by a warm reading lamp (see ReadingLamp), in any page colour
+     * and any view. Off unless turned on.
+     */
+    val mushafReadingLamp: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_MUSHAF_LAMP] ?: false }
+
+    suspend fun setMushafReadingLamp(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_LAMP] = on }
     }
 
     /** The reciter the reader chose (see Reciter); empty until they choose. */

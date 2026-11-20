@@ -124,13 +124,17 @@ internal object BookFrame {
     }
 }
 
-/** How the book and the desk under it look, from the page colours of the reading theme; [density] sizes the grain. */
-internal class BookLook(colors: MushafColors, paper: PaperLook, density: Float) {
+/**
+ * How the book and the desk under it look, from the page colours of the reading theme; [density] sizes the grain. With
+ * the reading lamp on ([lit]) the desk and the cover are those of the day whatever the page, for the lamp lights them
+ * (the room around falls dark under the lamp's own light, see ReadingLamp).
+ */
+internal class BookLook(colors: MushafColors, paper: PaperLook, density: Float, lit: Boolean = false) {
     val page: Color = colors.bg
     val middle = BookMiddle(paper)
 
-    /** Whether the desk and the cover are seen in dim light: at night. */
-    val dark = colors.dark
+    /** Whether the desk and the cover are seen in dim light: at night, unless the reading lamp lights them. */
+    val dark = colors.dark && !lit
     private val pageDark = colors.dark
     /** The wood's own colour, shown until its grain is ready. */
     private val deskPlain = DeskWood.tones(dark)[1]
