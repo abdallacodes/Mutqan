@@ -22,6 +22,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.LinearScale
@@ -70,6 +71,7 @@ fun MushafMenuSheet(
     twoPage: Boolean,
     fillWidth: Boolean,
     rotateWithDevice: Boolean,
+    bookView: Boolean,
     theme: MushafTheme,
     onListen: () -> Unit,
     onRecitation: () -> Unit,
@@ -80,6 +82,7 @@ fun MushafMenuSheet(
     onMarkMemorised: () -> Unit,
     onFillWidth: (Boolean) -> Unit,
     onRotate: (Boolean) -> Unit,
+    onBookView: (Boolean) -> Unit,
     onTheme: (MushafTheme) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -114,7 +117,11 @@ fun MushafMenuSheet(
                 ActionRow(Icons.Filled.Verified, stringResource(R.string.mushaf_mark_page_memorised), onMarkMemorised)
             }
             Group(R.string.mushaf_menu_page) {
-                if (twoPage) {
+                // The book is both views: one page of the open book, or the whole of it with two pages.
+                SwitchRow(Icons.Filled.AutoStories, stringResource(R.string.mushaf_menu_book_view), bookView, onBookView)
+                FolioDivider(inset = DIVIDER_INSET)
+                // Filling the width is for the plain two pages; the book is always seen whole.
+                if (twoPage && !bookView) {
                     SwitchRow(Icons.Filled.OpenInFull, stringResource(R.string.mushaf_menu_fill_width), fillWidth, onFillWidth)
                     FolioDivider(inset = DIVIDER_INSET)
                 }

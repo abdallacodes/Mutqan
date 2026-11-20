@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +51,12 @@ internal class MushafTool(
     val onClick: () -> Unit
 )
 
+/**
+ * Whether the controls float over the desk of the book view rather than over the page. The desk is dark, and through
+ * frosted glass it would take the contrast from the controls' text, so there the panes are nearly solid page colour.
+ */
+internal val LocalMushafGlassSolid = staticCompositionLocalOf { false }
+
 /** A pane of the controls floating over the page: the page's own colour, frosted where the phone can blur, tinted where it cannot. */
 @Composable
 internal fun MushafGlass(
@@ -59,10 +66,11 @@ internal fun MushafGlass(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val solid = LocalMushafGlassSolid.current
     FrostedPanel(
         backdrop = backdrop,
         shape = shape,
-        tint = colors.bg.copy(alpha = if (backdrop.blurs) 0.66f else 0.96f),
+        tint = colors.bg.copy(alpha = if (backdrop.blurs && !solid) 0.66f else 0.96f),
         sheen = Color.White.copy(alpha = if (colors.dark) 0.04f else 0.22f),
         rim = Brush.verticalGradient(listOf(colors.ink.copy(alpha = 0.20f), colors.ink.copy(alpha = 0.08f))),
         shadow = if (colors.dark) Color.Black else colors.ink,

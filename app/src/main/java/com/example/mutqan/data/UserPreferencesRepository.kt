@@ -29,6 +29,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_MUSHAF_ROTATE     = booleanPreferencesKey("mushaf_rotate")
         private val KEY_MUSHAF_SUBJECTS   = booleanPreferencesKey("mushaf_subject_tint")
         private val KEY_MUSHAF_REVEAL     = booleanPreferencesKey("mushaf_reveal_steps")
+        private val KEY_MUSHAF_BOOK       = booleanPreferencesKey("mushaf_book_view")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
@@ -108,6 +109,18 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setMushafRevealSteps(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_REVEAL] = on }
+    }
+
+    /**
+     * Whether the one-page Mushaf is a book: each page a page of an open book on a desk (the page in its printed shape,
+     * the edges of the other pages and the cover on its outer side, the middle of the book along its bound edge, so the
+     * side of the book is always known), its leaves turning like paper. One switch for both (until 2026-11-20 the paper
+     * turn had its own, `mushaf_paper_turn`, never released). It takes some width: off unless turned on.
+     */
+    val mushafBookView: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_MUSHAF_BOOK] ?: false }
+
+    suspend fun setMushafBookView(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_MUSHAF_BOOK] = on }
     }
 
     /** The reciter the reader chose (see Reciter); empty until they choose. */

@@ -1,5 +1,8 @@
 package com.example.mutqan.quran
 
+/** Width / height of a page as [MushafPageView] draws it: it keeps this shape whatever room it is given. */
+const val MUSHAF_PAGE_ASPECT: Float = MushafPageGeometry.PAGE_ASPECT
+
 /** A word's glyph, the x coordinate of its left edge, its width, and its word and ayah ids (0 if unknown). */
 internal data class PlacedWord(val glyph: String, val x: Float, val width: Float, val wordId: Int = 0, val ayahId: Int = 0)
 

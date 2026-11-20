@@ -67,8 +67,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import android.provider.Settings
+import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlin.math.abs
+import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -305,6 +318,31 @@ fun MushafViewerScreen(
     // With "reveal in steps" on, a tap shows a verse a step at a time; these are the verses shown in part so far.
     var partial by remember { mutableStateOf(emptyMap<Int, PartialReveal>()) }
     val revealSteps by prefs.mushafRevealSteps.collectAsState(initial = false)
+
+    // The Mushaf as a book, one switch for all of it: each page a page of an open book on a desk (the page in its printed
+    // shape, the edges of the other pages and the cover on its outer side, the middle of the book along its bound edge,
+    // so the side of the book always shows), and its leaves turning like paper. It takes some width, so the page is a
+    // little smaller: off unless the reader turns it on. With Android's animations off the book stays, but pages slide.
+    val bookPref by prefs.mushafBookView.collectAsState(initial = false)
+    val animationsOff = remember(context) {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+    val bookOn = bookPref
+    // The two views are then the same book: one page of it, or with two pages the whole open book, always in sight; what
+    // the one-page view shows halfway through a turn (see BookSpread). Its pager is the one-page view's.
+    val bookSpread = bookOn && useSpreadLayout
+    val paperTurn = bookOn && !animationsOff
+    val paperLook = remember(colors) { PaperLook(colors.dark, colors.bg) }
+    val densityValue = LocalDensity.current.density
+    val bookLook = remember(colors, paperLook, densityValue) { BookLook(colors, paperLook, densityValue) }
+    // How high the finger holds the page, 0 at the top to 1 at the bottom: it decides which corner lifts first. Low by
+    // default, where a thumb takes a page.
+    val grip = remember { mutableFloatStateOf(0.75f) }
+    // The bottom corners are where a page is taken to turn it: the left one to go on, the right one to go back. There
+    // Android's back gesture would take the swipe and close the Mushaf, so those corners are kept for the page (Android
+    // allows up to 200dp of each edge). The rest of each edge still goes back.
+    val density = LocalDensity.current
+    val turnCorner = remember(density) { with(density) { Size(TURN_CORNER_WIDTH.toPx(), TURN_CORNER_HEIGHT.toPx()) } }
     fun coverAgain() { revealed = emptySet(); partial = emptyMap() }
     fun revealTap(ayahId: Int) {
         // A verse that is shown whole is covered again by a tap, whichever way it was shown.
@@ -471,9 +509,10 @@ fun MushafViewerScreen(
         onDispose { view.keepScreenOn = false }
     }
     val window = context.findActivity()?.window
-    DisposableEffect(window, showHeader, colors.dark) {
+    DisposableEffect(window, showHeader, colors.dark, bookOn) {
         val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-        controller?.isAppearanceLightStatusBars = !colors.dark
+        // In the book view the bar lies over the dark desk, not over the page.
+        controller?.isAppearanceLightStatusBars = !colors.dark && !bookOn
         if (showHeader) {
             controller?.show(WindowInsetsCompat.Type.systemBars())
         } else {
@@ -506,7 +545,7 @@ fun MushafViewerScreen(
     val backdrop = rememberGlassBackdrop()
 
     // ── Root: full-bleed pager + floating chrome (no permanent top bar eating height)
-    CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons) {
+    CompositionLocalProvider(LocalMushafColors provides colors, LocalPageRibbons provides ribbons, LocalMushafGlassSolid provides bookOn) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -518,45 +557,129 @@ fun MushafViewerScreen(
                 PaperLoading(color = MushafInk, delayMillis = 0)
             }
         } else {
-            key(useSpreadLayout) {
-                val pageCount    = if (useSpreadLayout) TOTAL_SPREADS else TOTAL_PAGES
-                val initialIndex = if (useSpreadLayout) (currentPage - 1) / 2 else currentPage - 1
+            key(useSpreadLayout, bookSpread) {
+                val pageCount    = if (useSpreadLayout && !bookSpread) TOTAL_SPREADS else TOTAL_PAGES
+                val initialIndex = when {
+                    bookSpread      -> 2 * ((currentPage - 1) / 2)
+                    useSpreadLayout -> (currentPage - 1) / 2
+                    else            -> currentPage - 1
+                }
 
                 val pagerState = rememberPagerState(
                     initialPage = initialIndex,
                     pageCount   = { pageCount }
                 )
+                // With pages turning like paper, a page goes at the pace of paper however hard it is flicked, so the eye
+                // can follow the turn (see PaperSettle).
+                // In the two-page book a turn is two of its pages long.
+                val paperSettle = remember(pagerState, bookSpread) {
+                    PaperSettle { pagerState.layoutInfo.pageSize * if (bookSpread) 2 else 1 }
+                }
 
                 LaunchedEffect(jumpTarget) {
                     val target = jumpTarget ?: return@LaunchedEffect
-                    pagerState.scrollToPage(if (useSpreadLayout) (target - 1) / 2 else target - 1)
+                    val index = when {
+                        bookSpread      -> 2 * ((target - 1) / 2)
+                        useSpreadLayout -> (target - 1) / 2
+                        else            -> target - 1
+                    }
+                    // The next or previous page is turned, as a hand would turn it (the recitation reaching it, say);
+                    // anything further is opened at once rather than leafing through every page between.
+                    if (paperTurn && abs(index - pagerState.currentPage) == if (bookSpread) 2 else 1) {
+                        pagerState.animateScrollToPage(index, animationSpec = paperSettle)
+                    } else {
+                        pagerState.scrollToPage(index)
+                    }
                     jumpTarget = null
+                }
+
+                // A light tick when a leaf the reader turned lands, as paper settles (moving across the open book to the
+                // facing page turns no paper, so it is quiet).
+                LaunchedEffect(pagerState, paperTurn) {
+                    if (!paperTurn) return@LaunchedEffect
+                    var settled = pagerState.currentPage
+                    var dragged = false
+                    launch {
+                        pagerState.interactionSource.interactions.collect { if (it is DragInteraction.Start) dragged = true }
+                    }
+                    snapshotFlow { pagerState.isScrollInProgress }.collect { scrolling ->
+                        if (scrolling) return@collect
+                        val now = pagerState.currentPage
+                        if (dragged && now != settled && (bookSpread || LeafTurn.turnsLeafAfter(minOf(now, settled)))) {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        }
+                        settled = now
+                        dragged = false
+                    }
                 }
 
                 LaunchedEffect(pagerState.currentPage) {
                     val n = pagerState.currentPage
-                    currentPage = if (useSpreadLayout) {
-                        (2 * n + 1).coerceIn(1, TOTAL_PAGES)
-                    } else {
-                        (n + 1).coerceIn(1, TOTAL_PAGES)
+                    // With two pages the pager is at a spread (the two-page book at an even pager page). The place stays
+                    // on the page it was on while that page is in view, so going back to one page goes back to it; it
+                    // once moved to the spread's right-hand page whenever the view changed.
+                    val spread = when {
+                        bookSpread      -> n / 2
+                        useSpreadLayout -> n
+                        else            -> -1
                     }
+                    currentPage = when {
+                        spread < 0                         -> n + 1
+                        (currentPage - 1) / 2 == spread    -> currentPage
+                        else                               -> 2 * spread + 1
+                    }.coerceIn(1, TOTAL_PAGES)
                     currentScale = 1f
                 }
 
-                // USER REQUIREMENT: 
+                // In the book view the desk lies under all the pages and stays where it is: the book moves over it, and
+                // is seen smaller on it while a leaf turns.
+                if (bookOn) BookDesk(bookLook)
+
+                // USER REQUIREMENT:
                 // Swiping LEFT always moves to PREV page.
                 // Swiping RIGHT always moves to NEXT page.
                 // This is achieved by forcing LTR layout and using reverseLayout = true.
+                val spreadFling = rememberSpreadFling(pagerState, if (paperTurn) paperSettle else spring<Float>(stiffness = Spring.StiffnessMediumLow))
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, LocalAyahMarks provides marks) {
                     HorizontalPager(
                         state                   = pagerState,
-                        reverseLayout           = true, 
-                        beyondViewportPageCount = 1,
+                        // The two-page book: two pages side by side, and the pages of the next spread ready to turn.
+                        pageSize                = if (bookSpread) HalfPage else PageSize.Fill,
+                        reverseLayout           = true,
+                        beyondViewportPageCount = if (bookSpread) 2 else 1,
+                        flingBehavior           = when {
+                            bookSpread -> spreadFling
+                            paperTurn  -> PagerDefaults.flingBehavior(state = pagerState, snapAnimationSpec = paperSettle)
+                            else       -> PagerDefaults.flingBehavior(state = pagerState)
+                        },
                         userScrollEnabled       = currentScale <= 1.05f,
                         verticalAlignment       = Alignment.CenterVertically,
-                        modifier                = Modifier.fillMaxSize()
+                        modifier                = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (paperTurn) Modifier
+                                    .systemGestureExclusion { place ->
+                                        val height = place.size.height.toFloat()
+                                        Rect(0f, height - turnCorner.height, turnCorner.width, height)
+                                    }
+                                    .systemGestureExclusion { place ->
+                                        val width = place.size.width.toFloat()
+                                        val height = place.size.height.toFloat()
+                                        Rect(width - turnCorner.width, height - turnCorner.height, width, height)
+                                    }
+                                else Modifier
+                            )
+                            // Watches where the finger holds the page, for the paper turn; it takes nothing from the page.
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull() ?: continue
+                                        if (change.pressed && size.height > 0) grip.floatValue = (change.position.y / size.height).coerceIn(0f, 1f)
+                                    }
+                                }
+                            }
                     ) { pageIndex ->
-                        if (useSpreadLayout) {
+                        if (useSpreadLayout && !bookSpread) {
                             SpreadView(
                                 pagerState       = pagerState,
                                 spreadFillWidth  = spreadFillWidth,
@@ -576,7 +699,11 @@ fun MushafViewerScreen(
                                 quran         = quran,
                                 fonts         = fonts,
                                 onScaleChange = { scale -> currentScale = scale },
-                                onTap         = { showHeader = !showHeader }
+                                onTap         = { showHeader = !showHeader },
+                                book          = if (bookOn) bookLook else null,
+                                modifier      = if (paperTurn) {
+                                    Modifier.leafTurn(pagerState, pageIndex, { grip.floatValue }, paperLook, book = bookOn, spread = bookSpread)
+                                } else Modifier
                             )
                         }
                     }
@@ -769,6 +896,7 @@ fun MushafViewerScreen(
             twoPage = useSpreadLayout,
             fillWidth = spreadFillWidth,
             rotateWithDevice = rotateWithDevice,
+            bookView = bookPref,
             theme = readingTheme,
             onListen = {
                 menuOpen = false
@@ -791,6 +919,7 @@ fun MushafViewerScreen(
             },
             onFillWidth = { spreadFillWidth = it },
             onRotate = { coroutineScope.launch { prefs.setMushafRotate(it) } },
+            onBookView = { coroutineScope.launch { prefs.setMushafBookView(it) } },
             onTheme = { coroutineScope.launch { prefs.setMushafTheme(it.name) }; menuOpen = false },
             onDismiss = { menuOpen = false }
         )
@@ -994,7 +1123,9 @@ private fun SinglePageView(
     fonts:         MushafFontManager,
     onScaleChange: (Float) -> Unit,
     onTap:         () -> Unit,
-    modifier:      Modifier = Modifier
+    modifier:      Modifier = Modifier,
+    /** How the page looks as a page of a book on a desk, or null to show the page alone, filling the screen. */
+    book:          BookLook? = null
 ) {
     val description = rememberPageDescription(quran, listOf(page))
     val toggleLabel = stringResource(R.string.mushaf_cd_toggle_bar)
@@ -1007,12 +1138,28 @@ private fun SinglePageView(
             onClick(label = toggleLabel) { onTap(); true }
         }
     ) {
-        PageImage(
-            page          = page,
-            quran         = quran,
-            fonts         = fonts,
-            modifier      = Modifier.fillMaxSize()
-        )
+        if (book == null) {
+            PageImage(
+                page          = page,
+                quran         = quran,
+                fonts         = fonts,
+                modifier      = Modifier.fillMaxSize()
+            )
+        } else {
+            // An odd page is a right-hand page, bound on its left; an even page is bound on its right. The text keeps
+            // clear of the middle of the book along that edge.
+            val boundOnLeft = page % 2 == 1
+            BookPage(page = page, look = book) {
+                PageImage(
+                    page     = page,
+                    quran    = quran,
+                    fonts    = fonts,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = if (boundOnLeft) MIDDLE_WIDTH else 0.dp, end = if (boundOnLeft) 0.dp else MIDDLE_WIDTH)
+                )
+            }
+        }
     }
 }
 
@@ -1137,6 +1284,11 @@ private fun SpreadView(
 }
 
 private val GUTTER_WIDTH = 28.dp
+
+
+/** The corner of the left edge kept for turning pages, out of reach of Android's back gesture. */
+private val TURN_CORNER_WIDTH = 40.dp
+private val TURN_CORNER_HEIGHT = 200.dp
 
 /** The number of a page in the two-page view: filled for the page the reader came to, quiet for its neighbour. */
 @Composable
