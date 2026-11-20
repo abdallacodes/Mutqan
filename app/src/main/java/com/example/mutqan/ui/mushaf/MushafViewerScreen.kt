@@ -67,6 +67,7 @@ import androidx.compose.foundation.layout.width
 import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import kotlin.math.abs
@@ -621,12 +622,17 @@ fun MushafViewerScreen(
 
                 // A light tick when a leaf the reader turned lands, as paper settles (moving across the open book to the
                 // facing page turns no paper, so it is quiet).
+                // The two-page book has its own drag (see SpreadDrag), which says here when it starts.
+                val spreadHand = remember(pagerState) { MutableInteractionSource() }
                 LaunchedEffect(pagerState, paperTurn) {
                     if (!paperTurn) return@LaunchedEffect
                     var settled = pagerState.currentPage
                     var dragged = false
                     launch {
                         pagerState.interactionSource.interactions.collect { if (it is DragInteraction.Start) dragged = true }
+                    }
+                    launch {
+                        spreadHand.interactions.collect { if (it is DragInteraction.Start) dragged = true }
                     }
                     snapshotFlow { pagerState.isScrollInProgress }.collect { scrolling ->
                         if (scrolling) return@collect
@@ -720,8 +726,9 @@ fun MushafViewerScreen(
                                     paperTurn  -> PagerDefaults.flingBehavior(state = pagerState, snapAnimationSpec = paperSettle)
                                     else       -> PagerDefaults.flingBehavior(state = pagerState)
                                 },
-                                // Zoomed in, a finger moves the page instead of turning it.
-                                userScrollEnabled       = !zoomed,
+                                // Zoomed in, a finger moves the page instead of turning it. The two-page book turns by its
+                                // own drag, which keeps the leaf under the finger.
+                                userScrollEnabled       = !zoomed && !(bookSpread && paperTurn),
                                 verticalAlignment       = Alignment.CenterVertically,
                                 modifier                = Modifier
                                     .fillMaxWidth()
@@ -738,6 +745,10 @@ fun MushafViewerScreen(
                                             }
                                         }
                                     }
+                                    .then(
+                                        if (bookSpread && paperTurn) Modifier.spreadTurnDrag(pagerState, spreadFling, spreadHand) { !zoom.zoomed }
+                                        else Modifier
+                                    )
                             ) { pageIndex ->
                                 if (useSpreadLayout && !bookSpread) {
                                     SpreadView(

@@ -57,4 +57,29 @@ class BookSpreadTest {
         assertEquals(602, SpreadSnap.target(602.9f, 5000f, fast, 603))
         assertEquals(0, SpreadSnap.target(0.2f, -5000f, fast, 603))
     }
+
+    @Test
+    fun `a held turn keeps the point taken under the finger, the whole turn within the book's width`() {
+        // A phone held sideways: each half 1212 pixels, the page about 670 wide.
+        val spine = 1212f
+        val length = 670f
+        val eye = LeafCurve.EYE * spine
+        // A finger in the page's inner half holds it as if by its middle (see spreadTurnDrag), so from there out.
+        for (u in listOf(1f, 0.75f, 0.5f)) {
+            // Lying flat, the point is where the finger took it.
+            assertEquals(spine - u * length, SpreadDrag.heldX(0f, u, spine, length, eye), 0.01f)
+            // Wherever the turn has gone, the finger over the point gives back that turn. (At the very start a point near
+            // the middle of the page seems to move out a little as it rises toward the eye, so there the first match is
+            // taken; from a quarter of the way it moves only on.)
+            for (t in listOf(0.3f, 0.5f, 0.7f)) {
+                val x = SpreadDrag.heldX(t, u, spine, length, eye)
+                assertEquals(t, SpreadDrag.progressAt(x, u, spine, length, eye), 0.01f)
+            }
+        }
+        // The edge taken at the outer side of the left-hand page and carried across the book has turned it (the edge
+        // lands first, the paper by the binding last), not a screen's width as with the pager's drag.
+        assertTrue(SpreadDrag.progressAt(spine + length, 1f, spine, length, eye) > 0.75f)
+        // A small move at the start already lifts the leaf (the edge hardly moves there, so the turn moves on quickly).
+        assertTrue(SpreadDrag.progressAt(spine - length + 20f, 1f, spine, length, eye) > 0.05f)
+    }
 }
