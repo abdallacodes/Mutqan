@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -82,6 +84,8 @@ internal fun MushafGlass(
 /**
  * The capsule at the top: back, the name of the surah with the place under it (a tap opens the jump sheet), and the menu.
  * [placeLine] draws the line under the name, so the page's memory dots and text stay with the screen that knows them.
+ * [compact] is for a screen held sideways, short for the page: the place goes beside the name, on one line, and the
+ * capsule is only as wide as that line.
  */
 @Composable
 internal fun MushafTopCapsule(
@@ -92,8 +96,56 @@ internal fun MushafTopCapsule(
     onTitle: () -> Unit,
     onMenu: () -> Unit,
     placeLine: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
+    if (compact) {
+        MushafGlass(backdrop, colors, RoundedCornerShape(COMPACT_HEIGHT / 2), modifier) {
+            Row(modifier = Modifier.padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack, modifier = Modifier.size(COMPACT_HEIGHT)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = colors.ink
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .heightIn(min = COMPACT_HEIGHT)
+                        .clip(RoundedCornerShape(COMPACT_HEIGHT / 2))
+                        .clickable(role = Role.Button, onClick = onTitle)
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        tint = colors.muted,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Box(Modifier.weight(1f, fill = false)) { placeLine() }
+                }
+                IconButton(onClick = onMenu, modifier = Modifier.size(COMPACT_HEIGHT)) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.mushaf_cd_menu),
+                        tint = colors.ink
+                    )
+                }
+            }
+        }
+        return
+    }
     MushafGlass(backdrop, colors, RoundedCornerShape(28.dp), modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
@@ -158,7 +210,7 @@ internal fun MushafQuarterChip(
     MushafGlass(backdrop, colors, RoundedCornerShape(20.dp), modifier) {
         Row(
             modifier = Modifier
-                .heightIn(min = 40.dp)
+                .heightIn(min = COMPACT_HEIGHT)
                 .clip(RoundedCornerShape(20.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = 14.dp),
@@ -184,14 +236,46 @@ internal fun MushafQuarterChip(
     }
 }
 
-/** The capsule at the bottom, in reach of the thumb: the tools used while reading, each with its name under it. */
+/**
+ * The capsule at the bottom, in reach of the thumb: the tools used while reading, each with its name under it. [compact]
+ * is for a screen held sideways: each name beside its icon, on one low row only as wide as the tools.
+ */
 @Composable
 internal fun MushafToolCapsule(
     backdrop: GlassBackdrop,
     colors: MushafColors,
     tools: List<MushafTool>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
+    if (compact) {
+        MushafGlass(backdrop, colors, RoundedCornerShape(COMPACT_HEIGHT / 2), modifier) {
+            Row(modifier = Modifier.padding(horizontal = 2.dp)) {
+                tools.forEach { tool ->
+                    val tint = if (tool.active) accentOn(colors) else colors.ink
+                    Row(
+                        modifier = Modifier
+                            .heightIn(min = COMPACT_HEIGHT)
+                            .clip(RoundedCornerShape(COMPACT_HEIGHT / 2))
+                            .clickable(role = Role.Button, onClick = tool.onClick)
+                            .semantics { contentDescription = tool.description }
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(imageVector = tool.icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                        Text(
+                            text = tool.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tint,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
     MushafGlass(backdrop, colors, RoundedCornerShape(32.dp), modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
             tools.forEach { tool ->
@@ -230,3 +314,6 @@ private fun accentOn(colors: MushafColors): Color {
 }
 
 private val CAPSULE_BUTTON = 44.dp
+
+/** The height of the controls on a screen held sideways, where the page has little height to spare. */
+internal val COMPACT_HEIGHT = 40.dp

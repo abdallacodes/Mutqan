@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Visibility
@@ -223,6 +224,9 @@ private fun spreadLeftPage(n: Int):  Int? = (2 * n + 2).let { if (it > TOTAL_PAG
 
 /** The smallest width (dp) from which a screen counts as a tablet: the orientation is not locked there. */
 private const val LARGE_SCREEN_DP = 600
+
+/** Below this height (dp) the screen is a phone held sideways: the bars are kept to one low row each. */
+private const val COMPACT_SCREEN_HEIGHT_DP = 480
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity         -> this
@@ -510,8 +514,9 @@ fun MushafViewerScreen(
     // used to make it spin back and forth).
     val configuration = LocalConfiguration.current
     val largeScreen = configuration.smallestScreenWidthDp >= LARGE_SCREEN_DP
-    // Held sideways the pages can fill the width (a switch in the menu).
+    // Held sideways the pages can fill the width; on a phone, where the page then has little height, the controls are low.
     val sideways = configuration.screenWidthDp > configuration.screenHeightDp
+    val compactBars = sideways && configuration.screenHeightDp < COMPACT_SCREEN_HEIGHT_DP
     LaunchedEffect(useSpreadLayout, rotatePref, largeScreen) {
         val act = context.findActivity() ?: return@LaunchedEffect
         val wanted = when {
@@ -781,48 +786,80 @@ fun MushafViewerScreen(
             val juzHizb = pageInfo?.let { stringResource(R.string.mushaf_juz_hizb, it.first, it.second) }
             val pageLine = listOfNotNull(juzHizb, pageBarLabel).joinToString(" · ")
             val rubHere = quarterHere
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MushafTopCapsule(
-                    backdrop = backdrop,
-                    colors   = colors,
-                    title    = surahName.ifEmpty { pageBarLabel },
-                    onBack   = onBack,
-                    onTitle  = { showJump = true },
-                    onMenu   = { menuOpen = true },
-                    placeLine = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // How well each page in view is known, in the colour it has everywhere else.
-                            val inView = if (useSpreadLayout) {
-                                listOfNotNull(spreadRightPage((currentPage - 1) / 2), spreadLeftPage((currentPage - 1) / 2))
-                            } else listOf(currentPage)
-                            inView.forEach { StabilityDot(state.stabilities.getOrNull(it - 1), Modifier.padding(end = 6.dp)) }
-                            // Two lines at most: with large text the page number wraps rather than being cut off.
-                            Text(
-                                text     = pageLine,
-                                style    = MaterialTheme.typography.labelMedium,
-                                color    = MushafInkMuted,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                )
-                // The quarter with the subject the user gave it, if any; a tap opens that juz's map. With no subject it
-                // says where the tap leads, which is where one is added.
+            val placeLine: @Composable () -> Unit = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // How well each page in view is known, in the colour it has everywhere else.
+                    val inView = if (useSpreadLayout) {
+                        listOfNotNull(spreadRightPage((currentPage - 1) / 2), spreadLeftPage((currentPage - 1) / 2))
+                    } else listOf(currentPage)
+                    inView.forEach { StabilityDot(state.stabilities.getOrNull(it - 1), Modifier.padding(end = 6.dp)) }
+                    // Two lines at most: with large text the page number wraps rather than being cut off. On the one
+                    // low row of a screen held sideways, one.
+                    Text(
+                        text     = pageLine,
+                        style    = MaterialTheme.typography.labelMedium,
+                        color    = MushafInkMuted,
+                        maxLines = if (compactBars) 1 else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            // The quarter with the subject the user gave it, if any; a tap opens that juz's map. With no subject it
+            // says where the tap leads, which is where one is added.
+            val quarterChip: @Composable (Modifier) -> Unit = { chipModifier ->
                 if (rubHere != null) {
                     MushafQuarterChip(
                         backdrop = backdrop,
                         colors   = colors,
                         label    = if (subjectHere != null) stringResource(R.string.mushaf_quarter_subject, rubHere.quarterInJuz, subjectHere)
                                    else stringResource(R.string.mushaf_quarter_open, rubHere.quarterInJuz),
-                        onClick  = { onOpenJuz(rubHere.juz) }
+                        onClick  = { onOpenJuz(rubHere.juz) },
+                        modifier = chipModifier
                     )
+                }
+            }
+            if (compactBars) {
+                // Held sideways: one low row, the place beside the name and the quarter beside the capsule, each only as
+                // wide as it needs, so the page shows around them.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MushafTopCapsule(
+                        backdrop  = backdrop,
+                        colors    = colors,
+                        title     = surahName.ifEmpty { pageBarLabel },
+                        onBack    = onBack,
+                        onTitle   = { showJump = true },
+                        onMenu    = { menuOpen = true },
+                        placeLine = placeLine,
+                        modifier  = Modifier.weight(1f, fill = false),
+                        compact   = true
+                    )
+                    quarterChip(Modifier.widthIn(max = QUARTER_CHIP_WIDEST))
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MushafTopCapsule(
+                        backdrop  = backdrop,
+                        colors    = colors,
+                        title     = surahName.ifEmpty { pageBarLabel },
+                        onBack    = onBack,
+                        onTitle   = { showJump = true },
+                        onMenu    = { menuOpen = true },
+                        placeLine = placeLine
+                    )
+                    quarterChip(Modifier)
                 }
             }
         }
@@ -865,7 +902,8 @@ fun MushafViewerScreen(
                 .fillMaxWidth()
                 .padding(bottom = if (coverBarShown) 48.dp else 0.dp)
                 .navigationBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = if (compactBars) 4.dp else 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // The bars are away while the text is covered: one small button brings back the cover bar.
             if (coverOn && !coverBarShown) {
@@ -923,11 +961,13 @@ fun MushafViewerScreen(
                         ))
                     }
                 }
+                // Held sideways, one low row only as wide as the tools.
                 MushafToolCapsule(
                     backdrop = backdrop,
                     colors   = colors,
                     tools    = tools,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    modifier = if (compactBars) Modifier else Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    compact  = compactBars
                 )
             }
             if (playback.active) {
@@ -1342,6 +1382,9 @@ private fun pagesHeightToFill(width: Int, book: Boolean, bookSpread: Boolean, tw
 private val SPINE_WIDTH = 0.5.dp
 private val SPREAD_NUMBERS_HEIGHT = 30.dp
 private val GUTTER_WIDTH = 28.dp
+
+/** The widest the quarter chip grows beside the top capsule on a screen held sideways; a long subject is cut short. */
+private val QUARTER_CHIP_WIDEST = 320.dp
 
 
 /** The corner of the left edge kept for turning pages, out of reach of Android's back gesture. */
