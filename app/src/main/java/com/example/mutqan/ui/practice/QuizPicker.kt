@@ -10,8 +10,6 @@ import com.example.mutqan.domain.QuizQuestion
 import com.example.mutqan.domain.QuizText
 import com.example.mutqan.domain.SimilarLibrary
 import com.example.mutqan.domain.StudyRepository
-import com.example.mutqan.domain.TopicLanguage
-import com.example.mutqan.domain.TopicsLibrary
 import com.example.mutqan.domain.VerseClosingsLibrary
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -87,11 +85,7 @@ class QuizPicker private constructor(
         ): QuizPicker = withContext(Dispatchers.Default) {
             val appContext = context.applicationContext
             val (weights, scopeEmpty) = pageWeights(appContext, study, only)
-            val language = TopicLanguage(arabicUi = appContext.resources.configuration.locales[0].language == "ar")
-            val engine = QuizEngine(
-                quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext),
-                TopicsLibrary.load(appContext), language
-            )
+            val engine = QuizEngine(quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext))
             QuizPicker(quran, engine, weights, random, scopeEmpty)
         }
 

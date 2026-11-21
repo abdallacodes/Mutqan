@@ -32,8 +32,6 @@ data class ChoiceQuestion(
     val showRef: Boolean,
     /** True when the options are Quran text (shown in the Mushaf's type); false for plain labels such as topics. */
     val optionsAreVerses: Boolean = true,
-    /** A line shown with the answer, e.g. the topics of the verse. */
-    val note: String? = null,
     /** For the end-of-verse question: what makes its choices alike. */
     val kind: EndingKind? = null
 ) : QuizQuestion
@@ -307,9 +305,7 @@ class QuizEngine(
     private val quran: QuranRepository,
     private val similar: SimilarData,
     private val random: Random = Random.Default,
-    private val closings: VerseClosings? = null,
-    private val topics: TopicIndex? = null,
-    private val topicLanguage: TopicLanguage? = null
+    private val closings: VerseClosings? = null
 ) {
 
     fun build(type: ExerciseType, ayahId: Int, hard: Boolean): QuizQuestion? = when (type) {
@@ -318,7 +314,6 @@ class QuizEngine(
         ExerciseType.QUIZ_FINISH -> finishing(ayahId)
         ExerciseType.QUIZ_ORDER -> order(ayahId)
         ExerciseType.QUIZ_WHERE -> where(ayahId)
-        ExerciseType.QUIZ_TOPIC -> topic(ayahId)
         else -> null
     }
 
@@ -334,7 +329,7 @@ class QuizEngine(
 
     private fun finish(
         type: ExerciseType, subject: QuranAyah, prompt: MushafSpan, correct: MushafSpan, distractors: List<MushafSpan>,
-        revealed: QuranAyah, showRef: Boolean, optionsAreVerses: Boolean = true, note: String? = null,
+        revealed: QuranAyah, showRef: Boolean, optionsAreVerses: Boolean = true,
         kind: EndingKind? = null
     ): ChoiceQuestion? {
         val options = QuizText.options(correct, distractors, 4)
@@ -350,7 +345,6 @@ class QuizEngine(
             revealRef = ref(revealed),
             showRef = showRef,
             optionsAreVerses = optionsAreVerses,
-            note = note,
             kind = kind
         )
     }
@@ -469,37 +463,6 @@ class QuizEngine(
         )
     }
 
-    /**
-     * Which topic is this verse about? The right answer is one of its topics (not a very broad one); the wrong
-     * ones are sibling topics first, which is what makes it hard, then others the verse is not listed under.
-     */
-    private fun topic(id: Int): QuizQuestion? {
-        val index = topics ?: return null
-        val language = topicLanguage ?: return null
-        val x = quran.ayahById(id) ?: return null
-        val words = wordsOf(x)
-        if (words.size < 4) return null
-
-        val ofVerse = index.topicsOf(id)
-        val correct = ofVerse.filter { language.visible(it) && it.verses.size in TOPIC_MIN_VERSES..TOPIC_MAX_VERSES }
-            .randomOrNull(random) ?: return null
-        val own = ofVerse.map { it.id }.toSet()
-
-        fun usable(t: Topic) = t.id !in own && language.visible(t) && t.verses.size in TOPIC_MIN_VERSES..TOPIC_MAX_VERSES
-        val siblings = listOf(correct.thematicParent, correct.ontologyParent, correct.parent)
-            .filter { it != -1 }.flatMap(index::childrenOf).filter(::usable).shuffled(random)
-        val others = index.topics.shuffled(random).asSequence().filter(::usable).take(20).toList()
-
-        return finish(
-            ExerciseType.QUIZ_TOPIC, x,
-            QuizText.opening(words, TOPIC_WORDS),
-            MushafSpan.label(language.title(correct)),
-            (siblings + others).map { MushafSpan.label(language.title(it)) },
-            x, showRef = false, optionsAreVerses = false,
-            note = ofVerse.filter { language.visible(it) }.take(TOPIC_NOTE).joinToString(" · ") { language.title(it) }.ifEmpty { null }
-        )
-    }
-
     /** Four consecutive verses of one surah, shuffled. */
     private fun order(id: Int): QuizQuestion? {
         val first = quran.ayahById(id) ?: return null
@@ -571,9 +534,5 @@ class QuizEngine(
         const val IDENTICAL_SCORE = 95
         const val WHERE_OPTIONS = 5
         const val LOOKALIKE_SURAH_SCORE = 60
-        const val TOPIC_MIN_VERSES = 3
-        const val TOPIC_MAX_VERSES = 150
-        const val TOPIC_WORDS = 30
-        const val TOPIC_NOTE = 4
     }
 }

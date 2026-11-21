@@ -430,7 +430,7 @@
     <string name="effect_practice">قراءة فقط: تُسجَّل ولا تغيّر مستوى أي صفحة.</string>
     <string name="settings_about">عن التطبيق</string>
     <string name="settings_about_version">%1$s · الإصدار %2$s</string>
-    <string name="settings_about_sources">موارد القرآن في التطبيق (النص وتخطيط المصحف وخطوطه والتحليل الصرفي والتفسير والمواضيع والآيات المتشابهة) مصدرها مشروع QUL، أي المكتبة القرآنية الشاملة (Quranic Universal Library). وتُبثّ التلاوات الصوتية من خوادم Tarteel بأصوات القرّاء المذكورين في التطبيق.</string>
+    <string name="settings_about_sources">موارد القرآن في التطبيق (النص وتخطيط المصحف وخطوطه والتحليل الصرفي والتفسير وموضوعات المقاطع والآيات المتشابهة) مصدرها مشروع QUL، أي المكتبة القرآنية الشاملة (Quranic Universal Library). وتُبثّ التلاوات الصوتية من خوادم Tarteel بأصوات القرّاء المذكورين في التطبيق.</string>
     <string name="coverage_strength_hint">اختر الأجزاء التي حفظتها ومستوى كل جزء: ضعيف أو متوسط أو قوي. تبني الخطة على تقديرك في البداية، ثم تحلّ محلّه سجلات التسميع حين تُظهر حال كل صفحة فعلًا.</string>
     <string name="strength_fair">متوسط</string>
     <string name="strength_strong">قوي</string>
@@ -950,7 +950,6 @@
     <string name="root_row_title">الجذر: %s</string>
     <string name="root_forms">الصيغ</string>
     <string name="root_all_forms">الكل</string>
-    <string name="quran_tab_topics">المواضيع</string>
     <string name="quran_tab_lists">قوائمي</string>
     <string name="lists_new">قائمة جديدة</string>
     <string name="lists_empty_title">قوائمك من الآيات</string>
@@ -1015,24 +1014,12 @@
         <item quantity="other">أُضيفت %1$d آية إلى «%2$s»</item>
     </plurals>
     <string name="list_added_none">كانت هذه الآيات في «%1$s» من قبل</string>
-    <string name="topics_search_hint">ابحث عن موضوع</string>
-    <string name="topics_none">لا مواضيع بهذا الاسم</string>
-    <string name="topics_themes">المحاور</string>
-    <string name="topics_concepts">المفاهيم</string>
-    <string name="topics_popular">الأكثر ذكرًا</string>
-    <string name="topic_subtopics">مواضيع فرعية</string>
-    <string name="topic_related">مواضيع ذات صلة</string>
-    <string name="topic_verses_header">الآيات (%d)</string>
-    <string name="topic_memorised_of">حفظت %1$d من %2$d</string>
-    <string name="topic_only_memorised">ما حفظته فقط</string>
     <string name="peek_theme_title">موضوع المقطع</string>
     <string name="theme_range">الآيات %1$d–%2$d</string>
     <string name="theme_range_one">الآية\u00A0%1$d</string>
     <string name="theme_row_place">%1$s · %2$s · صفحة\u00A0%3$d</string>
     <string name="themes_search_hint">ابحث في موضوعات المقاطع</string>
     <string name="mushaf_tab_themes">موضوعات</string>
-    <string name="quiz_q_topic">إلى أي موضوع تنتمي هذه الآية؟</string>
-    <string name="quiz_topics_of_verse">مواضيع هذه الآية</string>
     <string name="account_title">الحساب</string>
     <string name="account_intro">سجّل الدخول بحساب Google لتبقى مراجعتك ومحفوظك متطابقين على كل أجهزتك. لا تبدأ المزامنة بمجرد الدخول: إن كانت على هذا الجهاز بيانات فأنت تختار أي النسختين تبقى، وتُحفظ على الهاتف نسخة مما يُستبدل. ويعمل الحساب على جهاز واحد في كل مرة.</string>
     <string name="account_sign_in">تسجيل الدخول بحساب Google</string>

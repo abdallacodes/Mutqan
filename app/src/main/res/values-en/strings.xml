@@ -406,7 +406,7 @@
     <string name="effect_practice">Reading only: it is recorded, but it does not change any page\'s strength.</string>
     <string name="settings_about">About</string>
     <string name="settings_about_version">%1$s · version %2$s</string>
-    <string name="settings_about_sources">The Quran resources in this app (text, Mushaf layout and fonts, word morphology, tafsir, topics and similar verses) come from the QUL project, the Quranic Universal Library. Recitation audio is streamed from Tarteel’s servers, in the voices of the reciters named in the app.</string>
+    <string name="settings_about_sources">The Quran resources in this app (text, Mushaf layout and fonts, word morphology, tafsir, passage themes and similar verses) come from the QUL project, the Quranic Universal Library. Recitation audio is streamed from Tarteel’s servers, in the voices of the reciters named in the app.</string>
     <string name="coverage_strength_hint">Pick the juz you have memorised and how well you know each: weak, fair or strong. The plan starts from your estimate, then your revision history takes over once it shows how each page really holds.</string>
     <string name="strength_fair">Fair</string>
     <string name="strength_strong">Strong</string>
@@ -850,7 +850,6 @@
     <string name="root_row_title">Root: %s</string>
     <string name="root_forms">Forms</string>
     <string name="root_all_forms">All</string>
-    <string name="quran_tab_topics">Topics</string>
     <string name="quran_tab_lists">My lists</string>
     <string name="lists_new">New list</string>
     <string name="lists_empty_title">Your own lists of verses</string>
@@ -903,24 +902,12 @@
         <item quantity="other">Added %1$d verses to “%2$s”</item>
     </plurals>
     <string name="list_added_none">Those verses were already in “%1$s”</string>
-    <string name="topics_search_hint">Search a topic</string>
-    <string name="topics_none">No topics with that name</string>
-    <string name="topics_themes">Themes</string>
-    <string name="topics_concepts">Concepts</string>
-    <string name="topics_popular">Most mentioned</string>
-    <string name="topic_subtopics">Subtopics</string>
-    <string name="topic_related">Related topics</string>
-    <string name="topic_verses_header">Verses (%d)</string>
-    <string name="topic_memorised_of">You have memorised %1$d of %2$d</string>
-    <string name="topic_only_memorised">Only what I have memorised</string>
     <string name="peek_theme_title">Theme of this passage</string>
     <string name="theme_range">Verses %1$d–%2$d</string>
     <string name="theme_range_one">Verse\u00A0%1$d</string>
     <string name="theme_row_place">%1$s · %2$s · page\u00A0%3$d</string>
     <string name="themes_search_hint">Search passage themes</string>
     <string name="mushaf_tab_themes">Themes</string>
-    <string name="quiz_q_topic">Which topic does this verse belong to?</string>
-    <string name="quiz_topics_of_verse">Topics of this verse</string>
     <string name="account_title">Account</string>
     <string name="account_intro">Sign in with Google to keep your revision and memorisation the same on all your devices. Signing in does not start syncing: if this device has data you choose which copy stays, and a copy of what is replaced is saved on the phone. An account works on one device at a time.</string>
     <string name="account_sign_in">Sign in with Google</string>

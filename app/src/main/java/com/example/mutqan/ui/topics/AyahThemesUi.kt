@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -37,7 +38,7 @@ import kotlinx.coroutines.withContext
 private class Place(val theme: AyahTheme, val surah: Int, val from: Int, val to: Int, val page: Int)
 
 @Composable
-private fun rememberThemesShown(): Boolean = rememberTopicLanguage().themesVisible()
+private fun rememberThemesShown(): Boolean = LocalConfiguration.current.locales[0].language != "ar"
 
 @Composable
 private fun rangeText(place: Place): String =

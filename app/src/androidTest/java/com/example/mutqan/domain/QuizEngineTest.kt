@@ -20,8 +20,7 @@ class QuizEngineTest {
     fun everyKindOfQuestionIsWellFormed() = runBlocking {
         val quran = QuranRepository.getInstance(context)
         val engine = QuizEngine(
-            quran, SimilarLibrary.load(context), closings = VerseClosingsLibrary.load(context),
-            topics = TopicsLibrary.load(context), topicLanguage = TopicLanguage(arabicUi = true)
+            quran, SimilarLibrary.load(context), closings = VerseClosingsLibrary.load(context)
         )
         for (type in ExerciseType.QUIZ) {
             var built = 0

@@ -251,7 +251,6 @@ internal fun instruction(type: ExerciseType, kind: EndingKind? = null): String =
         ExerciseType.QUIZ_NEXT -> R.string.quiz_q_next
         ExerciseType.QUIZ_FINISH -> if (kind == EndingKind.LOOKALIKE) R.string.quiz_q_finish_lookalike else R.string.quiz_q_finish_closing
         ExerciseType.QUIZ_ORDER -> R.string.quiz_q_order
-        ExerciseType.QUIZ_TOPIC -> R.string.quiz_q_topic
         else -> R.string.quiz_q_where_surah
     }
 )
@@ -278,10 +277,6 @@ private fun ChoiceBody(q: ChoiceQuestion, state: QuizUiState, onPick: (Int) -> U
         Text(refLabel(q.revealRef), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         VerseText(q.revealed, size = 28)
         OpenInMushaf(ayahId = q.revealRef.id)
-        q.note?.let {
-            SectionLabel(stringResource(R.string.quiz_topics_of_verse))
-            Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
-        }
     }
 }
 
