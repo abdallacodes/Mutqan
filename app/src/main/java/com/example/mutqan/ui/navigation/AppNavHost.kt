@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
@@ -201,6 +202,7 @@ object Routes {
     fun juzDetail(juzId: Int)                    = "juz_detail/$juzId"
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int, ayahId: Int? = null) = "mushaf_viewer/$page" + (ayahId?.let { "?ayah=$it" } ?: "")
+    fun verseSearch(query: String)               = "$VERSE_SEARCH?q=" + Uri.encode(query)
     fun topic(topicId: Int)                      = "topic/$topicId"
     fun root(rootId: Int)                        = "root/$rootId"
     fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
@@ -779,6 +781,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenMushaf       = { page -> navController.openMushaf(page) },
             onSettingsClick    = onSettingsClick,
             onSearchClick      = { navController.navigate(Routes.VERSE_SEARCH) },
+            onSearchVerses     = { q -> navController.navigate(Routes.verseSearch(q)) },
             onOpenRoot         = { root -> navController.navigate(Routes.root(root)) },
             onOpenTopic        = { topic -> navController.navigate(Routes.topic(topic)) },
             onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }

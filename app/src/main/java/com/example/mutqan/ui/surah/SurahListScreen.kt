@@ -96,6 +96,7 @@ fun SurahListScreen(
     onOpenMushaf: (page: Int) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
+    onSearchVerses: (String) -> Unit = {},
     onOpenRoot: (Int) -> Unit = {},
     onOpenTopic: (Int) -> Unit = {},
     onOpenAudioStorage: () -> Unit = {}
@@ -271,6 +272,16 @@ fun SurahListScreen(
                             title = stringResource(R.string.quran_go_page, page),
                             subtitle = null,
                             onClick = { onOpenMushaf(page) }
+                        )
+                    }
+                }
+                // Words typed here may be words of a verse, which this box does not look for: offer the verse search.
+                if (needle.count { it in '\u0621'..'\u064A' } >= 2) {
+                    item(key = "search-verses") {
+                        HubRow(
+                            title = stringResource(R.string.quran_search_verses, query.trim()),
+                            subtitle = null,
+                            onClick = { onSearchVerses(query.trim()) }
                         )
                     }
                 }

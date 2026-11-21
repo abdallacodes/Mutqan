@@ -824,6 +824,7 @@
     <string name="quran_tab_juz">الأجزاء</string>
     <string name="quran_search_hint">اسم السورة أو رقمها أو رقم الصفحة</string>
     <string name="quran_go_page">اذهب إلى الصفحة\u00A0%d</string>
+    <string name="quran_search_verses">ابحث في الآيات عن «%1$s»</string>
     <string name="quran_surah_info">%1$s · الجزء\u00A0%2$d · صفحة\u00A0%3$d</string>
     <string name="quran_memorised">محفوظة</string>
     <string name="quran_lookalikes">المتشابهات: %d</string>

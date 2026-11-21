@@ -736,6 +736,7 @@
     <string name="quran_tab_juz">Juz</string>
     <string name="quran_search_hint">Surah name, number or page</string>
     <string name="quran_go_page">Go to page\u00A0%d</string>
+    <string name="quran_search_verses">Search the verses for “%1$s”</string>
     <string name="quran_surah_info">%1$s · Juz\u00A0%2$d · page\u00A0%3$d</string>
     <string name="quran_memorised">Memorised</string>
     <string name="quran_lookalikes">Look-alikes: %d</string>
