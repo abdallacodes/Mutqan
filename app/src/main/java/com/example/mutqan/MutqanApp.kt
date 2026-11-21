@@ -6,13 +6,21 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.example.mutqan.domain.reminder.DailyReminder
 import com.example.mutqan.domain.sync.CloudSync
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class MutqanApp : Application() {
     override fun onCreate() {
         super.onCreate()
         applyDefaultLanguage()
         CloudSync.get(this).startAutoSync(this)
+        DailyReminder.createChannel(this)
+        // The alarm does not survive every kind of stop; each start sets it again from the saved settings.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { runCatching { DailyReminder.refresh(this@MutqanApp) } }
     }
 
     /**

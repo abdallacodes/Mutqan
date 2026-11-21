@@ -247,6 +247,12 @@ fun SettingsBottomSheet(
 
             Spacer(Modifier.height(28.dp))
 
+            // ── Daily reminder ─────────────────────────────────────────────
+            SectionLabel(stringResource(R.string.reminder_settings_title))
+            Spacer(Modifier.height(8.dp))
+            com.example.mutqan.ui.habit.ReminderSettingsRows()
+            Spacer(Modifier.height(28.dp))
+
             // ── Account ────────────────────────────────────────────────────
             if (remember { com.example.mutqan.domain.sync.CloudSync.get(context).isConfigured }) {
                 AccountSection()

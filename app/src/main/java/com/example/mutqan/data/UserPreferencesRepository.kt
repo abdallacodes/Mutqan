@@ -20,6 +20,17 @@ import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/** The daily reminder: on or off, and its time in minutes after midnight. */
+data class ReminderSettings(val on: Boolean, val minutes: Int) {
+    companion object {
+        /** 8 in the evening: late enough to catch a day not finished yet, and silent when it is. */
+        const val DEFAULT_MINUTES = 20 * 60
+    }
+}
+
+/** How many shown milestones are remembered (runs of days add new keys over the years). */
+private const val MILESTONES_KEPT = 500
+
 class UserPreferencesRepository(private val context: Context) {
 
     companion object {
@@ -47,6 +58,12 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_SEARCH_RECENT     = stringPreferencesKey("search_recent")
         private val KEY_QUIZ_RETRIES      = stringPreferencesKey("quiz_retries")
+        private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
+        private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
+        private val KEY_REMINDER_OFFERED  = booleanPreferencesKey("reminder_offer_closed")
+        private val KEY_WARD_CELEBRATED   = longPreferencesKey("ward_celebrated_day")
+        private val KEY_MILESTONES_SEEN   = stringPreferencesKey("milestones_seen")
+        private val KEY_MILESTONES_START  = booleanPreferencesKey("milestones_baseline")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
         private val KEY_RECITE_SURAH      = booleanPreferencesKey("recitation_to_surah_end")
@@ -207,6 +224,51 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun editQuizRetries(change: (List<QuizRetry>) -> List<QuizRetry>) {
         context.dataStore.edit { prefs -> prefs[KEY_QUIZ_RETRIES] = QuizRetries.format(change(QuizRetries.parse(prefs[KEY_QUIZ_RETRIES]))) }
+    }
+
+    /** The daily reminder: whether it is on, and its time as minutes after midnight (this device only). */
+    val reminder: Flow<ReminderSettings> = context.dataStore.data.map { prefs ->
+        ReminderSettings(prefs[KEY_REMINDER_ON] ?: false, prefs[KEY_REMINDER_MINUTES] ?: ReminderSettings.DEFAULT_MINUTES)
+    }
+
+    suspend fun setReminder(on: Boolean, minutes: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_REMINDER_ON] = on
+            prefs[KEY_REMINDER_MINUTES] = minutes.coerceIn(0, 24 * 60 - 1)
+            // Answered once, the offer on Today does not come back.
+            prefs[KEY_REMINDER_OFFERED] = true
+        }
+    }
+
+    /** True once the user turned the reminder on or closed its offer on Today. */
+    val reminderOfferClosed: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_REMINDER_OFFERED] ?: false }
+
+    suspend fun closeReminderOffer() {
+        context.dataStore.edit { prefs -> prefs[KEY_REMINDER_OFFERED] = true }
+    }
+
+    /** The last day (local epoch day) whose finished ward was celebrated on Today. */
+    val wardCelebratedDay: Flow<Long> = context.dataStore.data.map { prefs -> prefs[KEY_WARD_CELEBRATED] ?: 0L }
+
+    suspend fun setWardCelebrated(day: Long) {
+        context.dataStore.edit { prefs -> prefs[KEY_WARD_CELEBRATED] = day }
+    }
+
+    /**
+     * The milestones already shown (their keys), and whether the ones reached before milestones existed were set aside
+     * (they never get a moment of their own).
+     */
+    val milestonesSeen: Flow<Pair<Boolean, Set<String>>> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_MILESTONES_START] ?: false) to prefs[KEY_MILESTONES_SEEN]?.split('\n')?.filter { it.isNotBlank() }.orEmpty().toSet()
+    }
+
+    /** Adds [keys] to the milestones shown; [baseline] also records that the ones reached before were set aside. */
+    suspend fun addMilestonesSeen(keys: Collection<String>, baseline: Boolean = false) {
+        context.dataStore.edit { prefs ->
+            val old = prefs[KEY_MILESTONES_SEEN]?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+            prefs[KEY_MILESTONES_SEEN] = (old + keys).distinct().takeLast(MILESTONES_KEPT).joinToString("\n")
+            if (baseline) prefs[KEY_MILESTONES_START] = true
+        }
     }
 
     /** The latest searches, newest first (this device only, never synced). */

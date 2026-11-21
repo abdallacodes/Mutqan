@@ -319,6 +319,10 @@ abstract class StudyDao {
     @Query("SELECT * FROM exercise_results")
     abstract suspend fun getAllExerciseResultsSync(): List<ExerciseResultEntity>
 
+    /** When each practice answer was given (epoch millis), for the days kept in the habit. */
+    @Query("SELECT timestamp FROM exercise_results")
+    abstract fun observeExerciseTimes(): Flow<List<Long>>
+
     @Query("DELETE FROM exercise_results")
     abstract suspend fun deleteAllExerciseResults()
 

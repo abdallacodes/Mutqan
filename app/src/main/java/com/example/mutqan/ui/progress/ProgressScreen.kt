@@ -152,6 +152,30 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                         )
                         Spacer(Modifier.height(12.dp))
                         DaysGrid(state.revisedDays)
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.habit_now,
+                                if (state.streak == 0) stringResource(R.string.habit_streak_start)
+                                else pluralStringResource(R.plurals.habit_streak_days, state.streak, state.streak)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (state.bestStreak > 0) {
+                            Text(
+                                text = stringResource(R.string.habit_best, pluralStringResource(R.plurals.habit_streak_days, state.bestStreak, state.bestStreak)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (state.passes > 0) {
+                            Text(
+                                text = stringResource(R.string.habit_passes, state.passes),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 

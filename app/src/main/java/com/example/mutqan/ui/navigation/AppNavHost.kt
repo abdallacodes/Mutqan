@@ -780,7 +780,9 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenMushaf    = { page -> navController.openMushaf(page) },
             onOpenSavedWeak = { navController.navigate(Routes.SAVED_WEAK) },
             onLogRevision   = { navController.navigate(Routes.REVISION_LOG) },
-            onSettingsClick = onSettingsClick
+            onSettingsClick = onSettingsClick,
+            onOpenDailySet  = { navController.navigate(Routes.quiz(QuizMode.DAILY)) },
+            onOpenVerse     = { page, ayah -> navController.openMushaf(page, ayah) }
         )
         Routes.SURAH_LIST -> SurahListScreen(
             onSurahClick       = { id -> navController.navigate(Routes.surahDetail(id)) },

@@ -1,6 +1,14 @@
 package com.example.mutqan.ui.home
 
+import com.example.mutqan.data.ReminderSettings
 import com.example.mutqan.data.UserPreferencesRepository
+import com.example.mutqan.domain.HabitSnapshot
+import com.example.mutqan.domain.HabitSnapshots
+import com.example.mutqan.domain.Milestone
+import com.example.mutqan.domain.Milestones
+import com.example.mutqan.domain.PlanGeometry
+import com.example.mutqan.domain.TodayPlans
+import kotlinx.coroutines.flow.first
 import com.example.mutqan.data.local.dao.PageMiss
 import android.content.Context
 import androidx.compose.runtime.Immutable
@@ -65,6 +73,15 @@ data class AdviceCard(val advice: PlanAdvice, val cycleNow: Int, val cycleThen: 
 @Immutable
 data class MissedPage(val page: Int, val count: Int)
 
+/** What the habit needs besides the plan: practice answers, milestones shown, and the reminder's state. */
+private data class HabitInputs(
+    val answerTimes: List<Long>,
+    val seen: Pair<Boolean, Set<String>>,
+    val celebratedDay: Long,
+    val reminder: ReminderSettings,
+    val offerClosed: Boolean
+)
+
 private data class Extras(
     val day: Long,
     val hidden: Set<Int>,
@@ -91,7 +108,16 @@ data class HomeUiState(
     /** The Mushaf page the user last read, to offer "continue". */
     val lastPage: Int? = null,
     /** A suggestion to change the pages a day of a plan by strength, now and then (see PlanAdvisor). */
-    val advice: AdviceCard? = null
+    val advice: AdviceCard? = null,
+    /** Today's ward, the run of days and the week strip; null until something is memorised. */
+    val habit: HabitSnapshot? = null,
+    /** A milestone reached and not shown yet, to show now. */
+    val milestone: Milestone? = null,
+    /** Today's ward is done and its moment has not been shown yet. */
+    val celebrateWard: Boolean = false,
+    val reminder: ReminderSettings = ReminderSettings(false, ReminderSettings.DEFAULT_MINUTES),
+    /** Offer the daily reminder on the ward card: it is off and the offer was never answered. */
+    val offerReminder: Boolean = false
 )
 
 class HomeViewModel(
@@ -123,24 +149,33 @@ class HomeViewModel(
         Extras(day, view.first, last, missed, rated, view.second)
     }
 
-    private val extrasAndAdvice = combine(extras, preferences.planAdviceMemory) { extra, memory -> extra to memory }
+    private val habitInputs = combine(
+        study.exerciseTimes(), preferences.milestonesSeen, preferences.wardCelebratedDay, preferences.reminder, preferences.reminderOfferClosed
+    ) { times, seen, celebrated, reminder, offerClosed -> HabitInputs(times, seen, celebrated, reminder, offerClosed) }
+
+    private val extrasAndAdvice = combine(extras, preferences.planAdviceMemory, habitInputs) { extra, memory, habit -> Triple(extra, memory, habit) }
+
+    /** Juz and surah page spans, read once. */
+    private var geometryCache: PlanGeometry? = null
+
+    private suspend fun geometry(): PlanGeometry = geometryCache ?: study.planGeometry().also { geometryCache = it }
 
     val uiState: StateFlow<HomeUiState> = combine(
         study.plans(), study.revisionLogs(), study.coveredPages(), study.savedPassages(), extrasAndAdvice
-    ) { plans, logs, covered, saved, (extra, memory) ->
+    ) { plans, logs, covered, saved, (extra, memory, habitIn) ->
         val (day, hidden, lastPage) = extra
         val plan = plans.firstOrNull()
         val lastRevised = RevisionPlanner.lastRevisedDays(logs, ::offsetAt)
-        val states = if (plan == null || plan.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED }
-        else PassageStates.compute(logs)
-        val today = plan?.let {
-            if (it.order == PlanOrder.BY_STRENGTH) {
-                SmartPlan.today(it, covered, lastRevised, states, day, extra.selfRated)
-            } else {
-                val items = RevisionPlanner.buildItems(it.unit, covered, study.planGeometry())
-                RevisionPlanner.todayPlan(it, items, lastRevised, states, day)
-            }
+        val recall = PassageStates.compute(logs)
+        val states = if (plan == null || plan.order == PlanOrder.ROTATION) Array(PAGES) { PassageState.NOT_ASSESSED } else recall
+        val today = plan?.let { TodayPlans.of(it, logs, covered, recall, extra.selfRated, day, ::offsetAt) { geometry() } }
+        val habit = covered?.let {
+            val strong = RevisionPlanner.tierPages(it, recall, extra.selfRated)[PlanTier.STRONG].orEmpty()
+            HabitSnapshots.of(plan, today, logs, it, strong, geometry().juzPages, habitIn.answerTimes, day, ::offsetAt)
         }
+        // Until the ones reached before this existed are set aside, none is shown (see init).
+        val (baselineDone, seen) = habitIn.seen
+        val milestone = if (habit != null && baselineDone) Milestones.next(habit.reached, seen) else null
         val advice = if (plan != null && today != null && plan.order == PlanOrder.BY_STRENGTH) {
             advise(plan, today, logs, covered, states, extra.selfRated, memory, day)
         } else null
@@ -157,10 +192,54 @@ class HomeViewModel(
             .filter { it.count >= MISS_MIN && lastRevised.getOrElse(it.page - 1) { 0L } < Math.floorDiv(it.lastTime + offsetAt(it.lastTime), 86_400_000L) }
             .take(MAX_SUGGESTIONS)
             .map { MissedPage(it.page, it.count) }
-        HomeUiState(isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, weakTotal = openWeak.size, missed = missed, lastPage = lastPage, advice = advice)
+        HomeUiState(
+            isLoaded = true, hasCoverage = covered != null, plan = plan, today = today, weak = weak, weakTotal = openWeak.size,
+            missed = missed, lastPage = lastPage, advice = advice,
+            habit = habit,
+            milestone = milestone,
+            celebrateWard = habit?.ward?.complete == true && habitIn.celebratedDay != day,
+            reminder = habitIn.reminder,
+            offerReminder = !habitIn.reminder.on && !habitIn.offerClosed
+        )
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    init {
+        // Milestones reached before they existed (a long run, passes done long ago) are set aside once, without a moment.
+        viewModelScope.launch {
+            if (preferences.milestonesSeen.first().first) return@launch
+            val habit = uiState.first { it.isLoaded && (it.habit != null || !it.hasCoverage) }.habit
+            preferences.addMilestonesSeen(habit?.reached.orEmpty().map { it.key }, baseline = true)
+        }
+    }
+
+    /** A verse from what the user memorised, other each day: the reward shown when the day's ward is done. */
+    val verseOfDay: StateFlow<Int?> = combine(epochDay, study.coverage()) { day, ranges ->
+        val total = ranges.sumOf { it.last - it.first + 1 }
+        if (total <= 0) return@combine null
+        var index = Math.floorMod(day * 2654435761L, total.toLong()).toInt()
+        for (range in ranges) {
+            val size = range.last - range.first + 1
+            if (index < size) return@combine range.first + index
+            index -= size
+        }
+        null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** [milestone] was shown: it (and, for a run of days, the smaller ones of the same run) does not come again. */
+    fun milestoneShown(milestone: Milestone) {
+        viewModelScope.launch { preferences.addMilestonesSeen(Milestones.keysShown(milestone)) }
+    }
+
+    /** Today's finished ward had its moment. */
+    fun wardCelebrated() {
+        viewModelScope.launch { preferences.setWardCelebrated(localEpochDay()) }
+    }
+
+    fun closeReminderOffer() {
+        viewModelScope.launch { preferences.closeReminderOffer() }
+    }
 
     /** Whether to suggest a higher or lower number of pages a day today (see PlanAdvisor). */
     private fun advise(

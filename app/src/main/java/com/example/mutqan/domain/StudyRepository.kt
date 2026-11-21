@@ -180,6 +180,9 @@ class StudyRepository(
             rows.mapNotNull { r -> ExerciseType.fromCode(r.type)?.let { OutcomeCount(it, RecallOutcome.fromCode(r.outcome), r.count) } }
         }
 
+    /** When each practice answer was given (epoch millis). */
+    fun exerciseTimes(): Flow<List<Long>> = dao.observeExerciseTimes().flowOn(Dispatchers.IO)
+
     /** Pages where quiz questions were answered wrongly since [since] (epoch millis), most missed first. */
     fun quizMissesSince(since: Long): Flow<List<com.example.mutqan.data.local.dao.PageMiss>> =
         dao.observeQuizMisses(since, ExerciseType.QUIZ_ENDING.code, RecallOutcome.UNABLE.code)

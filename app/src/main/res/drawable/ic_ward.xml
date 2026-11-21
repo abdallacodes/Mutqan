@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The daily reminder's mark: an eight-pointed star, as on the app's cards. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.00,2.00 L14.93,4.93 L19.07,4.93 L19.07,9.07 L22.00,12.00 L19.07,14.93 L19.07,19.07 L14.93,19.07 L12.00,22.00 L9.07,19.07 L4.93,19.07 L4.93,14.93 L2.00,12.00 L4.93,9.07 L4.93,4.93 L9.07,4.93 Z" />
+</vector>

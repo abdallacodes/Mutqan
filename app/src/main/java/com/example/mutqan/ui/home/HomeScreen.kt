@@ -1,5 +1,11 @@
 package com.example.mutqan.ui.home
 
+import com.example.mutqan.ui.habit.MilestoneDialog
+import com.example.mutqan.ui.habit.ReminderOffer
+import com.example.mutqan.ui.habit.ReminderTimeDialog
+import com.example.mutqan.ui.habit.WardCard
+import com.example.mutqan.ui.habit.rememberReminderSwitch
+import com.example.mutqan.quran.QuranRepository
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -91,8 +97,6 @@ import com.example.mutqan.ui.components.Folio
 import com.example.mutqan.ui.components.FolioDivider
 import com.example.mutqan.ui.components.FolioGroup
 import com.example.mutqan.ui.components.HeroButton
-import com.example.mutqan.ui.components.HeroCard
-import com.example.mutqan.ui.components.PageStrip
 import com.example.mutqan.ui.components.PrimaryButton
 import com.example.mutqan.ui.components.TonalButton
 import com.example.mutqan.domain.PlanAdvice
@@ -158,6 +162,10 @@ fun HomeScreen(
     onOpenSavedWeak: () -> Unit,
     onLogRevision: () -> Unit,
     onSettingsClick: () -> Unit,
+    /** Opens the day's question set. */
+    onOpenDailySet: () -> Unit = {},
+    /** Opens the Mushaf on a verse, lit. */
+    onOpenVerse: (page: Int, ayahId: Int) -> Unit = { page, _ -> onOpenMushaf(page) },
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(LocalContext.current))
 ) {
     val context = LocalContext.current
@@ -206,6 +214,15 @@ fun HomeScreen(
 
     val accent = FolioTheme.colors.heroAccent
 
+    val verseOfDay by viewModel.verseOfDay.collectAsState()
+    val ayahIndex = remember(context) { QuranRepository.getInstance(context).ayahIndex }
+    val openVerse: (Int) -> Unit = { id -> onOpenVerse(ayahIndex.firstPageOf(id), id) }
+    var pickingReminder by remember { mutableStateOf(false) }
+    val reminderSwitch = rememberReminderSwitch()
+    val reminderOffer: (@Composable () -> Unit)? = if (state.offerReminder) {
+        { ReminderOffer(onTurnOn = { pickingReminder = true }, onClose = viewModel::closeReminderOffer) }
+    } else null
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -245,42 +262,61 @@ fun HomeScreen(
                     )
                 }
                 plan == null || today == null -> item {
-                    Prompt(
-                        title = stringResource(R.string.home_no_plan_title),
-                        body = stringResource(R.string.home_no_plan_body),
-                        action = stringResource(R.string.home_btn_create_plan),
-                        onAction = onOpenPlan
-                    )
+                    val habit = state.habit
+                    if (habit != null) {
+                        WardCard(
+                            habit = habit,
+                            celebrate = state.celebrateWard,
+                            onCelebrated = viewModel::wardCelebrated,
+                            verseOfDay = verseOfDay,
+                            onOpenVerse = openVerse,
+                            onOpenQuestions = onOpenDailySet,
+                            reminderOffer = reminderOffer
+                        ) {
+                            Text(text = stringResource(R.string.habit_no_plan), style = MaterialTheme.typography.bodyLarge)
+                            Spacer(Modifier.height(14.dp))
+                            HeroButton(
+                                text = stringResource(R.string.home_btn_create_plan),
+                                onClick = onOpenPlan,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    } else {
+                        Prompt(
+                            title = stringResource(R.string.home_no_plan_title),
+                            body = stringResource(R.string.home_no_plan_body),
+                            action = stringResource(R.string.home_btn_create_plan),
+                            onAction = onOpenPlan
+                        )
+                    }
                 }
                 else -> {
                     val first = today.due.firstOrNull()
                     val total = today.due.size + today.done.size
                     item {
-                        if (first != null) {
-                            // The one deep card of the screen: what is due now, how far the day is, and the button that starts it.
-                            HeroCard(modifier = Modifier.fillMaxWidth()) {
+                        // Something is memorised once there is a plan, so the habit is there (see HomeViewModel).
+                        val habit = state.habit ?: return@item
+                        // The one deep card of the screen: the day's ward and how far it is, the run of days, what is
+                        // due now with the button that starts it, and the day's questions.
+                        WardCard(
+                            habit = habit,
+                            celebrate = state.celebrateWard,
+                            onCelebrated = viewModel::wardCelebrated,
+                            verseOfDay = verseOfDay,
+                            onOpenVerse = openVerse,
+                            onOpenQuestions = onOpenDailySet,
+                            reminderOffer = reminderOffer
+                        ) {
+                            if (first != null) {
                                 if (total > 0) {
                                     Text(
-                                        text = stringResource(R.string.home_progress_today, today.done.size, total),
-                                        style = MaterialTheme.typography.labelLarge,
+                                        text = stringResource(R.string.habit_revision_progress, today.done.size, total),
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                                         color = accent
                                     )
-                                    PageStrip(
-                                        fraction = today.done.size.toFloat() / total,
-                                        track = accent.copy(alpha = 0.25f),
-                                        color = accent,
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 18.dp)
-                                    )
+                                    Spacer(Modifier.height(4.dp))
                                 }
-                                Text(
-                                    text = stringResource(R.string.home_due_title),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                                    color = accent
-                                )
-                                Text(
-                                    text = first.label(),
-                                    style = MaterialTheme.typography.displayMedium
-                                )
+                                Text(text = first.label(), style = MaterialTheme.typography.headlineLarge)
                                 if (first.unit != PlanUnit.PAGE) {
                                     Text(
                                         text = stringResource(R.string.pages_range, first.startPage, first.endPage),
@@ -288,13 +324,9 @@ fun HomeScreen(
                                     )
                                 }
                                 first.whyText()?.let { why ->
-                                    Text(
-                                        text = why,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = accent
-                                    )
+                                    Text(text = why, style = MaterialTheme.typography.labelLarge, color = accent)
                                 }
-                                Spacer(Modifier.height(20.dp))
+                                Spacer(Modifier.height(16.dp))
                                 if (today.due.size > 1) {
                                     HeroButton(
                                         text = stringResource(R.string.home_btn_start_review, today.due.size),
@@ -310,28 +342,17 @@ fun HomeScreen(
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
-                            }
-                        } else {
-                            val status = when {
-                                today.isPaused -> R.string.home_paused
-                                today.isRestDay -> R.string.home_rest_day
-                                else -> R.string.home_all_done
-                            }
-                            HeroCard(modifier = Modifier.fillMaxWidth()) {
-                                if (total > 0) {
-                                    Text(
-                                        text = stringResource(R.string.home_progress_today, today.done.size, total),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = accent
-                                    )
-                                    PageStrip(
-                                        fraction = today.done.size.toFloat() / total,
-                                        track = accent.copy(alpha = 0.25f),
-                                        color = accent,
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 14.dp)
-                                    )
-                                }
-                                Text(text = stringResource(status), style = MaterialTheme.typography.headlineMedium)
+                            } else {
+                                Text(
+                                    text = stringResource(
+                                        when {
+                                            today.isPaused -> R.string.home_paused
+                                            today.isRestDay -> R.string.home_rest_day
+                                            else -> R.string.habit_revision_done
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                             }
                         }
                     }
@@ -539,6 +560,22 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (pickingReminder) {
+        ReminderTimeDialog(
+            initialMinutes = state.reminder.minutes,
+            onConfirm = { minutes ->
+                pickingReminder = false
+                reminderSwitch(true, minutes)
+            },
+            onDismiss = { pickingReminder = false }
+        )
+    }
+
+    // A milestone waits until the day's own moment (the ring closing) has played.
+    state.milestone?.takeIf { !state.celebrateWard }?.let { milestone ->
+        MilestoneDialog(milestone, onClose = { viewModel.milestoneShown(milestone) })
     }
 }
 

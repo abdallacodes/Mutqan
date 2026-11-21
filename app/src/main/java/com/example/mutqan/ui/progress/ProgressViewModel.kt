@@ -1,5 +1,7 @@
 package com.example.mutqan.ui.progress
 
+import com.example.mutqan.domain.RevisionPasses
+import com.example.mutqan.domain.Habit
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -38,7 +40,11 @@ data class ProgressUiState(
     val revisedDays: List<Boolean> = emptyList(),
     val attention: List<AttentionJuz> = emptyList(),
     /** The thirty juz in order, for the map strip. */
-    val juzMap: List<JuzMemory> = emptyList()
+    val juzMap: List<JuzMemory> = emptyList(),
+    /** The run of days kept now, the longest one ever, and the full passes over everything memorised (see Habit). */
+    val streak: Int = 0,
+    val bestStreak: Int = 0,
+    val passes: Int = 0
 ) {
     val daysRevised: Int get() = revisedDays.count { it }
 }
@@ -50,7 +56,9 @@ private const val TOTAL_PAGES = 604
 /** Coverage, what the recall history shows, consistency and the places worth a look: all from what was recorded. */
 class ProgressViewModel(private val study: StudyRepository) : ViewModel() {
 
-    val uiState: StateFlow<ProgressUiState> = combine(study.revisionLogs(), study.coveredPages()) { logs, covered ->
+    val uiState: StateFlow<ProgressUiState> = combine(
+        study.revisionLogs(), study.coveredPages(), study.exerciseTimes(), study.plans()
+    ) { logs, covered, answerTimes, plans ->
         val geometry = study.planGeometry()
         val states = PassageStates.compute(logs)
         val inCoverage = (1..TOTAL_PAGES).filter { covered?.get(it - 1) == true }
@@ -72,7 +80,15 @@ class ProgressViewModel(private val study: StudyRepository) : ViewModel() {
             JuzMemory(juz, memorised.size, pages.size, memorised.groupingBy { states[it - 1] }.eachCount())
         }
 
-        ProgressUiState(true, inCoverage.size, counts, days, attention, juzMap)
+        val plan = plans.firstOrNull()
+        val kept = Habit.keptDays(revised, answerTimes.map { Math.floorDiv(it + offsetAt(it), 86_400_000L) })
+        val isRest: (Long) -> Boolean = { d -> plan != null && RevisionPlanner.isoWeekday(d) in plan.restDays }
+        ProgressUiState(
+            true, inCoverage.size, counts, days, attention, juzMap,
+            streak = Habit.streak(kept, isRest, today).days,
+            bestStreak = Habit.best(kept, isRest, today),
+            passes = RevisionPasses.completed(logs, covered) { RevisionPlanner.logDay(it, ::offsetAt) }.size
+        )
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
