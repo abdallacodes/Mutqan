@@ -507,4 +507,67 @@ class SnapshotMergeTest {
         val merged = SnapshotMerge.merge(snapshot(), settings("a" to 1))
         assertEquals(1, merged.getJSONObject("settings").getInt("a"))
     }
+
+    // ── Lists of verses ─────────────────────────────────────────────────────
+
+    private fun lists(vararg lists: Pair<String, List<IntRange>>) = JSONObject().put("verse_lists", JSONArray(lists.map { (name, ranges) ->
+        JSONObject().put("name", name).put("note", "").put("created_at", 1L).put("updated_at", 1L)
+            .put("items", JSONArray(ranges.map { JSONObject().put("start_ayah_id", it.first).put("end_ayah_id", it.last).put("note", "").put("created_at", 1L) }))
+    }))
+
+    private fun listed(merged: JSONObject): Map<String, List<IntRange>> {
+        val array = merged.getJSONArray("verse_lists")
+        return (0 until array.length()).associate { i ->
+            val o = array.getJSONObject(i)
+            val items = o.getJSONArray("items")
+            o.getString("name") to (0 until items.length()).map { items.getJSONObject(it).let { p -> p.getInt("start_ayah_id")..p.getInt("end_ayah_id") } }
+        }
+    }
+
+    @Test
+    fun `a passage added to a list on each side keeps both`() {
+        val base = lists("duas" to listOf(10..10))
+        val merged = SnapshotMerge.merge(lists("duas" to listOf(10..10, 20..21)), lists("duas" to listOf(10..10, 40..40)), base)
+        assertEquals(mapOf("duas" to listOf(10..10, 20..21, 40..40)), listed(merged))
+    }
+
+    @Test
+    fun `a list deleted on the other side is gone when this side left it alone`() {
+        val base = lists("a" to listOf(1..2), "b" to listOf(5..5))
+        val merged = SnapshotMerge.merge(base, lists("a" to listOf(1..2)), base)
+        assertEquals(mapOf("a" to listOf(1..2)), listed(merged))
+    }
+
+    @Test
+    fun `a list deleted on one side and added to on the other stays with what was added`() {
+        val base = lists("a" to listOf(1..2))
+        val merged = SnapshotMerge.merge(lists("a" to listOf(1..2, 9..9)), JSONObject().put("verse_lists", JSONArray()), base)
+        assertEquals(mapOf("a" to listOf(9..9)), listed(merged))
+    }
+
+    @Test
+    fun `passages that overlap after a merge become one`() {
+        val merged = SnapshotMerge.merge(lists("a" to listOf(1..5)), lists("a" to listOf(4..8)))
+        assertEquals(mapOf("a" to listOf(1..8)), listed(merged))
+    }
+
+    @Test
+    fun `a side without lists at all deletes none`() {
+        val base = lists("a" to listOf(1..2))
+        val merged = SnapshotMerge.merge(snapshot(), lists("a" to listOf(1..2)), base)
+        assertEquals(mapOf("a" to listOf(1..2)), listed(merged))
+        assertFalse(SnapshotMerge.merge(snapshot(), snapshot()).has("verse_lists"))
+    }
+
+    @Test
+    fun `lists whose names differ only in diacritics are one list`() {
+        val merged = SnapshotMerge.merge(lists("الصَّبر" to listOf(1..1)), lists("الصبر" to listOf(3..3)))
+        assertEquals(mapOf("الصَّبر" to listOf(1..1, 3..3)), listed(merged))
+    }
+
+    @Test
+    fun `the report counts passages brought in and taken out`() {
+        assertEquals(SnapshotMerge.Report(1, 0), SnapshotMerge.report(lists("a" to listOf(1..1)), lists("a" to listOf(1..1, 5..5))))
+        assertEquals(SnapshotMerge.Report(0, 2), SnapshotMerge.report(lists("a" to listOf(1..1)), JSONObject()))
+    }
 }

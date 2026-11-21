@@ -12,6 +12,8 @@ import com.example.mutqan.domain.HifzCoverage
 import com.example.mutqan.domain.Morphology
 import com.example.mutqan.domain.MorphologyLibrary
 import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.VerseListSummary
+import com.example.mutqan.domain.VerseListsRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -108,6 +110,15 @@ class SurahListViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = SurahData.ALL.map { SurahListItem(it, 0, 0, 0, 0) }
         )
+
+    private val verseLists = VerseListsRepository.create(appContext)
+
+    /** The user's own lists of verses, the most recently changed first; null until they are read. */
+    val lists: StateFlow<List<VerseListSummary>?> = verseLists.lists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** A new, empty list; its id. */
+    suspend fun createList(name: String, note: String): Int = verseLists.create(name, note)
 
     /** The Mushaf page the user last read, to offer "continue". */
     val lastPage: StateFlow<Int?> = preferences.lastMushafPage

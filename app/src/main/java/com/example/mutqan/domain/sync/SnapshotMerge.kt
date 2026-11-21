@@ -1,5 +1,7 @@
 package com.example.mutqan.domain.sync
 
+import com.example.mutqan.domain.ListPassage
+import com.example.mutqan.domain.VerseLists
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -34,6 +36,7 @@ object SnapshotMerge {
 
         coverage(local, remote, base)?.let { out.put("hifz_coverage", it) }
         vault(local, remote, base)?.forEach { (name, array) -> out.put(name, array) }
+        lists(local, remote, base)?.let { out.put("verse_lists", it) }
         settings(local, remote, base)?.let { out.put("settings", it) }
         return out
     }
@@ -61,6 +64,10 @@ object SnapshotMerge {
             added += a.count { it !in b }
             removed += b.count { it !in a }
         }
+        val bl = listCanons(before)
+        val al = listCanons(after)
+        added += al.count { it !in bl }
+        removed += bl.count { it !in al }
         return Report(added, removed)
     }
 
@@ -277,6 +284,97 @@ object SnapshotMerge {
                     }
                 }
                 return VaultSide(folders, groups)
+            }
+        }
+    }
+
+    // ── Lists of verses ─────────────────────────────────────────────────────
+
+    /**
+     * The user's lists carry their passages inside them. A list is told apart by its name ([VerseLists.nameKey]) and
+     * a passage by its list and verses, so a passage added on each device stays. A list deleted on one side while
+     * the other added to it stays, with what was added. Passages that now overlap become one.
+     */
+    private fun lists(local: JSONObject, remote: JSONObject, base: JSONObject?): JSONArray? {
+        val l = ListSide.of(local)
+        val r = ListSide.of(remote)
+        if (l == null && r == null) return null
+        // A side without lists at all (written by an older version) has not deleted any.
+        val b = if (l == null || r == null) null else ListSide.of(base)
+
+        val lists = pick(l?.lists.orEmpty(), r?.lists.orEmpty(), b?.lists)
+        val items = pick(l?.items.orEmpty(), r?.items.orEmpty(), b?.items)
+        val itemsOf = items.groupBy { it.getString("list") }
+
+        val keys = LinkedHashSet<String>()
+        val chosen = HashMap<String, JSONObject>()
+        for (list in lists) {
+            val key = VerseLists.nameKey(list.getString("name"))
+            keys.add(key)
+            chosen[key] = list
+        }
+        keys.addAll(itemsOf.keys)
+
+        return JSONArray().also { out ->
+            for (key in keys) {
+                val list = chosen[key] ?: l?.lists?.get(key) ?: r?.lists?.get(key) ?: continue
+                val passages = VerseLists.tidy(itemsOf[key].orEmpty().map {
+                    ListPassage(it.getInt("start_ayah_id"), it.getInt("end_ayah_id"), it.optString("note"), it.optLong("created_at"))
+                })
+                out.put(JSONObject().apply {
+                    put("name", list.getString("name"))
+                    put("note", list.optString("note"))
+                    put("created_at", list.optLong("created_at"))
+                    put("updated_at", maxOf(l?.updated?.get(key) ?: 0L, r?.updated?.get(key) ?: 0L))
+                    put("items", JSONArray().apply {
+                        for (p in passages) {
+                            put(JSONObject().put("start_ayah_id", p.start).put("end_ayah_id", p.end).put("note", p.note).put("created_at", p.createdAt))
+                        }
+                    })
+                })
+            }
+        }
+    }
+
+    /** The lists and passages of a snapshot as entries of their own, for [report]. */
+    private fun listCanons(side: JSONObject): Set<String> {
+        val s = ListSide.of(side) ?: return emptySet()
+        return s.lists.values.mapTo(HashSet()) { "list" + SEP + canon(it) }.apply { s.items.values.forEach { add("item" + SEP + canon(it)) } }
+    }
+
+    /**
+     * One side's lists by name, and their passages by list name and verses. The time a list was last changed is kept
+     * apart: it moves with every passage, so comparing it would make one passage added look like a changed list.
+     */
+    private class ListSide(val lists: Map<String, JSONObject>, val items: Map<String, JSONObject>, val updated: Map<String, Long>) {
+        companion object {
+            fun of(snapshot: JSONObject?): ListSide? {
+                val array = snapshot?.optJSONArray("verse_lists") ?: return null
+                val lists = LinkedHashMap<String, JSONObject>()
+                val items = LinkedHashMap<String, JSONObject>()
+                val updated = HashMap<String, Long>()
+                for (i in 0 until array.length()) {
+                    val o = array.getJSONObject(i)
+                    val key = VerseLists.nameKey(o.optString("name"))
+                    if (key.isEmpty()) continue
+                    lists.putIfAbsent(
+                        key,
+                        JSONObject().put("name", o.optString("name")).put("note", o.optString("note")).put("created_at", o.optLong("created_at"))
+                    )
+                    updated[key] = maxOf(updated[key] ?: 0L, o.optLong("updated_at"))
+                    val passages = o.optJSONArray("items") ?: continue
+                    for (j in 0 until passages.length()) {
+                        val p = passages.getJSONObject(j)
+                        val start = p.optInt("start_ayah_id")
+                        val end = p.optInt("end_ayah_id")
+                        items.putIfAbsent(
+                            key + SEP + start + SEP + end,
+                            JSONObject().put("list", key).put("start_ayah_id", start).put("end_ayah_id", end)
+                                .put("note", p.optString("note")).put("created_at", p.optLong("created_at"))
+                        )
+                    }
+                }
+                return ListSide(lists, items, updated)
             }
         }
     }

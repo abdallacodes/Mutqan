@@ -249,7 +249,7 @@
     <string name="help_vault_title">Vault Help</string>
     <string name="help_vault_desc">Organize similar verses into folders and groups to resolve confusion. You can export folders to share your work with others.</string>
     <string name="help_surahs_title">Surah List Help</string>
-    <string name="help_surahs_desc">Tap a surah or a juz to read it in the Mushaf. Surahs you have memorised are marked, and the search takes a surah name, a surah number or a page number. The look-alikes count opens the groups of similar verses linked to that surah.</string>
+    <string name="help_surahs_desc">Tap a surah or a juz to read it in the Mushaf. Surahs you have memorised are marked, and the search takes a surah name, a surah number or a page number. The look-alikes count opens the groups of similar verses linked to that surah. In “My lists” you gather verses for any purpose, adding them from the Mushaf or from Search.</string>
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">Search Help</string>
@@ -851,6 +851,58 @@
     <string name="root_forms">Forms</string>
     <string name="root_all_forms">All</string>
     <string name="quran_tab_topics">Topics</string>
+    <string name="quran_tab_lists">My lists</string>
+    <string name="lists_new">New list</string>
+    <string name="lists_empty_title">Your own lists of verses</string>
+    <string name="lists_empty_body">Gather verses for anything: a theme to reflect on, what you recite in prayer, the duas of the Quran. Long-press a verse in the Mushaf and choose “Add to a list”, or find verses in Search and add them.</string>
+    <string name="lists_examples">Or start with one of these:</string>
+    <string name="lists_example_1">Duas from the Quran</string>
+    <string name="lists_example_2">What I recite in prayer</string>
+    <string name="lists_example_3">Verses on patience</string>
+    <string name="list_summary">%1$s in %2$s</string>
+    <plurals name="list_passages">
+        <item quantity="one">%d passage</item>
+        <item quantity="other">%d passages</item>
+    </plurals>
+    <string name="list_name_label">List name</string>
+    <string name="list_note_label">Note (optional)</string>
+    <string name="list_name_taken">You already have a list with this name</string>
+    <string name="list_edit_title">Edit list</string>
+    <string name="list_menu_edit">Edit name and note</string>
+    <string name="list_menu_share">Share the verses as text</string>
+    <string name="list_menu_delete">Delete list</string>
+    <string name="list_delete_title">Delete the list?</string>
+    <string name="list_delete_body">The list “%1$s” and everything you added to it will be deleted.</string>
+    <string name="list_deleted">List deleted</string>
+    <string name="list_add_verses">Add verses</string>
+    <string name="list_empty">No verses in this list yet. Add them from Search, or long-press a verse in the Mushaf.</string>
+    <string name="list_ref_run">%1$s · %2$d–%3$d</string>
+    <string name="list_passage_cd">Edit this passage</string>
+    <string name="list_passage_from">From verse</string>
+    <string name="list_passage_to">To verse</string>
+    <string name="list_passage_remove">Remove from the list</string>
+    <string name="list_open_page">Open page %1$d in the Mushaf</string>
+    <string name="list_share_passage">%1$s\n— %2$s</string>
+    <string name="list_share_title">Share the list</string>
+    <string name="list_add_title">Add to a list</string>
+    <string name="list_add_up_to">Up to verse</string>
+    <string name="list_added">Added to “%1$s”</string>
+    <string name="list_removed">Removed from “%1$s”</string>
+    <string name="list_in_cd">In the list</string>
+    <string name="list_not_in_cd">Not in the list</string>
+    <string name="mushaf_lists_add">Add to a list</string>
+    <string name="mushaf_lists_in">In your lists: %1$s</string>
+    <string name="search_pick_title">Add verses to “%1$s”</string>
+    <string name="search_pick_note">Tap verses to choose them, then add them. Those already in the list are marked.</string>
+    <plurals name="search_pick_add">
+        <item quantity="one">Add the verse</item>
+        <item quantity="other">Add %d verses</item>
+    </plurals>
+    <plurals name="list_added_verses">
+        <item quantity="one">Added a verse to “%2$s”</item>
+        <item quantity="other">Added %1$d verses to “%2$s”</item>
+    </plurals>
+    <string name="list_added_none">Those verses were already in “%1$s”</string>
     <string name="topics_search_hint">Search a topic</string>
     <string name="topics_none">No topics with that name</string>
     <string name="topics_themes">Themes</string>

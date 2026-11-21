@@ -162,6 +162,8 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import com.example.mutqan.ui.topics.VerseTheme
+import com.example.mutqan.ui.lists.AddToListSheet
+import com.example.mutqan.ui.lists.ListsRow
 
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
@@ -296,6 +298,7 @@ fun MushafViewerScreen(
     var peekGroups by remember { mutableStateOf<List<AyahGroup>>(emptyList()) }
     var showSaveSheet by remember { mutableStateOf(false) }
     var showGroupSheet by remember { mutableStateOf(false) }
+    var showListSheet by remember { mutableStateOf(false) }
 
     val themeName by prefs.mushafTheme.collectAsState(initial = "")
     // Null until the choice has been read, so the screen is not locked to one orientation on a guess and turned again.
@@ -401,6 +404,8 @@ fun MushafViewerScreen(
     }
     val allSubjects by viewModel.subjects.collectAsState()
     val userSubjects by viewModel.userSubjects.collectAsState()
+    val verseLists by viewModel.lists.collectAsState()
+    val listPassages by viewModel.listPassages.collectAsState()
     var showSubjectDialog by remember { mutableStateOf(false) }
     val subjectSaved = stringResource(R.string.mushaf_subject_saved)
     val subjectHere = remember(quarterHere, allSubjects, currentPage) {
@@ -1108,6 +1113,10 @@ fun MushafViewerScreen(
             extraContent = {
                 // Make this verse the start of a subject (or change the one that starts here).
                 SubjectRow(startedHere?.subjectText) { showSubjectDialog = true }
+                Spacer(Modifier.height(8.dp))
+                // The user's own lists: the ones that hold this verse, or a way to put it in one.
+                val holding = verseLists.filter { list -> listPassages[list.id].orEmpty().any { target.verseId in it } }
+                ListsRow(holding.map { it.name }) { showListSheet = true }
                 Spacer(Modifier.height(12.dp))
                 VerseTheme(target.verseId)
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
@@ -1140,6 +1149,25 @@ fun MushafViewerScreen(
                     }
                 },
                 onDismiss = { showGroupSheet = false }
+            )
+        }
+
+        if (showListSheet) {
+            val addedTo = stringResource(R.string.list_added)
+            val removedFrom = stringResource(R.string.list_removed)
+            AddToListSheet(
+                ayahId = target.verseId,
+                lists = verseLists,
+                passages = listPassages,
+                onToggle = { list, start, end, add ->
+                    viewModel.setInList(list.id, start, end, add)
+                    Toast.makeText(context, (if (add) addedTo else removedFrom).format(list.name), Toast.LENGTH_SHORT).show()
+                },
+                onCreate = { name, note, start, end ->
+                    viewModel.createListWith(name, note, start, end)
+                    Toast.makeText(context, addedTo.format(name), Toast.LENGTH_SHORT).show()
+                },
+                onDismiss = { showListSheet = false }
             )
         }
 

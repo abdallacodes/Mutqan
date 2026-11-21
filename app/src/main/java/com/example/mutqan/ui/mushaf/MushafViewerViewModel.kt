@@ -20,6 +20,9 @@ import com.example.mutqan.domain.MemoryEngine
 import com.example.mutqan.domain.SavedPassage
 import com.example.mutqan.domain.PageStability
 import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.ListPassage
+import com.example.mutqan.domain.VerseListSummary
+import com.example.mutqan.domain.VerseListsRepository
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +53,8 @@ data class MushafViewerState(
 class MushafViewerViewModel(
     private val dao: StudyDao,
     private val study: StudyRepository,
-    private val quran: QuranRepository
+    private val quran: QuranRepository,
+    private val verseLists: VerseListsRepository
 ) : ViewModel() {
 
     // Loaded once from the bundled Quran layout — never changes at runtime
@@ -92,6 +96,27 @@ class MushafViewerViewModel(
 
     fun deleteSubject(subject: UserSubjectEntity) {
         viewModelScope.launch(Dispatchers.IO) { dao.deleteUserSubject(subject) }
+    }
+
+    /** The user's own lists of verses, the most recently changed first, for the verse sheet. */
+    val lists: StateFlow<List<VerseListSummary>> = verseLists.lists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The passages of every list, by list id, to tell which lists hold a verse. */
+    val listPassages: StateFlow<Map<Int, List<ListPassage>>> = verseLists.passagesByList()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Puts verses [start]..[end] into list [listId] ([add]) or takes them out of it. */
+    fun setInList(listId: Int, start: Int, end: Int, add: Boolean) {
+        viewModelScope.launch { if (add) verseLists.add(listId, start, end) else verseLists.remove(listId, start, end) }
+    }
+
+    /** A new list called [name] holding verses [start]..[end]. */
+    fun createListWith(name: String, note: String, start: Int, end: Int) {
+        viewModelScope.launch {
+            val id = verseLists.create(name, note)
+            verseLists.add(id, start, end)
+        }
     }
 
     /** All the user's mutashabihat groups, newest first, for the "add to group" sheet. */
@@ -181,6 +206,7 @@ class MushafViewerViewModelFactory(private val context: Context) : ViewModelProv
         MushafViewerViewModel(
             AppDatabase.getInstance(context).studyDao(),
             StudyRepository.create(context),
-            QuranRepository.getInstance(context)
+            QuranRepository.getInstance(context),
+            VerseListsRepository.create(context)
         ) as T
 }

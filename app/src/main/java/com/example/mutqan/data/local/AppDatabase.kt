@@ -17,6 +17,8 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.data.local.entity.VerseListEntity
+import com.example.mutqan.data.local.entity.VerseListItemEntity
 import com.example.mutqan.domain.HifzCoverage
 import com.example.mutqan.domain.RecallOutcome
 import com.example.mutqan.quran.QuranRepository
@@ -36,9 +38,11 @@ import com.example.mutqan.quran.QuranRepository
         SavedPassageEntity::class,
         RevisionPlanEntity::class,
         ExerciseResultEntity::class,
-        PageStrengthEntity::class
+        PageStrengthEntity::class,
+        VerseListEntity::class,
+        VerseListItemEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -175,6 +179,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** The user's own lists of verses. */
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `verse_lists` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `note` TEXT NOT NULL DEFAULT '', `created_at` INTEGER NOT NULL, " +
+                        "`updated_at` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `verse_list_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`list_id` INTEGER NOT NULL, `start_ayah_id` INTEGER NOT NULL, `end_ayah_id` INTEGER NOT NULL, " +
+                        "`note` TEXT NOT NULL DEFAULT '', `created_at` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`list_id`) REFERENCES `verse_lists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_verse_list_items_list_id` ON `verse_list_items` (`list_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_verse_list_items_start_ayah_id` ON `verse_list_items` (`start_ayah_id`)")
+            }
+        }
+
         /** Strength plans are set in pages a day per tier instead of days per tier. */
         /** How well the user says they know each page, as a starting point for the plan. */
         val MIGRATION_21_22 = object : Migration(21, 22) {
@@ -245,7 +268,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

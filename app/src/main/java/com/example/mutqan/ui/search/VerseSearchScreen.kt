@@ -137,12 +137,22 @@ fun VerseSearchScreen(
     onSettingsClick: () -> Unit,
     onBack: (() -> Unit)? = null,
     initialQuery: String = "",
+    /** A list to pick verses for (0: a plain search): verses are ticked and added to it, then the screen goes back. */
+    pickForList: Int = 0,
     viewModel: VerseSearchViewModel = viewModel(factory = VerseSearchViewModelFactory(LocalContext.current))
 ) {
     val ui by viewModel.uiState.collectAsState()
     val results by viewModel.results.collectAsState()
     val tiers by viewModel.tiers.collectAsState()
     val compare by viewModel.compare.collectAsState()
+    val picking by viewModel.picking.collectAsState()
+    val pickMode = pickForList != 0
+    // What the list being picked for holds already: those verses are marked and cannot be ticked again.
+    val inList: (Int) -> Boolean = remember(picking) {
+        val passages = picking?.passages.orEmpty()
+        val held: (Int) -> Boolean = { id -> passages.any { id in it } }
+        held
+    }
     val context = LocalContext.current
     val savedNote = stringResource(R.string.search_group_saved)
     var naming by remember { mutableStateOf(false) }
@@ -157,6 +167,7 @@ fun VerseSearchScreen(
     val list = rememberLazyListState()
 
     LaunchedEffect(initialQuery) { viewModel.start(initialQuery) }
+    LaunchedEffect(pickForList) { viewModel.pickFor(pickForList) }
     // Opened to search: the box takes the typing at once (not again on coming back from the Mushaf).
     LaunchedEffect(Unit) {
         if (!focusedOnce) {
@@ -179,14 +190,29 @@ fun VerseSearchScreen(
     Scaffold(
         topBar = {
             PaperHeader(
-                title = stringResource(R.string.nav_search),
+                title = if (pickMode) stringResource(R.string.search_pick_title, picking?.name.orEmpty()) else stringResource(R.string.nav_search),
+                compact = pickMode,
                 onBack = onBack,
                 actions = { TopBarOverflowMenu(onHelpClick = { showHelp = true }, onSettingsClick = onSettingsClick) }
             )
         },
         // While comparing, the ticked verses can be saved as one look-alike group.
         bottomBar = {
-            if (ui.view != ResultView.SURAH && ui.chosen.isNotEmpty()) {
+            if (pickMode && ui.chosen.isNotEmpty()) {
+                PickBar(
+                    count = ui.chosen.size,
+                    onAdd = {
+                        keyboard?.hide()
+                        viewModel.addPicked { added, name ->
+                            val note = if (added == 0) context.getString(R.string.list_added_none, name)
+                            else context.resources.getQuantityString(R.plurals.list_added_verses, added, added, name)
+                            Toast.makeText(context, note, Toast.LENGTH_SHORT).show()
+                            onBack?.invoke()
+                        }
+                    },
+                    onClear = viewModel::clearChosen
+                )
+            } else if (!pickMode && ui.view != ResultView.SURAH && ui.chosen.isNotEmpty()) {
                 SaveBar(count = ui.chosen.size, onSave = { keyboard?.hide(); naming = true }, onClear = viewModel::clearChosen)
             }
         },
@@ -222,6 +248,15 @@ fun VerseSearchScreen(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
+
+            if (pickMode) {
+                Text(
+                    text = stringResource(R.string.search_pick_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = PaperSpace.Gutter).padding(bottom = 4.dp)
+                )
+            }
 
             ScopeChips(
                 scope = ui.scope,
@@ -282,7 +317,11 @@ fun VerseSearchScreen(
                         val goTo = results.goTo[i]
                         val go = { viewModel.target(goTo).let { (page, ayah) -> open(page, ayah) } }
                         if (goTo is GoTo.Verse) {
-                            VerseGoToRow(goToTitle(goTo), viewModel.target(goTo).second, onClick = go)
+                            val ayahId = viewModel.target(goTo).second
+                            VerseGoToRow(
+                                goToTitle(goTo), ayahId, onClick = go,
+                                pick = if (pickMode && ayahId != null) Pick(ayahId in ui.chosen, inList(ayahId)) { viewModel.toggleChosen(ayahId) } else null
+                            )
                         } else {
                             IndexRow(
                                 title = goToTitle(goTo),
@@ -353,10 +392,12 @@ fun VerseSearchScreen(
                     if (lined != null) {
                         items(lined.rows.size, key = { "line-${lined.rows[it].hit.ayahId}" }) { i ->
                             val row = lined.rows[i]
+                            val held = pickMode && inList(row.hit.ayahId)
                             CompareRowView(
                                 row = row,
                                 divider = i > 0 && row.runStart,
-                                chosen = row.hit.ayahId in ui.chosen,
+                                chosen = held || row.hit.ayahId in ui.chosen,
+                                held = held,
                                 tier = tiers[row.hit.page],
                                 onChoose = { viewModel.toggleChosen(row.hit.ayahId) },
                                 onPeek = {
@@ -373,6 +414,7 @@ fun VerseSearchScreen(
                             HitRow(
                                 hit = hit,
                                 tier = tiers[hit.page],
+                                pick = if (pickMode) Pick(hit.ayahId in ui.chosen, inList(hit.ayahId)) { viewModel.toggleChosen(hit.ayahId) } else null,
                                 onPeek = {
                                     viewModel.rememberQuery()
                                     keyboard?.hide()
@@ -463,7 +505,7 @@ private fun goToTitle(goTo: GoTo): String = when (goTo) {
 
 /** A reference typed in the box: where it goes, with the verse itself, so it can be read before it is opened. */
 @Composable
-private fun VerseGoToRow(title: String, ayahId: Int?, onClick: () -> Unit) {
+private fun VerseGoToRow(title: String, ayahId: Int?, onClick: () -> Unit, pick: Pick? = null) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
         Row(
             modifier = Modifier
@@ -473,6 +515,7 @@ private fun VerseGoToRow(title: String, ayahId: Int?, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (pick != null) PickBox(pick)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 if (ayahId != null) AyahText(ayahId = ayahId, size = 20.sp, color = MaterialTheme.colorScheme.onSurface, firstWords = MatchWindow.MOST)
@@ -494,6 +537,8 @@ private fun CompareRowView(
     divider: Boolean,
     chosen: Boolean,
     tier: PlanTier?,
+    /** Already in the list being picked for: shown ticked, and cannot be unticked. */
+    held: Boolean = false,
     onChoose: () -> Unit,
     onPeek: () -> Unit,
     onOpenPage: () -> Unit
@@ -519,14 +564,14 @@ private fun CompareRowView(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .toggleable(value = chosen, role = Role.Checkbox, onValueChange = { onChoose() })
+                    .toggleable(value = chosen, enabled = !held, role = Role.Checkbox, onValueChange = { onChoose() })
                     .semantics { contentDescription = chooseLabel },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (chosen) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                     contentDescription = null,
-                    tint = if (chosen) accent else muted,
+                    tint = if (chosen && !held) accent else muted,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -539,6 +584,55 @@ private fun CompareRowView(
                 MushafText(span = row.span, size = 20.sp, color = MaterialTheme.colorScheme.onSurface, wordColors = colors)
             }
             PagePill(row.hit.page, tier, onClick = onOpenPage)
+        }
+    }
+}
+
+/** A found verse while picking for a list: whether it is ticked, whether the list holds it already, and what ticks it. */
+private class Pick(val chosen: Boolean, val held: Boolean, val onToggle: () -> Unit)
+
+/** The tick of a verse being picked, as its own button (in a row whose tap does something else). */
+@Composable
+private fun PickBox(pick: Pick) {
+    val label = stringResource(R.string.search_choose_cd)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .toggleable(value = pick.chosen || pick.held, enabled = !pick.held, role = Role.Checkbox, onValueChange = { pick.onToggle() })
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center
+    ) { PickMark(pick) }
+}
+
+/** Ticked (accent), already in the list (muted tick), or not ticked. */
+@Composable
+private fun PickMark(pick: Pick) {
+    val on = pick.chosen || pick.held
+    val held = stringResource(R.string.list_in_cd)
+    Icon(
+        imageVector = if (on) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+        contentDescription = if (pick.held) held else null,
+        tint = if (pick.chosen && !pick.held) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(22.dp)
+    )
+}
+
+/** Under the list while verses are picked for a list: add them to it, or untick them all. */
+@Composable
+private fun PickBar(count: Int, onAdd: () -> Unit, onClear: () -> Unit) {
+    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
+        Hairline(Modifier.fillMaxWidth())
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PaperButton(
+                text = pluralStringResource(R.plurals.search_pick_add, count, count),
+                onClick = onAdd,
+                modifier = Modifier.weight(1f)
+            )
+            PaperLink(text = stringResource(R.string.search_clear_chosen), onClick = onClear, soft = true)
         }
     }
 }
@@ -714,16 +808,20 @@ private fun SurahHeader(surah: Int, count: Int) {
 
 /** A found verse: its number, its words with the matched ones marked, and its page, which opens the Mushaf on it. */
 @Composable
-private fun HitRow(hit: SearchHit, tier: PlanTier?, onPeek: () -> Unit, onOpenPage: () -> Unit) {
+private fun HitRow(hit: SearchHit, tier: PlanTier?, onPeek: () -> Unit, onOpenPage: () -> Unit, pick: Pick? = null) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onPeek)
+                .then(
+                    if (pick == null) Modifier.clickable(role = Role.Button, onClick = onPeek)
+                    else Modifier.toggleable(value = pick.chosen || pick.held, enabled = !pick.held, role = Role.Checkbox, onValueChange = { pick.onToggle() })
+                )
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (pick != null) PickMark(pick)
             Text(
                 text = "${hit.ayah}",
                 style = MaterialTheme.typography.titleMedium.copy(fontFamily = AmiriFontFamily),

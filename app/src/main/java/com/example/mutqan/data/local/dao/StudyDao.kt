@@ -18,6 +18,8 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.data.local.entity.VerseListEntity
+import com.example.mutqan.data.local.entity.VerseListItemEntity
 import com.example.mutqan.domain.SubjectRules
 import kotlinx.coroutines.flow.Flow
 
@@ -323,6 +325,92 @@ abstract class StudyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun insertExerciseResults(results: List<ExerciseResultEntity>)
 
+    // ─────────────────────────────────────────────────────────
+    // The user's lists of verses
+    // ─────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM verse_lists ORDER BY updated_at DESC, id DESC")
+    abstract fun observeVerseLists(): Flow<List<VerseListEntity>>
+
+    @Query("SELECT * FROM verse_lists WHERE id = :id LIMIT 1")
+    abstract fun observeVerseList(id: Int): Flow<VerseListEntity?>
+
+    @Query("SELECT * FROM verse_lists WHERE id = :id LIMIT 1")
+    abstract suspend fun getVerseList(id: Int): VerseListEntity?
+
+    @Query("SELECT * FROM verse_list_items ORDER BY start_ayah_id")
+    abstract fun observeVerseListItems(): Flow<List<VerseListItemEntity>>
+
+    @Query("SELECT * FROM verse_list_items WHERE list_id = :listId ORDER BY start_ayah_id")
+    abstract fun observeItemsOfList(listId: Int): Flow<List<VerseListItemEntity>>
+
+    @Query("SELECT * FROM verse_list_items WHERE list_id = :listId ORDER BY start_ayah_id")
+    abstract suspend fun getItemsOfList(listId: Int): List<VerseListItemEntity>
+
+    @Query("SELECT * FROM verse_lists ORDER BY id")
+    abstract suspend fun getAllVerseListsSync(): List<VerseListEntity>
+
+    @Query("SELECT * FROM verse_list_items ORDER BY list_id, start_ayah_id")
+    abstract suspend fun getAllVerseListItemsSync(): List<VerseListItemEntity>
+
+    @Insert
+    abstract suspend fun insertVerseList(list: VerseListEntity): Long
+
+    @Update
+    abstract suspend fun updateVerseList(list: VerseListEntity)
+
+    @Query("DELETE FROM verse_list_items WHERE list_id = :id")
+    abstract suspend fun deleteItemsOfList(id: Int)
+
+    @Query("DELETE FROM verse_lists WHERE id = :id")
+    abstract suspend fun deleteVerseListRow(id: Int)
+
+    @Transaction
+    open suspend fun deleteVerseList(id: Int) {
+        deleteItemsOfList(id)
+        deleteVerseListRow(id)
+    }
+
+    @Insert
+    abstract suspend fun insertVerseListItems(items: List<VerseListItemEntity>)
+
+    @Query("UPDATE verse_lists SET updated_at = :time WHERE id = :id")
+    abstract suspend fun touchVerseList(id: Int, time: Long)
+
+    /** The passages of list [listId] become [items], and the list counts as changed at [time]. */
+    @Transaction
+    open suspend fun replaceItemsOfList(listId: Int, items: List<VerseListItemEntity>, time: Long) {
+        deleteItemsOfList(listId)
+        insertVerseListItems(items)
+        touchVerseList(listId, time)
+    }
+
+    @Query("DELETE FROM verse_list_items")
+    abstract suspend fun deleteAllVerseListItems()
+
+    @Query("DELETE FROM verse_lists")
+    abstract suspend fun deleteAllVerseListRows()
+
+    @Transaction
+    open suspend fun deleteAllVerseLists() {
+        deleteAllVerseListItems()
+        deleteAllVerseListRows()
+    }
+
+    /** The lists become exactly [lists], each with its passages; row ids are given afresh. */
+    @Transaction
+    open suspend fun replaceVerseLists(lists: List<Pair<VerseListEntity, List<VerseListItemEntity>>>) {
+        deleteAllVerseLists()
+        for ((list, items) in lists) {
+            val id = insertVerseList(list.copy(id = 0)).toInt()
+            insertVerseListItems(items.map { it.copy(id = 0, listId = id) })
+        }
+    }
+
+    /**
+     * Everything the user made except their lists of verses: a snapshot from a version without lists has nothing to
+     * say about them, so restoring one leaves them as they are (see `BackupManager.restoreSnapshot`).
+     */
     @Transaction
     open suspend fun clearUserData() {
         deleteAllRevisionLogs()

@@ -68,10 +68,9 @@ import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.TopBarOverflowMenu
-import com.example.mutqan.ui.topics.TopicsViewModel
-import com.example.mutqan.ui.topics.TopicsViewModelFactory
-import com.example.mutqan.ui.topics.rememberTopicLanguage
-import com.example.mutqan.ui.topics.topicsTab
+import com.example.mutqan.domain.VerseLists
+import com.example.mutqan.ui.lists.ListNameDialog
+import com.example.mutqan.ui.lists.listsTab
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.mutqan.ui.navigation.OnTabReselected
 import com.example.mutqan.ui.navigation.Routes
@@ -98,7 +97,7 @@ fun SurahListScreen(
     onSearchClick: () -> Unit = {},
     onSearchVerses: (String) -> Unit = {},
     onOpenRoot: (Int) -> Unit = {},
-    onOpenTopic: (Int) -> Unit = {},
+    onOpenList: (Int) -> Unit = {},
     onOpenAudioStorage: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -142,10 +141,9 @@ fun SurahListScreen(
     var showHelpDialog by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
-    var topicQuery by rememberSaveable { mutableStateOf("") }
-    val topicsViewModel: TopicsViewModel = viewModel(factory = TopicsViewModelFactory(context))
-    val topicIndex by topicsViewModel.index.collectAsState()
-    val topicLanguage = rememberTopicLanguage()
+    val lists by viewModel.lists.collectAsState()
+    // The name a new list is being given (offered from an example), or null when no list is being named.
+    var naming by remember { mutableStateOf<String?>(null) }
 
     val needle = ArabicNormalization.normalizeForSearch(query.trim())
     val page = query.trim().toIntOrNull()?.takeIf { it in 1..604 }
@@ -216,7 +214,7 @@ fun SurahListScreen(
                     labels = listOf(
                         stringResource(R.string.quran_tab_surahs),
                         stringResource(R.string.quran_tab_juz),
-                        stringResource(R.string.quran_tab_topics)
+                        stringResource(R.string.quran_tab_lists)
                     ),
                     selectedIndex = tab,
                     onSelect = { tab = it },
@@ -322,12 +320,10 @@ fun SurahListScreen(
                     )
                 }
             } else if (tab == 2) {
-                topicsTab(
-                    index = topicIndex,
-                    language = topicLanguage,
-                    query = topicQuery,
-                    onQueryChange = { topicQuery = it },
-                    onOpenTopic = onOpenTopic
+                listsTab(
+                    lists = lists,
+                    onOpen = onOpenList,
+                    onNew = { suggested -> naming = suggested }
                 )
             } else {
                 items(juz, key = { it.juz }) { entry ->
@@ -367,6 +363,20 @@ fun SurahListScreen(
             reciterName = stringResource(reciter.nameRes),
             onConfirm = { downloads.delete(reciter, surah); deleting = null },
             onDismiss = { deleting = null }
+        )
+    }
+
+    naming?.let { suggested ->
+        ListNameDialog(
+            title = stringResource(R.string.lists_new),
+            initialName = suggested,
+            initialNote = "",
+            takenKeys = remember(lists) { lists.orEmpty().mapTo(HashSet()) { VerseLists.nameKey(it.name) } },
+            onDismiss = { naming = null },
+            onSave = { name, note ->
+                naming = null
+                scope.launch { onOpenList(viewModel.createList(name, note)) }
+            }
         )
     }
 

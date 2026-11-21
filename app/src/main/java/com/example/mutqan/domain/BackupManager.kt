@@ -16,6 +16,8 @@ import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
+import com.example.mutqan.data.local.entity.VerseListEntity
+import com.example.mutqan.data.local.entity.VerseListItemEntity
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,7 +35,11 @@ class BackupManager(private val context: Context) {
     private val preferences = UserPreferencesRepository(context)
 
     private companion object {
-        /** The layout of the snapshot JSON this version writes and understands. */
+        /**
+         * The layout of the snapshot JSON this version writes and understands. The lists of verses came later without
+         * changing it: an older version keeps the other tables and has nothing to say about the lists (see
+         * [restoreSnapshot]), so it can go on syncing.
+         */
         const val SNAPSHOT_VERSION = 5
     }
 
@@ -49,6 +55,8 @@ class BackupManager(private val context: Context) {
             val plans = dao.getAllPlansSync()
             val exercises = dao.getAllExerciseResultsSync()
             val strengths = dao.getAllPageStrengthSync()
+            val verseLists = dao.getAllVerseListsSync()
+            val listItems = dao.getAllVerseListItemsSync().groupBy { it.listId }
 
             val root = JSONObject().apply {
                 put("type", "full_backup")
@@ -164,6 +172,26 @@ class BackupManager(private val context: Context) {
                         })
                     }
                 })
+                put("verse_lists", JSONArray().apply {
+                    verseLists.forEach { list ->
+                        put(JSONObject().apply {
+                            put("name", list.name)
+                            put("note", list.note)
+                            put("created_at", list.createdAt)
+                            put("updated_at", list.updatedAt)
+                            put("items", JSONArray().apply {
+                                listItems[list.id].orEmpty().forEach { item ->
+                                    put(JSONObject().apply {
+                                        put("start_ayah_id", item.startAyahId)
+                                        put("end_ayah_id", item.endAyahId)
+                                        put("note", item.note)
+                                        put("created_at", item.createdAt)
+                                    })
+                                }
+                            })
+                        })
+                    }
+                })
                 put("settings", preferences.syncedSettings())
             }
             return root
@@ -186,7 +214,10 @@ class BackupManager(private val context: Context) {
 
     /** Removes everything the user has made, in one step; the settings stay. */
     suspend fun clearUserData() {
-        db.withTransaction { dao.clearUserData() }
+        db.withTransaction {
+            dao.clearUserData()
+            dao.deleteAllVerseLists()
+        }
     }
 
     /** Replaces everything the user has made with the contents of [root], a snapshot from [buildSnapshot] or a backup file. */
@@ -352,6 +383,9 @@ class BackupManager(private val context: Context) {
                 }
             }
 
+            // A snapshot from a version without lists has none to give, and leaves this device's lists as they are.
+            val verseLists = root.optJSONArray("verse_lists")?.let(::readVerseLists)
+
             // All or nothing: a failure or a cancelled sync half-way must not leave the device wiped or half-filled.
             db.withTransaction {
                 dao.clearUserData()
@@ -365,9 +399,40 @@ class BackupManager(private val context: Context) {
                 dao.insertPlans(plans)
                 dao.insertExerciseResults(exercises)
                 dao.insertPageStrength(strengths)
+                verseLists?.let { dao.replaceVerseLists(it) }
             }
             // Backups and cloud copies from before settings were kept have none; the settings here stay then.
             root.optJSONObject("settings")?.let { preferences.applySyncedSettings(it) }
+    }
+
+    /**
+     * The lists of a snapshot, each with its passages: verses outside the Quran are dropped, overlapping passages
+     * joined, and lists whose names differ only in diacritics or case made one.
+     */
+    private fun readVerseLists(array: JSONArray): List<Pair<VerseListEntity, List<VerseListItemEntity>>> {
+        val byName = LinkedHashMap<String, Pair<VerseListEntity, MutableList<ListPassage>>>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val name = VerseLists.cleanName(obj.optString("name"))
+            if (name.isEmpty()) continue
+            val created = obj.optLong("created_at")
+            val entry = byName.getOrPut(VerseLists.nameKey(name)) {
+                VerseListEntity(name = name, note = obj.optString("note"), createdAt = created, updatedAt = obj.optLong("updated_at", created)) to ArrayList()
+            }
+            val items = obj.optJSONArray("items") ?: continue
+            for (j in 0 until items.length()) {
+                val item = items.getJSONObject(j)
+                val start = item.optInt("start_ayah_id")
+                val end = item.optInt("end_ayah_id")
+                if (start < 1 || end > 6236 || start > end) continue
+                entry.second.add(ListPassage(start, end, item.optString("note"), item.optLong("created_at")))
+            }
+        }
+        return byName.values.map { (list, passages) ->
+            list to VerseLists.tidy(passages) { index.surahOf(it) }.map {
+                VerseListItemEntity(listId = 0, startAyahId = it.start, endAyahId = it.end, note = it.note, createdAt = it.createdAt)
+            }
+        }
     }
 
     /** Thrown for data written by a newer version of the app, which this version would only half understand. */

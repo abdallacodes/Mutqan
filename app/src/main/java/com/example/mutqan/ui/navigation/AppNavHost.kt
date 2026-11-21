@@ -80,7 +80,7 @@ import com.example.mutqan.ui.progress.ProgressScreen
 import com.example.mutqan.ui.practice.QuizScreen
 import com.example.mutqan.ui.root.RootScreen
 import com.example.mutqan.ui.tafsir.TafsirScreen
-import com.example.mutqan.ui.topics.TopicScreen
+import com.example.mutqan.ui.lists.VerseListScreen
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.domain.SavedKind
 import com.example.mutqan.ui.vault.ReadyListScreen
@@ -166,7 +166,7 @@ object Routes {
     const val READY_LIST     = "ready_list"
     const val QUIZ           = "quiz"
     const val ROOT           = "root"
-    const val TOPIC          = "topic"
+    const val VERSE_LIST     = "verse_list"
     const val TAFSIR         = "tafsir"
     const val PRACTICE       = "practice"
     const val INSIGHTS       = "insights"
@@ -203,7 +203,9 @@ object Routes {
     fun similarityTest(folderId: Int?, groupId: Int?) = "similarity_test?folderId=${folderId ?: -1}&groupId=${groupId ?: -1}"
     fun mushafViewer(page: Int, ayahId: Int? = null) = "mushaf_viewer/$page" + (ayahId?.let { "?ayah=$it" } ?: "")
     fun verseSearch(query: String)               = "$VERSE_SEARCH?q=" + Uri.encode(query)
-    fun topic(topicId: Int)                      = "topic/$topicId"
+    /** Search, to pick verses for list [listId]. */
+    fun pickForList(listId: Int)                 = "$VERSE_SEARCH?list=$listId"
+    fun verseList(listId: Int)                   = "verse_list/$listId"
     fun root(rootId: Int)                        = "root/$rootId"
     fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
@@ -506,15 +508,19 @@ fun AppNavHost(
             tabDestination(Routes.SURAH_LIST)
 
             composable(
-                route     = "${Routes.VERSE_SEARCH}?q={q}",
-                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
+                route     = "${Routes.VERSE_SEARCH}?q={q}&list={list}",
+                arguments = listOf(
+                    navArgument("q") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("list") { type = NavType.IntType; defaultValue = 0 }
+                )
             ) { entry ->
                 VerseSearchScreen(
                     onOpenMushaf = { page, ayah -> navController.openMushaf(page, ayah) },
                     onOpenRoot = { root -> navController.navigate(Routes.root(root)) },
                     onSettingsClick = { showSettingsSheet = true },
                     onBack = { navController.popBackStack() },
-                    initialQuery = entry.arguments?.getString("q").orEmpty()
+                    initialQuery = entry.arguments?.getString("q").orEmpty(),
+                    pickForList = entry.arguments?.getInt("list") ?: 0
                 )
             }
 
@@ -555,14 +561,14 @@ fun AppNavHost(
             // ── Sub-screens (bottom bar hidden) ──────────────────────
 
             composable(
-                route     = "${Routes.TOPIC}/{id}",
+                route     = "${Routes.VERSE_LIST}/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.IntType })
             ) { entry ->
-                TopicScreen(
-                    topicId = entry.arguments?.getInt("id") ?: 0,
+                VerseListScreen(
+                    listId = entry.arguments?.getInt("id") ?: 0,
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.openMushaf(page) },
-                    onOpenTopic = { topic -> navController.navigate(Routes.topic(topic)) }
+                    onOpenMushaf = { page, ayah -> navController.openMushaf(page, ayah) },
+                    onAddVerses = { id -> navController.navigate(Routes.pickForList(id)) }
                 )
             }
 
@@ -783,7 +789,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onSearchClick      = { navController.navigate(Routes.VERSE_SEARCH) },
             onSearchVerses     = { q -> navController.navigate(Routes.verseSearch(q)) },
             onOpenRoot         = { root -> navController.navigate(Routes.root(root)) },
-            onOpenTopic        = { topic -> navController.navigate(Routes.topic(topic)) },
+            onOpenList         = { id -> navController.navigate(Routes.verseList(id)) },
             onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) }
         )
         Routes.PRACTICE -> PracticeScreen(

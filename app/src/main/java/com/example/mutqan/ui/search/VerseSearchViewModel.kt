@@ -23,6 +23,11 @@ import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranWord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import com.example.mutqan.domain.VerseListDetail
+import com.example.mutqan.domain.VerseListsRepository
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -102,7 +107,7 @@ data class SearchUiState(
     val hasHifz: Boolean = false,
     val recent: List<String> = emptyList(),
     val view: ResultView = ResultView.SURAH,
-    /** The verses ticked, while comparing, to save as a look-alike group. */
+    /** The verses ticked: while comparing, to save as a look-alike group; while picking for a list, to add to it. */
     val chosen: Set<Int> = emptySet()
 )
 
@@ -116,12 +121,13 @@ object VerseSearchIndex {
 }
 
 /** The verse search: one box for words, references, surahs, pages and roots (see VerseSearch.kt). */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class VerseSearchViewModel(
     private val appContext: Context,
     private val quran: QuranRepository,
     private val study: StudyRepository,
-    private val prefs: UserPreferencesRepository
+    private val prefs: UserPreferencesRepository,
+    private val verseLists: VerseListsRepository
 ) : ViewModel() {
 
     /** What the search needs to know of the surahs and juz; read once. */
@@ -136,6 +142,8 @@ class VerseSearchViewModel(
     private val scope = MutableStateFlow<SearchScope>(SearchScope.All)
     private val view = MutableStateFlow(ResultView.SURAH)
     private val chosen = MutableStateFlow<Set<Int>>(emptySet())
+    /** The list verses are being picked for (0: none, a plain search). */
+    private val pickList = MutableStateFlow(0)
     private val places = MutableStateFlow<Places?>(null)
     private val index = MutableStateFlow<VerseIndex?>(null)
     private val morphology = MutableStateFlow<Morphology?>(null)
@@ -192,9 +200,32 @@ class VerseSearchViewModel(
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** The list being picked for, with its passages to mark what it already holds; null in a plain search. */
+    val picking: StateFlow<VerseListDetail?> = pickList
+        .flatMapLatest { id -> if (id == 0) flowOf(null) else verseLists.list(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Picks verses for list [listId] (0 for a plain search). */
+    fun pickFor(listId: Int) {
+        pickList.value = listId
+    }
+
     fun setQuery(text: String) {
-        if (text.trim() != query.value.trim()) chosen.value = emptySet()
+        // Verses picked for a list stay picked through several searches; a look-alike group is one search's.
+        if (pickList.value == 0 && text.trim() != query.value.trim()) chosen.value = emptySet()
         query.value = text
+    }
+
+    /** Adds the ticked verses to the list being picked for; [onDone] gets how many were new and the list's name. */
+    fun addPicked(onDone: (added: Int, name: String) -> Unit) {
+        val listId = pickList.value
+        val ayahs = chosen.value
+        if (listId == 0 || ayahs.isEmpty()) return
+        viewModelScope.launch {
+            val added = verseLists.addAll(listId, ayahs)
+            chosen.value = emptySet()
+            onDone(added, picking.value?.name.orEmpty())
+        }
     }
 
     fun setView(value: ResultView) {
@@ -367,6 +398,7 @@ class VerseSearchViewModelFactory(private val context: Context) : ViewModelProvi
         context.applicationContext,
         QuranRepository.getInstance(context),
         StudyRepository.create(context),
-        UserPreferencesRepository(context.applicationContext)
+        UserPreferencesRepository(context.applicationContext),
+        VerseListsRepository.create(context.applicationContext)
     ) as T
 }
