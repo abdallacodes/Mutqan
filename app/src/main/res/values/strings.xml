@@ -269,7 +269,7 @@
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">البحث في الآيات</string>
-    <string name="search_help_desc">اكتب كلمات من آية لتجد كل الآيات التي فيها هذه الكلمات، أو اكتب اسم سورة، أو رقم صفحة، أو سورة وآية مثل البقرة ٢٥٥ أو ٢:٢٥٥. يمكنك أن تحصر البحث في حفظك أو في أجزاء أو في سورة. البحث يتسامح مع اختلافات الرسم الشائعة، ورقم الصفحة بجانب كل آية يفتحها في المصحف.</string>
+    <string name="search_help_desc">اكتب كلمات من آية لتجد كل الآيات التي فيها هذه الكلمات، أو اكتب اسم سورة، أو رقم صفحة، أو سورة وآية مثل البقرة ٢٥٥ أو ٢:٢٥٥. يمكنك أن تحصر البحث في حفظك أو في أجزاء أو في سورة. البحث يتسامح مع اختلافات الرسم الشائعة، ورقم الصفحة بجانب كل آية يفتحها في المصحف. وللمتشابهات: «ما بعدها» و«ما قبلها» ترتّب المواضع بما يلي الكلمات أو يسبقها، فتظهر المواضع المتشابهة متجاورة، ويمكنك اختيار بعضها وحفظها مجموعة في مخزن المتشابهات.</string>
     <string name="search_field_hint">كلمات من آية، أو سورة، أو صفحة، أو ٢:٢٥٥</string>
     <string name="search_scope_all">كل القرآن</string>
     <string name="search_scope_hifz">حفظي</string>
@@ -303,6 +303,24 @@
     <string name="search_example_2">البقرة ٢٥٥</string>
     <string name="search_example_3">صفحة ٣٠٠</string>
     <string name="search_open_page">افتح الصفحة %1$d في المصحف</string>
+    <string name="search_view_surah">بالسور</string>
+    <string name="search_view_after">ما بعدها</string>
+    <string name="search_view_before">ما قبلها</string>
+    <string name="search_compare_after_note">مرتبة بما يأتي بعد الكلمات، فما تشابه منها تجاور. اختر ما يلتبس عليك واحفظه مجموعة متشابهات.</string>
+    <string name="search_compare_before_note">مرتبة بما يسبق الكلمات، فما تشابه منها تجاور. اختر ما يلتبس عليك واحفظه مجموعة متشابهات.</string>
+    <string name="search_choose_cd">اختر الآية للمجموعة</string>
+    <plurals name="search_save_chosen">
+        <item quantity="zero">احفظ %d آية في مخزن المتشابهات</item>
+        <item quantity="one">احفظ آية واحدة في مخزن المتشابهات</item>
+        <item quantity="two">احفظ الآيتين في مخزن المتشابهات</item>
+        <item quantity="few">احفظ %d آيات في مخزن المتشابهات</item>
+        <item quantity="many">احفظ %d آيةً في مخزن المتشابهات</item>
+        <item quantity="other">احفظ %d آية في مخزن المتشابهات</item>
+    </plurals>
+    <string name="search_clear_chosen">ألغِ الاختيار</string>
+    <string name="search_group_title">مجموعة متشابهات جديدة</string>
+    <string name="search_group_hint">اسم المجموعة</string>
+    <string name="search_group_saved">حُفظت المجموعة في مخزن المتشابهات</string>
     <string name="search_hint">اكتب حرفين على الأقل للبحث…</string>
     <string name="label_groups_header">المجموعات</string>
 

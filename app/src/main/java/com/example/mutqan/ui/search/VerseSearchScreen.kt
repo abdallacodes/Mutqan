@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.search
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -91,6 +94,7 @@ import com.example.mutqan.domain.SearchQuery
 import com.example.mutqan.domain.SearchText
 import com.example.mutqan.domain.SurahName
 import com.example.mutqan.quran.MushafSpan
+import com.example.mutqan.quran.PaperLoading
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.ui.components.AyahText
 import com.example.mutqan.ui.components.AyahWords
@@ -101,6 +105,8 @@ import com.example.mutqan.ui.components.IndexRow
 import com.example.mutqan.ui.components.MushafText
 import com.example.mutqan.ui.components.PageGlyphKind
 import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperDialog
+import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.PaperSpace
@@ -136,6 +142,10 @@ fun VerseSearchScreen(
     val ui by viewModel.uiState.collectAsState()
     val results by viewModel.results.collectAsState()
     val tiers by viewModel.tiers.collectAsState()
+    val compare by viewModel.compare.collectAsState()
+    val context = LocalContext.current
+    val savedNote = stringResource(R.string.search_group_saved)
+    var naming by remember { mutableStateOf(false) }
 
     var showHelp by remember { mutableStateOf(false) }
     var peek by remember { mutableStateOf<QuickPeekTarget?>(null) }
@@ -173,6 +183,12 @@ fun VerseSearchScreen(
                 onBack = onBack,
                 actions = { TopBarOverflowMenu(onHelpClick = { showHelp = true }, onSettingsClick = onSettingsClick) }
             )
+        },
+        // While comparing, the ticked verses can be saved as one look-alike group.
+        bottomBar = {
+            if (ui.view != ResultView.SURAH && ui.chosen.isNotEmpty()) {
+                SaveBar(count = ui.chosen.size, onSave = { keyboard?.hide(); naming = true }, onClear = viewModel::clearChosen)
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -306,7 +322,52 @@ fun VerseSearchScreen(
                             )
                         }
                     }
-                    results.groups.forEach { group ->
+                    if (results.comparable) {
+                        item(key = "views") {
+                            PaperTabs(
+                                labels = listOf(
+                                    stringResource(R.string.search_view_surah),
+                                    stringResource(R.string.search_view_after),
+                                    stringResource(R.string.search_view_before)
+                                ),
+                                selectedIndex = ui.view.ordinal,
+                                onSelect = { viewModel.setView(ResultView.entries[it]) },
+                                modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 6.dp)
+                            )
+                        }
+                        if (ui.view != ResultView.SURAH) {
+                            item(key = "views-note") {
+                                Text(
+                                    text = stringResource(if (ui.view == ResultView.AFTER) R.string.search_compare_after_note else R.string.search_compare_before_note),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                    val lined = compare?.takeIf {
+                        ui.view != ResultView.SURAH && results.comparable &&
+                            it.query == results.query && it.view == ui.view && it.scope == ui.scope
+                    }
+                    if (lined != null) {
+                        items(lined.rows.size, key = { "line-${lined.rows[it].hit.ayahId}" }) { i ->
+                            val row = lined.rows[i]
+                            CompareRowView(
+                                row = row,
+                                divider = i > 0 && row.runStart,
+                                chosen = row.hit.ayahId in ui.chosen,
+                                tier = tiers[row.hit.page],
+                                onChoose = { viewModel.toggleChosen(row.hit.ayahId) },
+                                onPeek = {
+                                    viewModel.rememberQuery()
+                                    keyboard?.hide()
+                                    peek = QuickPeekTarget(row.hit.ayahId, row.hit.surah, row.hit.ayah, row.hit.page)
+                                },
+                                onOpenPage = { open(row.hit.page, row.hit.ayahId) }
+                            )
+                        }
+                    } else results.groups.forEach { group ->
                         stickyHeader(key = "surah-${group.surah}") { SurahHeader(group.surah, group.hits.size) }
                         items(group.hits, key = { "ayah-${it.ayahId}" }) { hit ->
                             HitRow(
@@ -325,6 +386,9 @@ fun VerseSearchScreen(
                     if (results.total == 0 && results.query == ui.query.trim()) {
                         item(key = "none") {
                             when {
+                                results.loading -> Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                                    PaperLoading(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 results.searched && results.goTo.isEmpty() && results.roots.isEmpty() ->
                                     NoVerses(scoped = ui.scope != SearchScope.All, onWiden = { viewModel.setScope(SearchScope.All) })
                                 !results.searched && results.goTo.isEmpty() && results.roots.isEmpty() -> Text(
@@ -354,6 +418,17 @@ fun VerseSearchScreen(
             target = target,
             onDismiss = { peek = null },
             onOpenMushaf = { page -> open(page, target.verseId) }
+        )
+    }
+
+    if (naming) {
+        GroupNameDialog(
+            initialName = results.query,
+            onDismiss = { naming = false },
+            onConfirm = { name ->
+                naming = false
+                viewModel.saveGroup(name) { Toast.makeText(context, savedNote, Toast.LENGTH_SHORT).show() }
+            }
         )
     }
 
@@ -406,6 +481,109 @@ private fun VerseGoToRow(title: String, ayahId: Int?, onClick: () -> Unit) {
         }
         Hairline(Modifier.fillMaxWidth())
     }
+}
+
+/**
+ * A found verse lined up for comparing: a box to tick it for a group, where it is, and the searched words (accent)
+ * with what follows or comes before them, the neighbouring verse's words muted. A rule marks where a new run of
+ * alike places starts.
+ */
+@Composable
+private fun CompareRowView(
+    row: CompareRow,
+    divider: Boolean,
+    chosen: Boolean,
+    tier: PlanTier?,
+    onChoose: () -> Unit,
+    onPeek: () -> Unit,
+    onOpenPage: () -> Unit
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val colors = remember(row, accent, muted) { row.matchedIds.associateWith { accent } + row.otherIds.associateWith { muted } }
+    val chooseLabel = stringResource(R.string.search_choose_cd)
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
+        if (divider) {
+            Spacer(Modifier.height(6.dp))
+            Hairline(Modifier.fillMaxWidth())
+            Spacer(Modifier.height(6.dp))
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button, onClick = onPeek)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .toggleable(value = chosen, role = Role.Checkbox, onValueChange = { onChoose() })
+                    .semantics { contentDescription = chooseLabel },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (chosen) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = if (chosen) accent else muted,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.quiz_ref, SurahData.nameOf(row.hit.surah), row.hit.ayah),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+                MushafText(span = row.span, size = 20.sp, color = MaterialTheme.colorScheme.onSurface, wordColors = colors)
+            }
+            PagePill(row.hit.page, tier, onClick = onOpenPage)
+        }
+    }
+}
+
+/** Under the list while verses are ticked: save them as a look-alike group (two at least), or untick them all. */
+@Composable
+private fun SaveBar(count: Int, onSave: () -> Unit, onClear: () -> Unit) {
+    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
+        Hairline(Modifier.fillMaxWidth())
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PaperButton(
+                text = pluralStringResource(R.plurals.search_save_chosen, count, count),
+                onClick = onSave,
+                enabled = count >= 2,
+                modifier = Modifier.weight(1f)
+            )
+            PaperLink(text = stringResource(R.string.search_clear_chosen), onClick = onClear, soft = true)
+        }
+    }
+}
+
+/** Names the new look-alike group; the search words are offered as the name. */
+@Composable
+private fun GroupNameDialog(initialName: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf(initialName) }
+    PaperDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.search_group_title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                placeholder = { Text(stringResource(R.string.search_group_hint)) },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content),
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = { PaperLink(text = stringResource(R.string.btn_save), onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) },
+        dismissButton = { PaperLink(text = stringResource(R.string.btn_cancel), onClick = onDismiss, soft = true) }
+    )
 }
 
 // ── The choice of where to look ─────────────────────────────────────────────────

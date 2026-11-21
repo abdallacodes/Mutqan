@@ -18,7 +18,9 @@ import com.example.mutqan.domain.SearchText
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.SurahName
 import com.example.mutqan.domain.VerseIndex
+import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranRepository
+import com.example.mutqan.quran.QuranWord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +48,29 @@ data class SearchHit(val ayahId: Int, val surah: Int, val ayah: Int, val page: I
 @Immutable
 data class SurahHits(val surah: Int, val hits: List<SearchHit>)
 
+/** How the found verses are listed: by surah, or lined up to compare what follows the words, or what comes before them. */
+enum class ResultView { SURAH, AFTER, BEFORE }
+
+/**
+ * A found verse lined up for comparing: the searched words with the words after them (or before them), running into
+ * the next (or previous) verse when the words end (or begin) this one.
+ */
+@Immutable
+data class CompareRow(
+    val hit: SearchHit,
+    val span: MushafSpan,
+    /** The searched words, drawn in the accent colour. */
+    val matchedIds: Set<Int>,
+    /** Words of the verse after (or before), drawn muted. */
+    val otherIds: Set<Int>,
+    /** True when the first compared word differs from the row above's: a new run of alike places starts here. */
+    val runStart: Boolean
+)
+
+/** The lined-up verses of one search and view, so a list made for an earlier search is never shown for a newer one. */
+@Immutable
+data class CompareList(val query: String, val scope: SearchScope, val view: ResultView, val rows: List<CompareRow>)
+
 /** A root whose letters were typed, offered beside the verses. */
 @Immutable
 data class RootOffer(val root: Int, val spaced: String, val words: Int, val verses: Int)
@@ -58,8 +83,16 @@ data class SearchResults(
     val groups: List<SurahHits> = emptyList(),
     val total: Int = 0,
     /** True when the query had enough letters for the verses to be looked through. */
-    val searched: Boolean = false
-)
+    val searched: Boolean = false,
+    /** True while the search index is still being built (the first search after the app starts). */
+    val loading: Boolean = false
+) {
+    /** Whether the verses can be lined up to compare: at least two, and not so many that the eye cannot follow. */
+    val comparable: Boolean get() = total in 2..MAX_COMPARE
+}
+
+/** The most verses lined up for comparing. */
+const val MAX_COMPARE = 300
 
 @Immutable
 data class SearchUiState(
@@ -67,7 +100,10 @@ data class SearchUiState(
     val scope: SearchScope = SearchScope.All,
     /** Whether anything is marked memorised, for the "my hifz" choice. */
     val hasHifz: Boolean = false,
-    val recent: List<String> = emptyList()
+    val recent: List<String> = emptyList(),
+    val view: ResultView = ResultView.SURAH,
+    /** The verses ticked, while comparing, to save as a look-alike group. */
+    val chosen: Set<Int> = emptySet()
 )
 
 /** The search index, built once a run from the Quran database (a fraction of a second), off the main thread. */
@@ -84,7 +120,7 @@ object VerseSearchIndex {
 class VerseSearchViewModel(
     private val appContext: Context,
     private val quran: QuranRepository,
-    study: StudyRepository,
+    private val study: StudyRepository,
     private val prefs: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -98,6 +134,8 @@ class VerseSearchViewModel(
 
     private val query = MutableStateFlow("")
     private val scope = MutableStateFlow<SearchScope>(SearchScope.All)
+    private val view = MutableStateFlow(ResultView.SURAH)
+    private val chosen = MutableStateFlow<Set<Int>>(emptySet())
     private val places = MutableStateFlow<Places?>(null)
     private val index = MutableStateFlow<VerseIndex?>(null)
     private val morphology = MutableStateFlow<Morphology?>(null)
@@ -134,8 +172,10 @@ class VerseSearchViewModel(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val uiState: StateFlow<SearchUiState> = combine(query, scope, covered, prefs.searchRecent) { q, s, c, recent ->
-        SearchUiState(q, s, hasHifz = c?.any { it } == true, recent = recent)
+    private val choice = combine(view, chosen) { v, c -> v to c }
+
+    val uiState: StateFlow<SearchUiState> = combine(query, scope, covered, prefs.searchRecent, choice) { q, s, c, recent, (v, picked) ->
+        SearchUiState(q, s, hasHifz = c?.any { it } == true, recent = recent, view = v, chosen = picked)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
     private val asked = combine(query.debounce(DEBOUNCE_MS), scope, covered) { q, s, c -> Triple(q, s, c) }
@@ -145,8 +185,40 @@ class VerseSearchViewModel(
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchResults())
 
+    /** The found verses lined up for comparing, when a compare view is chosen and there are 2 to [MAX_COMPARE] of them. */
+    val compare: StateFlow<CompareList?> = combine(results, view, scope) { r, v, s ->
+        if (v == ResultView.SURAH || r.total !in 2..MAX_COMPARE) null else CompareList(r.query, s, v, lineUp(r, v))
+    }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun setQuery(text: String) {
+        if (text.trim() != query.value.trim()) chosen.value = emptySet()
         query.value = text
+    }
+
+    fun setView(value: ResultView) {
+        view.value = value
+    }
+
+    /** Ticks [ayahId] for a group, or unticks it. */
+    fun toggleChosen(ayahId: Int) {
+        chosen.value = chosen.value.let { if (ayahId in it) it - ayahId else it + ayahId }
+    }
+
+    fun clearChosen() {
+        chosen.value = emptySet()
+    }
+
+    /** Saves the ticked verses, in reading order, as a new look-alike group called [name] in the Vault. */
+    fun saveGroup(name: String, onSaved: () -> Unit) {
+        val ayahs = chosen.value.sorted()
+        if (ayahs.size < 2 || name.isBlank()) return
+        viewModelScope.launch {
+            study.createGroup(name, ayahs)
+            chosen.value = emptySet()
+            onSaved()
+        }
     }
 
     /** Sets the box to [text] if it is still empty (a search started from elsewhere). */
@@ -190,6 +262,60 @@ class VerseSearchViewModel(
         }
     }
 
+    /**
+     * The verses of [results] with the words searched for and what follows them ([ResultView.AFTER]) or comes before
+     * them ([ResultView.BEFORE]), ordered by those words so alike places sit together. When the words end the verse,
+     * what follows is the start of the next one (and when they begin it, the end of the one before), after its marker.
+     */
+    private fun lineUp(results: SearchResults, view: ResultView): List<CompareRow> {
+        val index = quran.ayahIndex
+        val read = HashMap<Int, List<QuranWord>>()
+        fun words(id: Int): List<QuranWord> = read.getOrPut(id) {
+            if (id in index) quran.wordsOfAyah(index.surahOf(id), index.ayahOf(id)) else emptyList()
+        }
+        class Lined(val row: CompareRow, val key: String, val first: String)
+
+        val lined = results.groups.flatMap { it.hits }.map { hit ->
+            val all = words(hit.ayahId)
+            val body = all.filter { !it.isEnd }
+            val match = hit.matched.first()
+            val phrase = body.filter { it.position in match }
+            val compared: List<QuranWord>
+            val other: List<QuranWord>
+            val span: MushafSpan
+            if (view == ResultView.AFTER) {
+                val after = body.filter { it.position > match.last }
+                compared = after.take(CONTEXT)
+                other = if (after.isNotEmpty()) emptyList() else {
+                    val next = words(hit.ayahId + 1).filter { !it.isEnd }.take(OTHER_VERSE)
+                    if (next.isEmpty()) emptyList() else listOfNotNull(all.lastOrNull { it.isEnd }) + next
+                }
+                span = MushafSpan.of(phrase + compared + other) +
+                    (if (after.size > CONTEXT || other.isNotEmpty()) MushafSpan.More else MushafSpan.Empty)
+            } else {
+                val before = body.filter { it.position < match.first }
+                compared = before.takeLast(CONTEXT)
+                other = if (before.isNotEmpty()) emptyList() else {
+                    val previous = words(hit.ayahId - 1)
+                    val tail = previous.filter { !it.isEnd }.takeLast(OTHER_VERSE)
+                    if (tail.isEmpty()) emptyList() else tail + listOfNotNull(previous.lastOrNull { it.isEnd })
+                }
+                span = (if (before.size > CONTEXT || other.isNotEmpty()) MushafSpan.More else MushafSpan.Empty) +
+                    MushafSpan.of(other + compared + phrase)
+            }
+            // Ordered by the compared words, nearest the searched words first.
+            val sortWords = (compared.ifEmpty { other.filter { !it.isEnd } }).let { if (view == ResultView.AFTER) it else it.reversed() }
+            val keyWords = sortWords.map { SearchText.normalize(it.hafs) }
+            Lined(
+                CompareRow(hit, span, phrase.mapTo(HashSet()) { it.id }, other.mapTo(HashSet()) { it.id }, runStart = false),
+                keyWords.joinToString(" "),
+                keyWords.firstOrNull().orEmpty()
+            )
+        }.sortedWith(compareBy<Lined> { it.key }.thenBy { it.row.hit.ayahId })
+
+        return lined.mapIndexed { i, l -> l.row.copy(runStart = i == 0 || l.first != lined[i - 1].first) }
+    }
+
     private fun search(
         text: String,
         scope: SearchScope,
@@ -214,15 +340,20 @@ class VerseSearchViewModel(
             is SearchScope.Juz -> { id -> ayahs.juzOf(id) in scope.juz }
             is SearchScope.Surah -> { id -> ayahs.surahOf(id) == scope.surah }
         }
-        val searched = index != null && SearchText.normalize(q).count { it in 'ء'..'ي' } >= VerseIndex.MIN_LETTERS
+        val enough = SearchText.normalize(q).count { it in 'ء'..'ي' } >= VerseIndex.MIN_LETTERS
+        val searched = index != null && enough
         val hits = if (!searched) emptyList() else index!!.find(q, accept).map { m ->
             SearchHit(m.ayahId, ayahs.surahOf(m.ayahId), ayahs.ayahOf(m.ayahId), ayahs.firstPageOf(m.ayahId), m.matched)
         }
         val groups = hits.groupBy { it.surah }.map { (surah, list) -> SurahHits(surah, list) }
-        return SearchResults(q, goTo, roots, groups, hits.size, searched)
+        return SearchResults(q, goTo, roots, groups, hits.size, searched, loading = index == null && enough)
     }
 
     private companion object {
+        /** Words shown after (or before) the searched words. */
+        const val CONTEXT = 6
+        /** Words shown of the next (or previous) verse when the searched words end (or begin) one. */
+        const val OTHER_VERSE = 4
         const val SURAHS = 114
         const val JUZ = 30
         const val MOST_ROOTS = 3

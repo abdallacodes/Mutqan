@@ -346,6 +346,13 @@ class StudyRepository(
         }
     }
 
+    /** A new, uncategorised group called [description] holding [ayahIds]; returns the group's id. */
+    suspend fun createGroup(description: String, ayahIds: List<Int>): Int = withContext(Dispatchers.IO) {
+        val id = dao.insertSimilarityGroup(SimilarityGroupEntity(description = description.trim())).toInt()
+        dao.insertSimilarityMembers(ayahIds.distinct().map { SimilarityMemberEntity(groupId = id, verseId = it) })
+        id
+    }
+
     /** Starts a new, uncategorised group called [description] with [ayahId] as its first ayah; returns the group's id. */
     suspend fun createGroupWith(description: String, ayahId: Int): Int = withContext(Dispatchers.IO) {
         val id = dao.insertSimilarityGroup(SimilarityGroupEntity(description = description.trim())).toInt()
