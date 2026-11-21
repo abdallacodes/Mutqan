@@ -79,6 +79,11 @@ object DailyReminder {
 
     private fun cancel(context: Context) {
         alarm(context)?.cancel(pending(context))
+        clear(context)
+    }
+
+    /** Takes down today's reminder if it is still showing (the ward is done, or the reminder was turned off). */
+    fun clear(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 

@@ -114,7 +114,10 @@ fun ReminderTimeDialog(initialMinutes: Int, onConfirm: (Int) -> Unit, onDismiss:
             Column {
                 Text(stringResource(R.string.reminder_time_hint), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.padding(top = 12.dp))
-                TimePicker(state = state)
+                // The picker's big digits are displayLarge, and the app's (72 sp) is cut off in its boxes.
+                MaterialTheme(typography = MaterialTheme.typography.copy(displayLarge = MaterialTheme.typography.displayMedium)) {
+                    TimePicker(state = state)
+                }
             }
         },
         confirmButton = { PaperLink(text = stringResource(R.string.btn_save), onClick = { onConfirm(state.hour * 60 + state.minute) }) },

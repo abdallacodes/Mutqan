@@ -1,5 +1,6 @@
 package com.example.mutqan.ui.home
 
+import com.example.mutqan.domain.reminder.DailyReminder
 import com.example.mutqan.ui.habit.MilestoneDialog
 import com.example.mutqan.ui.habit.ReminderOffer
 import com.example.mutqan.ui.habit.ReminderTimeDialog
@@ -222,6 +223,9 @@ fun HomeScreen(
     val reminderOffer: (@Composable () -> Unit)? = if (state.offerReminder) {
         { ReminderOffer(onTurnOn = { pickingReminder = true }, onClose = viewModel::closeReminderOffer) }
     } else null
+    // A reminder still showing has had its answer once the day's ward is done.
+    val wardDone = state.habit?.ward?.complete == true
+    LaunchedEffect(wardDone) { if (wardDone) DailyReminder.clear(context) }
 
     Column(
         modifier = Modifier
