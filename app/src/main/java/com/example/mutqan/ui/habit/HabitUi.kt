@@ -67,8 +67,8 @@ import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.rememberHaptics
 import com.example.mutqan.ui.theme.FolioTheme
 import kotlinx.coroutines.delay
-import java.time.LocalDate
-import java.time.format.TextStyle
+import android.icu.text.DateFormatSymbols
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** The revision's share of the ring when there is a revision today; the questions take the rest. */
@@ -228,15 +228,31 @@ fun WardRing(ward: Ward, celebrate: Boolean, onCelebrated: () -> Unit, modifier:
     }
 }
 
+/**
+ * The weekday of a day, as a narrow letter for the strip and a full name to be read out. From ICU, which Android 7 has
+ * (java.time it does not).
+ */
+private class WeekdayNames(locale: Locale) {
+    private val symbols = DateFormatSymbols.getInstance(locale)
+    private val narrow = symbols.getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.NARROW)
+    private val full = symbols.getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.WIDE)
+
+    /** Day [epochDay] (1970-01-01, a Thursday, is 0) as Calendar's SUNDAY = 1 … SATURDAY = 7. */
+    private fun index(epochDay: Long): Int = (Math.floorMod(epochDay + 4, 7L) + 1).toInt()
+
+    fun letter(epochDay: Long): String = narrow[index(epochDay)]
+    fun name(epochDay: Long): String = full[index(epochDay)]
+}
+
 /** The last seven days, oldest first (so today ends the row): each a letter for its weekday over a mark. */
 @Composable
 fun WeekStrip(week: List<Pair<Long, DayMark>>, modifier: Modifier = Modifier) {
     val locale = LocalConfiguration.current.locales[0]
+    val names = remember(locale) { WeekdayNames(locale) }
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         for ((day, mark) in week) {
-            val weekday = remember(day, locale) { LocalDate.ofEpochDay(day).dayOfWeek }
-            val letter = remember(weekday, locale) { weekday.getDisplayName(TextStyle.NARROW, locale) }
-            val name = remember(weekday, locale) { weekday.getDisplayName(TextStyle.FULL, locale) }
+            val letter = names.letter(day)
+            val name = names.name(day)
             val state = stringResource(
                 when (mark) {
                     DayMark.KEPT -> R.string.habit_day_kept

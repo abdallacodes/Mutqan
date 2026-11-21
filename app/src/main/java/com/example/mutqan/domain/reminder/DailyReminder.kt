@@ -24,9 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalTime
-import java.time.ZoneId
+import java.util.Calendar
+import java.util.TimeZone
 
 /**
  * One reminder a day, at the time the user chose, saying what is left of today's ward; nothing when the ward is done.
@@ -40,6 +39,8 @@ object DailyReminder {
     private const val TAG = "DailyReminder"
 
     fun createChannel(context: Context) {
+        // Android 7 has no channels; its notifications go out without one.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, context.getString(R.string.reminder_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
@@ -49,13 +50,19 @@ object DailyReminder {
     }
 
     /** The next time it goes off: today at [minutes] after midnight if that is still ahead, else tomorrow. */
-    fun nextTime(now: Long, minutes: Int, zone: ZoneId): Long {
-        val time = LocalTime.of(minutes / 60 % 24, minutes % 60)
-        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-        var at = today.atTime(time).atZone(zone)
-        // A firing a few seconds after its time must not set itself again for the same moment.
-        if (at.toInstant().toEpochMilli() <= now + 30_000L) at = today.plusDays(1).atTime(time).atZone(zone)
-        return at.toInstant().toEpochMilli()
+    fun nextTime(now: Long, minutes: Int, zone: TimeZone): Long {
+        // Calendar, not java.time: the app runs on Android 7, where java.time does not exist.
+        val at = Calendar.getInstance(zone).apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, minutes / 60 % 24)
+            set(Calendar.MINUTE, minutes % 60)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        // A firing a few seconds after its time must not set itself again for the same moment. A day on keeps the
+        // time of day across a clock change.
+        if (at.timeInMillis <= now + 30_000L) at.add(Calendar.DAY_OF_MONTH, 1)
+        return at.timeInMillis
     }
 
     /** Turns the reminder on at [minutes] after midnight, or off, and sets or clears the alarm. */
@@ -73,7 +80,7 @@ object DailyReminder {
     }
 
     private fun schedule(context: Context, minutes: Int) {
-        val at = nextTime(System.currentTimeMillis(), minutes, ZoneId.systemDefault())
+        val at = nextTime(System.currentTimeMillis(), minutes, TimeZone.getDefault())
         alarm(context)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(context))
     }
 

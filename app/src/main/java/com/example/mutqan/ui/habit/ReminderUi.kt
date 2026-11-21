@@ -49,16 +49,24 @@ import com.example.mutqan.ui.components.PaperDialog
 import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.PaperSwitch
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.text.NumberFormat
+import java.util.Calendar
 import java.util.Locale
 
 /** [minutes] after midnight as the phone shows times: "8:00 م", or "20:00" on a 24-hour phone. */
 fun reminderTime(context: Context, locale: Locale, minutes: Int): String {
-    val time = LocalTime.of(minutes / 60 % 24, minutes % 60)
-    return if (DateFormat.is24HourFormat(context)) "%02d:%02d".format(Locale.ROOT, time.hour, time.minute)
-    else time.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+    val hour = minutes / 60 % 24
+    val minute = minutes % 60
+    if (DateFormat.is24HourFormat(context)) return "%02d:%02d".format(Locale.ROOT, hour, minute)
+    // java.text, not java.time: the app runs on Android 7, where java.time does not exist.
+    val time = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, hour)
+        set(Calendar.MINUTE, minute)
+    }
+    val format = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, locale)
+    // The digits 0-9, as everywhere else in the app, whatever the language's own.
+    format.numberFormat = NumberFormat.getIntegerInstance(Locale.ROOT).apply { isGroupingUsed = false }
+    return format.format(time.time)
 }
 
 /**
