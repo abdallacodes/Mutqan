@@ -133,6 +133,13 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                             PaperChip(selected = state.hard, onClick = viewModel::toggleHard, label = { Text(stringResource(R.string.quiz_harder)) })
                         }
                     }
+                    if (state.retry) {
+                        Text(
+                            text = stringResource(R.string.quiz_retry_note),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
                     when (q) {
                         is ChoiceQuestion -> ChoiceBody(q, state, viewModel::chooseOption)
                         is OrderQuestion -> OrderBody(q, state, viewModel::tapOrder, viewModel::clearOrder)

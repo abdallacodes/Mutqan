@@ -873,6 +873,7 @@
     <string name="practice_skill_none">لم تُجب بعد ما يكفي لمعرفة مستواك فيها.</string>
     <string name="practice_sheet_choose">تختار، والتطبيق يصحّح</string>
     <string name="practice_sheet_recite">تسمّع من حفظك، وتقيّم نفسك</string>
+    <string name="quiz_retry_note">سؤال أخطأت فيه من قبل</string>
     <string name="practice_section_suggested">مقترح لك</string>
     <string name="practice_first_question">أول أسئلة اليوم: %1$s</string>
     <string name="ex_ending_title">أيّ الخاتمتين الصحيحة؟</string>

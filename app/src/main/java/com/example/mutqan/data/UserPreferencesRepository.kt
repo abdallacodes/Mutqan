@@ -3,6 +3,8 @@ package com.example.mutqan.data
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.mutqan.domain.QuizRetries
+import com.example.mutqan.domain.QuizRetry
 import com.example.mutqan.domain.PracticeScope
 import com.example.mutqan.domain.AdviceMemory
 import com.example.mutqan.domain.sync.SyncMemory
@@ -44,6 +46,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_PLAN_TRIED_ON     = longPreferencesKey("plan_tried_on")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_SEARCH_RECENT     = stringPreferencesKey("search_recent")
+        private val KEY_QUIZ_RETRIES      = stringPreferencesKey("quiz_retries")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
         private val KEY_RECITE_SURAH      = booleanPreferencesKey("recitation_to_surah_end")
@@ -197,6 +200,13 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[KEY_MUSHAF_COVER] = state.cover
             prefs[KEY_MUSHAF_COVER_BARS] = state.coverBarsHidden
         }
+    }
+
+    /** Quiz questions answered wrongly, to ask again on a later day (this device only, never synced). */
+    val quizRetries: Flow<List<QuizRetry>> = context.dataStore.data.map { prefs -> QuizRetries.parse(prefs[KEY_QUIZ_RETRIES]) }
+
+    suspend fun editQuizRetries(change: (List<QuizRetry>) -> List<QuizRetry>) {
+        context.dataStore.edit { prefs -> prefs[KEY_QUIZ_RETRIES] = QuizRetries.format(change(QuizRetries.parse(prefs[KEY_QUIZ_RETRIES]))) }
     }
 
     /** The latest searches, newest first (this device only, never synced). */

@@ -7,7 +7,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.ChoiceQuestion
 import com.example.mutqan.domain.ExerciseType
+import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.DailySchedule
+import com.example.mutqan.domain.QuizRetries
+import com.example.mutqan.domain.QuizRetry
+import com.example.mutqan.ui.home.localEpochDay
 import com.example.mutqan.domain.OrderQuestion
 import com.example.mutqan.domain.PassageState
 import com.example.mutqan.domain.QuizMode
@@ -50,7 +54,9 @@ data class QuizUiState(
     /** Daily set: the set is over. */
     val finished: Boolean = false,
     /** Pages answered wrongly in this sitting, for the summary. */
-    val missedPages: List<Int> = emptyList()
+    val missedPages: List<Int> = emptyList(),
+    /** The question on screen was missed on an earlier day and is asked again. */
+    val retry: Boolean = false
 ) {
     /** A set of ten mixed questions (the daily set, a skill's, or the pages missed lately) rather than one kind in a row. */
     val isSet: Boolean get() = mode.isSet
@@ -59,7 +65,7 @@ data class QuizUiState(
 /**
  * Runs a sitting of quiz questions: one kind in a row, or a set of ten mixed ones (the daily set, a skill's set, or one
  * on the pages missed lately). The pages and the questions come from a [QuizPicker]. Each answer is kept as an exercise
- * result so Today can point at pages that keep going wrong.
+ * result so Today can point at pages that keep going wrong; a missed question comes back in a later day's set.
  */
 class QuizViewModel(
     private val mode: QuizMode,
@@ -78,6 +84,11 @@ class QuizViewModel(
     /** The first question of the daily set, when the Practice screen already built it for its card. */
     private var preset: DailyPreview.Held? = null
 
+    private val prefs = UserPreferencesRepository(appContext)
+
+    /** Questions missed on earlier days, asked again in the daily set after its first question. */
+    private var retries = ArrayDeque<QuizRetry>()
+
     init {
         start()
     }
@@ -94,6 +105,7 @@ class QuizViewModel(
             val only = if (mode == QuizMode.MISSED) {
                 study.quizMissesSince(System.currentTimeMillis() - MISSED_WINDOW_MS).first().map { it.page }.take(MISSED_PAGES).toSet()
             } else null
+            retries = if (mode == QuizMode.DAILY) ArrayDeque(QuizRetries.due(prefs.quizRetries.first(), localEpochDay())) else ArrayDeque()
             val made = QuizPicker.create(appContext, study, quran, only, random)
             preset?.let { made.markAsked(it.first.subject.page) }
             picker = made
@@ -157,6 +169,7 @@ class QuizViewModel(
 
     private fun answer(correct: Boolean) {
         val q = _state.value.question ?: return
+        val again = _state.value.retry
         _state.update {
             it.copy(
                 answered = true,
@@ -168,6 +181,13 @@ class QuizViewModel(
         }
         viewModelScope.launch {
             study.addExerciseResult(q.type, q.subject.page, q.subject.page, if (correct) RecallOutcome.INDEPENDENT else RecallOutcome.UNABLE)
+            if (q.subject.id > 0) {
+                val today = localEpochDay()
+                prefs.editQuizRetries { list ->
+                    if (correct) QuizRetries.answered(list, q.type, q.subject.id)
+                    else QuizRetries.missed(list, q.type, q.subject.id, today, again)
+                }
+            }
         }
     }
 
@@ -180,6 +200,15 @@ class QuizViewModel(
             preset = null
             show(it.first)
             return
+        }
+        // After the set's first question, the ones missed on earlier days.
+        while (s.asked > 0 && retries.isNotEmpty()) {
+            val retry = retries.removeFirst()
+            val q = picker.buildFor(retry.type, retry.ayahId)
+            if (q != null) {
+                show(q, retry = true)
+                return
+            }
         }
         val pool = mode.setTypes
         val wanted: List<ExerciseType> = when {
@@ -199,11 +228,12 @@ class QuizViewModel(
         _state.update { it.copy(loading = false, noMaterial = true, scopeEmpty = picker.scopeEmpty, question = null) }
     }
 
-    private fun show(q: QuizQuestion) {
+    private fun show(q: QuizQuestion, retry: Boolean = false) {
         _state.update {
             it.copy(
                 loading = false, noMaterial = false, question = q, stage = 0, pickedOption = null,
-                pickedSurah = null, pickedAyah = null, orderTaps = emptyList(), answered = false, correct = false
+                pickedSurah = null, pickedAyah = null, orderTaps = emptyList(), answered = false, correct = false,
+                retry = retry
             )
         }
     }

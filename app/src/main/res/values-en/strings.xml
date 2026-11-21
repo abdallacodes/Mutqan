@@ -777,6 +777,7 @@
     <string name="practice_skill_none">Not enough answers yet to show how it is going.</string>
     <string name="practice_sheet_choose">You choose; the app checks</string>
     <string name="practice_sheet_recite">You recite from memory and rate yourself</string>
+    <string name="quiz_retry_note">One you missed before</string>
     <string name="practice_section_suggested">Suggested for you</string>
     <string name="practice_first_question">Today’s first question: %1$s</string>
     <string name="ex_ending_title">Which ending is real?</string>

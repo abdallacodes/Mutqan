@@ -55,6 +55,10 @@ class QuizPicker private constructor(
         return null
     }
 
+    /** The question of [type] about verse [ayahId] (one asked again), or null when it cannot be built now. */
+    fun buildFor(type: ExerciseType, ayahId: Int): QuizQuestion? =
+        engine.build(type, ayahId, hard = false)?.also { markAsked(it.subject.page) }
+
     private fun pickPage(): Int? {
         val w = IntArray(PAGES) { i -> if (i + 1 in recent) 0 else weights[i] }
         val index = QuizText.weightedPick(w, random) ?: QuizText.weightedPick(weights, random)
