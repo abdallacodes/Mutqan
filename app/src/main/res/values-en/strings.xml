@@ -581,8 +581,12 @@
     <string name="ex_boundaries_title">Page boundaries</string>
     <string name="ex_boundaries_desc">Where each page starts and ends, and what lies on either side</string>
     <string name="ex_this_week">This week: %d</string>
-    <string name="ex_random_title">Random verse</string>
-    <string name="ex_random_desc">A verse from a juz, surah or pages you pick, to continue from</string>
+    <string name="ex_recite_title">Continue from here</string>
+    <string name="ex_recite_desc">A verse from your hifz: recite what follows from memory, then reveal it to check</string>
+    <string name="ex_recite_ask">Recite what comes after this verse from memory, then reveal to check</string>
+    <string name="ex_recite_reveal">Reveal the next verse</string>
+    <string name="ex_recite_more">Reveal the one after</string>
+    <string name="ex_recite_no_pages">Try another juz, or widen the question pages on the Practice screen.</string>
     <string name="ex_similarity_title">Mutashabihat test</string>
     <string name="ex_similarity_desc">A verse from your vault or the ready-made groups, and you place it</string>
     <string name="ex_vault_desc">Your groups of similar verses, and the ready-made lists</string>

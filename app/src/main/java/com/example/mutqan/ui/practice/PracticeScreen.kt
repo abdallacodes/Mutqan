@@ -229,7 +229,7 @@ fun PracticeScreen(
     onOpenPageQuiz: (end: Boolean) -> Unit,
     onOpenJuz: (Int) -> Unit,
     onOpenQuiz: (QuizMode) -> Unit,
-    onRandomVerse: () -> Unit,
+    onRecite: () -> Unit,
     onSimilarityTest: () -> Unit,
     onOpenVault: () -> Unit,
     onSettingsClick: () -> Unit
@@ -326,10 +326,10 @@ fun PracticeScreen(
                 onClick = onOpenVault
             )
             IndexRow(
-                title = stringResource(R.string.ex_random_title),
-                description = stringResource(R.string.ex_random_desc),
+                title = stringResource(R.string.ex_recite_title),
+                description = stringResource(R.string.ex_recite_desc),
                 glyph = PageGlyphKind.RANDOM,
-                onClick = onRandomVerse
+                onClick = onRecite
             )
             Spacer(Modifier.height(24.dp))
         }

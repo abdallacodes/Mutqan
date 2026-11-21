@@ -617,8 +617,12 @@
     <string name="ex_boundaries_title">حدود الصفحات</string>
     <string name="ex_boundaries_desc">أول الصفحة وآخرها وما قبلها وما بعدها</string>
     <string name="ex_this_week">هذا الأسبوع: %d</string>
-    <string name="ex_random_title">آية عشوائية</string>
-    <string name="ex_random_desc">آية من جزء أو سورة أو صفحات تختارها لتكمل منها</string>
+    <string name="ex_recite_title">أكمل من هنا</string>
+    <string name="ex_recite_desc">آية من حفظك تكمل التلاوة بعدها، ثم تكشف ما يليها لتتحقق</string>
+    <string name="ex_recite_ask">اقرأ ما بعد هذه الآية من حفظك، ثم اكشف لتتحقق</string>
+    <string name="ex_recite_reveal">اكشف الآية التالية</string>
+    <string name="ex_recite_more">اكشف التي بعدها</string>
+    <string name="ex_recite_no_pages">جرّب جزءًا آخر، أو وسّع صفحات الأسئلة في صفحة التدرّب.</string>
     <string name="ex_similarity_title">اختبار المتشابهات</string>
     <string name="ex_similarity_desc">آية من مخزنك أو من المجموعات الجاهزة، وتحدّد مكانها</string>
     <string name="ex_vault_desc">مجموعاتك من الآيات المتشابهة والقوائم الجاهزة</string>

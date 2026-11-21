@@ -82,24 +82,7 @@ class QuizPicker private constructor(
             random: Random = Random.Default
         ): QuizPicker = withContext(Dispatchers.Default) {
             val appContext = context.applicationContext
-            val covered = study.coveredPages().first()
-            val logs = study.revisionLogs().first()
-            val states = PassageStates.compute(logs)
-            val misses = study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS).first().map { it.page }.toSet()
-            val allowed: Set<Int>
-            val scopeEmpty: Boolean
-            if (only != null) {
-                allowed = only
-                scopeEmpty = false
-            } else {
-                val scope = UserPreferencesRepository(appContext).practiceScope.first()
-                allowed = scope.pages(covered, states, study.selfRatedStrength().first(), logs)
-                scopeEmpty = !scope.isAll && allowed.isEmpty()
-            }
-            val weights = IntArray(PAGES) { i ->
-                if ((i + 1) !in allowed) 0
-                else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
-            }
+            val (weights, scopeEmpty) = pageWeights(appContext, study, only)
             val language = TopicLanguage(arabicUi = appContext.resources.configuration.locales[0].language == "ar")
             val engine = QuizEngine(
                 quran, SimilarLibrary.load(appContext), random, VerseClosingsLibrary.load(appContext),
@@ -107,5 +90,33 @@ class QuizPicker private constructor(
             )
             QuizPicker(quran, engine, weights, random, scopeEmpty)
         }
+
+        /**
+         * How likely each page (index 0 is page 1) is to come up: zero outside the saved choice of pages (or [only]),
+         * more for a weak page and for one missed in the last month. The second value is true when a choice of pages
+         * was made and no memorised page fits it.
+         */
+        suspend fun pageWeights(context: Context, study: StudyRepository, only: Set<Int>? = null): Pair<IntArray, Boolean> =
+            withContext(Dispatchers.Default) {
+                val covered = study.coveredPages().first()
+                val logs = study.revisionLogs().first()
+                val states = PassageStates.compute(logs)
+                val misses = study.quizMissesSince(System.currentTimeMillis() - MISS_WINDOW_MS).first().map { it.page }.toSet()
+                val allowed: Set<Int>
+                val scopeEmpty: Boolean
+                if (only != null) {
+                    allowed = only
+                    scopeEmpty = false
+                } else {
+                    val scope = UserPreferencesRepository(context.applicationContext).practiceScope.first()
+                    allowed = scope.pages(covered, states, study.selfRatedStrength().first(), logs)
+                    scopeEmpty = !scope.isAll && allowed.isEmpty()
+                }
+                val weights = IntArray(PAGES) { i ->
+                    if ((i + 1) !in allowed) 0
+                    else BASE_WEIGHT + (if (states[i] == PassageState.NEEDS_ATTENTION) WEAK_BONUS else 0) + (if (i + 1 in misses) MISS_BONUS else 0)
+                }
+                weights to scopeEmpty
+            }
     }
 }

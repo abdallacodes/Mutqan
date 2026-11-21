@@ -72,6 +72,7 @@ import com.example.mutqan.ui.vault.EditSimilarityGroupScreen
 import com.example.mutqan.ui.vault.MutashabihatListScreen
 import com.example.mutqan.ui.insights.InsightsScreen
 import com.example.mutqan.ui.practice.PageBoundariesScreen
+import com.example.mutqan.ui.practice.ReciteScreen
 import com.example.mutqan.ui.practice.PageQuizScreen
 import com.example.mutqan.ui.practice.PracticeScreen
 import com.example.mutqan.ui.progress.ProgressScreen
@@ -170,6 +171,7 @@ object Routes {
     const val INSIGHTS       = "insights"
     const val PAGE_BOUNDARIES = "page_boundaries"
     const val PAGE_EDGES_OF_VERSE = "page_edges_of_verse"
+    const val RECITE = "recite"
     const val PAGE_QUIZ = "page_quiz"
     const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
@@ -529,6 +531,10 @@ fun AppNavHost(
                 PageBoundariesScreen(fromVerse = true, onBack = { navController.popBackStack() })
             }
 
+            composable(Routes.RECITE) {
+                ReciteScreen(onBack = { navController.popBackStack() })
+            }
+
             composable(
                 route     = "${Routes.PAGE_QUIZ}/{end}",
                 arguments = listOf(navArgument("end") { type = NavType.BoolType })
@@ -778,7 +784,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenPageQuiz   = { end -> navController.navigate(Routes.pageQuiz(end)) },
             onOpenJuz        = { juz -> navController.navigate(Routes.juzDetail(juz)) },
             onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
-            onRandomVerse    = { navController.navigate(Routes.VERSE_SEARCH) },
+            onRecite         = { navController.navigate(Routes.RECITE) },
             onSimilarityTest = { navController.navigate(Routes.similarityTest(null, null)) },
             onOpenVault      = { navController.navigate(Routes.VAULT_LIST) },
             onSettingsClick  = onSettingsClick

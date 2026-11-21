@@ -47,7 +47,10 @@ enum class ExerciseType(val code: Int) {
     QUIZ_PAGE_START(14),
 
     /** Given a page number, pick (or say) the verse that ends it. */
-    QUIZ_PAGE_END(15);
+    QUIZ_PAGE_END(15),
+
+    /** A verse from the hifz: recite on from it from memory, reveal what follows verse by verse, and say how it went. */
+    RECITE_ON(16);
 
     companion object {
         fun fromCode(code: Int): ExerciseType? = entries.firstOrNull { it.code == code }
