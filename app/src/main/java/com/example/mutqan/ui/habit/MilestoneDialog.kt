@@ -71,11 +71,14 @@ fun MilestoneDialog(milestone: Milestone, onClose: () -> Unit) {
     val badge: String
     val title: String
     val body: String
+    // Where the line comes from, when it is a hadith.
+    var source: String? = null
     when (milestone) {
         is Milestone.Days -> {
             badge = milestone.days.toString()
             title = pluralStringResource(R.plurals.habit_streak_days, milestone.days, milestone.days)
             body = stringResource(R.string.milestone_days_body)
+            source = stringResource(R.string.milestone_days_source)
         }
         is Milestone.Pass -> {
             badge = milestone.number.toString()
@@ -93,15 +96,19 @@ fun MilestoneDialog(milestone: Milestone, onClose: () -> Unit) {
     val background = MaterialTheme.colorScheme.background
 
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        // One sheet on the page's colour, holding the card and the buttons under it.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .graphicsLayer { scaleX = grow.value; scaleY = grow.value },
+                .graphicsLayer { scaleX = grow.value; scaleY = grow.value }
+                .clip(RoundedCornerShape(28.dp))
+                .background(background)
+                .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // The card on the page's colour, recorded so it can be shared as it looks.
+            // The card with its margin of the page's colour, recorded so it can be shared as it looks.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,12 +128,21 @@ fun MilestoneDialog(milestone: Milestone, onClose: () -> Unit) {
                     ) {
                         StarMedallion(text = badge, size = 116.dp, onHero = true)
                         Text(text = title, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-                        Text(
-                            text = body,
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center,
-                            color = FolioTheme.colors.onHero.copy(alpha = 0.85f)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = body,
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                color = FolioTheme.colors.onHero.copy(alpha = 0.85f)
+                            )
+                            source?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = FolioTheme.colors.onHero.copy(alpha = 0.65f)
+                                )
+                            }
+                        }
                         Text(
                             text = stringResource(R.string.app_name),
                             style = MaterialTheme.typography.labelMedium,
@@ -135,7 +151,7 @@ fun MilestoneDialog(milestone: Milestone, onClose: () -> Unit) {
                     }
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PaperOutlinedButton(
                     text = stringResource(R.string.milestone_share),
                     onClick = { scope.launch { share(context, layer, shareText, shareTitle) } },

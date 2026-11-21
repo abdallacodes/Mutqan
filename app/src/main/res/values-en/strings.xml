@@ -691,6 +691,7 @@
     <string name="reminder_set_toast">Mutqan will remind you every day at %1$s if your wird isn’t done</string>
     <string name="reminder_denied">Allow Mutqan’s notifications in the phone’s settings to get the reminder</string>
     <string name="milestone_days_body">“The most beloved deeds to Allah are the most constant, even if small.”</string>
+    <string name="milestone_days_source">Al-Bukhari and Muslim</string>
     <string name="milestone_pass_first">You revised all your hifz</string>
     <string name="milestone_pass_n">Revision pass %1$d of your hifz</string>
     <plurals name="milestone_pass_body">

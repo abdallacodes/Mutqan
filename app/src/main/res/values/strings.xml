@@ -738,7 +738,8 @@
     <string name="reminder_time_label">الوقت</string>
     <string name="reminder_set_toast">سيذكّرك متقن كل يوم الساعة %1$s إن لم يكتمل وِردك</string>
     <string name="reminder_denied">اسمح لمتقن بالإشعارات من إعدادات الهاتف ليصلك التذكير</string>
-    <string name="milestone_days_body">«أحبّ الأعمال إلى الله أدومها وإن قلّ»</string>
+    <string name="milestone_days_body">«أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ»</string>
+    <string name="milestone_days_source">متفق عليه</string>
     <string name="milestone_pass_first">ختمت مراجعة حفظك</string>
     <string name="milestone_pass_n">الختمة %1$d لمراجعة حفظك</string>
     <plurals name="milestone_pass_body">
