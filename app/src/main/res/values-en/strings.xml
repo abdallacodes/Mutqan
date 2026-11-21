@@ -253,20 +253,40 @@
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">Search Help</string>
-    <string name="search_help_desc">Search for any verse using keywords. You can filter by a specific Surah or a range of Juzs. The search is smart and handles common Arabic typing variations.</string>
-    <string name="search_no_results">No results found</string>
+    <string name="search_help_desc">Type words from a verse to find every verse that has them, or a surah name, a page number, or a surah and verse such as Al-Baqarah 255 or 2:255. You can keep the search to your hifz, to some juz, or to one surah. The search allows for the usual spelling differences, and the page number beside each verse opens it in the Mushaf.</string>
+    <string name="search_field_hint">Words of a verse, a surah, a page, or 2:255</string>
+    <string name="search_scope_all">Whole Quran</string>
+    <string name="search_scope_hifz">My hifz</string>
+    <string name="search_scope_juz">Juz</string>
+    <string name="search_scope_juz_some">Juz %1$s</string>
+    <plurals name="search_scope_juz_many">
+        <item quantity="one">%d juz</item>
+        <item quantity="other">%d juz</item>
+    </plurals>
+    <string name="search_scope_surah">Surah</string>
+    <string name="search_juz_title">Search in these juz</string>
+    <string name="search_surah_title">Search in a surah</string>
+    <string name="search_surah_hint">Surah name or number</string>
+    <string name="search_clear">Clear</string>
+    <string name="search_clear_query">Clear the search</string>
+    <string name="search_goto_surah">Go to Surah %1$s</string>
+    <string name="search_goto_juz">Go to juz %1$d</string>
+    <string name="search_goto_verse">Go to %1$s · verse %2$d</string>
+    <string name="search_count">%1$s in %2$s</string>
+    <string name="search_none">No verse has these words.</string>
+    <string name="search_none_scoped">No verse here has these words.</string>
+    <string name="search_widen">Search the whole Quran</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_try">Try</string>
+    <string name="search_tips">Search with words of a verse, a surah name, a page number, or a surah and verse.</string>
+    <string name="search_example_1">يا أيها الذين آمنوا</string>
+    <string name="search_example_2">2:255</string>
+    <string name="search_example_3">page 300</string>
+    <string name="search_open_page">Open page %1$d in the Mushaf</string>
     <string name="search_hint">Type at least 2 characters to search...</string>
-    <string name="label_filters">FILTERS</string>
-    <string name="label_hide">HIDE</string>
-    <string name="label_show">SHOW</string>
     <string name="label_groups_header">GROUPS</string>
 
     <!-- Random Ayah -->
-    <string name="label_random_ayah">RANDOM AYAH</string>
-    <string name="scope_juz">Juz</string>
-    <string name="scope_surah">Surah</string>
-    <string name="scope_page_range">Page Range</string>
-    <string name="btn_generate_random">GENERATE RANDOM AYAH</string>
 
     <!-- Vault Test -->
     <string name="vault_test_title">Self-Test</string>

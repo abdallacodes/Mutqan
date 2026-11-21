@@ -503,11 +503,16 @@ fun AppNavHost(
 
             tabDestination(Routes.SURAH_LIST)
 
-            composable(Routes.VERSE_SEARCH) {
+            composable(
+                route     = "${Routes.VERSE_SEARCH}?q={q}",
+                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
+            ) { entry ->
                 VerseSearchScreen(
-                    onOpenMushaf = { page -> navController.openMushaf(page) },
+                    onOpenMushaf = { page, ayah -> navController.openMushaf(page, ayah) },
+                    onOpenRoot = { root -> navController.navigate(Routes.root(root)) },
                     onSettingsClick = { showSettingsSheet = true },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    initialQuery = entry.arguments?.getString("q").orEmpty()
                 )
             }
 

@@ -43,6 +43,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_PLAN_TRIED_FROM   = intPreferencesKey("plan_tried_from")
         private val KEY_PLAN_TRIED_ON     = longPreferencesKey("plan_tried_on")
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
+        private val KEY_SEARCH_RECENT     = stringPreferencesKey("search_recent")
         private val KEY_RECITE_REPEAT     = intPreferencesKey("recitation_repeat")
         private val KEY_RECITE_LOOP       = booleanPreferencesKey("recitation_loop")
         private val KEY_RECITE_SURAH      = booleanPreferencesKey("recitation_to_surah_end")
@@ -66,6 +67,9 @@ class UserPreferencesRepository(private val context: Context) {
         )
         private val SYNCED_BOOLEANS = listOf(KEY_RECITE_LOOP, KEY_RECITE_SURAH)
         private val SYNCED_STRINGS = listOf(KEY_RECITER, KEY_MUSHAF_THEME)
+
+        /** How many searches are remembered. */
+        const val RECENT_SEARCHES = 8
     }
 
     /** `true` on fresh installs; `false` after onboarding is completed. */
@@ -193,6 +197,25 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[KEY_MUSHAF_COVER] = state.cover
             prefs[KEY_MUSHAF_COVER_BARS] = state.coverBarsHidden
         }
+    }
+
+    /** The latest searches, newest first (this device only, never synced). */
+    val searchRecent: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        prefs[KEY_SEARCH_RECENT]?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+    }
+
+    /** Puts [query] first among the latest searches, keeping the last [RECENT_SEARCHES]. */
+    suspend fun addSearchRecent(query: String) {
+        val q = query.trim().replace('\n', ' ')
+        if (q.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            val old = prefs[KEY_SEARCH_RECENT]?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+            prefs[KEY_SEARCH_RECENT] = (listOf(q) + old.filter { it != q }).take(RECENT_SEARCHES).joinToString("\n")
+        }
+    }
+
+    suspend fun clearSearchRecent() {
+        context.dataStore.edit { prefs -> prefs.remove(KEY_SEARCH_RECENT) }
     }
 
     /** The reciter the reader chose (see Reciter); empty until they choose. */

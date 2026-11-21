@@ -269,12 +269,41 @@
 
     <!-- Verse Search Screen -->
     <string name="search_help_title">البحث في الآيات</string>
-    <string name="search_help_desc">اكتب مقطعًا من الآية أو كلماتها؛ يمكنك ضيق النتائج بسورة أو بنطاق أجزاء. البحث يتسامح مع اختلافات الخط الشائعة حتى لا يفوتك ما تبحث عنه.</string>
-    <string name="search_no_results">لم يتم العثور على نتائج</string>
+    <string name="search_help_desc">اكتب كلمات من آية لتجد كل الآيات التي فيها هذه الكلمات، أو اكتب اسم سورة، أو رقم صفحة، أو سورة وآية مثل البقرة ٢٥٥ أو ٢:٢٥٥. يمكنك أن تحصر البحث في حفظك أو في أجزاء أو في سورة. البحث يتسامح مع اختلافات الرسم الشائعة، ورقم الصفحة بجانب كل آية يفتحها في المصحف.</string>
+    <string name="search_field_hint">كلمات من آية، أو سورة، أو صفحة، أو ٢:٢٥٥</string>
+    <string name="search_scope_all">كل القرآن</string>
+    <string name="search_scope_hifz">حفظي</string>
+    <string name="search_scope_juz">الأجزاء</string>
+    <string name="search_scope_juz_some">الجزء %1$s</string>
+    <plurals name="search_scope_juz_many">
+        <item quantity="zero">%d جزء</item>
+        <item quantity="one">جزء واحد</item>
+        <item quantity="two">جزآن</item>
+        <item quantity="few">%d أجزاء</item>
+        <item quantity="many">%d جزءًا</item>
+        <item quantity="other">%d جزء</item>
+    </plurals>
+    <string name="search_scope_surah">سورة</string>
+    <string name="search_juz_title">ابحث في هذه الأجزاء</string>
+    <string name="search_surah_title">ابحث في سورة</string>
+    <string name="search_surah_hint">اسم السورة أو رقمها</string>
+    <string name="search_clear">مسح</string>
+    <string name="search_clear_query">امسح البحث</string>
+    <string name="search_goto_surah">اذهب إلى سورة %1$s</string>
+    <string name="search_goto_juz">اذهب إلى الجزء %1$d</string>
+    <string name="search_goto_verse">اذهب إلى %1$s · آية %2$d</string>
+    <string name="search_count">%1$s في %2$s</string>
+    <string name="search_none">لا آية فيها هذه الكلمات.</string>
+    <string name="search_none_scoped">لا آية هنا فيها هذه الكلمات.</string>
+    <string name="search_widen">ابحث في كل القرآن</string>
+    <string name="search_recent">بحثت مؤخرًا</string>
+    <string name="search_try">جرّب</string>
+    <string name="search_tips">ابحث بكلمات من آية، أو باسم سورة، أو برقم صفحة، أو بسورة وآية.</string>
+    <string name="search_example_1">يا أيها الذين آمنوا</string>
+    <string name="search_example_2">البقرة ٢٥٥</string>
+    <string name="search_example_3">صفحة ٣٠٠</string>
+    <string name="search_open_page">افتح الصفحة %1$d في المصحف</string>
     <string name="search_hint">اكتب حرفين على الأقل للبحث…</string>
-    <string name="label_filters">عناصر التصفية</string>
-    <string name="label_hide">إخفاء</string>
-    <string name="label_show">إظهار</string>
     <string name="label_groups_header">المجموعات</string>
 
     <!-- Onboarding -->
@@ -288,11 +317,6 @@
     <string name="delete_subject_confirmation">هل أنت متأكد من حذف هذا الموضوع؟</string>
 
     <!-- Random Ayah -->
-    <string name="label_random_ayah">آية عشوائية</string>
-    <string name="scope_juz">جزء</string>
-    <string name="scope_surah">سورة</string>
-    <string name="scope_page_range">نطاق الصفحات</string>
-    <string name="btn_generate_random">توليد آية عشوائية</string>
 
     <!-- Vault Test -->
     <string name="vault_test_title">اختبر نفسك</string>
