@@ -141,6 +141,17 @@ class HabitTest {
     }
 
     @Test
+    fun aRunReachingFurtherBackDoesNotBringItsMomentAgain() {
+        val seen = setOf(Milestone.Days(3, 19).key)
+        // A forgotten day logged before the run: the same run now starts on day 18.
+        assertNull(Milestones.next(listOf(Milestone.Days(3, 18)), seen))
+        // Its next threshold still comes.
+        assertEquals(Milestone.Days(7, 18), Milestones.next(listOf(Milestone.Days(3, 18), Milestone.Days(7, 18)), seen))
+        // A new run after a break gets its own moment.
+        assertEquals(Milestone.Days(3, 30), Milestones.next(listOf(Milestone.Days(3, 30)), seen))
+    }
+
+    @Test
     fun milestonesComeOnceAndTheBiggestRunFirst() {
         val streak = Streak(days = 8, since = 900, todayKept = true)
         val reached = Milestones.reached(streak, listOf(RevisionPasses.Pass(1, 1, 20)), listOf(30))

@@ -240,10 +240,25 @@ object Milestones {
      * once (a long run hitting 7 and 30 on the same day cannot happen, but a pass and a juz can) come one at a time.
      */
     fun next(reached: List<Milestone>, seen: Set<String>): Milestone? {
-        val fresh = reached.filter { it.key !in seen }
+        val fresh = reached.filter { !wasShown(it, seen) }
         return fresh.filterIsInstance<Milestone.Days>().maxByOrNull { it.days }
             ?: fresh.filterIsInstance<Milestone.Pass>().maxByOrNull { it.number }
             ?: fresh.filterIsInstance<Milestone.StrongJuz>().firstOrNull()
+    }
+
+    /**
+     * Whether [milestone] was shown already. A run's threshold also counts as shown when it was shown for a start day
+     * inside this run: a forgotten day logged before the run moves its start back, and must not bring the same moment
+     * again. A new run after a break starts later than every older key, so it gets its own.
+     */
+    fun wasShown(milestone: Milestone, seen: Set<String>): Boolean {
+        if (milestone.key in seen) return true
+        if (milestone !is Milestone.Days) return false
+        return seen.any { key ->
+            val parts = key.split(':')
+            parts.size == 3 && parts[0] == "days" && parts[2].toIntOrNull() == milestone.days &&
+                (parts[1].toLongOrNull() ?: return@any false) >= milestone.since
+        }
     }
 
     /** The keys to mark as shown along with [shown]: for a run, its smaller thresholds too, so none comes after it. */
