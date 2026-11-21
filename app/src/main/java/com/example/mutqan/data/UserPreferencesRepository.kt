@@ -62,6 +62,9 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_SEARCH_RECENT     = stringPreferencesKey("search_recent")
         private val KEY_QUIZ_RETRIES      = stringPreferencesKey("quiz_retries")
         private val KEY_READING_QUIZ      = intPreferencesKey("reading_quiz_minutes")
+        private val KEY_LANTERNS_BEST     = intPreferencesKey("lanterns_best")
+        private val KEY_LANTERNS_ROUNDS   = intPreferencesKey("lanterns_rounds")
+        private val KEY_LANTERNS_HIFZ     = booleanPreferencesKey("lanterns_from_hifz")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
         private val KEY_REMINDER_OFFERED  = booleanPreferencesKey("reminder_offer_closed")
@@ -228,6 +231,33 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun editQuizRetries(change: (List<QuizRetry>) -> List<QuizRetry>) {
         context.dataStore.edit { prefs -> prefs[KEY_QUIZ_RETRIES] = QuizRetries.format(change(QuizRetries.parse(prefs[KEY_QUIZ_RETRIES]))) }
+    }
+
+    /** The best score in «فوانيس» on this device (0 before the first round). */
+    val lanternsBest: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_BEST] ?: 0 }
+
+    /** How many rounds of «فوانيس» were played. */
+    val lanternsRounds: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_ROUNDS] ?: 0 }
+
+    /** Whether «فوانيس» takes its verses from the hifz (else from Juz 'Amma). */
+    val lanternsFromHifz: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_HIFZ] ?: true }
+
+    suspend fun setLanternsFromHifz(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_LANTERNS_HIFZ] = on }
+    }
+
+    /** Counts a finished round of «فوانيس»; true when [score] beat the best (and is kept as the best). */
+    suspend fun recordLanternsRound(score: Int): Boolean {
+        var beaten = false
+        context.dataStore.edit { prefs ->
+            val best = prefs[KEY_LANTERNS_BEST] ?: 0
+            if (score > best) {
+                prefs[KEY_LANTERNS_BEST] = score
+                beaten = true
+            }
+            prefs[KEY_LANTERNS_ROUNDS] = (prefs[KEY_LANTERNS_ROUNDS] ?: 0) + 1
+        }
+        return beaten
     }
 
     /** Every how many minutes of reading in the Mushaf a quiz on the pages read is offered; 0 is never. */

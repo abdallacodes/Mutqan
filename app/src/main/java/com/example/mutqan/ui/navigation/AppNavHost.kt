@@ -154,6 +154,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.snapshotFlow
 import androidx.navigation.NavGraphBuilder
+import com.example.mutqan.ui.game.LanternsScreen
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -174,6 +175,7 @@ object Routes {
     const val PAGE_EDGES_OF_VERSE = "page_edges_of_verse"
     const val RECITE = "recite"
     const val PAGE_QUIZ = "page_quiz"
+    const val LANTERNS = "game_lanterns"
     const val PROGRESS       = "progress"
     const val SURAH_LIST     = "surah_list"
     const val VERSE_SEARCH   = "verse_search"
@@ -611,6 +613,13 @@ fun AppNavHost(
                 )
             }
 
+            composable(Routes.LANTERNS) {
+                LanternsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenVerse = { page, ayah -> navController.openMushaf(page, ayah) }
+                )
+            }
+
             composable(Routes.PROGRESS) {
                 ProgressScreen(
                     onBack = { navController.popBackStack() },
@@ -806,6 +815,7 @@ private fun TabPage(route: String, navController: NavHostController, homeViewMod
             onOpenBoundaries = { navController.navigate(Routes.PAGE_BOUNDARIES) },
             onOpenPageEdges  = { navController.navigate(Routes.PAGE_EDGES_OF_VERSE) },
             onOpenPageQuiz   = { end -> navController.navigate(Routes.pageQuiz(end)) },
+            onPlayGame       = { navController.navigate(Routes.LANTERNS) },
             onOpenJuz        = { juz -> navController.navigate(Routes.juzDetail(juz)) },
             onOpenQuiz       = { mode -> navController.navigate(Routes.quiz(mode)) },
             onRecite         = { navController.navigate(Routes.RECITE) },

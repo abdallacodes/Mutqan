@@ -118,6 +118,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.mutqan.ui.game.LanternsCard
 
 private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 private const val SKILL_WINDOW_MS = PracticeSkills.DAYS * 24L * 60 * 60 * 1000
@@ -240,6 +241,7 @@ private enum class ScopePreset(@StringRes val label: Int, val scope: PracticeSco
  */
 @Composable
 fun PracticeScreen(
+    onPlayGame: () -> Unit = {},
     onOpenBoundaries: () -> Unit,
     onOpenPageEdges: () -> Unit,
     onOpenPageQuiz: (end: Boolean) -> Unit,
@@ -258,6 +260,7 @@ fun PracticeScreen(
     val skills by viewModel.skills.collectAsState()
     val missed by viewModel.missed.collectAsState()
     val daily by viewModel.daily.collectAsState()
+    val gameBest by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsBest }.collectAsState(initial = 0)
     var choosing by remember { mutableStateOf(false) }
     var pickingJuz by remember { mutableStateOf(false) }
     var openSkill by remember { mutableStateOf<Skill?>(null) }
@@ -320,6 +323,12 @@ fun PracticeScreen(
                 question = daily,
                 note = if (quizWeek > 0) stringResource(R.string.ex_this_week, quizWeek) else null,
                 onStart = { onOpenQuiz(QuizMode.DAILY) }
+            )
+            // The game: what catches the eye on this screen after the day's set.
+            LanternsCard(
+                best = gameBest,
+                onPlay = onPlayGame,
+                modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
             )
 
             SectionHead(stringResource(R.string.practice_section_skills))
