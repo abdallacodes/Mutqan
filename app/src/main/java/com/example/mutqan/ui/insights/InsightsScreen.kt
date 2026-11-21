@@ -73,6 +73,8 @@ import com.example.mutqan.ui.theme.FolioTheme
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import com.example.mutqan.ui.time.durationText
+import com.example.mutqan.ui.time.rememberTimeSummary
 
 private const val TOTAL_PAGES = 604
 private const val JUZ_COUNT = 30
@@ -355,6 +357,16 @@ private fun WeekBars(revisedDays: List<Boolean>, daysRevised: Int) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 10.dp)
+            )
+        }
+        // The week's time in the Mushaf and in practice, once some has been counted.
+        val time = rememberTimeSummary()
+        if (time != null && time.weekMushaf + time.weekPractice > 0) {
+            Text(
+                text = stringResource(R.string.time_week, durationText(time.weekMushaf), durationText(time.weekPractice)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }

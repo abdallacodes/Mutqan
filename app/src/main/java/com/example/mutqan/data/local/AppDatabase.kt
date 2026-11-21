@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.mutqan.data.local.dao.StudyDao
+import com.example.mutqan.data.local.dao.TimeDao
 import com.example.mutqan.data.local.entity.HifzCoverageEntity
 import com.example.mutqan.data.local.entity.PageStrengthEntity
 import com.example.mutqan.data.local.entity.RevisionLogEntity
@@ -15,6 +16,7 @@ import com.example.mutqan.data.local.entity.RevisionPlanEntity
 import com.example.mutqan.data.local.entity.SavedPassageEntity
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
 import com.example.mutqan.data.local.entity.SimilarityMemberEntity
+import com.example.mutqan.data.local.entity.TimeSpentEntity
 import com.example.mutqan.data.local.entity.UserSubjectEntity
 import com.example.mutqan.data.local.entity.VaultFolderEntity
 import com.example.mutqan.data.local.entity.VerseListEntity
@@ -40,14 +42,17 @@ import com.example.mutqan.quran.QuranRepository
         ExerciseResultEntity::class,
         PageStrengthEntity::class,
         VerseListEntity::class,
-        VerseListItemEntity::class
+        VerseListItemEntity::class,
+        TimeSpentEntity::class
     ],
-    version = 24,
+    version = 25,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studyDao(): StudyDao
+
+    abstract fun timeDao(): TimeDao
 
     companion object {
         @Volatile
@@ -198,6 +203,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** The time spent in the Mushaf and in practice, a day at a time (this device only). */
+        val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `time_spent` (`day` INTEGER NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`millis` INTEGER NOT NULL, PRIMARY KEY(`day`, `kind`))"
+                )
+            }
+        }
+
         /** Strength plans are set in pages a day per tier instead of days per tier. */
         /** How well the user says they know each page, as a starting point for the plan. */
         val MIGRATION_21_22 = object : Migration(21, 22) {
@@ -268,7 +283,7 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun create(context: Context, name: String): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, name)
                 .addCallback(ForeignKeysCallback())
-                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
+                .addMigrations(MIGRATION_13_14, migration14to15(context.applicationContext), MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25)
                 // Versions 1..12 never had a migration path (see git history); start them fresh.
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
                 .build()

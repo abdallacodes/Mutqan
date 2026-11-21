@@ -232,7 +232,7 @@ fun WardRing(ward: Ward, celebrate: Boolean, onCelebrated: () -> Unit, modifier:
  * The weekday of a day, as a narrow letter for the strip and a full name to be read out. From ICU, which Android 7 has
  * (java.time it does not).
  */
-private class WeekdayNames(locale: Locale) {
+internal class WeekdayNames(locale: Locale) {
     private val symbols = DateFormatSymbols.getInstance(locale)
     private val narrow = symbols.getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.NARROW)
     private val full = symbols.getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.WIDE)

@@ -164,6 +164,8 @@ import androidx.compose.ui.graphics.Brush
 import com.example.mutqan.ui.topics.VerseTheme
 import com.example.mutqan.ui.lists.AddToListSheet
 import com.example.mutqan.ui.lists.ListsRow
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 private const val TOTAL_PAGES  = 604
 // 302 spreads: spread 0 = (right=1, left=2), spreads 1–301 = (right=odd, left=even)
@@ -312,6 +314,8 @@ fun MushafViewerScreen(
     // Recitation: it plays on whatever the screen does; here the verse sounding is tinted and the page follows it.
     val recitation = remember(context) { RecitationController.get(context) }
     val playback by recitation.player.state.collectAsState()
+    // Reading time: while the page is touched, or the recitation goes on by itself.
+    TrackTime(TimeKind.MUSHAF) { playback.playing }
     val askForNotifications = rememberAskForNotifications()
     var showRecitationSheet by remember { mutableStateOf(false) }
     fun listenFrom(ayahId: Int, page: Int) {

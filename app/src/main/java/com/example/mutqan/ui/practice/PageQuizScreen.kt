@@ -55,6 +55,8 @@ import com.example.mutqan.ui.components.PaperOutlinedButton
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.PaperTabs
 import com.example.mutqan.ui.components.SectionLabel
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 /**
  * The page-edge quiz, which has no end: a page number and the verse that starts (or ends) it, among five verses cut to
@@ -64,6 +66,7 @@ import com.example.mutqan.ui.components.SectionLabel
 @Composable
 fun PageQuizScreen(end: Boolean, onBack: () -> Unit) {
     val context = LocalContext.current
+    TrackTime(TimeKind.PRACTICE)
     val viewModel: PageQuizViewModel = viewModel(key = "page-quiz-$end", factory = PageQuizViewModelFactory(context, end))
     val state by viewModel.state.collectAsState()
     val q = state.question

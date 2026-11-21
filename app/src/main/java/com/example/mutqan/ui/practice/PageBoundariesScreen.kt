@@ -51,6 +51,8 @@ import androidx.compose.foundation.layout.width
 import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.AyahText
 import com.example.mutqan.ui.components.OpenInMushaf
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 /**
  * Know the edges of each page. Starting from a page: its number, its first verse, or the verses either side of it.
@@ -60,6 +62,7 @@ import com.example.mutqan.ui.components.OpenInMushaf
 @Composable
 fun PageBoundariesScreen(fromVerse: Boolean, onBack: () -> Unit) {
     val context = LocalContext.current
+    TrackTime(TimeKind.PRACTICE)
     val viewModel: PageBoundariesViewModel = viewModel(
         key = "boundaries-$fromVerse",
         factory = PageBoundariesViewModelFactory(context, fromVerse)

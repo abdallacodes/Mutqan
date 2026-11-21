@@ -47,6 +47,8 @@ import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.ui.components.AyahText
 import com.example.mutqan.ui.components.MushafText
 import com.example.mutqan.ui.components.OpenInMushaf
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +59,7 @@ fun SimilarityTestScreen(
     onNavigateToGroup: (groupId: Int) -> Unit
 ) {
     val context = LocalContext.current
+    TrackTime(TimeKind.PRACTICE)
     val viewModel: SimilarityTestViewModel = viewModel(
         factory = SimilarityTestViewModelFactory(context, groupId, folderId)
     )

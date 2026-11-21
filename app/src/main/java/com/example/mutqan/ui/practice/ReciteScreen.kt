@@ -49,6 +49,8 @@ import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.SectionLabel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withTimeoutOrNull
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 /**
  * Continue from here: the classic test of a hafiz, a verse from anywhere in what they know, and they go on from it.
@@ -57,6 +59,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun ReciteScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    TrackTime(TimeKind.PRACTICE)
     val viewModel: ReciteViewModel = viewModel(factory = ReciteViewModelFactory(context))
     val state by viewModel.state.collectAsState()
     val scope by remember { UserPreferencesRepository(context.applicationContext).practiceScope }.collectAsState(initial = null)

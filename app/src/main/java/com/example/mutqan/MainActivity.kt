@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.LocaleList
 import android.os.SystemClock
+import android.view.MotionEvent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mutqan.data.UserPreferencesRepository
+import com.example.mutqan.domain.time.UserActivity
 import com.example.mutqan.ui.components.OrnamentDivider
 import com.example.mutqan.ui.components.PaperButton
 import com.example.mutqan.ui.navigation.AppNavHost
@@ -87,6 +89,12 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         leftAt = SystemClock.elapsedRealtime()
+    }
+
+    /** Every touch says the app is in use, for the time it counts (see TrackTime). */
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        UserActivity.touched()
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun onStart() {

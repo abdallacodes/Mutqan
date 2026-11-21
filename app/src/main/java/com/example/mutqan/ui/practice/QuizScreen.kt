@@ -69,11 +69,14 @@ import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.rememberHaptics
 import com.example.mutqan.ui.theme.FolioTheme
 import androidx.compose.runtime.LaunchedEffect
+import com.example.mutqan.domain.time.TimeKind
+import com.example.mutqan.ui.time.TrackTime
 
 /** One sitting of questions: a single kind in a row, or a daily set of ten mixed ones. */
 @Composable
 fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
     val context = LocalContext.current
+    TrackTime(TimeKind.PRACTICE)
     val viewModel: QuizViewModel = viewModel(key = "quiz-${mode.route}", factory = QuizViewModelFactory(context, mode))
     val state by viewModel.state.collectAsState()
     val scope by remember { UserPreferencesRepository(context.applicationContext).practiceScope }.collectAsState(initial = null)

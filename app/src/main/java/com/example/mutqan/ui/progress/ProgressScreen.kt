@@ -49,6 +49,8 @@ import com.example.mutqan.ui.components.FolioGroup
 import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.PageStrip
 import com.example.mutqan.ui.theme.FolioTheme
+import com.example.mutqan.ui.time.TimeCard
+import com.example.mutqan.ui.time.rememberTimeSummary
 
 /**
  * One page that says where the user stands, from what they recorded: how much is memorised,
@@ -176,6 +178,17 @@ fun ProgressScreen(onBack: () -> Unit, onOpenCoverage: () -> Unit, onOpenMushaf:
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                }
+
+                // ── Time ──
+                item {
+                    val time = rememberTimeSummary()
+                    if (time != null) {
+                        Spacer(Modifier.height(PaperSpace.Section - 6.dp))
+                        SectionLabel(stringResource(R.string.time_section))
+                        Spacer(Modifier.height(10.dp))
+                        TimeCard(time)
                     }
                 }
 
