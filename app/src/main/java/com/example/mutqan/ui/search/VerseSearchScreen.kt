@@ -70,6 +70,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -154,6 +155,7 @@ fun VerseSearchScreen(
         held
     }
     val context = LocalContext.current
+    val resources = LocalResources.current
     val savedNote = stringResource(R.string.search_group_saved)
     var naming by remember { mutableStateOf(false) }
 
@@ -204,8 +206,8 @@ fun VerseSearchScreen(
                     onAdd = {
                         keyboard?.hide()
                         viewModel.addPicked { added, name ->
-                            val note = if (added == 0) context.getString(R.string.list_added_none, name)
-                            else context.resources.getQuantityString(R.plurals.list_added_verses, added, added, name)
+                            val note = if (added == 0) resources.getString(R.string.list_added_none, name)
+                            else resources.getQuantityString(R.plurals.list_added_verses, added, added, name)
                             Toast.makeText(context, note, Toast.LENGTH_SHORT).show()
                             onBack?.invoke()
                         }
