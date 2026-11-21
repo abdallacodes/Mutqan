@@ -174,6 +174,12 @@ class StudyRepository(
     fun exerciseCountsSince(since: Long): Flow<Map<ExerciseType, Int>> =
         dao.observeExerciseCounts(since).map { rows -> rows.mapNotNull { r -> ExerciseType.fromCode(r.type)?.let { it to r.count } }.toMap() }
 
+    /** How many answers of each exercise type had each outcome since [since] (epoch millis). */
+    fun exerciseOutcomesSince(since: Long): Flow<List<OutcomeCount>> =
+        dao.observeExerciseOutcomes(since).map { rows ->
+            rows.mapNotNull { r -> ExerciseType.fromCode(r.type)?.let { OutcomeCount(it, RecallOutcome.fromCode(r.outcome), r.count) } }
+        }
+
     /** Pages where quiz questions were answered wrongly since [since] (epoch millis), most missed first. */
     fun quizMissesSince(since: Long): Flow<List<com.example.mutqan.data.local.dao.PageMiss>> =
         dao.observeQuizMisses(since, ExerciseType.QUIZ_ENDING.code, RecallOutcome.UNABLE.code)

@@ -83,8 +83,8 @@ data class WhereQuestion(
 ) : QuizQuestion
 
 /**
- * What a Practice entry asks: one kind of question, or a mixed set of ten. [FOCUS] is a set drawn only from the pages
- * that most need it (see [FocusPages]), whatever choice of pages is saved.
+ * What a Practice entry asks: one kind of question, or a mixed set of ten: the day's set, a skill's set ([LINKS],
+ * [LOOKALIKES]), or [MISSED], drawn only from the pages whose questions went wrong in the last month.
  */
 enum class QuizMode(val route: String, val type: ExerciseType?) {
     ENDING("ending", ExerciseType.QUIZ_ENDING),
@@ -93,10 +93,20 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
     ORDER("order", ExerciseType.QUIZ_ORDER),
     WHERE("where", ExerciseType.QUIZ_WHERE),
     DAILY("daily", null),
-    FOCUS("focus", null);
+    LINKS("links", null),
+    LOOKALIKES("lookalikes", null),
+    MISSED("missed", null);
 
     /** A set of [DAILY_SIZE] mixed questions rather than one kind in a row. */
     val isSet: Boolean get() = type == null
+
+    /** The kinds of question a set draws from. */
+    val setTypes: List<ExerciseType>
+        get() = when (this) {
+            LINKS -> Skill.LINKS.quizTypes
+            LOOKALIKES -> Skill.LOOKALIKES.quizTypes
+            else -> type?.let { listOf(it) } ?: ExerciseType.QUIZ
+        }
 
     companion object {
         fun fromRoute(route: String?): QuizMode = entries.firstOrNull { it.route == route } ?: DAILY

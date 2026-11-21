@@ -86,7 +86,9 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             QuizMode.ORDER -> R.string.ex_order_title
             QuizMode.WHERE -> R.string.ex_where_title
             QuizMode.DAILY -> R.string.practice_daily_title
-            QuizMode.FOCUS -> R.string.practice_focus_set_title
+            QuizMode.LINKS -> R.string.practice_links_title
+            QuizMode.LOOKALIKES -> R.string.practice_lookalikes_title
+            QuizMode.MISSED -> R.string.practice_missed_title
         }
     )
     val subtitle = when {
@@ -109,7 +111,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Which pages the questions come from, when that is not simply all of them (a focused set names its own pages).
-            scope?.takeIf { mode != QuizMode.FOCUS && !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
+            scope?.takeIf { mode != QuizMode.MISSED && !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
             val q = state.question
             when {
                 state.loading -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {

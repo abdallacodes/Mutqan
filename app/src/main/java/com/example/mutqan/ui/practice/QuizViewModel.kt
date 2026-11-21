@@ -7,10 +7,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.domain.ChoiceQuestion
 import com.example.mutqan.domain.ExerciseType
-import com.example.mutqan.domain.FocusPages
+import com.example.mutqan.domain.DailySchedule
 import com.example.mutqan.domain.OrderQuestion
 import com.example.mutqan.domain.PassageState
-import com.example.mutqan.domain.PassageStates
 import com.example.mutqan.domain.QuizMode
 import com.example.mutqan.domain.QuizQuestion
 import com.example.mutqan.domain.RecallOutcome
@@ -53,14 +52,14 @@ data class QuizUiState(
     /** Pages answered wrongly in this sitting, for the summary. */
     val missedPages: List<Int> = emptyList()
 ) {
-    /** A set of ten mixed questions (the daily set or a focused one) rather than one kind in a row. */
+    /** A set of ten mixed questions (the daily set, a skill's, or the pages missed lately) rather than one kind in a row. */
     val isSet: Boolean get() = mode.isSet
 }
 
 /**
- * Runs a sitting of quiz questions: one kind in a row, or a set of ten mixed ones (the daily set, or a focused one on
- * the weakest pages). The pages and the questions come from a [QuizPicker]. Each answer is kept as an exercise result so
- * Today can point at pages that keep going wrong.
+ * Runs a sitting of quiz questions: one kind in a row, or a set of ten mixed ones (the daily set, a skill's set, or one
+ * on the pages missed lately). The pages and the questions come from a [QuizPicker]. Each answer is kept as an exercise
+ * result so Today can point at pages that keep going wrong.
  */
 class QuizViewModel(
     private val mode: QuizMode,
@@ -86,11 +85,14 @@ class QuizViewModel(
     private fun start() {
         _state.update { QuizUiState(mode = mode, hard = it.hard) }
         preset = if (mode == QuizMode.DAILY) DailyPreview.take() else null
-        schedule = preset?.schedule
-            ?: if (mode.isSet) (ExerciseType.QUIZ + ExerciseType.QUIZ).shuffled(random).take(QuizMode.DAILY_SIZE) else emptyList()
+        schedule = preset?.schedule ?: when {
+            mode == QuizMode.DAILY -> DailySchedule.make(null, random)
+            mode.isSet -> List(QuizMode.DAILY_SIZE) { mode.setTypes[it % mode.setTypes.size] }.shuffled(random)
+            else -> emptyList()
+        }
         viewModelScope.launch(Dispatchers.Default) {
-            val only = if (mode == QuizMode.FOCUS) {
-                FocusPages.pick(study.coveredPages().first(), PassageStates.compute(study.revisionLogs().first()))?.pages ?: emptySet()
+            val only = if (mode == QuizMode.MISSED) {
+                study.quizMissesSince(System.currentTimeMillis() - MISSED_WINDOW_MS).first().map { it.page }.take(MISSED_PAGES).toSet()
             } else null
             val made = QuizPicker.create(appContext, study, quran, only, random)
             preset?.let { made.markAsked(it.first.subject.page) }
@@ -179,11 +181,12 @@ class QuizViewModel(
             show(it.first)
             return
         }
+        val pool = mode.setTypes
         val wanted: List<ExerciseType> = when {
             mode.type != null -> listOf(mode.type)
             else -> {
-                val first = schedule.getOrNull(s.asked) ?: ExerciseType.QUIZ.random(random)
-                listOf(first) + ExerciseType.QUIZ.filter { it != first }.shuffled(random)
+                val first = schedule.getOrNull(s.asked) ?: pool.random(random)
+                listOf(first) + pool.filter { it != first }.shuffled(random)
             }
         }
         for (type in wanted) {
@@ -203,6 +206,12 @@ class QuizViewModel(
                 pickedSurah = null, pickedAyah = null, orderTaps = emptyList(), answered = false, correct = false
             )
         }
+    }
+
+    private companion object {
+        /** How far back the "missed lately" set looks, and the most pages it draws from. */
+        const val MISSED_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
+        const val MISSED_PAGES = 20
     }
 }
 
