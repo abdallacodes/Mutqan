@@ -31,6 +31,9 @@ data class ReminderSettings(val on: Boolean, val minutes: Int) {
 /** How many shown milestones are remembered (runs of days add new keys over the years). */
 private const val MILESTONES_KEPT = 500
 
+/** A quiz is offered after every quarter of an hour of reading, until the reader changes it. */
+private const val READING_QUIZ_DEFAULT = 15
+
 class UserPreferencesRepository(private val context: Context) {
 
     companion object {
@@ -58,6 +61,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_RECITER           = stringPreferencesKey("recitation_reciter")
         private val KEY_SEARCH_RECENT     = stringPreferencesKey("search_recent")
         private val KEY_QUIZ_RETRIES      = stringPreferencesKey("quiz_retries")
+        private val KEY_READING_QUIZ      = intPreferencesKey("reading_quiz_minutes")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
         private val KEY_REMINDER_OFFERED  = booleanPreferencesKey("reminder_offer_closed")
@@ -224,6 +228,13 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun editQuizRetries(change: (List<QuizRetry>) -> List<QuizRetry>) {
         context.dataStore.edit { prefs -> prefs[KEY_QUIZ_RETRIES] = QuizRetries.format(change(QuizRetries.parse(prefs[KEY_QUIZ_RETRIES]))) }
+    }
+
+    /** Every how many minutes of reading in the Mushaf a quiz on the pages read is offered; 0 is never. */
+    val readingQuizMinutes: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_READING_QUIZ] ?: READING_QUIZ_DEFAULT }
+
+    suspend fun setReadingQuizMinutes(minutes: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_READING_QUIZ] = minutes.coerceIn(0, 240) }
     }
 
     /** The daily reminder: whether it is on, and its time as minutes after midnight (this device only). */

@@ -252,7 +252,9 @@ fun MushafViewerScreen(
     onOpenTafsir: (Int) -> Unit = {},
     onOpenAudioStorage: () -> Unit = {},
     /** Opens the map of a juz (its quarters and the user's subjects). */
-    onOpenJuz: (Int) -> Unit = {}
+    onOpenJuz: (Int) -> Unit = {},
+    /** Opens a short quiz on the pages just read (offered every so many minutes of reading). */
+    onOpenReadingQuiz: (Set<Int>) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -335,6 +337,16 @@ fun MushafViewerScreen(
     // While covered a tap goes to the verse, so the page cannot bring the bars or send them away: a button does, and a
     // small one stays to bring them back. The cover bar always shows with the capsules, so there is always a way to hide them.
     var coverBarsHidden by rememberSaveable { mutableStateOf(start.coverBarsHidden) }
+    // Every so many minutes of reading (Settings), a quiz on the pages read is offered; not while the text is covered,
+    // as the reader is testing already.
+    val readingOffer = rememberReadingQuizOffer(
+        pagesInView = if (useSpreadLayout) {
+            val left = 2 * ((currentPage - 1) / 2) + 1
+            setOf(left, (left + 1).coerceAtMost(TOTAL_PAGES))
+        } else setOf(currentPage),
+        paused = coverOn,
+        keepGoing = { playback.playing }
+    )
     // Kept as they change, for the next opening.
     LaunchedEffect(useSpreadLayout, fillWidth, showGroupAyahs, showHeader, coverOn, coverBarsHidden) {
         prefs.setMushafViewerState(
@@ -937,6 +949,11 @@ fun MushafViewerScreen(
                     }
                 }
             }
+            ReadingQuizCard(
+                offer = readingOffer,
+                onStart = onOpenReadingQuiz,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+            )
             AnimatedVisibility(
                 visible  = showHeader,
                 enter    = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),

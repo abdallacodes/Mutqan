@@ -209,6 +209,8 @@ object Routes {
     fun root(rootId: Int)                        = "root/$rootId"
     fun tafsir(ayahId: Int)                      = "tafsir/$ayahId"
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
+    /** A short quiz on [pages], the pages just read in the Mushaf. */
+    fun readingQuiz(pages: Set<Int>)             = "quiz/${QuizMode.READING.route}?pages=" + pages.sorted().joinToString(",")
     fun pageQuiz(end: Boolean)                   = "page_quiz/$end"
 }
 
@@ -594,13 +596,18 @@ fun AppNavHost(
             }
 
             composable(
-                route     = "${Routes.QUIZ}/{mode}",
-                arguments = listOf(navArgument("mode") { type = NavType.StringType })
+                route     = "${Routes.QUIZ}/{mode}?pages={pages}",
+                arguments = listOf(
+                    navArgument("mode") { type = NavType.StringType },
+                    navArgument("pages") { type = NavType.StringType; nullable = true; defaultValue = null }
+                )
             ) { entry ->
                 QuizScreen(
                     mode = QuizMode.fromRoute(entry.arguments?.getString("mode")),
                     onBack = { navController.popBackStack() },
-                    onOpenMushaf = { page -> navController.openMushaf(page) }
+                    onOpenMushaf = { page -> navController.openMushaf(page) },
+                    pages = entry.arguments?.getString("pages")
+                        ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()?.takeIf { it.isNotEmpty() }
                 )
             }
 
@@ -720,7 +727,8 @@ fun AppNavHost(
                     onOpenSaved = { navController.navigate(Routes.SAVED) },
                     onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) },
                     onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) },
-                    onOpenJuz = { juz -> navController.navigate(Routes.juzDetail(juz)) }
+                    onOpenJuz = { juz -> navController.navigate(Routes.juzDetail(juz)) },
+                    onOpenReadingQuiz = { pages -> navController.navigate(Routes.readingQuiz(pages)) }
                 )
             }
         }

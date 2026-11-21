@@ -71,7 +71,9 @@ class QuizViewModel(
     private val mode: QuizMode,
     private val study: StudyRepository,
     private val quran: QuranRepository,
-    private val appContext: Context
+    private val appContext: Context,
+    /** The only pages to ask about (the pages just read), or null for the usual choice. */
+    private val pages: Set<Int>? = null
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(QuizUiState(mode = mode))
@@ -98,13 +100,16 @@ class QuizViewModel(
         preset = if (mode == QuizMode.DAILY) DailyPreview.take() else null
         schedule = preset?.schedule ?: when {
             mode == QuizMode.DAILY -> DailySchedule.make(null, random)
-            mode.isSet -> List(QuizMode.DAILY_SIZE) { mode.setTypes[it % mode.setTypes.size] }.shuffled(random)
+            mode.isSet -> List(mode.size) { mode.setTypes[it % mode.setTypes.size] }.shuffled(random)
             else -> emptyList()
         }
         viewModelScope.launch(Dispatchers.Default) {
-            val only = if (mode == QuizMode.MISSED) {
-                study.quizMissesSince(System.currentTimeMillis() - MISSED_WINDOW_MS).first().map { it.page }.take(MISSED_PAGES).toSet()
-            } else null
+            val only = when {
+                pages != null -> pages
+                mode == QuizMode.MISSED ->
+                    study.quizMissesSince(System.currentTimeMillis() - MISSED_WINDOW_MS).first().map { it.page }.take(MISSED_PAGES).toSet()
+                else -> null
+            }
             retries = if (mode == QuizMode.DAILY) ArrayDeque(QuizRetries.due(prefs.quizRetries.first(), localEpochDay())) else ArrayDeque()
             val made = QuizPicker.create(appContext, study, quran, only, random)
             preset?.let { made.markAsked(it.first.subject.page) }
@@ -122,7 +127,7 @@ class QuizViewModel(
 
     fun next() {
         val s = _state.value
-        if (s.isSet && s.asked >= QuizMode.DAILY_SIZE) {
+        if (s.isSet && s.asked >= mode.size) {
             _state.update { it.copy(finished = true) }
             return
         }
@@ -245,8 +250,12 @@ class QuizViewModel(
     }
 }
 
-class QuizViewModelFactory(private val context: Context, private val mode: QuizMode) : ViewModelProvider.Factory {
+class QuizViewModelFactory(
+    private val context: Context,
+    private val mode: QuizMode,
+    private val pages: Set<Int>? = null
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        QuizViewModel(mode, StudyRepository.create(context), QuranRepository.getInstance(context), context.applicationContext) as T
+        QuizViewModel(mode, StudyRepository.create(context), QuranRepository.getInstance(context), context.applicationContext, pages) as T
 }

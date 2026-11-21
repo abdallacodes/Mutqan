@@ -768,6 +768,33 @@
     <string name="time_hours">%d س</string>
     <string name="time_hours_minutes">%1$d س %2$d د</string>
     <string name="time_bar_cd">%1$s: %2$s في المصحف، %3$s في التدريب</string>
+    <string name="reading_quiz_title">اختبار ما قرأت</string>
+    <string name="reading_quiz_section">أثناء القراءة</string>
+    <string name="reading_quiz_setting">اختبار أثناء القراءة</string>
+    <string name="reading_quiz_setting_hint">بعد كل مدة من القراءة في المصحف يقترح متقن اختبارًا قصيرًا فيما قرأت.</string>
+    <string name="reading_quiz_off">متوقف</string>
+    <plurals name="reading_quiz_every">
+        <item quantity="zero">كل %d دقيقة</item>
+        <item quantity="one">كل دقيقة</item>
+        <item quantity="two">كل دقيقتين</item>
+        <item quantity="few">كل %d دقائق</item>
+        <item quantity="many">كل %d دقيقة</item>
+        <item quantity="other">كل %d دقيقة</item>
+    </plurals>
+    <plurals name="reading_quiz_read">
+        <item quantity="zero">قرأت %d دقيقة</item>
+        <item quantity="one">قرأت دقيقة</item>
+        <item quantity="two">قرأت دقيقتين</item>
+        <item quantity="few">قرأت %d دقائق</item>
+        <item quantity="many">قرأت %d دقيقة</item>
+        <item quantity="other">قرأت %d دقيقة</item>
+    </plurals>
+    <string name="reading_quiz_offer">اختبر نفسك فيما قرأت</string>
+    <string name="reading_quiz_start">ابدأ الاختبار</string>
+    <string name="reading_quiz_later">لاحقًا</string>
+    <string name="reading_quiz_page">الصفحة %1$d</string>
+    <string name="reading_quiz_pages">الصفحات %1$d–%2$d</string>
+    <string name="reading_quiz_page_list">الصفحات %1$s</string>
     <string name="home_btn_revised">أنهيتُ المراجعة</string>
     <string name="home_later_title">لاحقًا اليوم</string>
     <string name="home_plan_title">خطتك</string>

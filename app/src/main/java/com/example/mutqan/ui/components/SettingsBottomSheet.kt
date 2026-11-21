@@ -253,6 +253,12 @@ fun SettingsBottomSheet(
             com.example.mutqan.ui.habit.ReminderSettingsRows()
             Spacer(Modifier.height(28.dp))
 
+            // ── While reading ──────────────────────────────────────────────
+            SectionLabel(stringResource(R.string.reading_quiz_section))
+            Spacer(Modifier.height(8.dp))
+            com.example.mutqan.ui.mushaf.ReadingQuizSettingsRow()
+            Spacer(Modifier.height(28.dp))
+
             // ── Account ────────────────────────────────────────────────────
             if (remember { com.example.mutqan.domain.sync.CloudSync.get(context).isConfigured }) {
                 AccountSection()

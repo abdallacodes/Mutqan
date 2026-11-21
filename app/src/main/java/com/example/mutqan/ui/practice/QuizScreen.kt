@@ -71,13 +71,17 @@ import com.example.mutqan.ui.theme.FolioTheme
 import androidx.compose.runtime.LaunchedEffect
 import com.example.mutqan.domain.time.TimeKind
 import com.example.mutqan.ui.time.TrackTime
+import com.example.mutqan.ui.mushaf.readingPagesText
 
 /** One sitting of questions: a single kind in a row, or a daily set of ten mixed ones. */
 @Composable
-fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) {
+fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit, pages: Set<Int>? = null) {
     val context = LocalContext.current
     TrackTime(TimeKind.PRACTICE)
-    val viewModel: QuizViewModel = viewModel(key = "quiz-${mode.route}", factory = QuizViewModelFactory(context, mode))
+    val viewModel: QuizViewModel = viewModel(
+        key = "quiz-${mode.route}-${pages?.sorted()?.joinToString(",").orEmpty()}",
+        factory = QuizViewModelFactory(context, mode, pages)
+    )
     val state by viewModel.state.collectAsState()
     val scope by remember { UserPreferencesRepository(context.applicationContext).practiceScope }.collectAsState(initial = null)
 
@@ -92,14 +96,19 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             QuizMode.LINKS -> R.string.practice_links_title
             QuizMode.LOOKALIKES -> R.string.practice_lookalikes_title
             QuizMode.MISSED -> R.string.practice_missed_title
+            QuizMode.READING -> R.string.reading_quiz_title
         }
     )
     val subtitle = when {
         state.finished || state.question == null -> null
-        state.isSet -> stringResource(R.string.quiz_progress, minOf(state.asked + if (state.answered) 0 else 1, QuizMode.DAILY_SIZE), QuizMode.DAILY_SIZE)
+        state.isSet -> stringResource(R.string.quiz_progress, minOf(state.asked + if (state.answered) 0 else 1, mode.size), mode.size)
         state.asked > 0 -> stringResource(R.string.quiz_score, state.right, state.asked)
         else -> null
     }
+
+    // Each new question is read from its top; the last one may have been scrolled down to its answer.
+    val scroll = rememberScrollState()
+    LaunchedEffect(state.asked, state.answered) { if (!state.answered) scroll.scrollTo(0) }
 
     Scaffold(
         topBar = { PaperHeader(title = title, subtitle = subtitle, onBack = onBack, compact = true) },
@@ -109,12 +118,19 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(horizontal = PaperSpace.Gutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Which pages the questions come from, when that is not simply all of them (a focused set names its own pages).
-            scope?.takeIf { mode != QuizMode.MISSED && !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
+            if (pages != null && !state.loading && !state.finished) {
+                Text(
+                    text = readingPagesText(pages),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            scope?.takeIf { mode != QuizMode.MISSED && pages == null && !it.isAll && !state.loading && !state.finished }?.let { ScopeLine(it, onChange = onBack) }
             val q = state.question
             when {
                 state.loading -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
@@ -151,7 +167,7 @@ fun QuizScreen(mode: QuizMode, onBack: () -> Unit, onOpenMushaf: (Int) -> Unit) 
                     if (state.answered) {
                         Feedback(state.correct)
                         PaperButton(
-                            text = stringResource(if (state.isSet && state.asked >= QuizMode.DAILY_SIZE) R.string.quiz_see_results else R.string.quiz_next),
+                            text = stringResource(if (state.isSet && state.asked >= mode.size) R.string.quiz_see_results else R.string.quiz_next),
                             onClick = viewModel::next
                         )
                         // The verse number is an extra: it is there to answer or to leave.

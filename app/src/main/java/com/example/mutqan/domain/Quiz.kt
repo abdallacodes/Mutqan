@@ -93,10 +93,16 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
     DAILY("daily", null),
     LINKS("links", null),
     LOOKALIKES("lookalikes", null),
-    MISSED("missed", null);
+    MISSED("missed", null),
 
-    /** A set of [DAILY_SIZE] mixed questions rather than one kind in a row. */
+    /** A short mixed set on the pages just read, offered during a long reading in the Mushaf. */
+    READING("reading", null);
+
+    /** A set of [size] mixed questions rather than one kind in a row. */
     val isSet: Boolean get() = type == null
+
+    /** How many questions a set asks: ten, or five for a pause in reading. */
+    val size: Int get() = if (this == READING) READING_SIZE else DAILY_SIZE
 
     /** The kinds of question a set draws from. */
     val setTypes: List<ExerciseType>
@@ -109,6 +115,7 @@ enum class QuizMode(val route: String, val type: ExerciseType?) {
     companion object {
         fun fromRoute(route: String?): QuizMode = entries.firstOrNull { it.route == route } ?: DAILY
         const val DAILY_SIZE = 10
+        const val READING_SIZE = 5
     }
 }
 
