@@ -1395,8 +1395,10 @@ fun LanternsCard(best: Int, stars: List<Int>, onPlay: () -> Unit, modifier: Modi
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth(0.62f)
         ) {
+            // «لعبة», and the level reached once one is won.
+            val tag = stringResource(R.string.game_tag)
             Text(
-                text = stringResource(R.string.game_tag),
+                text = if (stars.isEmpty()) tag else "$tag · ${stringResource(R.string.game_level_title, stars.size + 1)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = GameColors.Gold.copy(alpha = 0.85f)
             )
@@ -1430,12 +1432,6 @@ fun LanternsCard(best: Int, stars: List<Int>, onPlay: () -> Unit, modifier: Modi
                 when {
                     stars.isNotEmpty() -> {
                         Spacer(Modifier.width(10.dp))
-                        Text(
-                            text = stringResource(R.string.game_level_title, stars.size + 1),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Spacer(Modifier.width(8.dp))
                         StarCount(stars.sum())
                     }
                     best > 0 -> {
