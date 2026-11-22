@@ -8,16 +8,19 @@ import kotlin.random.Random
 /** A word on a lantern: [id] draws it (a Quran word id), [key] compares it (the text without marks). */
 data class GameWord(val id: Int, val key: String)
 
-/** A verse to build, its words in order; the first [given] are shown placed from the start. */
-data class GameVerse(val ayahId: Int, val words: List<GameWord>, val given: Int)
+/**
+ * A verse to build, its words in order; the first [given] are shown placed from the start. With none given, [cue] holds
+ * the last words of the verse before it (its end marker included), shown to start from: word ids, for drawing only.
+ */
+data class GameVerse(val ayahId: Int, val words: List<GameWord>, val given: Int, val cue: List<Int> = emptyList())
 
 /** Where the verses and the wrong words come from. Called from the game loop: no slow work. */
 interface GameSource {
     /** The next verse to build, or null when there is none. */
     fun nextVerse(): GameVerse?
 
-    /** Words to float beside the right one: none with the same text as [right]. */
-    fun decoys(verse: GameVerse, right: GameWord, count: Int): List<GameWord>
+    /** Words to float beside the one wanted, word [at] of [verse]: none with its text. */
+    fun decoys(verse: GameVerse, at: Int, count: Int): List<GameWord>
 }
 
 enum class LanternKind {
@@ -45,7 +48,9 @@ class Lantern internal constructor(
     internal val speed: Float,
     private val phase: Float,
     /** Which of the lantern colours it wears. */
-    val hue: Int
+    val hue: Int,
+    /** A golden lantern: three times the points when its word is the one wanted. */
+    val golden: Boolean = false
 ) {
     var y: Float = y
         internal set
@@ -58,8 +63,9 @@ class Lantern internal constructor(
     var stateTime: Float = 0f
         internal set
 
-    internal fun sway(time: Float) {
-        x = baseX + SWAY * sin(time * SWAY_SPEED + phase)
+    /** Sways it at [time]: a little on its own, [wider] more in the wind, and pushed [gust] with all the others. */
+    internal fun sway(time: Float, wider: Float = 0f, gust: Float = 0f) {
+        x = baseX + (SWAY + wider) * sin(time * SWAY_SPEED + phase) + gust
     }
 
     private companion object {
@@ -90,10 +96,18 @@ data class PlayedVerse(val ayahId: Int, val mistakes: Int, val done: Boolean)
  * puts out one of the lights; with none left the round is over. Now and then a lantern carries an hourglass (slows
  * time) or, with lights lost, a heart (one back).
  *
+ * In a level of the map ([fixed] dials) the sky stays as hard from the first verse to the last, the helpers come from
+ * the start, and the round is won ([cleared]) when the source has no verse left.
+ *
  * Pure logic in screen fractions; the screen sets [escapeY] (where lanterns pass under the verse panel), [laneXs] and
  * [lanternHeight] from its size, calls [update] every frame and [tap] on a touch, and reads [events].
  */
-class LanternsGame(private val source: GameSource, private val random: Random = Random.Default) {
+class LanternsGame(
+    private val source: GameSource,
+    private val random: Random = Random.Default,
+    /** A level's dials, for the whole level; null for the open round, whose dials rise with each verse built. */
+    private val fixed: Dials? = null
+) {
 
     val lanterns = mutableListOf<Lantern>()
     val events = ArrayDeque<GameEvent>()
@@ -107,6 +121,15 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
     var versesDone = 0; private set
     var right = 0; private set
     var wrong = 0; private set
+
+    /** Times the wanted word floated away untouched. */
+    var missed = 0; private set
+
+    /** Words built in the round. */
+    var built = 0; private set
+
+    /** True when a level was won: its last verse built with a light still on. */
+    var cleared = false; private set
     var verse: GameVerse? = null; private set
 
     /** How many words of [verse] are in place, the given ones included. */
@@ -133,15 +156,24 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
 
     private var nextId = 1L
     private var spawnIn = 0.4f
-    private var powerIn = POWER_FIRST
+    private var powerIn = fixed?.let { it.helperEvery * HELPER_FIRST } ?: POWER_FIRST
     private var spawnsWithoutNeeded = 0
     private var verseMistakes = 0
+
+    /** When the word wanted now became the one wanted ([time]). */
+    private var neededSince = 0f
 
     /** The word to tap now, or null between verses. */
     val needed: GameWord? get() = verse?.words?.getOrNull(placed)
 
     /** How many right words in a row multiply a word's points now (1 to 5). */
     val multiplier: Int get() = multiplierFor(combo)
+
+    /** How hard the sky is now. */
+    val dials: Dials get() = fixed ?: openDials(level)
+
+    /** Slips so far: wrong lanterns, and wanted words that floated away. */
+    val slips: Int get() = wrong + missed
 
     fun start() {
         nextVerse()
@@ -150,11 +182,13 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
     private fun nextVerse() {
         val next = source.nextVerse()
         if (next == null) {
+            cleared = fixed != null && lives > 0
             finish()
             return
         }
         verse = next
         placed = next.given.coerceIn(0, next.words.size - 1)
+        neededSince = time
         verseMistakes = 0
         spawnsWithoutNeeded = 0
         spawnIn = 0.5f
@@ -172,10 +206,12 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         val move = if (slowLeft > 0f) step * SLOW_FACTOR else step
 
         age(step)
+        val wind = dials.wind
+        val gust = if (wind > 0f) wind * sin(time * GUST_SPEED) else 0f
         for (lantern in lanterns) {
             if (lantern.state != LanternState.RISING) continue
             lantern.y -= lantern.speed * move
-            lantern.sway(time)
+            lantern.sway(time, wider = wind * 0.4f, gust = gust)
         }
         escape()
 
@@ -209,15 +245,19 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         }
     }
 
-    /** Lanterns that rose past the panel; the word needed going with them costs a light. */
+    /**
+     * Lanterns that rose past the panel; the word needed going with them costs a light, unless it became the one needed
+     * only a moment before (a lantern already high when the word before it was caught): it comes again soon instead.
+     */
     private fun escape() {
         val iterator = lanterns.iterator()
         while (iterator.hasNext()) {
             val lantern = iterator.next()
             if (lantern.state != LanternState.RISING || lantern.y > escapeY) continue
             iterator.remove()
-            if (lantern.kind == LanternKind.WORD && celebrating <= 0f && lantern.word?.key == needed?.key) {
+            if (lantern.kind == LanternKind.WORD && celebrating <= 0f && lantern.word?.key == needed?.key && time - neededSince >= MISS_GRACE) {
                 combo = 0
+                missed++
                 verseMistakes++
                 events += GameEvent.Missed(lantern)
                 loseLight()
@@ -226,13 +266,13 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         }
     }
 
-    private fun speedNow(): Float = min(BASE_SPEED + LEVEL_SPEED * (level - 1), MAX_SPEED)
+    private fun speedNow(): Float = dials.speed
 
     private fun wordLanternsRising(): List<Lantern> =
         lanterns.filter { it.state == LanternState.RISING && it.kind == LanternKind.WORD }
 
-    /** The number of word lanterns kept in the sky at this level. */
-    private fun target(): Int = min(3 + (level - 1) / 2, 6)
+    /** The number of word lanterns kept in the sky now. */
+    private fun target(): Int = dials.sky
 
     private fun spawn() {
         val verse = verse ?: return
@@ -256,22 +296,26 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         } else {
             if (!hasNeeded) spawnsWithoutNeeded++
             val shown = rising.mapNotNull { it.word?.key }.toSet()
-            source.decoys(verse, needed, 4).firstOrNull { it.key != needed.key && it.key !in shown }
+            source.decoys(verse, placed, target() + DECOYS_SPARE).firstOrNull { it.key != needed.key && it.key !in shown }
                 ?: run { spawnsWithoutNeeded = 0; needed }
         }
-        lanterns += newLantern(LanternKind.WORD, word, lane)
-        spawnIn = (BASE_INTERVAL - LEVEL_INTERVAL * (level - 1)).coerceAtLeast(MIN_INTERVAL) * (0.85f + 0.3f * random.nextFloat())
+        val golden = dials.golden > 0f && random.nextFloat() < dials.golden
+        lanterns += newLantern(LanternKind.WORD, word, lane, golden)
+        spawnIn = dials.interval * (0.85f + 0.3f * random.nextFloat())
+        // The word wanted is not up yet: it comes soon, whatever the pace.
+        if (!hasNeeded && word.key != needed.key) spawnIn = min(spawnIn, NEEDED_SOON)
     }
 
     private fun power() {
-        powerIn = POWER_EVERY * (0.8f + 0.4f * random.nextFloat())
-        if (level < 2) return
+        val dials = dials
+        powerIn = dials.helperEvery * (0.8f + 0.4f * random.nextFloat())
+        if (!dials.helpersAtOnce && level < 2) return
         val lane = freeLane() ?: return
         val kind = if (lives < START_LIVES && random.nextFloat() < 0.5f) LanternKind.LIFE else LanternKind.SLOW
         lanterns += newLantern(kind, null, lane)
     }
 
-    private fun newLantern(kind: LanternKind, word: GameWord?, lane: Int): Lantern = Lantern(
+    private fun newLantern(kind: LanternKind, word: GameWord?, lane: Int, golden: Boolean = false): Lantern = Lantern(
         id = nextId++,
         kind = kind,
         word = word,
@@ -281,7 +325,8 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         // One speed for all at a level, so lanterns side by side never drift into each other.
         speed = speedNow(),
         phase = random.nextFloat() * 2f * PI.toFloat(),
-        hue = random.nextInt(HUES)
+        hue = random.nextInt(HUES),
+        golden = golden
     )
 
     /** A column whose last lantern, and its neighbours' last lanterns, have risen clear of where a new one starts. */
@@ -318,13 +363,17 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
     }
 
     private fun rightWord(lantern: Lantern) {
-        val points = WORD_POINTS * multiplierFor(combo)
+        val points = WORD_POINTS * multiplierFor(combo) * if (lantern.golden) GOLDEN_TIMES else 1
         combo++
         bestCombo = maxOf(bestCombo, combo)
         right++
+        built++
         score += points
         placed++
+        neededSince = time
         catch(lantern)
+        val next = needed
+        if (next != null && wordLanternsRising().none { it.word?.key == next.key }) spawnIn = min(spawnIn, NEEDED_SOON)
         events += GameEvent.Right(lantern, points, combo)
         val verse = verse ?: return
         if (placed >= verse.words.size) verseDone(verse)
@@ -347,7 +396,7 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         versesDone++
         played += PlayedVerse(verse.ayahId, verseMistakes, done = true)
         events += GameEvent.VerseDone(verse.ayahId, bonus, perfect)
-        if (level < MAX_LEVEL) {
+        if (fixed == null && level < MAX_LEVEL) {
             level++
             events += GameEvent.LevelUp(level)
         }
@@ -405,9 +454,33 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         const val MIN_INTERVAL = 0.6f
         const val POWER_FIRST = 16f
         const val POWER_EVERY = 22f
+        const val GOLDEN_TIMES = 3
+
+        /** Wrong words asked for beyond the sky's size, so a full sky never runs out of them (and sends the right one twice). */
+        private const val DECOYS_SPARE = 3
         private const val MAX_STEP = 0.1f
+
+        /** At most this many seconds pass before the next lantern when the word wanted is not in the sky. */
+        private const val NEEDED_SOON = 0.6f
+
+        /** Seconds a word must have been the one wanted for its lantern floating away to count as missed. */
+        const val MISS_GRACE = 1.5f
+
+        /** In a level, the first helper comes this share of the usual wait in. */
+        private const val HELPER_FIRST = 0.7f
+
+        /** How fast the wind turns from one side to the other, in radians a second. */
+        private const val GUST_SPEED = 0.45f
 
         /** ×1 for the first four right words in a row, then one more every four, up to ×5. */
         fun multiplierFor(combo: Int): Int = (1 + combo / 4).coerceAtMost(5)
+
+        /** The open round's dials at its [level]: a little faster, more often and fuller with each verse built. */
+        fun openDials(level: Int): Dials = Dials(
+            speed = min(BASE_SPEED + LEVEL_SPEED * (level - 1), MAX_SPEED),
+            interval = (BASE_INTERVAL - LEVEL_INTERVAL * (level - 1)).coerceAtLeast(MIN_INTERVAL),
+            sky = min(3 + (level - 1) / 2, 6),
+            helperEvery = POWER_EVERY
+        )
     }
 }

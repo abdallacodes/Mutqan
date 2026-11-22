@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -43,6 +44,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.Replay
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -111,6 +114,7 @@ import com.example.mutqan.domain.game.Lantern
 import com.example.mutqan.domain.game.LanternKind
 import com.example.mutqan.domain.game.LanternState
 import com.example.mutqan.domain.game.LanternsGame
+import com.example.mutqan.domain.game.LanternsLevels
 import com.example.mutqan.domain.time.TimeKind
 import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranRepository
@@ -133,6 +137,7 @@ private class Hud {
     var combo by mutableIntStateOf(0)
     var level by mutableIntStateOf(1)
     var placed by mutableIntStateOf(0)
+    var built by mutableIntStateOf(0)
     var verse by mutableStateOf<GameVerse?>(null)
     var slow by mutableStateOf(false)
 
@@ -142,6 +147,7 @@ private class Hud {
         if (combo != game.combo) combo = game.combo
         if (level != game.level) level = game.level
         if (placed != game.placed) placed = game.placed
+        if (built != game.built) built = game.built
         if (verse != game.verse) verse = game.verse
         val slowNow = game.slowLeft > 0f
         if (slow != slowNow) slow = slowNow
@@ -164,6 +170,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     val context = LocalContext.current
     val vm: LanternsViewModel = viewModel(factory = LanternsViewModelFactory(context))
     val best by vm.best.collectAsState()
+    val stars by vm.stars.collectAsState()
     val fromHifz by vm.fromHifz.collectAsState()
     val hasHifz by vm.hasHifz.collectAsState()
     val haptics = rememberHaptics()
@@ -174,7 +181,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     var clock by remember { mutableFloatStateOf(0f) }
     var paused by remember { mutableStateOf(false) }
     val effects = remember { Effects() }
-    // Confetti over everything, for a new best at the end of a round.
+    // Confetti over everything, for a new best or a level won.
     val cheers = remember { Effects() }
     val hud = remember { Hud() }
     var shown by remember { mutableStateOf<List<Lantern>>(emptyList()) }
@@ -187,7 +194,30 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     // A new round counts down before the first lantern rises.
     var countdownUntil by remember { mutableFloatStateOf(0f) }
     val game = vm.game
-    LaunchedEffect(game) { if (game != null) countdownUntil = clock + COUNTDOWN }
+    val level = vm.level
+    val next = stars.size + 1
+    LaunchedEffect(game) {
+        if (game == null) return@LaunchedEffect
+        // A new round starts clean: no sparks, banner or hint left from the one before.
+        effects.sparks.clear()
+        effects.floaters.clear()
+        banner = null
+        hintWord = null
+        pendingLevel = 0
+        paused = false
+        countdownUntil = clock + COUNTDOWN
+    }
+    val inRound = game != null && (vm.phase == LanternsViewModel.Phase.PLAYING || vm.phase == LanternsViewModel.Phase.OVER)
+    // The night turns toward dawn as the levels go up (and as the open round goes on).
+    val dawn by animateFloatAsState(
+        targetValue = when {
+            inRound && level != null -> LanternsLevels.dawn(level.number)
+            inRound -> LanternsLevels.dawn(hud.level)
+            else -> LanternsLevels.dawn(next)
+        },
+        animationSpec = tween(1400),
+        label = "dawn"
+    )
 
     // Leaving the app pauses a round; coming back shows it paused.
     DisposableEffect(lifecycle) {
@@ -199,7 +229,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     }
     BackHandler(enabled = vm.phase == LanternsViewModel.Phase.PLAYING && !paused) { paused = true }
 
-    // The game's sizes follow the screen: columns as many as fit, and the line where lanterns pass under the panel.
+    // The game's sizes follow the screen: columns as many as fit (kept clear of the edges by the wind), and the line
+    // where lanterns pass under the panel.
     LaunchedEffect(game, area, panelBottom) {
         val round = game ?: return@LaunchedEffect
         if (area.width == 0 || area.height == 0) return@LaunchedEffect
@@ -207,7 +238,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
         val lanternH = with(density) { LanternHeight.toPx() }
         val widthDp = with(density) { area.width.toDp().value }
         val count = (widthDp / 104f).toInt().coerceIn(3, 6)
-        val margin = (lanternW / 2f + with(density) { 4.dp.toPx() }) / area.width
+        val margin = (lanternW / 2f + with(density) { 4.dp.toPx() }) / area.width + round.dials.wind * 1.4f
         round.laneXs = List(count) { margin + (1f - 2f * margin) * it / (count - 1) }
         round.lanternHeight = lanternH / area.height
         round.escapeY = ((panelBottom - lanternH * 0.15f) / area.height).coerceIn(0.1f, 0.5f)
@@ -226,6 +257,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                     val round = vm.game
                     val w = area.width.toFloat()
                     val h = area.height.toFloat()
+                    val hintTime = vm.level?.hintTime ?: HINT_TIME
                     // After the round the game still runs, only for the lanterns' last animations.
                     if (round != null && vm.phase == LanternsViewModel.Phase.OVER) round.update(dt)
                     if (round != null && vm.phase == LanternsViewModel.Phase.PLAYING && clock >= countdownUntil) {
@@ -237,7 +269,10 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     val y = e.lantern.y * h
                                     effects.burst(x, y, GameColors.hue(e.lantern.hue), 20, w * 0.9f)
                                     effects.float("+${e.points}", GameColors.Gold, x, y - h * 0.05f)
-                                    if (e.combo >= 4 && e.combo % 4 == 0) {
+                                    if (e.lantern.golden) {
+                                        effects.burst(x, y, GameColors.Gold, 28, w * 1.1f)
+                                        effects.float("×${LanternsGame.GOLDEN_TIMES}", GameColors.Gold, x, y - h * 0.1f, big = true)
+                                    } else if (e.combo >= 4 && e.combo % 4 == 0) {
                                         effects.float("×${LanternsGame.multiplierFor(e.combo)}", Color.White, x, y - h * 0.1f, big = true)
                                     }
                                     hintWord = null
@@ -248,13 +283,13 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     effects.shake = 1f
                                     effects.burst(e.lantern.x * w, e.lantern.y * h, Color(0xFF8B8794), 14, w * 0.6f)
                                     hintWord = round.needed?.id
-                                    hintUntil = clock + 2f
+                                    hintUntil = clock + hintTime
                                     haptics.reject()
                                 }
                                 is GameEvent.Missed -> {
                                     effects.redFlash = 1f
                                     hintWord = e.lantern.word?.id
-                                    hintUntil = clock + 2f
+                                    hintUntil = clock + hintTime
                                     haptics.reject()
                                 }
                                 is GameEvent.VerseDone -> {
@@ -276,7 +311,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                 }
                                 GameEvent.Over -> {
                                     vm.finished()
-                                    haptics.reject()
+                                    if (round.cleared) haptics.confirm() else haptics.reject()
                                 }
                             }
                         }
@@ -297,7 +332,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     Box(
         Modifier
             .fillMaxSize()
-            .background(GameColors.SkyTop)
+            .background(GameColors.sky(dawn)[0])
     ) {
         // The sky, the town and the lanterns shake together after a mistake; the top stays still.
         Box(
@@ -306,14 +341,11 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 .onSizeChanged { area = it }
                 .graphicsLayer { translationX = sin(clock * 70f) * effects.shake * 14.dp.toPx() }
         ) {
-            val inMenu = vm.phase == LanternsViewModel.Phase.MENU || vm.phase == LanternsViewModel.Phase.LOADING
             // In a round the moon goes low on the right, out from behind the hearts and the verse.
-            NightSky(time = { clock }, moon = if (inMenu) Offset(0.16f, 0.15f) else Offset(0.82f, 0.44f))
-            if (vm.phase == LanternsViewModel.Phase.MENU || vm.phase == LanternsViewModel.Phase.LOADING) {
-                MenuLanterns(time = { clock })
-            }
+            NightSky(time = { clock }, moon = if (inRound) Offset(0.82f, 0.44f) else Offset(0.16f, 0.15f), dawn = dawn)
+            if (vm.phase == LanternsViewModel.Phase.MENU) MenuLanterns(time = { clock })
             Skyline(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.2f))
-            if (game != null) {
+            if (game != null && inRound) {
                 // The sky is measured from the left whatever the language, like the sparks drawn over it; each word on
                 // its lantern still reads right to left.
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -327,6 +359,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     area = area,
                                     panelY = if (area.height > 0) panelBottom / area.height - 0.04f else 0.2f,
                                     escapeY = { game.escapeY },
+                                    wind = game.dials.wind,
                                     onTap = { id -> if (!paused && vm.phase == LanternsViewModel.Phase.PLAYING) vm.game?.tap(id) }
                                 )
                             }
@@ -337,14 +370,19 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             SparksLayer(effects = effects, clock = { clock }, slow = hud.slow)
         }
 
-        if (game != null && vm.phase != LanternsViewModel.Phase.MENU) {
+        if (game != null && inRound) {
             Column(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 14.dp, vertical = 4.dp)
             ) {
-                HudBar(hud = hud, onPause = { paused = true })
+                HudBar(
+                    hud = hud,
+                    levelNumber = level?.number,
+                    progress = if (level != null && vm.levelWords > 0) ({ hud.built / vm.levelWords.toFloat() }) else null,
+                    onPause = { paused = true }
+                )
                 Spacer(Modifier.height(6.dp))
                 VersePanel(
                     verse = hud.verse,
@@ -356,13 +394,16 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 )
             }
             banner?.let { b -> BannerView(b, clock = { clock }, onDone = { if (banner === b) banner = null }) }
-            if (vm.phase == LanternsViewModel.Phase.PLAYING && clock < countdownUntil) Countdown(left = countdownUntil - clock)
+            if (vm.phase == LanternsViewModel.Phase.PLAYING && clock < countdownUntil) {
+                Countdown(left = countdownUntil - clock, title = level?.let { stringResource(R.string.game_level_title, it.number) })
+            }
         }
 
-        // A new best: three bursts of every colour from the title, one after another.
-        LaunchedEffect(vm.newBest) {
-            if (!vm.newBest) return@LaunchedEffect
-            repeat(3) { wave ->
+        // A new best, or a level won: bursts of every colour from the top, one after another (more for more stars).
+        val cheering = vm.newBest || (vm.phase == LanternsViewModel.Phase.OVER && vm.starsWon > 0)
+        LaunchedEffect(cheering, vm.starsWon) {
+            if (!cheering) return@LaunchedEffect
+            repeat(if (vm.newBest) 3 else vm.starsWon) { wave ->
                 val w = area.width.toFloat()
                 val h = area.height.toFloat()
                 GameColors.hues.forEach { cheers.burst(w * (0.3f + 0.2f * wave), h * 0.2f, it, 9, w * 1.2f) }
@@ -373,43 +414,82 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
         }
 
         when (vm.phase) {
-            LanternsViewModel.Phase.MENU, LanternsViewModel.Phase.LOADING -> MenuOverlay(
+            LanternsViewModel.Phase.MENU -> MenuOverlay(
                 best = best,
+                next = next,
+                starsTotal = stars.sum(),
                 fromHifz = fromHifz && hasHifz,
                 hasHifz = hasHifz,
-                loading = vm.phase == LanternsViewModel.Phase.LOADING,
                 failed = vm.nothingToPlay,
                 onScope = vm::setFromHifz,
-                onStart = {
-                    paused = false
-                    effects.sparks.clear()
-                    effects.floaters.clear()
-                    banner = null
-                    hintWord = null
-                    pendingLevel = 0
-                    vm.start()
-                },
+                onPlayNext = { vm.openCard(next) },
+                onMap = vm::openMap,
+                onFree = vm::startFree,
                 onBack = onBack
             )
+            LanternsViewModel.Phase.MAP -> LevelMap(
+                stars = stars,
+                clock = { clock },
+                anyLevel = vm.anyLevel,
+                failed = vm.nothingToPlay,
+                onLevel = vm::openCard,
+                onBack = vm::toMenu
+            )
+            LanternsViewModel.Phase.LOADING -> Loading()
             LanternsViewModel.Phase.PLAYING -> if (paused) PauseOverlay(
+                restart = stringResource(if (level != null) R.string.game_replay_level else R.string.game_restart),
                 onResume = { paused = false },
-                onRestart = { paused = false; banner = null; hintWord = null; vm.start() },
-                onQuit = { paused = false; vm.toMenu() }
+                onRestart = { paused = false; vm.again() },
+                onQuit = { paused = false; if (level != null) vm.openMap() else vm.toMenu() }
             )
             LanternsViewModel.Phase.OVER -> game?.let { round ->
-                OverOverlay(
-                    game = round,
-                    best = best,
-                    newBest = vm.newBest,
-                    onAgain = { banner = null; hintWord = null; pendingLevel = 0; vm.start() },
-                    onBack = { vm.toMenu() },
-                    onOpenVerse = onOpenVerse
-                )
+                if (level != null) {
+                    LevelOverOverlay(
+                        game = round,
+                        level = level.number,
+                        starsWon = vm.starsWon,
+                        onStarLand = { haptics.tick() },
+                        onNext = vm::nextLevel,
+                        onAgain = vm::again,
+                        onMap = vm::openMap,
+                        onOpenVerse = onOpenVerse
+                    )
+                } else {
+                    OverOverlay(
+                        game = round,
+                        best = best,
+                        newBest = vm.newBest,
+                        onAgain = vm::again,
+                        onBack = vm::toMenu,
+                        onOpenVerse = onOpenVerse
+                    )
+                }
             }
+        }
+        vm.card?.let { number ->
+            LevelCard(
+                level = number,
+                stars = stars.getOrNull(number - 1) ?: 0,
+                onStart = { vm.startLevel(number) },
+                onClose = vm::closeCard
+            )
         }
         SparksLayer(effects = cheers, clock = { clock }, slow = false)
     }
 }
+
+/** While a round is read: a word over the sky. */
+@Composable
+private fun Loading() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = stringResource(R.string.game_loading),
+            style = TextStyle(fontFamily = AmiriFontFamily, fontWeight = FontWeight.Bold, fontSize = 30.sp, color = GameColors.Gold)
+        )
+    }
+}
+
+private const val HINT_TIME = 2f
 
 /** Light status-bar icons over the night sky, and the screen kept on while the game is open. */
 @Composable
@@ -457,13 +537,14 @@ private fun LanternView(
     area: IntSize,
     panelY: Float,
     escapeY: () -> Float,
+    wind: Float,
     onTap: (Long) -> Unit
 ) {
     val density = LocalDensity.current
     val widthPx = with(density) { LanternWidth.toPx() }
     val heightPx = with(density) { LanternHeight.toPx() }
     val body = when (lantern.kind) {
-        LanternKind.WORD -> GameColors.hue(lantern.hue)
+        LanternKind.WORD -> if (lantern.golden) GameColors.Golden else GameColors.hue(lantern.hue)
         LanternKind.SLOW -> GameColors.hues[2]
         LanternKind.LIFE -> GameColors.hues[1]
     }
@@ -484,7 +565,8 @@ private fun LanternView(
                     LanternState.RISING -> {
                         // A gentle lean with the sway, a fade-in as it comes up out of the town, and a fade-out as it
                         // goes under the verse panel.
-                        rotationZ = sin(clock() * 1.35f + lantern.id) * 3f
+                        // In the wind it leans the way it is pushed.
+                        rotationZ = sin(clock() * 1.35f + lantern.id) * 3f + if (wind > 0f) sin(clock() * 0.45f) * wind * 140f else 0f
                         val fadeIn = ((LanternsGame.SPAWN_Y + 0.05f - lantern.y) / 0.18f).coerceIn(0f, 1f)
                         val fadeOut = ((lantern.y - escapeY()) / 0.07f).coerceIn(0f, 1f)
                         alpha = minOf(fadeIn, fadeOut)
@@ -516,7 +598,9 @@ private fun LanternView(
             .drawWithContent {
                 clock()
                 val broken = lantern.state == LanternState.BROKEN
-                drawLantern(body, lit = if (broken) 0.25f else 1f, glow = if (lantern.state == LanternState.CAUGHT) 1.6f else 1f)
+                val shine = if (lantern.golden && !broken) 1.35f + 0.25f * sin(clock() * 5f) else 1f
+                drawLantern(body, lit = if (broken) 0.25f else 1f, glow = if (lantern.state == LanternState.CAUGHT) 1.6f else shine)
+                if (lantern.golden && !broken) drawTwinkles(clock())
                 drawContent()
                 if (broken) drawRect(Color(0x66200814))
             }
@@ -618,7 +702,7 @@ private fun MenuLanterns(time: () -> Float) {
 }
 
 @Composable
-private fun HudBar(hud: Hud, onPause: () -> Unit) {
+private fun HudBar(hud: Hud, levelNumber: Int?, progress: (() -> Float)?, onPause: () -> Unit) {
     val score by animateIntAsState(hud.score, tween(450), label = "score")
     // The score jumps a little with each right word, more as the run grows.
     val pop = remember { Animatable(1f) }
@@ -649,13 +733,42 @@ private fun HudBar(hud: Hud, onPause: () -> Unit) {
             )
             val mult = LanternsGame.multiplierFor(hud.combo)
             Text(
-                text = if (hud.combo >= 2) stringResource(R.string.game_combo, hud.combo, mult) else stringResource(R.string.game_level, hud.level),
+                text = when {
+                    hud.combo >= 2 -> stringResource(R.string.game_combo, hud.combo, mult)
+                    levelNumber != null -> stringResource(R.string.game_level_title, levelNumber)
+                    else -> stringResource(R.string.game_level, hud.level)
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = if (mult > 1) Color.White else Color.White.copy(alpha = 0.7f)
             )
         }
         Lights(hud.lives)
         Spacer(Modifier.width(8.dp))
+    }
+    // A level: how much of it is built.
+    if (progress != null) {
+        val label = stringResource(R.string.game_progress_cd, hud.built)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp)
+                .height(5.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.12f))
+                .semantics { contentDescription = label }
+                .drawWithContent {
+                    val p = progress().coerceIn(0f, 1f)
+                    // From the start of the line in the reading direction.
+                    val rtl = layoutDirection == LayoutDirection.Rtl
+                    val w = size.width * p
+                    drawRoundRect(
+                        Brush.horizontalGradient(listOf(GameColors.GoldDeep, GameColors.Gold)),
+                        topLeft = Offset(if (rtl) size.width - w else 0f, 0f),
+                        size = Size(w, size.height),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
+                    )
+                }
+        )
     }
 }
 
@@ -726,11 +839,21 @@ private fun VersePanel(
         val inPlace = verse.words.take(placed).mapNotNull { words[it.id] }
         // A long verse shows its last words, after an ellipsis.
         val tail = inPlace.takeLast(TAIL_WORDS)
+        // Started from nothing: the end of the verse before it, faint, to go on from (until the verse is under way).
+        val cue = if (verse.given == 0 && placed < CUE_UNTIL) verse.cue.mapNotNull { words[it] } else emptyList()
         val span = remember(verse, placed) {
-            (if (inPlace.size > tail.size) MushafSpan.More else MushafSpan.Empty) + MushafSpan.of(tail) +
+            (if (cue.isNotEmpty()) MushafSpan.More + MushafSpan.of(cue) else MushafSpan.Empty) +
+                (if (inPlace.size > tail.size) MushafSpan.More else MushafSpan.Empty) + MushafSpan.of(tail) +
                 if (placed < verse.words.size) MushafSpan.More else MushafSpan.Empty
         }
-        MushafText(span = span, size = 24.sp, color = if (placed >= verse.words.size) GameColors.Gold else GameColors.Window, maxLines = 2)
+        val faint = remember(verse, placed) { cue.associate { it.id to Color.White.copy(alpha = 0.42f) } }
+        MushafText(
+            span = span,
+            size = 24.sp,
+            color = if (placed >= verse.words.size) GameColors.Gold else GameColors.Window,
+            maxLines = 2,
+            wordColors = faint
+        )
         if (hint != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.game_next_word), style = MaterialTheme.typography.labelMedium, color = GameColors.Red)
@@ -742,6 +865,9 @@ private fun VersePanel(
 }
 
 private const val TAIL_WORDS = 9
+
+/** The end of the verse before shows until this many words of the new one are in place. */
+private const val CUE_UNTIL = 3
 
 @Composable
 private fun BannerView(banner: Banner, clock: () -> Float, onDone: () -> Unit) {
@@ -817,12 +943,25 @@ private val LTR_START = Char(0x2066)
 private val LTR_END = Char(0x2069)
 private const val COUNTDOWN = 2.4f
 
-/** "3, 2, 1" before a round, each number popping in. */
+/** "3, 2, 1" before a round, each number popping in; a level's name over it. */
 @Composable
-private fun Countdown(left: Float) {
+private fun Countdown(left: Float, title: String?) {
     val number = kotlin.math.ceil(left / (COUNTDOWN / 3f)).toInt().coerceIn(1, 3)
     val within = 1f - ((left % (COUNTDOWN / 3f)) / (COUNTDOWN / 3f))
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = TextStyle(
+                    fontFamily = AmiriFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 34.sp,
+                    color = Color.White,
+                    shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 16f)
+                ),
+                modifier = Modifier.offset(y = (-110).dp)
+            )
+        }
         Text(
             text = number.toString(),
             style = TextStyle(
@@ -844,7 +983,7 @@ private fun Countdown(left: Float) {
 
 /** A big gold button in the game's look. */
 @Composable
-private fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = true) {
+internal fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = true) {
     Box(
         modifier
             .clip(RoundedCornerShape(30.dp))
@@ -867,7 +1006,7 @@ private fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = M
 }
 
 @Composable
-private fun GameChip(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+internal fun GameChip(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .clip(RoundedCornerShape(20.dp))
@@ -891,12 +1030,15 @@ private fun GameChip(text: String, selected: Boolean, enabled: Boolean, onClick:
 @Composable
 private fun MenuOverlay(
     best: Int,
+    next: Int,
+    starsTotal: Int,
     fromHifz: Boolean,
     hasHifz: Boolean,
-    loading: Boolean,
     failed: Boolean,
     onScope: (Boolean) -> Unit,
-    onStart: () -> Unit,
+    onPlayNext: () -> Unit,
+    onMap: () -> Unit,
+    onFree: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -916,7 +1058,7 @@ private fun MenuOverlay(
                 modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onBack).padding(10.dp)
             )
         }
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(24.dp))
         Text(
             text = stringResource(R.string.game_title),
             style = TextStyle(
@@ -935,29 +1077,38 @@ private fun MenuOverlay(
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(26.dp))
+        GameButton(
+            text = stringResource(R.string.game_play_level, next),
+            onClick = onPlayNext,
+            modifier = Modifier.widthIn(min = 250.dp)
+        )
+        if (starsTotal > 0) {
+            Spacer(Modifier.height(8.dp))
+            StarCount(starsTotal)
+        }
+        Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            GameChip(stringResource(R.string.game_from_hifz), selected = fromHifz, enabled = hasHifz && !loading) { onScope(true) }
-            GameChip(stringResource(R.string.game_from_amma), selected = !fromHifz, enabled = !loading) { onScope(false) }
+            GameButton(stringResource(R.string.game_levels), onMap, Modifier.widthIn(min = 120.dp), primary = false)
+            GameButton(stringResource(R.string.game_free_round), onFree, Modifier.widthIn(min = 120.dp), primary = false)
+        }
+        if (best > 0) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.game_free_best, best),
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.7f)
+            )
         }
         Spacer(Modifier.height(20.dp))
-        if (best > 0) {
-            Text(
-                text = stringResource(R.string.game_best, best),
-                style = MaterialTheme.typography.titleSmall,
-                color = GameColors.Gold
-            )
-            Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GameChip(stringResource(R.string.game_from_hifz), selected = fromHifz, enabled = hasHifz) { onScope(true) }
+            GameChip(stringResource(R.string.game_from_amma), selected = !fromHifz, enabled = true) { onScope(false) }
         }
-        GameButton(
-            text = stringResource(if (loading) R.string.game_loading else R.string.game_start),
-            onClick = { if (!loading) onStart() },
-            modifier = Modifier.widthIn(min = 220.dp)
-        )
         if (failed) {
             Spacer(Modifier.height(10.dp))
             Text(stringResource(R.string.game_nothing), style = MaterialTheme.typography.bodyMedium, color = GameColors.Red, textAlign = TextAlign.Center)
         }
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(26.dp))
         Column(
             Modifier
                 .widthIn(max = 460.dp)
@@ -966,9 +1117,11 @@ private fun MenuOverlay(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Rule(Icons.Outlined.StarBorder, stringResource(R.string.game_rule_stars))
             Rule(Icons.Outlined.AutoAwesome, stringResource(R.string.game_rule_combo))
             Rule(Icons.Outlined.FavoriteBorder, stringResource(R.string.game_rule_lives))
             Rule(Icons.Outlined.HourglassEmpty, stringResource(R.string.game_rule_power))
+            Rule(Icons.Outlined.Replay, stringResource(R.string.game_rule_slips))
         }
     }
 }
@@ -983,7 +1136,7 @@ private fun Rule(icon: androidx.compose.ui.graphics.vector.ImageVector, text: St
 }
 
 @Composable
-private fun Scrim(color: Color = Color(0xB3050816), content: @Composable () -> Unit) {
+internal fun Scrim(color: Color = Color(0xB3050816), content: @Composable () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -994,7 +1147,7 @@ private fun Scrim(color: Color = Color(0xB3050816), content: @Composable () -> U
 }
 
 @Composable
-private fun PauseOverlay(onResume: () -> Unit, onRestart: () -> Unit, onQuit: () -> Unit) {
+private fun PauseOverlay(restart: String, onResume: () -> Unit, onRestart: () -> Unit, onQuit: () -> Unit) {
     BackHandler(onBack = onResume)
     Scrim {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1004,7 +1157,7 @@ private fun PauseOverlay(onResume: () -> Unit, onRestart: () -> Unit, onQuit: ()
             )
             Spacer(Modifier.height(6.dp))
             GameButton(stringResource(R.string.game_resume), onResume, Modifier.widthIn(min = 220.dp))
-            GameButton(stringResource(R.string.game_restart), onRestart, Modifier.widthIn(min = 220.dp), primary = false)
+            GameButton(restart, onRestart, Modifier.widthIn(min = 220.dp), primary = false)
             GameButton(stringResource(R.string.game_quit), onQuit, Modifier.widthIn(min = 220.dp), primary = false)
         }
     }
@@ -1019,8 +1172,7 @@ private fun OverOverlay(
     onBack: () -> Unit,
     onOpenVerse: (page: Int, ayahId: Int) -> Unit
 ) {
-    val context = LocalContext.current
-    val index = remember(context) { QuranRepository.getInstance(context).ayahIndex }
+    BackHandler(onBack = onBack)
     val shownScore by animateIntAsState(game.score, tween(900), label = "final")
     var counted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { counted = true }
@@ -1062,51 +1214,7 @@ private fun OverOverlay(
                 )
                 Stat(stringResource(R.string.game_best_combo), game.bestCombo.toString(), Modifier.weight(1f))
             }
-            if (game.played.isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
-                Column(
-                    Modifier
-                        .widthIn(max = 460.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(GameColors.Panel)
-                        .padding(vertical = 6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.game_review),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                    )
-                    for (verse in game.played.takeLast(8).reversed()) {
-                        val id = verse.ayahId
-                        if (id !in index) continue
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenVerse(index.firstPageOf(id), id) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${SurahData.nameOf(index.surahOf(id))} · ${index.ayahOf(id)}",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = Color.White,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = when {
-                                    !verse.done -> stringResource(R.string.game_unfinished)
-                                    verse.mistakes == 0 -> stringResource(R.string.game_perfect)
-                                    else -> pluralStringResource(R.plurals.game_mistakes, verse.mistakes, verse.mistakes)
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (verse.done && verse.mistakes == 0) GameColors.Gold else GameColors.Red
-                            )
-                        }
-                    }
-                }
-            }
+            PlayedVerses(game, onOpenVerse)
             Spacer(Modifier.height(22.dp))
             GameButton(stringResource(R.string.game_again), onAgain, Modifier.widthIn(min = 220.dp))
             Spacer(Modifier.height(10.dp))
@@ -1115,8 +1223,60 @@ private fun OverOverlay(
     }
 }
 
+/** The verses of a round, the last first, each with how it went: a tap opens it in the Mushaf. */
 @Composable
-private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
+internal fun PlayedVerses(game: LanternsGame, onOpenVerse: (page: Int, ayahId: Int) -> Unit) {
+    val context = LocalContext.current
+    val index = remember(context) { QuranRepository.getInstance(context).ayahIndex }
+    if (game.played.isNotEmpty()) {
+        Spacer(Modifier.height(18.dp))
+        Column(
+            Modifier
+                .widthIn(max = 460.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(GameColors.Panel)
+                .padding(vertical = 6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.game_review),
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+            for (verse in game.played.takeLast(8).reversed()) {
+                val id = verse.ayahId
+                if (id !in index) continue
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenVerse(index.firstPageOf(id), id) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${SurahData.nameOf(index.surahOf(id))} · ${index.ayahOf(id)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = when {
+                            !verse.done -> stringResource(R.string.game_unfinished)
+                            verse.mistakes == 0 -> stringResource(R.string.game_perfect)
+                            else -> pluralStringResource(R.plurals.game_mistakes, verse.mistakes, verse.mistakes)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (verse.done && verse.mistakes == 0) GameColors.Gold else GameColors.Red
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
             .clip(RoundedCornerShape(16.dp))
@@ -1134,7 +1294,7 @@ private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
  * what it is, the best score, and a play button.
  */
 @Composable
-fun LanternsCard(best: Int, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+fun LanternsCard(best: Int, stars: List<Int>, onPlay: () -> Unit, modifier: Modifier = Modifier) {
     var clock by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         var last = -1L
@@ -1212,9 +1372,21 @@ fun LanternsCard(best: Int, onPlay: () -> Unit, modifier: Modifier = Modifier) {
                     Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = GameColors.Ink, modifier = Modifier.size(20.dp))
                     Text(stringResource(R.string.game_play), style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = GameColors.Ink)
                 }
-                if (best > 0) {
-                    Spacer(Modifier.width(10.dp))
-                    Text(stringResource(R.string.game_best, best), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.75f))
+                when {
+                    stars.isNotEmpty() -> {
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.game_level_title, stars.size + 1),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        StarCount(stars.sum())
+                    }
+                    best > 0 -> {
+                        Spacer(Modifier.width(10.dp))
+                        Text(stringResource(R.string.game_best, best), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.75f))
+                    }
                 }
             }
         }

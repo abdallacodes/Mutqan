@@ -261,6 +261,7 @@ fun PracticeScreen(
     val missed by viewModel.missed.collectAsState()
     val daily by viewModel.daily.collectAsState()
     val gameBest by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsBest }.collectAsState(initial = 0)
+    val gameStars by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsStars }.collectAsState(initial = emptyList())
     var choosing by remember { mutableStateOf(false) }
     var pickingJuz by remember { mutableStateOf(false) }
     var openSkill by remember { mutableStateOf<Skill?>(null) }
@@ -327,6 +328,7 @@ fun PracticeScreen(
             // The game: what catches the eye on this screen after the day's set.
             LanternsCard(
                 best = gameBest,
+                stars = gameStars,
                 onPlay = onPlayGame,
                 modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
             )

@@ -19,8 +19,11 @@ class LanternsGameTest {
         )
         private var next = 0
         override fun nextVerse(): GameVerse? = verses.getOrNull(next++)
-        override fun decoys(verse: GameVerse, right: GameWord, count: Int): List<GameWord> =
-            listOf(GameWord(91, "x"), GameWord(92, "y"), GameWord(93, "z"), GameWord(94, "q")).filter { it.key != right.key }
+        val asked = mutableListOf<Int>()
+        override fun decoys(verse: GameVerse, at: Int, count: Int): List<GameWord> {
+            asked += at
+            return listOf(GameWord(91, "x"), GameWord(92, "y"), GameWord(93, "z"), GameWord(94, "q")).filter { it.key != verse.words[at].key }
+        }
     }
 
     private fun game(seed: Int = 1) = LanternsGame(FakeSource(), Random(seed)).also { it.start() }
@@ -148,5 +151,77 @@ class LanternsGameTest {
                 assertTrue("lanterns ${a.id} and ${b.id} overlap", kotlin.math.abs(a.y - b.y) >= g.lanternHeight * 1.0f)
             }
         }
+    }
+
+    private val levelDials = Dials(speed = 0.1f, interval = 1f, sky = 3, helperEvery = 30f, helpersAtOnce = true)
+
+    private fun level(dials: Dials = levelDials, seed: Int = 1) = LanternsGame(FakeSource(), Random(seed), dials).also { it.start() }
+
+    @Test
+    fun aLevelIsWonWhenItsLastVerseIsBuilt() {
+        val g = level()
+        repeat(3) { g.tap(g.waitForNeeded().id) }
+        repeat(200) { g.update(0.02f) }
+        assertEquals(2, g.verse?.ayahId)
+        repeat(3) { g.tap(g.waitForNeeded().id) }
+        repeat(200) { g.update(0.02f) }
+        assertTrue(g.over)
+        assertTrue(g.cleared)
+        assertEquals(6, g.built)
+        assertEquals(0, g.slips)
+        // A level keeps its dials: no level up after a verse.
+        assertTrue(g.events.none { it is GameEvent.LevelUp })
+        assertEquals(1, g.level)
+    }
+
+    @Test
+    fun aLevelLostIsNotCleared() {
+        val g = level()
+        repeat(3) { if (!g.over) g.tap(g.waitForDecoy().id) }
+        assertTrue(g.over)
+        assertFalse(g.cleared)
+        assertEquals(3, g.slips)
+    }
+
+    @Test
+    fun slipsCountWrongLanternsAndWordsThatFloatAway() {
+        val g = level()
+        g.tap(g.waitForDecoy().id)
+        val lantern = g.waitForNeeded()
+        repeat(2000) { if (lantern in g.lanterns) g.update(0.02f) }
+        assertEquals(1, g.wrong)
+        assertEquals(1, g.missed)
+        assertEquals(2, g.slips)
+    }
+
+    @Test
+    fun aGoldenLanternTriplesTheWordsPoints() {
+        val g = level(levelDials.copy(golden = 1f))
+        val lantern = g.waitForNeeded()
+        assertTrue(lantern.golden)
+        g.tap(lantern.id)
+        assertEquals(LanternsGame.WORD_POINTS * LanternsGame.GOLDEN_TIMES, g.score)
+    }
+
+    @Test
+    fun inALevelTheHelpersComeFromTheStart() {
+        val g = level(levelDials.copy(helperEvery = 2f))
+        var seen = false
+        repeat(300) {
+            g.update(0.02f)
+            if (g.lanterns.any { it.kind != LanternKind.WORD }) seen = true
+        }
+        assertTrue("no helper lantern in the first six seconds", seen)
+    }
+
+    @Test
+    fun theWrongWordsAreAskedForTheWantedWordsPlace() {
+        val source = FakeSource()
+        val g = LanternsGame(source, Random(2), levelDials).also { it.start() }
+        g.tap(g.waitForNeeded().id)
+        repeat(300) { g.update(0.02f) }
+        assertTrue(source.asked.isNotEmpty())
+        assertTrue(source.asked.all { it in 1..3 })
+        assertTrue(2 in source.asked)
     }
 }

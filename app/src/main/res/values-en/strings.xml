@@ -780,6 +780,43 @@
         <item quantity="other">%d mistakes</item>
     </plurals>
     <string name="game_again">Play again</string>
+    <string name="game_levels">Levels</string>
+    <string name="game_free_round">Free round</string>
+    <string name="game_free_best">Free round best: %1$d</string>
+    <string name="game_play_level">Play level %1$d</string>
+    <string name="game_level_title">Level %1$d</string>
+    <string name="game_level_cd">Level %1$d, %2$s</string>
+    <string name="game_level_locked_cd">Level %1$d, locked</string>
+    <plurals name="game_stars">
+        <item quantity="one">%d star</item>
+        <item quantity="other">%d stars</item>
+    </plurals>
+    <plurals name="game_level_words">
+        <item quantity="one">Build %d word</item>
+        <item quantity="other">Build %d words</item>
+    </plurals>
+    <string name="game_new_label">New</string>
+    <string name="game_news_start">Build the verses word by word before their lanterns fly away. The first two words of each verse are given.</string>
+    <string name="game_news_one_given">From now on only the first word of each verse is given.</string>
+    <string name="game_news_fourth">A fourth lantern in the sky.</string>
+    <string name="game_news_look_alike">Words from look-alike verses: they follow the same words somewhere else in the Quran, so take care.</string>
+    <string name="game_news_golden">Golden lanterns: if one carries the right word, it scores triple.</string>
+    <string name="game_news_fifth">A fifth lantern in the sky.</string>
+    <string name="game_news_wind">Wind sways the lanterns from side to side.</string>
+    <string name="game_news_none_given">No words are given: you start each verse from the end of the one before it.</string>
+    <string name="game_news_sixth">A sixth lantern in the sky.</string>
+    <string name="game_news_faster_longer">A little faster than the last level, and one more word.</string>
+    <string name="game_news_faster">A little faster than the last level.</string>
+    <string name="game_level_cleared">Level %1$d complete</string>
+    <string name="game_level_failed">Level %1$d not finished</string>
+    <string name="game_three_stars_hint">Build it with no slips for three stars.</string>
+    <string name="game_failed_hint">Out of hearts. Try again.</string>
+    <string name="game_replay_level">Replay level</string>
+    <string name="game_try_again">Try again</string>
+    <string name="game_slips">Slips</string>
+    <string name="game_progress_cd">Words built in the level: %1$d</string>
+    <string name="game_rule_stars">Each level has stars: one for finishing it, two with one slip at most, three with none. Each level is harder than the one before.</string>
+    <string name="game_rule_slips">Verses you slip on come back in your next rounds until you build them twice with no slips.</string>
     <string name="home_btn_revised">I’ve finished revising</string>
     <string name="home_later_title">Later today</string>
     <string name="home_plan_title">Your plan</string>

@@ -40,6 +40,21 @@ internal object GameColors {
     val Calm = Color(0xFF6FB7FF)
     val Panel = Color(0xEB120C26)
 
+    /** A golden lantern's body. */
+    val Golden = Color(0xFFE9B23C)
+
+    /** The sky near dawn, toward which the night turns as the levels go up. */
+    private val DawnTop = Color(0xFF1C2758)
+    private val DawnMid = Color(0xFF3D4384)
+    private val DawnLow = Color(0xFF9C5C88)
+    private val DawnHorizon = Color(0xFFFFB57E)
+
+    /** The sky's four colours, from top to horizon, [dawn] of the way (0 to 1) from night to dawn. */
+    fun sky(dawn: Float): List<Color> {
+        val d = dawn.coerceIn(0f, 1f)
+        return listOf(lerp(SkyTop, DawnTop, d), lerp(SkyMid, DawnMid, d), lerp(SkyLow, DawnLow, d), lerp(Horizon, DawnHorizon, d))
+    }
+
     /** Emerald, ruby, sapphire, amber, amethyst. */
     val hues = listOf(
         Color(0xFF13A06E),
@@ -56,28 +71,30 @@ private class Star(val x: Float, val y: Float, val radius: Float, val phase: Flo
 
 /**
  * The sky: deep blue to a warm glow over the town, stars that twinkle with [time] (seconds), and a crescent at [moon]
- * (fractions of the width and height).
+ * (fractions of the width and height). With [dawn] (0 to 1) the night turns toward dawn and the stars fade.
  */
 @Composable
-internal fun NightSky(time: () -> Float, modifier: Modifier = Modifier, moon: Offset = Offset(0.16f, 0.15f)) {
+internal fun NightSky(time: () -> Float, modifier: Modifier = Modifier, moon: Offset = Offset(0.16f, 0.15f), dawn: Float = 0f) {
     val stars = remember {
         val random = Random(7)
         List(80) { Star(random.nextFloat(), random.nextFloat() * 0.78f, 0.5f + random.nextFloat() * 1.5f, random.nextFloat() * 6.28f, 0.5f + random.nextFloat() * 2f) }
     }
     Canvas(modifier.fillMaxSize()) {
         val t = time()
+        val sky = GameColors.sky(dawn)
         drawRect(
             Brush.verticalGradient(
-                0f to GameColors.SkyTop,
-                0.5f to GameColors.SkyMid,
-                0.84f to GameColors.SkyLow,
-                1f to GameColors.Horizon
+                0f to sky[0],
+                0.5f to sky[1],
+                0.84f to sky[2],
+                1f to sky[3]
             )
         )
         val unit = size.minDimension / 400f
+        val starLight = 1f - 0.65f * dawn.coerceIn(0f, 1f)
         for (s in stars) {
             val a = 0.25f + 0.75f * (0.5f + 0.5f * sin(t * s.speed + s.phase))
-            drawCircle(Color.White.copy(alpha = a * 0.9f), radius = s.radius * unit, center = Offset(s.x * size.width, s.y * size.height))
+            drawCircle(Color.White.copy(alpha = a * 0.9f * starLight), radius = s.radius * unit, center = Offset(s.x * size.width, s.y * size.height))
         }
         val r = 24f * unit
         val c = Offset(size.width * moon.x, size.height * moon.y)
@@ -175,6 +192,23 @@ internal fun DrawScope.drawLantern(
     drawContext.canvas.saveLayer(bounds, Paint().apply { this.alpha = alpha })
     lanternAt(body, lit, glow, topLeft, area)
     drawContext.canvas.restore()
+}
+
+/** Little four-pointed glints turning around a golden lantern filling this draw area, at [time] seconds. */
+internal fun DrawScope.drawTwinkles(time: Float) {
+    val cx = size.width / 2f
+    val cy = size.height * 0.52f
+    for (i in 0 until 4) {
+        val angle = time * 0.9f + i * (PI.toFloat() / 2f)
+        val r = size.width * (0.62f + 0.06f * sin(time * 2.3f + i))
+        val c = Offset(cx + cos(angle) * r, cy + sin(angle) * r * 0.9f)
+        val a = 0.45f + 0.55f * (0.5f + 0.5f * sin(time * 5f + i * 1.7f))
+        val arm = size.width * 0.07f * a
+        val glint = Color(0xFFFFF3C4).copy(alpha = a)
+        drawLine(glint, c - Offset(arm, 0f), c + Offset(arm, 0f), strokeWidth = size.width * 0.018f)
+        drawLine(glint, c - Offset(0f, arm), c + Offset(0f, arm), strokeWidth = size.width * 0.018f)
+        drawCircle(glint, radius = size.width * 0.018f, center = c)
+    }
 }
 
 private fun DrawScope.lanternAt(body: Color, lit: Float, glow: Float, topLeft: Offset, area: Size) = translate(topLeft.x, topLeft.y) {

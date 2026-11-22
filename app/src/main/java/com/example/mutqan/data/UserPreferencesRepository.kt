@@ -1,5 +1,8 @@
 package com.example.mutqan.data
 
+import com.example.mutqan.domain.game.GameSlips
+import com.example.mutqan.domain.game.LanternsLevels
+import com.example.mutqan.domain.game.PlayedVerse
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -65,6 +68,9 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_LANTERNS_BEST     = intPreferencesKey("lanterns_best")
         private val KEY_LANTERNS_ROUNDS   = intPreferencesKey("lanterns_rounds")
         private val KEY_LANTERNS_HIFZ     = booleanPreferencesKey("lanterns_from_hifz")
+        private val KEY_LANTERNS_STARS    = stringPreferencesKey("lanterns_stars")
+        private val KEY_LANTERNS_SLIPS    = stringPreferencesKey("lanterns_slips")
+        private val KEY_LANTERNS_SOUND    = booleanPreferencesKey("lanterns_sound")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
         private val KEY_REMINDER_OFFERED  = booleanPreferencesKey("reminder_offer_closed")
@@ -258,6 +264,39 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[KEY_LANTERNS_ROUNDS] = (prefs[KEY_LANTERNS_ROUNDS] ?: 0) + 1
         }
         return beaten
+    }
+
+    /** The best stars of each «فوانيس» level won, level 1 first; the next level to play is the one after the last. */
+    val lanternsStars: Flow<List<Int>> = context.dataStore.data.map { prefs -> LanternsLevels.parseStars(prefs[KEY_LANTERNS_STARS]) }
+
+    /** Keeps [stars] for [level] if better than before; returns the stars it had before (0 for a level not won yet). */
+    suspend fun recordLanternsLevel(level: Int, stars: Int): Int {
+        var before = 0
+        context.dataStore.edit { prefs ->
+            val kept = LanternsLevels.parseStars(prefs[KEY_LANTERNS_STARS])
+            before = kept.getOrNull(level - 1) ?: 0
+            prefs[KEY_LANTERNS_STARS] = LanternsLevels.formatStars(LanternsLevels.withStars(kept, level, stars))
+            prefs[KEY_LANTERNS_ROUNDS] = (prefs[KEY_LANTERNS_ROUNDS] ?: 0) + 1
+        }
+        return before
+    }
+
+    /** Verses slipped on in «فوانيس» (ayah id to the clean builds still needed), the most recent first: they come back first. */
+    val lanternsSlips: Flow<Map<Int, Int>> = context.dataStore.data.map { prefs -> GameSlips.parse(prefs[KEY_LANTERNS_SLIPS]) }
+
+    /** Updates the slipped verses after a round in which [played] were played. */
+    suspend fun recordLanternsSlips(played: List<PlayedVerse>) {
+        if (played.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            prefs[KEY_LANTERNS_SLIPS] = GameSlips.format(GameSlips.after(GameSlips.parse(prefs[KEY_LANTERNS_SLIPS]), played))
+        }
+    }
+
+    /** Whether «فوانيس» plays its sounds. */
+    val lanternsSound: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_SOUND] ?: true }
+
+    suspend fun setLanternsSound(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_LANTERNS_SOUND] = on }
     }
 
     /** Every how many minutes of reading in the Mushaf a quiz on the pages read is offered; 0 is never. */
