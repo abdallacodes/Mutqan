@@ -758,7 +758,7 @@ private fun BannerView(banner: Banner, clock: () -> Float, onDone: () -> Unit) {
             title = stringResource(R.string.game_verse_done)
             line = buildList {
                 // Isolated left to right, so "+800" keeps its sign in front in an Arabic line.
-                add("⁦+${banner.bonus}⁩")
+                add("$LTR_START+${banner.bonus}$LTR_END")
                 if (banner.perfect) add(stringResource(R.string.game_perfect))
                 if (banner.level > 0) add(stringResource(R.string.game_level, banner.level))
             }.joinToString(" · ")
@@ -811,6 +811,10 @@ private fun BannerView(banner: Banner, clock: () -> Float, onDone: () -> Unit) {
 }
 
 private const val BANNER_TIME = 1.6f
+
+/** Unicode isolates (built from their code points, not written in the source): what is between them reads left to right in an Arabic line. */
+private val LTR_START = Char(0x2066)
+private val LTR_END = Char(0x2069)
 private const val COUNTDOWN = 2.4f
 
 /** "3, 2, 1" before a round, each number popping in. */
