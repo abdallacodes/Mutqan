@@ -81,7 +81,10 @@ import kotlin.math.sin
 
 private val NodeWidth = 62.dp
 private val NodeHeight = 80.dp
-private val RowHeight = 112.dp
+private val RowHeight = 150.dp
+
+/** A level's lantern with the line under it (its stars, or «العب»). */
+private val NodeColumn = NodeHeight + 18.dp
 
 /** Locked levels shown above the next one, dark, so the climb goes on out of sight. */
 private const val LEVELS_AHEAD = 4
@@ -193,12 +196,14 @@ private fun LevelNode(
             val x = nodeX(level) * width
             if (pathUp) {
                 Canvas(Modifier.fillMaxSize()) {
-                    // To the next level's lantern, in the row above (drawn past this row's top).
-                    val from = Offset(x, rowPx / 2f)
-                    val to = Offset(nodeX(level + 1) * width, -rowPx / 2f)
+                    // From the top of this lantern to the foot of the next one, in the row above (drawn past this row's
+                    // top), through the gap between them only: neither row draws over the other's lantern.
+                    val top = (rowPx - NodeColumn.toPx()) / 2f
+                    val from = Offset(x, top)
+                    val to = Offset(nodeX(level + 1) * width, -top)
                     val path = Path().apply {
                         moveTo(from.x, from.y)
-                        cubicTo(from.x, from.y - rowPx * 0.55f, to.x, to.y + rowPx * 0.55f, to.x, to.y)
+                        cubicTo(from.x, from.y - top * 1.2f, to.x, to.y + top * 1.2f, to.x, to.y)
                     }
                     drawPath(
                         path,
@@ -261,7 +266,7 @@ private fun LevelNode(
                             .background(GameColors.Gold)
                             .padding(horizontal = 10.dp, vertical = 2.dp)
                     )
-                    NodeKind.LOCKED -> Spacer(Modifier.height(15.dp))
+                    NodeKind.LOCKED -> Spacer(Modifier.height(18.dp))
                 }
             }
         }

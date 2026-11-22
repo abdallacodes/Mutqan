@@ -14,6 +14,7 @@ import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.game.LanternsGame
 import com.example.mutqan.domain.game.LanternsLevels
 import com.example.mutqan.domain.game.LanternsSource
+import com.example.mutqan.domain.game.LevelNews
 import com.example.mutqan.domain.game.LevelRules
 import com.example.mutqan.domain.game.NextWords
 import com.example.mutqan.quran.QuranRepository
@@ -126,9 +127,17 @@ class LanternsViewModel(appContext: Context) : ViewModel() {
     /** The same round again: the same level, or another open round. */
     fun again() = start(level)
 
+    /** On to the level after the one won: straight in, or through its card on the map when it brings something new. */
     fun nextLevel() {
         val played = level ?: return
-        start(LanternsLevels.rules(played.number + 1))
+        val next = played.number + 1
+        val news = LanternsLevels.news(next)
+        if (news == LevelNews.FASTER || news == LevelNews.FASTER_LONGER) {
+            start(LanternsLevels.rules(next))
+        } else {
+            openMap()
+            card = next
+        }
     }
 
     /** Reads a round (from the hifz, or Juz 'Amma) and starts it: the level [rules], or the open round. */
