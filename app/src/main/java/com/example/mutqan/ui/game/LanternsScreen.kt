@@ -37,6 +37,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Pause
@@ -173,6 +175,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     val stars by vm.stars.collectAsState()
     val fromHifz by vm.fromHifz.collectAsState()
     val hasHifz by vm.hasHifz.collectAsState()
+    val soundOn by vm.sound.collectAsState()
+    val sounds = rememberGameSounds(soundOn)
     val haptics = rememberHaptics()
     val density = LocalDensity.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -191,8 +195,9 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     var hintWord by remember { mutableStateOf<Int?>(null) }
     var hintUntil by remember { mutableFloatStateOf(0f) }
     var pendingLevel by remember { mutableIntStateOf(0) }
-    // A new round counts down before the first lantern rises.
+    // A new round counts down before the first lantern rises; a tick for each number, a chime to go.
     var countdownUntil by remember { mutableFloatStateOf(0f) }
+    var countedTo by remember { mutableIntStateOf(0) }
     val game = vm.game
     val level = vm.level
     val next = stars.size + 1
@@ -206,6 +211,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
         pendingLevel = 0
         paused = false
         countdownUntil = clock + COUNTDOWN
+        countedTo = 4
     }
     val inRound = game != null && (vm.phase == LanternsViewModel.Phase.PLAYING || vm.phase == LanternsViewModel.Phase.OVER)
     // The night turns toward dawn as the levels go up (and as the open round goes on).
@@ -258,6 +264,13 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                     val w = area.width.toFloat()
                     val h = area.height.toFloat()
                     val hintTime = vm.level?.hintTime ?: HINT_TIME
+                    if (round != null && vm.phase == LanternsViewModel.Phase.PLAYING && countedTo > 0) {
+                        val number = if (clock >= countdownUntil) 0 else countdownNumber(countdownUntil - clock)
+                        if (number < countedTo) {
+                            sounds.play(if (number == 0) GameSound.GO else GameSound.TICK)
+                            countedTo = number
+                        }
+                    }
                     // After the round the game still runs, only for the lanterns' last animations.
                     if (round != null && vm.phase == LanternsViewModel.Phase.OVER) round.update(dt)
                     if (round != null && vm.phase == LanternsViewModel.Phase.PLAYING && clock >= countdownUntil) {
@@ -269,11 +282,14 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     val y = e.lantern.y * h
                                     effects.burst(x, y, GameColors.hue(e.lantern.hue), 20, w * 0.9f)
                                     effects.float("+${e.points}", GameColors.Gold, x, y - h * 0.05f)
+                                    sounds.play(GameSound.RIGHT, pitch = GameSounds.runPitch(e.combo))
                                     if (e.lantern.golden) {
                                         effects.burst(x, y, GameColors.Gold, 28, w * 1.1f)
                                         effects.float("×${LanternsGame.GOLDEN_TIMES}", GameColors.Gold, x, y - h * 0.1f, big = true)
+                                        sounds.play(GameSound.GOLDEN)
                                     } else if (e.combo >= 4 && e.combo % 4 == 0) {
                                         effects.float("×${LanternsGame.multiplierFor(e.combo)}", Color.White, x, y - h * 0.1f, big = true)
+                                        sounds.play(GameSound.COMBO)
                                     }
                                     hintWord = null
                                     haptics.tick()
@@ -284,12 +300,14 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     effects.burst(e.lantern.x * w, e.lantern.y * h, Color(0xFF8B8794), 14, w * 0.6f)
                                     hintWord = round.needed?.id
                                     hintUntil = clock + hintTime
+                                    sounds.play(GameSound.WRONG)
                                     haptics.reject()
                                 }
                                 is GameEvent.Missed -> {
                                     effects.redFlash = 1f
                                     hintWord = e.lantern.word?.id
                                     hintUntil = clock + hintTime
+                                    sounds.play(GameSound.MISSED)
                                     haptics.reject()
                                 }
                                 is GameEvent.VerseDone -> {
@@ -297,6 +315,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     GameColors.hues.forEach { effects.burst(w / 2f, panelBottom, it, 10, w * 1.1f) }
                                     banner = Banner(Banner.Kind.VERSE, clock, bonus = e.bonus, perfect = e.perfect, level = pendingLevel)
                                     hintWord = null
+                                    sounds.play(GameSound.VERSE)
+                                    if (e.perfect) sounds.play(GameSound.PERFECT)
                                     haptics.confirm()
                                 }
                                 is GameEvent.LevelUp -> {
@@ -307,11 +327,15 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     val slow = e.lantern.kind == LanternKind.SLOW
                                     effects.burst(e.lantern.x * w, e.lantern.y * h, if (slow) GameColors.Calm else GameColors.Red, 22, w)
                                     banner = Banner(if (slow) Banner.Kind.SLOW else Banner.Kind.LIFE, clock)
+                                    sounds.play(if (slow) GameSound.SLOW else GameSound.LIFE)
                                     haptics.confirm()
                                 }
                                 GameEvent.Over -> {
+                                    // A level won, or a new best in the open round, cheers; anything else ends softly.
+                                    val cheer = round.cleared || (vm.level == null && round.score > vm.best.value)
                                     vm.finished()
-                                    if (round.cleared) haptics.confirm() else haptics.reject()
+                                    sounds.play(if (cheer) GameSound.CLEAR else GameSound.FAIL)
+                                    if (cheer) haptics.confirm() else haptics.reject()
                                 }
                             }
                         }
@@ -329,6 +353,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
         }
     }
 
+    CompositionLocalProvider(LocalGameSounds provides sounds) {
     Box(
         Modifier
             .fillMaxSize()
@@ -415,6 +440,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
 
         when (vm.phase) {
             LanternsViewModel.Phase.MENU -> MenuOverlay(
+                sound = soundOn,
+                onSound = { vm.setSound(!soundOn) },
                 best = best,
                 next = next,
                 starsTotal = stars.sum(),
@@ -437,6 +464,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             )
             LanternsViewModel.Phase.LOADING -> Loading()
             LanternsViewModel.Phase.PLAYING -> if (paused) PauseOverlay(
+                sound = soundOn,
+                onSound = { vm.setSound(!soundOn) },
                 restart = stringResource(if (level != null) R.string.game_replay_level else R.string.game_restart),
                 onResume = { paused = false },
                 onRestart = { paused = false; vm.again() },
@@ -448,7 +477,10 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                         game = round,
                         level = level.number,
                         starsWon = vm.starsWon,
-                        onStarLand = { haptics.tick() },
+                        onStarLand = { i ->
+                            haptics.tick()
+                            sounds.play(GameSound.STAR, pitch = GameSounds.starPitch(i))
+                        },
                         onNext = vm::nextLevel,
                         onAgain = vm::again,
                         onMap = vm::openMap,
@@ -475,6 +507,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             )
         }
         SparksLayer(effects = cheers, clock = { clock }, slow = false)
+    }
     }
 }
 
@@ -943,10 +976,25 @@ private val LTR_START = Char(0x2066)
 private val LTR_END = Char(0x2069)
 private const val COUNTDOWN = 2.4f
 
+/** The game's sounds on or off. */
+@Composable
+private fun SoundButton(on: Boolean, onToggle: () -> Unit) {
+    IconButton(onClick = onToggle) {
+        Icon(
+            imageVector = if (on) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+            contentDescription = stringResource(if (on) R.string.game_sound_on_cd else R.string.game_sound_off_cd),
+            tint = if (on) GameColors.Gold else Color.White.copy(alpha = 0.5f)
+        )
+    }
+}
+
+/** The number the countdown shows with [left] seconds to go: 3, 2, 1. */
+private fun countdownNumber(left: Float): Int = kotlin.math.ceil(left / (COUNTDOWN / 3f)).toInt().coerceIn(1, 3)
+
 /** "3, 2, 1" before a round, each number popping in; a level's name over it. */
 @Composable
 private fun Countdown(left: Float, title: String?) {
-    val number = kotlin.math.ceil(left / (COUNTDOWN / 3f)).toInt().coerceIn(1, 3)
+    val number = countdownNumber(left)
     val within = 1f - ((left % (COUNTDOWN / 3f)) / (COUNTDOWN / 3f))
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (title != null) {
@@ -984,6 +1032,7 @@ private fun Countdown(left: Float, title: String?) {
 /** A big gold button in the game's look. */
 @Composable
 internal fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = true) {
+    val sounds = LocalGameSounds.current
     Box(
         modifier
             .clip(RoundedCornerShape(30.dp))
@@ -992,7 +1041,7 @@ internal fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = 
                 else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f)))
             )
             .border(1.dp, if (primary) Color(0x66FFFFFF) else GameColors.Gold.copy(alpha = 0.5f), RoundedCornerShape(30.dp))
-            .clickable(onClick = onClick)
+            .clickable { sounds?.play(GameSound.TAP); onClick() }
             .heightIn(min = 54.dp)
             .padding(horizontal = 28.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center
@@ -1007,12 +1056,13 @@ internal fun GameButton(text: String, onClick: () -> Unit, modifier: Modifier = 
 
 @Composable
 internal fun GameChip(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val sounds = LocalGameSounds.current
     Box(
         Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(if (selected) GameColors.Gold.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.06f))
             .border(1.dp, if (selected) GameColors.Gold else Color.White.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = enabled) { sounds?.play(GameSound.TAP); onClick() }
             .padding(horizontal = 18.dp, vertical = 10.dp)
     ) {
         Text(
@@ -1029,6 +1079,8 @@ internal fun GameChip(text: String, selected: Boolean, enabled: Boolean, onClick
 
 @Composable
 private fun MenuOverlay(
+    sound: Boolean,
+    onSound: () -> Unit,
     best: Int,
     next: Int,
     starsTotal: Int,
@@ -1050,13 +1102,15 @@ private fun MenuOverlay(
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.game_back),
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White.copy(alpha = 0.75f),
                 modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onBack).padding(10.dp)
             )
+            Spacer(Modifier.weight(1f))
+            SoundButton(sound, onSound)
         }
         Spacer(Modifier.height(24.dp))
         Text(
@@ -1147,7 +1201,7 @@ internal fun Scrim(color: Color = Color(0xB3050816), content: @Composable () -> 
 }
 
 @Composable
-private fun PauseOverlay(restart: String, onResume: () -> Unit, onRestart: () -> Unit, onQuit: () -> Unit) {
+private fun PauseOverlay(sound: Boolean, onSound: () -> Unit, restart: String, onResume: () -> Unit, onRestart: () -> Unit, onQuit: () -> Unit) {
     BackHandler(onBack = onResume)
     Scrim {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1159,6 +1213,7 @@ private fun PauseOverlay(restart: String, onResume: () -> Unit, onRestart: () ->
             GameButton(stringResource(R.string.game_resume), onResume, Modifier.widthIn(min = 220.dp))
             GameButton(restart, onRestart, Modifier.widthIn(min = 220.dp), primary = false)
             GameButton(stringResource(R.string.game_quit), onQuit, Modifier.widthIn(min = 220.dp), primary = false)
+            SoundButton(sound, onSound)
         }
     }
 }

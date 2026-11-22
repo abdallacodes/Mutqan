@@ -893,6 +893,8 @@
     <string name="game_progress_cd">الكلمات المبنية في المرحلة: %1$d</string>
     <string name="game_rule_stars">لكل مرحلة نجوم: نجمة إن أكملتها، ونجمتان بخطأ واحد على الأكثر، وثلاث بلا خطأ. وكل مرحلة أصعب من التي قبلها.</string>
     <string name="game_rule_slips">الآيات التي تخطئ فيها تعود في جولاتك القادمة حتى تبنيها مرتين بلا خطأ.</string>
+    <string name="game_sound_on_cd">الأصوات تعمل، اضغط لإطفائها</string>
+    <string name="game_sound_off_cd">الأصوات مطفأة، اضغط لتشغيلها</string>
     <string name="home_btn_revised">أنهيتُ المراجعة</string>
     <string name="home_later_title">لاحقًا اليوم</string>
     <string name="home_plan_title">خطتك</string>

@@ -817,6 +817,8 @@
     <string name="game_progress_cd">Words built in the level: %1$d</string>
     <string name="game_rule_stars">Each level has stars: one for finishing it, two with one slip at most, three with none. Each level is harder than the one before.</string>
     <string name="game_rule_slips">Verses you slip on come back in your next rounds until you build them twice with no slips.</string>
+    <string name="game_sound_on_cd">Sound on, tap to turn it off</string>
+    <string name="game_sound_off_cd">Sound off, tap to turn it on</string>
     <string name="home_btn_revised">I’ve finished revising</string>
     <string name="home_later_title">Later today</string>
     <string name="home_plan_title">Your plan</string>

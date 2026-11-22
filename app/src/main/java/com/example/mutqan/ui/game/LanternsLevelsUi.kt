@@ -179,6 +179,7 @@ private fun LevelNode(
     onLongTap: () -> Unit
 ) {
     val density = LocalDensity.current
+    val sounds = LocalGameSounds.current
     val label = when (kind) {
         NodeKind.LOCKED -> stringResource(R.string.game_level_locked_cd, level)
         NodeKind.NEXT -> stringResource(R.string.game_level_title, level)
@@ -221,7 +222,10 @@ private fun LevelNode(
                         if (kind == NodeKind.NEXT) translationY = sin(clock() * 2.2f) * 4.dp.toPx()
                     }
                     .semantics(mergeDescendants = true) { contentDescription = label }
-                    .combinedClickable(onClick = onTap, onLongClick = onLongTap)
+                    .combinedClickable(
+                        onClick = { if (kind != NodeKind.LOCKED) sounds?.play(GameSound.TAP); onTap() },
+                        onLongClick = onLongTap
+                    )
             ) {
                 Box(Modifier.size(NodeWidth, NodeHeight), contentAlignment = Alignment.Center) {
                     Canvas(Modifier.fillMaxSize()) {
