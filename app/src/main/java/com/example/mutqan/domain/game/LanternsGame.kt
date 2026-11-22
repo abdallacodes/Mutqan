@@ -238,7 +238,10 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
         val verse = verse ?: return
         val needed = needed ?: return
         val rising = wordLanternsRising()
-        if (rising.size >= target()) {
+        val hasNeeded = rising.any { it.word?.key == needed.key }
+        // A sky full of wrong words still makes room for the right one: it may come as one more.
+        val full = rising.size >= target()
+        if (rising.size >= target() + if (hasNeeded) 0 else 1) {
             spawnIn = 0.3f
             return
         }
@@ -246,9 +249,8 @@ class LanternsGame(private val source: GameSource, private val random: Random = 
             spawnIn = 0.15f
             return
         }
-        val hasNeeded = rising.any { it.word?.key == needed.key }
         // The right word is not always the newest lantern: it comes in its turn among the others, but soon.
-        val word = if (!hasNeeded && (spawnsWithoutNeeded >= 1 || random.nextFloat() < 0.55f)) {
+        val word = if (!hasNeeded && (full || spawnsWithoutNeeded >= 1 || random.nextFloat() < 0.55f)) {
             spawnsWithoutNeeded = 0
             needed
         } else {

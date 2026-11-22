@@ -813,7 +813,7 @@
     <string name="game_pause_cd">إيقاف مؤقت</string>
     <string name="game_score_cd">النقاط: %1$d</string>
     <string name="game_lives_cd">القلوب الباقية: %1$d</string>
-    <string name="game_combo">%1$d متتالية · ×%2$d</string>
+    <string name="game_combo">%1$d متتالية · ⁦×%2$d⁩</string>
     <string name="game_level">المستوى %1$d</string>
     <plurals name="game_words_left">
         <item quantity="zero">بقيت %d كلمة</item>

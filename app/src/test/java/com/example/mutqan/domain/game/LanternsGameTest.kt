@@ -58,6 +58,20 @@ class LanternsGameTest {
     }
 
     @Test
+    fun theNeededWordComesSoonAfterItFloatsAway() {
+        val g = game(seed = 3)
+        val first = g.waitForNeeded()
+        // Let it go: from the moment it is gone, the right word is back in the sky within a few seconds.
+        repeat(3000) { if (first in g.lanterns) g.update(0.02f) }
+        var waited = 0f
+        while (g.lanterns.none { it.state == LanternState.RISING && it.word?.key == g.needed?.key } && waited < 4f) {
+            g.update(0.02f)
+            waited += 0.02f
+        }
+        assertTrue("waited $waited s for the needed word", waited < 4f)
+    }
+
+    @Test
     fun theRightLanternScoresAndPlacesTheWord() {
         val g = game()
         g.tap(g.waitForNeeded().id)

@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -37,7 +38,7 @@ internal object GameColors {
     val TownLight = Color(0xFFFFC56B)
     val Red = Color(0xFFFF5964)
     val Calm = Color(0xFF6FB7FF)
-    val Panel = Color(0xCC120C26)
+    val Panel = Color(0xEB120C26)
 
     /** Emerald, ruby, sapphire, amber, amethyst. */
     val hues = listOf(
@@ -53,9 +54,12 @@ internal object GameColors {
 
 private class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val speed: Float)
 
-/** The sky: deep blue to a warm glow over the town, stars that twinkle with [time] (seconds), and a crescent. */
+/**
+ * The sky: deep blue to a warm glow over the town, stars that twinkle with [time] (seconds), and a crescent at [moon]
+ * (fractions of the width and height).
+ */
 @Composable
-internal fun NightSky(time: () -> Float, modifier: Modifier = Modifier) {
+internal fun NightSky(time: () -> Float, modifier: Modifier = Modifier, moon: Offset = Offset(0.16f, 0.15f)) {
     val stars = remember {
         val random = Random(7)
         List(80) { Star(random.nextFloat(), random.nextFloat() * 0.78f, 0.5f + random.nextFloat() * 1.5f, random.nextFloat() * 6.28f, 0.5f + random.nextFloat() * 2f) }
@@ -75,17 +79,16 @@ internal fun NightSky(time: () -> Float, modifier: Modifier = Modifier) {
             val a = 0.25f + 0.75f * (0.5f + 0.5f * sin(t * s.speed + s.phase))
             drawCircle(Color.White.copy(alpha = a * 0.9f), radius = s.radius * unit, center = Offset(s.x * size.width, s.y * size.height))
         }
-        // The crescent, low on the left so lanterns pass over it.
-        val r = 26f * unit
-        val c = Offset(size.width * 0.2f, size.height * 0.34f)
+        val r = 24f * unit
+        val c = Offset(size.width * moon.x, size.height * moon.y)
         drawCircle(
             Brush.radialGradient(listOf(GameColors.Moon.copy(alpha = 0.28f), Color.Transparent), center = c, radius = r * 3.4f),
             radius = r * 3.4f,
             center = c
         )
-        val moon = Path().apply { addOval(Rect(c, r)) }
+        val disc = Path().apply { addOval(Rect(c, r)) }
         val cut = Path().apply { addOval(Rect(c + Offset(r * 0.48f, -r * 0.22f), r * 0.92f)) }
-        drawPath(Path().apply { op(moon, cut, PathOperation.Difference) }, GameColors.Moon)
+        drawPath(Path().apply { op(disc, cut, PathOperation.Difference) }, GameColors.Moon)
     }
 }
 
@@ -159,8 +162,22 @@ internal fun DrawScope.drawLantern(
     lit: Float = 1f,
     glow: Float = 1f,
     topLeft: Offset = Offset.Zero,
-    area: Size = size
-) = translate(topLeft.x, topLeft.y) {
+    area: Size = size,
+    alpha: Float = 1f
+) {
+    if (alpha <= 0f) return
+    if (alpha >= 1f) {
+        lanternAt(body, lit, glow, topLeft, area)
+        return
+    }
+    // See-through: drawn in a layer as wide as its glow.
+    val bounds = Rect(topLeft.x - area.width * 0.45f, topLeft.y - area.height * 0.2f, topLeft.x + area.width * 1.45f, topLeft.y + area.height * 1.15f)
+    drawContext.canvas.saveLayer(bounds, Paint().apply { this.alpha = alpha })
+    lanternAt(body, lit, glow, topLeft, area)
+    drawContext.canvas.restore()
+}
+
+private fun DrawScope.lanternAt(body: Color, lit: Float, glow: Float, topLeft: Offset, area: Size) = translate(topLeft.x, topLeft.y) {
     val w = area.width
     val h = area.height
     val cx = w / 2f

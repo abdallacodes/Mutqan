@@ -328,6 +328,8 @@ fun AppNavHost(
     // The Mushaf draws edge to edge under the system bars. If it took their insets as padding, every tap that shows
     // or hides them would resize the page under the reader's eyes.
     val inMushaf = currentRoute?.startsWith(Routes.MUSHAF_VIEWER) == true
+    // The game's night sky runs under the bars too; it keeps its own controls clear of them.
+    val edgeToEdge = inMushaf || currentRoute == Routes.LANTERNS
 
     // The tabs run under the floating dock, so each leaves its own bottom room as tall as the dock (and the player over it).
     val backdrop = rememberGlassBackdrop()
@@ -372,7 +374,7 @@ fun AppNavHost(
     Scaffold(
         modifier       = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = if (inMushaf) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
+        contentWindowInsets = if (edgeToEdge) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         // On a tab the player sits in the floating dock's column instead, above the glass.
         bottomBar = {
             if (playback.active && !inMushaf && !showBottomBar) {

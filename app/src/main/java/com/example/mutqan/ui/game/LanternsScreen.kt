@@ -69,6 +69,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.IntOffset
@@ -172,6 +174,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     var clock by remember { mutableFloatStateOf(0f) }
     var paused by remember { mutableStateOf(false) }
     val effects = remember { Effects() }
+    // Confetti over everything, for a new best at the end of a round.
+    val cheers = remember { Effects() }
     val hud = remember { Hud() }
     var shown by remember { mutableStateOf<List<Lantern>>(emptyList()) }
     var area by remember { mutableStateOf(IntSize.Zero) }
@@ -222,6 +226,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                     val round = vm.game
                     val w = area.width.toFloat()
                     val h = area.height.toFloat()
+                    // After the round the game still runs, only for the lanterns' last animations.
+                    if (round != null && vm.phase == LanternsViewModel.Phase.OVER) round.update(dt)
                     if (round != null && vm.phase == LanternsViewModel.Phase.PLAYING && clock >= countdownUntil) {
                         round.update(dt)
                         while (round.events.isNotEmpty()) {
@@ -276,6 +282,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                         }
                     }
                     effects.update(dt, gravity = h * 0.5f)
+                    cheers.update(dt, gravity = h * 0.35f)
                     if (round != null) {
                         hud.sync(round)
                         val now = round.lanterns
@@ -299,7 +306,9 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 .onSizeChanged { area = it }
                 .graphicsLayer { translationX = sin(clock * 70f) * effects.shake * 14.dp.toPx() }
         ) {
-            NightSky(time = { clock })
+            val inMenu = vm.phase == LanternsViewModel.Phase.MENU || vm.phase == LanternsViewModel.Phase.LOADING
+            // In a round the moon goes low on the right, out from behind the hearts and the verse.
+            NightSky(time = { clock }, moon = if (inMenu) Offset(0.16f, 0.15f) else Offset(0.82f, 0.44f))
             if (vm.phase == LanternsViewModel.Phase.MENU || vm.phase == LanternsViewModel.Phase.LOADING) {
                 MenuLanterns(time = { clock })
             }
@@ -317,6 +326,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     clock = { clock },
                                     area = area,
                                     panelY = if (area.height > 0) panelBottom / area.height - 0.04f else 0.2f,
+                                    escapeY = { game.escapeY },
                                     onTap = { id -> if (!paused && vm.phase == LanternsViewModel.Phase.PLAYING) vm.game?.tap(id) }
                                 )
                             }
@@ -347,6 +357,19 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             }
             banner?.let { b -> BannerView(b, clock = { clock }, onDone = { if (banner === b) banner = null }) }
             if (vm.phase == LanternsViewModel.Phase.PLAYING && clock < countdownUntil) Countdown(left = countdownUntil - clock)
+        }
+
+        // A new best: three bursts of every colour from the title, one after another.
+        LaunchedEffect(vm.newBest) {
+            if (!vm.newBest) return@LaunchedEffect
+            repeat(3) { wave ->
+                val w = area.width.toFloat()
+                val h = area.height.toFloat()
+                GameColors.hues.forEach { cheers.burst(w * (0.3f + 0.2f * wave), h * 0.2f, it, 9, w * 1.2f) }
+                cheers.burst(w * (0.3f + 0.2f * wave), h * 0.2f, GameColors.Gold, 14, w * 1.3f)
+                haptics.confirm()
+                kotlinx.coroutines.delay(350)
+            }
         }
 
         when (vm.phase) {
@@ -384,6 +407,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 )
             }
         }
+        SparksLayer(effects = cheers, clock = { clock }, slow = false)
     }
 }
 
@@ -432,6 +456,7 @@ private fun LanternView(
     clock: () -> Float,
     area: IntSize,
     panelY: Float,
+    escapeY: () -> Float,
     onTap: (Long) -> Unit
 ) {
     val density = LocalDensity.current
@@ -451,12 +476,18 @@ private fun LanternView(
             .size(LanternWidth, LanternHeight)
             .graphicsLayer {
                 clock()
+                // Fading by drawing each part fainter, not through a layer of its own size, which would cut the
+                // glow (wider than the lantern) into a box.
+                compositingStrategy = CompositingStrategy.ModulateAlpha
                 val t = lantern.stateTime
                 when (lantern.state) {
                     LanternState.RISING -> {
-                        // A gentle lean with the sway, and a fade-in as it comes up out of the town.
+                        // A gentle lean with the sway, a fade-in as it comes up out of the town, and a fade-out as it
+                        // goes under the verse panel.
                         rotationZ = sin(clock() * 1.35f + lantern.id) * 3f
-                        alpha = ((LanternsGame.SPAWN_Y + 0.05f - lantern.y) / 0.18f).coerceIn(0f, 1f)
+                        val fadeIn = ((LanternsGame.SPAWN_Y + 0.05f - lantern.y) / 0.18f).coerceIn(0f, 1f)
+                        val fadeOut = ((lantern.y - escapeY()) / 0.07f).coerceIn(0f, 1f)
+                        alpha = minOf(fadeIn, fadeOut)
                     }
                     LanternState.CAUGHT -> {
                         val p = (t / LanternsGame.CAUGHT_TIME).coerceIn(0f, 1f)
@@ -552,7 +583,9 @@ private fun SparksLayer(effects: Effects, clock: () -> Float, slow: Boolean) {
                 color = f.color.copy(alpha = a),
                 fontSize = if (f.big) 40.sp else 24.sp,
                 fontWeight = FontWeight.Bold,
-                shadow = Shadow(Color.Black.copy(alpha = 0.6f * a), Offset(0f, 2f), 8f)
+                shadow = Shadow(Color.Black.copy(alpha = 0.6f * a), Offset(0f, 2f), 8f),
+                // "+200" and "×3" read left to right in any language.
+                textDirection = TextDirection.Ltr
             )
             val layout = measurer.measure(f.text, style)
             drawText(layout, topLeft = Offset(f.x - layout.size.width / 2f, f.y - layout.size.height / 2f))
@@ -565,14 +598,21 @@ private fun SparksLayer(effects: Effects, clock: () -> Float, slow: Boolean) {
 private fun MenuLanterns(time: () -> Float) {
     Canvas(Modifier.fillMaxSize()) {
         val t = time()
-        val lw = 58.dp.toPx()
+        val lw = 50.dp.toPx()
         val lh = lw * 1.3f
-        val xs = listOf(0.12f, 0.88f, 0.27f, 0.73f, 0.5f, 0.06f)
+        // Along the two sides only, so they never pass behind the words and buttons in the middle.
+        val xs = listOf(0.08f, 0.92f, 0.1f, 0.9f)
         xs.forEachIndexed { i, x ->
-            val p = (t * 0.03f + i * 0.19f) % 1f
+            val p = (t * 0.03f + i * 0.26f) % 1f
             val y = size.height * (1.12f - p * 1.35f)
-            val sx = size.width * x + sin(t * 1.1f + i) * 8.dp.toPx()
-            drawLantern(GameColors.hue(i), lit = 0.9f, glow = 0.9f, topLeft = Offset(sx - lw / 2f, y - lh / 2f), area = Size(lw, lh))
+            val sx = size.width * x + sin(t * 1.1f + i) * 6.dp.toPx()
+            // Faint while passing the words in the middle of the screen, bright over the town and the high sky.
+            val band = y / size.height
+            val clear = ((kotlin.math.abs(band - 0.5f) - 0.24f) / 0.1f).coerceIn(0f, 1f)
+            drawLantern(
+                GameColors.hue(i + 1), lit = 0.85f, glow = 0.8f,
+                topLeft = Offset(sx - lw / 2f, y - lh / 2f), area = Size(lw, lh), alpha = 0.12f + 0.88f * clear
+            )
         }
     }
 }
@@ -717,7 +757,8 @@ private fun BannerView(banner: Banner, clock: () -> Float, onDone: () -> Unit) {
         Banner.Kind.VERSE -> {
             title = stringResource(R.string.game_verse_done)
             line = buildList {
-                add("+${banner.bonus}")
+                // Isolated left to right, so "+800" keeps its sign in front in an Arabic line.
+                add("⁦+${banner.bonus}⁩")
                 if (banner.perfect) add(stringResource(R.string.game_perfect))
                 if (banner.level > 0) add(stringResource(R.string.game_level, banner.level))
             }.joinToString(" · ")
@@ -938,11 +979,11 @@ private fun Rule(icon: androidx.compose.ui.graphics.vector.ImageVector, text: St
 }
 
 @Composable
-private fun Scrim(content: @Composable () -> Unit) {
+private fun Scrim(color: Color = Color(0xB3050816), content: @Composable () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xB3050816))
+            .background(color)
             .pointerInput(Unit) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false) } },
         contentAlignment = Alignment.Center
     ) { content() }
@@ -979,7 +1020,7 @@ private fun OverOverlay(
     val shownScore by animateIntAsState(game.score, tween(900), label = "final")
     var counted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { counted = true }
-    Scrim {
+    Scrim(color = Color(0xE0050816)) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -1010,7 +1051,11 @@ private fun OverOverlay(
             Spacer(Modifier.height(18.dp))
             Row(Modifier.widthIn(max = 460.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Stat(stringResource(R.string.game_verses_done), game.versesDone.toString(), Modifier.weight(1f))
-                Stat(stringResource(R.string.game_accuracy), "${(game.accuracy * 100).roundToInt()}%", Modifier.weight(1f))
+                Stat(
+                    stringResource(R.string.game_accuracy),
+                    if (game.right + game.wrong == 0) "—" else "${(game.accuracy * 100).roundToInt()}%",
+                    Modifier.weight(1f)
+                )
                 Stat(stringResource(R.string.game_best_combo), game.bestCombo.toString(), Modifier.weight(1f))
             }
             if (game.played.isNotEmpty()) {
