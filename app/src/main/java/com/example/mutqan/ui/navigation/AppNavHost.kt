@@ -213,6 +213,8 @@ object Routes {
     fun quiz(mode: QuizMode)                     = "quiz/${mode.route}"
     /** A short quiz on [pages], the pages just read in the Mushaf. */
     fun readingQuiz(pages: Set<Int>)             = "quiz/${QuizMode.READING.route}?pages=" + pages.sorted().joinToString(",")
+    /** «فوانيس» as a break from reading: a calm sitting on the pages just read. */
+    fun lanternsBreak(pages: Set<Int>)           = "$LANTERNS?pages=" + pages.sorted().joinToString(",")
     fun pageQuiz(end: Boolean)                   = "page_quiz/$end"
 }
 
@@ -329,7 +331,7 @@ fun AppNavHost(
     // or hides them would resize the page under the reader's eyes.
     val inMushaf = currentRoute?.startsWith(Routes.MUSHAF_VIEWER) == true
     // The game's night sky runs under the bars too; it keeps its own controls clear of them.
-    val edgeToEdge = inMushaf || currentRoute == Routes.LANTERNS
+    val edgeToEdge = inMushaf || currentRoute?.startsWith(Routes.LANTERNS) == true
 
     // The tabs run under the floating dock, so each leaves its own bottom room as tall as the dock (and the player over it).
     val backdrop = rememberGlassBackdrop()
@@ -615,10 +617,15 @@ fun AppNavHost(
                 )
             }
 
-            composable(Routes.LANTERNS) {
+            composable(
+                route     = "${Routes.LANTERNS}?pages={pages}",
+                arguments = listOf(navArgument("pages") { type = NavType.StringType; nullable = true; defaultValue = null })
+            ) { entry ->
                 LanternsScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenVerse = { page, ayah -> navController.openMushaf(page, ayah) }
+                    onOpenVerse = { page, ayah -> navController.openMushaf(page, ayah) },
+                    breakPages = entry.arguments?.getString("pages")
+                        ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()?.takeIf { it.isNotEmpty() }
                 )
             }
 
@@ -739,7 +746,8 @@ fun AppNavHost(
                     onOpenTafsir = { ayah -> navController.navigate(Routes.tafsir(ayah)) },
                     onOpenAudioStorage = { navController.navigate(Routes.AUDIO_STORAGE) },
                     onOpenJuz = { juz -> navController.navigate(Routes.juzDetail(juz)) },
-                    onOpenReadingQuiz = { pages -> navController.navigate(Routes.readingQuiz(pages)) }
+                    onOpenReadingQuiz = { pages -> navController.navigate(Routes.readingQuiz(pages)) },
+                    onOpenLanterns = { pages -> navController.navigate(Routes.lanternsBreak(pages)) }
                 )
             }
         }

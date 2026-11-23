@@ -110,7 +110,8 @@ internal fun LevelMap(
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
-    val next = stars.size + 1
+    // The furthest open: the one after the last won, or two on after three stars (the one leapt over stays open).
+    val next = LanternsLevels.furthestOpen(stars)
     val count = next + if (anyLevel) LEVELS_AHEAD_TEST else LEVELS_AHEAD
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (next - 3).coerceAtLeast(0))
     Column(
@@ -152,8 +153,8 @@ internal fun LevelMap(
             items(count, key = { it }) { i ->
                 val level = i + 1
                 val kind = when {
-                    level <= stars.size -> NodeKind.WON
-                    level == next -> NodeKind.NEXT
+                    level <= stars.size && stars[level - 1] > 0 -> NodeKind.WON
+                    level <= next -> NodeKind.NEXT
                     else -> NodeKind.LOCKED
                 }
                 LevelNode(
@@ -429,6 +430,8 @@ internal fun LevelOverOverlay(
     game: LanternsGame,
     level: Int,
     starsWon: Int,
+    /** The level the next button goes to: the one after, or further on after a leap. */
+    nextLevel: Int,
     onStarLand: (Int) -> Unit,
     onNext: () -> Unit,
     onAgain: () -> Unit,
@@ -487,7 +490,11 @@ internal fun LevelOverOverlay(
             PlayedVerses(game, onOpenVerse)
             Spacer(Modifier.height(22.dp))
             if (cleared) {
-                GameButton(stringResource(R.string.game_level_title, level + 1), onNext, Modifier.widthIn(min = 240.dp))
+                GameButton(
+                    stringResource(if (nextLevel > level + 1) R.string.game_leap_to else R.string.game_level_title, nextLevel),
+                    onNext,
+                    Modifier.widthIn(min = 240.dp)
+                )
                 Spacer(Modifier.height(10.dp))
                 GameButton(stringResource(R.string.game_replay_level), onAgain, Modifier.widthIn(min = 240.dp), primary = false)
             } else {

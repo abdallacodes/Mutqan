@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,6 +55,7 @@ import com.example.mutqan.ui.components.FolioGroup
 import com.example.mutqan.ui.components.HeroCard
 import com.example.mutqan.ui.components.IconMedallion
 import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperOutlinedButton
 import com.example.mutqan.ui.components.PaperDialog
 import com.example.mutqan.ui.components.PaperLink
 import com.example.mutqan.ui.components.rememberHaptics
@@ -240,7 +242,7 @@ private const val TICK_MS = 5_000L
 
 /** The offer itself: a card over the bottom of the page, with the pages read and a button to start. */
 @Composable
-fun ReadingQuizCard(offer: ReadingQuizOffer, onStart: (Set<Int>) -> Unit, modifier: Modifier = Modifier) {
+fun ReadingQuizCard(offer: ReadingQuizOffer, onStart: (Set<Int>) -> Unit, modifier: Modifier = Modifier, onBreak: ((Set<Int>) -> Unit)? = null) {
     AnimatedVisibility(
         visible = offer.visible,
         enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
@@ -278,6 +280,16 @@ fun ReadingQuizCard(offer: ReadingQuizOffer, onStart: (Set<Int>) -> Unit, modifi
                     onClick = { onStart(offer.take()) },
                     modifier = Modifier.weight(1f)
                 )
+                // Or a break that stays with what was read: «فوانيس», calm, on these pages.
+                if (onBreak != null) {
+                    PaperOutlinedButton(
+                        text = stringResource(R.string.reading_quiz_game),
+                        onClick = { onBreak(offer.take()) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 PaperLink(text = stringResource(R.string.reading_quiz_later), onClick = offer::later, soft = true)
             }
         }

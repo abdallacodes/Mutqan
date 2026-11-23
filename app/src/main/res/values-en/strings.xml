@@ -1508,4 +1508,44 @@
     <string name="notice_title_merged">Changes merged</string>
     <string name="notice_merged">The account was changed on another device and on this one, so the changes were combined: %1$d added and %2$d removed on this device.</string>
     <string name="notice_copy_merged">A copy of this device\'s data from before the merge is saved on this phone:</string>
+    <!-- Lanterns: its three modes, where its verses come from, the calm meaning card, the mastery run. -->
+    <string name="game_mode_calm">Reflect</string>
+    <string name="game_mode_calm_line">No hearts, no hurry, and each verse\'s meaning once it is built.</string>
+    <string name="game_mode_challenge">Challenge</string>
+    <string name="game_mode_challenge_line">Levels with stars that speed up as you get words right. Three stars open two levels.</string>
+    <string name="game_mode_mastery">Mastery</string>
+    <string name="game_mode_mastery_line">One heart, no words given, look-alike words. How many verses can you build without a slip?</string>
+    <string name="game_mode_hardest">The hardest</string>
+    <plurals name="game_mastery_best">
+        <item quantity="one">Best run: %d verse</item>
+        <item quantity="other">Best run: %d verses</item>
+    </plurals>
+    <plurals name="game_mastery_verses">
+        <item quantity="one">%d verse</item>
+        <item quantity="other">%d verses</item>
+    </plurals>
+    <plurals name="game_calm_built">
+        <item quantity="one">%d verse built</item>
+        <item quantity="other">%d verses built</item>
+    </plurals>
+    <string name="game_source_from">Verses from: %1$s</string>
+    <string name="game_source_amma">Verses from Juz ʿAmma (your hifz is not set yet)</string>
+    <string name="game_source_title">Where do the verses come from?</string>
+    <string name="game_source_hint">The same choice as on the Practice screen: change it here and it changes there.</string>
+    <string name="game_source_amma_hint">Set your hifz in the app to play its verses.</string>
+    <string name="game_done">Done</string>
+    <string name="game_meaning_title">Meaning</string>
+    <string name="game_meaning_source">Al-Mukhtasar fi al-Tafsir</string>
+    <string name="game_meaning_next">Next verse</string>
+    <string name="game_meaning_finish">Finish</string>
+    <string name="game_meaning_none">No commentary for this verse here.</string>
+    <string name="game_calm_done">Well done</string>
+    <string name="game_calm_slipped">The verses you slipped on will come back after a while.</string>
+    <string name="game_calm_more">Seven more</string>
+    <string name="game_calm_finish">Done</string>
+    <string name="game_mastery_over">Run over</string>
+    <string name="game_mastery_new">New record!</string>
+    <string name="game_score_label">Points</string>
+    <string name="game_leap_to">Leap to level %1$d</string>
+    <string name="reading_quiz_game">Break: Lanterns</string>
 </resources>

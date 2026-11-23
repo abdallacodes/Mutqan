@@ -254,7 +254,9 @@ fun MushafViewerScreen(
     /** Opens the map of a juz (its quarters and the user's subjects). */
     onOpenJuz: (Int) -> Unit = {},
     /** Opens a short quiz on the pages just read (offered every so many minutes of reading). */
-    onOpenReadingQuiz: (Set<Int>) -> Unit = {}
+    onOpenReadingQuiz: (Set<Int>) -> Unit = {},
+    /** A break from reading in «فوانيس»: a calm sitting on the pages just read. */
+    onOpenLanterns: (Set<Int>) -> Unit = {}
 ) {
     val context     = LocalContext.current
     val viewModel   = viewModel<MushafViewerViewModel>(factory = MushafViewerViewModelFactory(context))
@@ -952,6 +954,7 @@ fun MushafViewerScreen(
             ReadingQuizCard(
                 offer = readingOffer,
                 onStart = onOpenReadingQuiz,
+                onBreak = onOpenLanterns,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
             )
             AnimatedVisibility(

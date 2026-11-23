@@ -1712,4 +1712,56 @@
     <string name="notice_title_merged">تم دمج التغييرات</string>
     <string name="notice_merged">تغيّرت بيانات الحساب على جهاز آخر وعلى هذا الجهاز معًا، فدُمجت التغييرات: أُضيف %1$d وأُزيل %2$d على هذا الجهاز.</string>
     <string name="notice_copy_merged">حُفظت على هذا الهاتف نسخة من بيانات هذا الجهاز قبل الدمج:</string>
+    <!-- «فوانيس»: its three modes, where its verses come from, the calm meaning card, the mastery run. -->
+    <string name="game_mode_calm">تدبّر</string>
+    <string name="game_mode_calm_line">بلا قلوب ولا عجلة، وبعد كل آية معناها.</string>
+    <string name="game_mode_challenge">تحدّي</string>
+    <string name="game_mode_challenge_line">مراحل بالنجوم، تتسارع كلما أصبت. ثلاث نجوم تفتح مرحلتين.</string>
+    <string name="game_mode_mastery">إتقان</string>
+    <string name="game_mode_mastery_line">قلب واحد، بلا كلمات معطاة، وكلمات متشابهة. كم آية تبني بلا خطأ؟</string>
+    <string name="game_mode_hardest">الأصعب</string>
+    <plurals name="game_mastery_best">
+        <item quantity="zero">أفضل سلسلة: لا شيء بعد</item>
+        <item quantity="one">أفضل سلسلة: آية واحدة</item>
+        <item quantity="two">أفضل سلسلة: آيتان</item>
+        <item quantity="few">أفضل سلسلة: %d آيات</item>
+        <item quantity="many">أفضل سلسلة: %d آية</item>
+        <item quantity="other">أفضل سلسلة: %d آية</item>
+    </plurals>
+    <plurals name="game_mastery_verses">
+        <item quantity="zero">%d آية</item>
+        <item quantity="one">آية واحدة</item>
+        <item quantity="two">آيتان</item>
+        <item quantity="few">%d آيات</item>
+        <item quantity="many">%d آية</item>
+        <item quantity="other">%d آية</item>
+    </plurals>
+    <plurals name="game_calm_built">
+        <item quantity="zero">ابنِ الآية الأولى</item>
+        <item quantity="one">بنيت آية واحدة</item>
+        <item quantity="two">بنيت آيتين</item>
+        <item quantity="few">بنيت %d آيات</item>
+        <item quantity="many">بنيت %d آية</item>
+        <item quantity="other">بنيت %d آية</item>
+    </plurals>
+    <string name="game_source_from">الآيات من: %1$s</string>
+    <string name="game_source_amma">الآيات من جزء عمّ (لم تحدّد حفظك بعد)</string>
+    <string name="game_source_title">من أين الآيات؟</string>
+    <string name="game_source_hint">الاختيار نفسه في شاشة التدريب: إن غيّرته هنا تغيّر هناك.</string>
+    <string name="game_source_amma_hint">حدّد حفظك في التطبيق لتأتي الآيات منه.</string>
+    <string name="game_done">تم</string>
+    <string name="game_meaning_title">المعنى</string>
+    <string name="game_meaning_source">المختصر في التفسير</string>
+    <string name="game_meaning_next">الآية التالية</string>
+    <string name="game_meaning_finish">إنهاء الجلسة</string>
+    <string name="game_meaning_none">لا تفسير لهذه الآية هنا.</string>
+    <string name="game_calm_done">أحسنت</string>
+    <string name="game_calm_slipped">الآيات التي تعثّرت فيها ستعود إليك بعد حين.</string>
+    <string name="game_calm_more">سبع آيات أخرى</string>
+    <string name="game_calm_finish">انتهيت</string>
+    <string name="game_mastery_over">انتهت السلسلة</string>
+    <string name="game_mastery_new">سلسلة قياسية!</string>
+    <string name="game_score_label">النقاط</string>
+    <string name="game_leap_to">اقفز إلى المرحلة %1$d</string>
+    <string name="reading_quiz_game">استراحة: فوانيس</string>
 </resources>

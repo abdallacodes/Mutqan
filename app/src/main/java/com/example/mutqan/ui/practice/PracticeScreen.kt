@@ -227,7 +227,7 @@ private class Entry(
 private class SkillExercises(val choose: List<Entry>, val recite: List<Entry>)
 
 /** The choices of pages offered as one tap; anything else made in the sheet shows as "custom". */
-private enum class ScopePreset(@StringRes val label: Int, val scope: PracticeScope) {
+internal enum class ScopePreset(@StringRes val label: Int, val scope: PracticeScope) {
     ALL(R.string.practice_chip_all, PracticeScope()),
     TODAY(R.string.practice_chip_today, PracticeScope(recentAmount = 1, recentUnit = RecencyUnit.DAYS)),
     WEEK(R.string.practice_chip_week, PracticeScope(recentAmount = 1, recentUnit = RecencyUnit.WEEKS)),
@@ -260,7 +260,7 @@ fun PracticeScreen(
     val skills by viewModel.skills.collectAsState()
     val missed by viewModel.missed.collectAsState()
     val daily by viewModel.daily.collectAsState()
-    val gameBest by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsBest }.collectAsState(initial = 0)
+    val gameBest by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsMasteryBest }.collectAsState(initial = 0)
     val gameStars by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsStars }.collectAsState(initial = emptyList())
     var choosing by remember { mutableStateOf(false) }
     var pickingJuz by remember { mutableStateOf(false) }
@@ -327,7 +327,7 @@ fun PracticeScreen(
             )
             // The game: what catches the eye on this screen after the day's set.
             LanternsCard(
-                best = gameBest,
+                masteryBest = gameBest,
                 stars = gameStars,
                 onPlay = onPlayGame,
                 modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)

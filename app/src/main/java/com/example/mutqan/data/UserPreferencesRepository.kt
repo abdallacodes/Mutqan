@@ -72,6 +72,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_LANTERNS_STARS    = stringPreferencesKey("lanterns_stars")
         private val KEY_LANTERNS_SLIPS    = stringPreferencesKey("lanterns_slips")
         private val KEY_LANTERNS_SEEN     = stringPreferencesKey("lanterns_seen")
+        private val KEY_LANTERNS_MASTERY  = intPreferencesKey("lanterns_mastery_best")
         private val KEY_LANTERNS_SOUND    = booleanPreferencesKey("lanterns_sound")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
@@ -303,6 +304,27 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LANTERNS_SEEN] = GameSeen.format(GameSeen.after(GameSeen.parse(prefs[KEY_LANTERNS_SEEN]), drawn))
         }
+    }
+
+    /** The most verses built in one run of «فوانيس» at its hardest (إتقان), on this device; 0 before the first. */
+    val lanternsMasteryBest: Flow<Int> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_MASTERY] ?: 0 }
+
+    /** Counts a mastery run that built [verses]; true when that is a new record (and it is kept). */
+    suspend fun recordLanternsMastery(verses: Int): Boolean {
+        var beaten = false
+        context.dataStore.edit { prefs ->
+            if (verses > (prefs[KEY_LANTERNS_MASTERY] ?: 0)) {
+                prefs[KEY_LANTERNS_MASTERY] = verses
+                beaten = true
+            }
+            prefs[KEY_LANTERNS_ROUNDS] = (prefs[KEY_LANTERNS_ROUNDS] ?: 0) + 1
+        }
+        return beaten
+    }
+
+    /** Counts a round of «فوانيس» that keeps nothing else (a calm sitting). */
+    suspend fun countLanternsRound() {
+        context.dataStore.edit { prefs -> prefs[KEY_LANTERNS_ROUNDS] = (prefs[KEY_LANTERNS_ROUNDS] ?: 0) + 1 }
     }
 
     /** Whether «فوانيس» plays its sounds. */

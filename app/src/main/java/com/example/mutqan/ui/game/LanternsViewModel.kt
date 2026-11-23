@@ -10,7 +10,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.UserPreferencesRepository
+import com.example.mutqan.domain.PassageStates
+import com.example.mutqan.domain.PracticeScope
 import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.TafsirLibrary
+import com.example.mutqan.domain.TafsirSource
+import com.example.mutqan.domain.game.GameMode
+import com.example.mutqan.domain.game.GameModes
 import com.example.mutqan.domain.game.LanternsGame
 import com.example.mutqan.domain.game.LanternsLevels
 import com.example.mutqan.domain.game.LanternsSource
@@ -22,20 +28,30 @@ import com.example.mutqan.quran.QuranWord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * «فوانيس» and what is around a round: the menu, the map of levels and a level's card, the loading, the round itself
- * and its end. A round is a level of the map ([level]) or the open round (no level).
+ * «فوانيس» and what is around a round: the menu of its three modes, the map of levels and a level's card, the loading,
+ * the round itself and its end. [breakPages], when given, are pages just read in the Mushaf: a calm sitting on them
+ * starts at once (a break from reading that stays with what was read).
  */
-class LanternsViewModel(appContext: Context) : ViewModel() {
+class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? = null) : ViewModel() {
 
     enum class Phase { MENU, MAP, LOADING, PLAYING, OVER }
 
+    /**
+     * Where the verses come from: the pages of [scope] (the Practice screen's choice); all the hifz when that choice has
+     * none ([widened]); Juz 'Amma when nothing is memorised ([amma]).
+     */
+    data class Source(val scope: PracticeScope, val pages: Set<Int>, val widened: Boolean, val amma: Boolean)
+
+    private val context = appContext.applicationContext
     private val prefs = UserPreferencesRepository(appContext)
     private val study = StudyRepository.create(appContext)
     private val quran = QuranRepository.getInstance(appContext)
@@ -45,15 +61,27 @@ class LanternsViewModel(appContext: Context) : ViewModel() {
     var game by mutableStateOf<LanternsGame?>(null)
         private set
 
+    /** The mode of the round being played or just played. */
+    var mode by mutableStateOf(GameMode.CHALLENGE)
+        private set
+
     /** The words of the round by id, to draw them on the lanterns. */
     var words: Map<Int, QuranWord> = emptyMap()
         private set
 
-    /** The level being played or just played; null for the open round. */
+    /** The meaning of each verse of a calm sitting (المختصر في التفسير, as kept), by ayah id. */
+    var meanings: Map<Int, String> = emptyMap()
+        private set
+
+    /** The level being played or just played (a challenge); null otherwise. */
     var level by mutableStateOf<LevelRules?>(null)
         private set
 
-    /** The words to build in the level being played. */
+    /** The verses the round holds (a calm sitting's few; an endless run's first ones). */
+    var roundVerses by mutableIntStateOf(0)
+        private set
+
+    /** The words to build in the round (a level, or a calm sitting). */
     var levelWords by mutableIntStateOf(0)
         private set
 
@@ -61,40 +89,62 @@ class LanternsViewModel(appContext: Context) : ViewModel() {
     var card by mutableStateOf<Int?>(null)
         private set
 
-    /** Whether the open round just over beat the best score. */
-    var newBest by mutableStateOf(false)
+    /** Whether the mastery run just over is a new record. */
+    var newRecord by mutableStateOf(false)
         private set
 
     /** The stars the level just played was won with (0 when it was lost). */
     var starsWon by mutableIntStateOf(0)
         private set
 
-    /** True when no verse could be found to play (nothing memorised fits). */
+    /** True when no verse could be found to play. */
     var nothingToPlay by mutableStateOf(false)
         private set
 
-    val best: StateFlow<Int> = prefs.lanternsBest.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    /** Whether this screen was opened as a break from reading (its calm sittings are on the pages read). */
+    val isBreak: Boolean get() = breakPages != null
+
     val stars: StateFlow<List<Int>> = prefs.lanternsStars.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val fromHifz: StateFlow<Boolean> = prefs.lanternsFromHifz.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val masteryBest: StateFlow<Int> = prefs.lanternsMasteryBest.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
     val sound: StateFlow<Boolean> = prefs.lanternsSound.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val hasHifz: StateFlow<Boolean> = study.coveredPages()
-        .map { covered -> covered?.any { it } == true }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val source: StateFlow<Source?> = combine(
+        prefs.practiceScope, study.coveredPages(), study.revisionLogs(), study.selfRatedStrength()
+    ) { scope, covered, logs, rated ->
+        if (covered == null || covered.none { it }) {
+            Source(scope, quran.pagesOfJuz(AMMA).toSet(), widened = false, amma = true)
+        } else {
+            val states = PassageStates.compute(logs)
+            val chosen = scope.pages(covered, states, rated, logs)
+            if (chosen.isNotEmpty()) Source(scope, chosen, widened = false, amma = false)
+            else Source(scope, PracticeScope().pages(covered, states, rated, logs), widened = true, amma = false)
+        }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** A test build may open any level, locked or not (a long press on it), to try the late ones. */
     val anyLevel: Boolean = (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
+    /** Seconds the wanted word shows after a slip in the round being played. */
+    val hintTime: Float
+        get() = when (mode) {
+            GameMode.CALM -> GameModes.CALM_HINT
+            GameMode.CHALLENGE -> level?.hintTime ?: GameModes.CALM_HINT
+            GameMode.MASTERY -> MASTERY_HINT
+        }
+
     init {
         // The look-alike words' index takes a moment to build: build it while the menu shows.
         viewModelScope.launch(Dispatchers.Default) { runCatching { NextWords.get(quran) } }
-    }
-
-    fun setFromHifz(on: Boolean) {
-        viewModelScope.launch { prefs.setLanternsFromHifz(on) }
+        if (breakPages != null) startCalm()
     }
 
     fun setSound(on: Boolean) {
         viewModelScope.launch { prefs.setLanternsSound(on) }
+    }
+
+    /** Chooses where the verses come from: the same choice as the Practice screen's, kept for both. */
+    fun setScope(scope: PracticeScope) {
+        viewModelScope.launch { prefs.setPracticeScope(scope) }
     }
 
     fun openMap() {
@@ -120,84 +170,125 @@ class LanternsViewModel(appContext: Context) : ViewModel() {
         phase = Phase.MENU
     }
 
-    fun startLevel(number: Int) = start(LanternsLevels.rules(number))
+    fun startCalm() = start(GameMode.CALM, null)
 
-    fun startFree() = start(null)
+    fun startLevel(number: Int) = start(GameMode.CHALLENGE, LanternsLevels.rules(number))
 
-    /** The same round again: the same level, or another open round. */
-    fun again() = start(level)
+    fun startMastery() = start(GameMode.MASTERY, null)
 
-    /** On to the level after the one won: straight in, or through its card on the map when it brings something new. */
+    /** The same again: the same level, another calm sitting, another run. */
+    fun again() = start(mode, level)
+
+    /**
+     * On to the level after the one just won ([nextAfter]): straight in, or through its card on the map when it brings
+     * something new.
+     */
     fun nextLevel() {
         val played = level ?: return
-        val next = played.number + 1
+        val next = nextAfter(played.number)
         val news = LanternsLevels.news(next)
         if (news == LevelNews.FASTER || news == LevelNews.FASTER_LONGER) {
-            start(LanternsLevels.rules(next))
+            start(GameMode.CHALLENGE, LanternsLevels.rules(next))
         } else {
             openMap()
             card = next
         }
     }
 
-    /** Reads a round (from the hifz, or Juz 'Amma) and starts it: the level [rules], or the open round. */
-    private fun start(rules: LevelRules?) {
+    /**
+     * The level to go on to after [played] was won with [starsWon]: when it was the furthest level, the furthest one
+     * open now (two on after three stars); else simply the next.
+     */
+    fun nextAfter(played: Int): Int {
+        val kept = LanternsLevels.withStars(stars.value, played, starsWon)
+        return if (played >= kept.size) LanternsLevels.furthestOpen(kept) else played + 1
+    }
+
+    /** Goes on after a verse of a calm sitting, once its meaning is read. */
+    fun proceed() {
+        game?.proceed()
+    }
+
+    /** Reads a round of [mode] (for a level, its [rules]) from where the verses come from, and starts it. */
+    private fun start(mode: GameMode, rules: LevelRules?) {
         if (phase == Phase.LOADING) return
-        val from = if (phase == Phase.MENU) Phase.MENU else Phase.MAP
+        val from = if (phase == Phase.MAP) Phase.MAP else Phase.MENU
         card = null
         phase = Phase.LOADING
-        newBest = false
+        newRecord = false
         starsWon = 0
         nothingToPlay = false
+        this.mode = mode
         level = rules
         viewModelScope.launch {
-            val source = withContext(Dispatchers.IO) {
-                val covered = study.coveredPages().first()
-                val hifz = covered?.indices?.filter { covered[it] }?.map { it + 1 }.orEmpty()
+            val round = withContext(Dispatchers.IO) {
+                val pages = (if (mode == GameMode.CALM) breakPages else null) ?: source.filterNotNull().first().pages
                 val amma = quran.pagesOfJuz(AMMA)
-                val pages = if (prefs.lanternsFromHifz.first() && hifz.isNotEmpty()) hifz else amma
                 val slipped = prefs.lanternsSlips.first().keys.toList()
                 val recent = prefs.lanternsSeen.first()
-                fun read(on: List<Int>): LanternsSource =
-                    if (rules == null) LanternsSource.load(quran, on, slipped = slipped, recent = recent)
-                    else LanternsSource.forLevel(quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null)
+                fun read(on: Collection<Int>): LanternsSource = when {
+                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent)
+                    mode == GameMode.MASTERY -> LanternsSource.load(
+                        quran, on, slipped = slipped, recent = recent,
+                        given = { 0 }, next = NextWords.get(quran), chance = GameModes.MASTERY_LOOK_ALIKE
+                    )
+                    rules != null -> LanternsSource.forLevel(
+                        quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null
+                    )
+                    else -> error("a level without its rules")
+                }
+                val source = read(pages).takeUnless { it.isEmpty } ?: read(amma)
                 // The verses of this round are noted at once, so the next round (or a replay) draws others.
-                (read(pages).takeUnless { it.isEmpty } ?: read(amma)).also { prefs.recordLanternsSeen(it.drawn) }
+                prefs.recordLanternsSeen(source.drawn)
+                meanings = if (mode != GameMode.CALM) emptyMap() else {
+                    val tafsir = TafsirLibrary.get(context)
+                    source.drawn.associateWith { id -> tafsir.entryFor(TafsirSource.MUKHTASAR, id)?.body.orEmpty() }
+                        .filterValues { it.isNotBlank() }
+                }
+                source
             }
-            if (source.isEmpty) {
+            if (round.isEmpty) {
                 nothingToPlay = true
                 phase = from
                 return@launch
             }
-            words = source.words
-            levelWords = source.toBuild
-            game = LanternsGame(source, fixed = rules?.dials).also { it.start() }
+            words = round.words
+            levelWords = round.toBuild
+            roundVerses = round.drawn.size
+            game = when (mode) {
+                GameMode.CALM -> LanternsGame(round, fixed = GameModes.calmDials, rules = GameModes.calmRules)
+                GameMode.MASTERY -> LanternsGame(round, fixed = GameModes.masteryDials, rules = GameModes.masteryRules)
+                GameMode.CHALLENGE -> LanternsGame(round, fixed = rules?.dials)
+            }.also { it.start() }
             phase = Phase.PLAYING
         }
     }
 
-    /** The round is over: a level won keeps its stars, the open round its score if the best, and the slips are kept. */
+    /** The round is over: a level won keeps its stars, a mastery run its record if the best, and the slips are kept. */
     fun finished() {
         val round = game ?: return
         if (phase != Phase.PLAYING) return
         phase = Phase.OVER
         val rules = level
-        if (rules != null && round.cleared) starsWon = LanternsLevels.stars(round.slips)
+        val mode = mode
+        if (mode == GameMode.CHALLENGE && rules != null && round.cleared) starsWon = LanternsLevels.stars(round.slips)
         viewModelScope.launch {
             prefs.recordLanternsSlips(round.played)
-            when {
-                rules == null -> newBest = prefs.recordLanternsRound(round.score)
-                round.cleared -> prefs.recordLanternsLevel(rules.number, starsWon)
+            when (mode) {
+                GameMode.CHALLENGE -> if (rules != null && round.cleared) prefs.recordLanternsLevel(rules.number, starsWon)
+                GameMode.MASTERY -> newRecord = prefs.recordLanternsMastery(round.versesDone)
+                GameMode.CALM -> prefs.countLanternsRound()
             }
         }
     }
 
     private companion object {
         const val AMMA = 30
+        const val MASTERY_HINT = 1f
     }
 }
 
-class LanternsViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+class LanternsViewModelFactory(private val context: Context, private val breakPages: Set<Int>? = null) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = LanternsViewModel(context.applicationContext) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = LanternsViewModel(context.applicationContext, breakPages) as T
 }
