@@ -53,7 +53,9 @@ fun MushafText(
     color: Color = MaterialTheme.colorScheme.onBackground,
     maxLines: Int = Int.MAX_VALUE,
     wordColors: Map<Int, Color> = emptyMap(),
-    textAlign: TextAlign = TextAlign.Start
+    textAlign: TextAlign = TextAlign.Start,
+    /** Called when the text did not fit [maxLines] (it ends in an ellipsis): the caller may show less. */
+    onOverflow: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val fonts = remember(context) { MushafFontManager.getInstance(context) }
@@ -110,6 +112,7 @@ fun MushafText(
         color = color,
         maxLines = maxLines,
         overflow = if (maxLines == Int.MAX_VALUE) TextOverflow.Clip else TextOverflow.Ellipsis,
+        onTextLayout = { layout -> if (layout.hasVisualOverflow) onOverflow?.invoke() },
         style = TextStyle(
             fontFamily = AmiriFontFamily,
             fontSize = size,

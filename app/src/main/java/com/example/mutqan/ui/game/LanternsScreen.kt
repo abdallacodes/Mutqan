@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -96,6 +97,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -551,7 +553,26 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
-/** The size of a word on a lantern, smaller for a longer word so it fits the window. */
+/**
+ * Lays [content] out as wide as it wants to be and, when that is wider than the width it is given, shrinks all of it
+ * (keeping its shape, centred) to fit: nothing is cut short, however wide the word.
+ */
+@Composable
+private fun FitWidth(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val inner = measurables.first().measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity, minHeight = 0))
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else inner.width
+        val fit = if (inner.width > width) width.toFloat() / inner.width else 1f
+        layout(width, inner.height) {
+            inner.placeRelativeWithLayer((width - inner.width) / 2, 0) {
+                scaleX = fit
+                scaleY = fit
+            }
+        }
+    }
+}
+
+/** The size of a word on a lantern, smaller for a longer word so it fits the window (and [FitWidth] does the rest). */
 private fun wordSize(word: QuranWord): TextUnit {
     val letters = word.hafs.count { it.isLetter() }
     return when {
@@ -648,14 +669,16 @@ private fun LanternView(
     ) {
         when (lantern.kind) {
             LanternKind.WORD -> if (word != null) {
-                MushafText(
-                    span = remember(word) { MushafSpan.of(listOf(word)) },
-                    modifier = Modifier.width(LanternWidth * 0.72f).offset(y = 4.dp),
-                    size = wordSize(word),
-                    color = GameColors.Ink,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center
-                )
+                // However wide the word is in its page font, it is shrunk to fit the window, never cut to an ellipsis.
+                FitWidth(Modifier.width(LanternWidth * 0.72f).offset(y = 4.dp)) {
+                    MushafText(
+                        span = remember(word) { MushafSpan.of(listOf(word)) },
+                        modifier = Modifier,
+                        size = wordSize(word),
+                        color = GameColors.Ink,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             LanternKind.SLOW -> Icon(Icons.Filled.HourglassTop, contentDescription = null, tint = GameColors.Ink, modifier = Modifier.size(36.dp).offset(y = 3.dp))
             LanternKind.LIFE -> Icon(Icons.Filled.Favorite, contentDescription = null, tint = GameColors.hues[1], modifier = Modifier.size(36.dp).offset(y = 3.dp))
@@ -871,11 +894,14 @@ private fun VersePanel(
             }
         }
         val inPlace = verse.words.take(placed).mapNotNull { words[it.id] }
-        // A long verse shows its last words, after an ellipsis.
-        val tail = inPlace.takeLast(TAIL_WORDS)
+        // A long verse shows its last words, after an ellipsis: nine, or fewer when two lines cannot hold them (a narrow
+        // screen, wide words), so the word just built is never the one cut off.
+        var tailWords by remember(verse) { mutableIntStateOf(TAIL_WORDS) }
+        val tailShown = tailWords
+        val tail = inPlace.takeLast(tailShown)
         // Started from nothing: the end of the verse before it, faint, to go on from (until the verse is under way).
         val cue = if (verse.given == 0 && placed < CUE_UNTIL) verse.cue.mapNotNull { words[it] } else emptyList()
-        val span = remember(verse, placed) {
+        val span = remember(verse, placed, tailShown) {
             (if (cue.isNotEmpty()) MushafSpan.More + MushafSpan.of(cue) else MushafSpan.Empty) +
                 (if (inPlace.size > tail.size) MushafSpan.More else MushafSpan.Empty) + MushafSpan.of(tail) +
                 if (placed < verse.words.size) MushafSpan.More else MushafSpan.Empty
@@ -886,7 +912,8 @@ private fun VersePanel(
             size = 24.sp,
             color = if (placed >= verse.words.size) GameColors.Gold else GameColors.Window,
             maxLines = 2,
-            wordColors = faint
+            wordColors = faint,
+            onOverflow = { if (tailWords == tailShown && tailShown > 1) tailWords = tailShown - 1 }
         )
         if (hint != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
