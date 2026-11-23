@@ -10,28 +10,57 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import com.example.mutqan.R
-import kotlin.math.pow
+import kotlin.random.Random
 
 /**
- * The sounds of «فوانيس» (made by `scripts/make_game_sounds.py`: chimes, a muted crack, shimmers and dings, no music),
- * each with how loud it plays next to the others.
+ * The sounds of «فوانيس», sounds of nature made by `scripts/make_game_sounds.py` (no musical tones, no music: the owner
+ * asked for none), each with how loud it plays next to the others.
  */
 internal enum class GameSound(@RawRes val res: Int, val volume: Float) {
-    RIGHT(R.raw.game_right, 0.55f),
-    WRONG(R.raw.game_wrong, 0.75f),
-    MISSED(R.raw.game_missed, 0.65f),
-    VERSE(R.raw.game_verse, 0.8f),
-    PERFECT(R.raw.game_perfect, 0.7f),
+    /** A water drop. */
+    RIGHT(R.raw.game_right, 0.7f),
+
+    /** A twig snapping. */
+    WRONG(R.raw.game_wrong, 0.85f),
+
+    /** A candle blown out. */
+    MISSED(R.raw.game_missed, 0.8f),
+
+    /** Birds' wings taking off. */
+    VERSE(R.raw.game_verse, 0.85f),
+
+    /** Drops dripping. */
+    PERFECT(R.raw.game_perfect, 0.6f),
+
+    /** A gust of wind. */
     COMBO(R.raw.game_combo, 0.6f),
-    SLOW(R.raw.game_slow, 0.75f),
-    LIFE(R.raw.game_life, 0.75f),
+
+    /** Sand trickling. */
+    SLOW(R.raw.game_slow, 0.9f),
+
+    /** A heartbeat. */
+    LIFE(R.raw.game_life, 0.95f),
+
+    /** A flame flaring up. */
     GOLDEN(R.raw.game_golden, 0.8f),
-    TICK(R.raw.game_tick, 0.6f),
-    GO(R.raw.game_go, 0.7f),
-    STAR(R.raw.game_star, 0.85f),
+
+    /** A knock on wood. */
+    TICK(R.raw.game_tick, 0.7f),
+
+    /** A splash. */
+    GO(R.raw.game_go, 0.75f),
+
+    /** A stone into water. */
+    STAR(R.raw.game_star, 0.9f),
+
+    /** A shower of rain. */
     CLEAR(R.raw.game_clear, 0.85f),
-    FAIL(R.raw.game_fail, 0.7f),
-    TAP(R.raw.game_tap, 0.4f)
+
+    /** The wind dying down. */
+    FAIL(R.raw.game_fail, 0.75f),
+
+    /** A pebble's tap. */
+    TAP(R.raw.game_tap, 0.5f)
 }
 
 /**
@@ -73,18 +102,11 @@ internal class GameSounds(context: Context) {
     companion object {
         private const val MAX_STREAMS = 8
 
-        /** Steps up a pentatonic scale, in semitones: the right-word chime climbs as a run grows. */
-        private val RUN_STEPS = intArrayOf(0, 2, 4, 7, 9, 12)
-
-        /** The chime's pitch for the [combo]-th right word in a row. */
-        fun runPitch(combo: Int): Float = 2f.pow(RUN_STEPS[(combo - 1).coerceIn(0, RUN_STEPS.size - 1)] / 12f)
-
-        /** The stars landing at the end of a level ring higher one after another: a major chord. */
-        fun starPitch(index: Int): Float = when (index) {
-            0 -> 1f
-            1 -> 2f.pow(4 / 12f)
-            else -> 2f.pow(7 / 12f)
-        }
+        /**
+         * A pitch a little off the sound as made, at random: no two drops or stones in nature sound the same. Random, not
+         * stepped, so nothing climbs like a tune.
+         */
+        fun natural(spread: Float = 0.12f): Float = 1f + (Random.nextFloat() - 0.5f) * spread
     }
 }
 

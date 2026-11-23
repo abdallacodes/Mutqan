@@ -282,7 +282,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     val y = e.lantern.y * h
                                     effects.burst(x, y, GameColors.hue(e.lantern.hue), 20, w * 0.9f)
                                     effects.float("+${e.points}", GameColors.Gold, x, y - h * 0.05f)
-                                    sounds.play(GameSound.RIGHT, pitch = GameSounds.runPitch(e.combo))
+                                    sounds.play(GameSound.RIGHT, pitch = GameSounds.natural())
                                     if (e.lantern.golden) {
                                         effects.burst(x, y, GameColors.Gold, 28, w * 1.1f)
                                         effects.float("×${LanternsGame.GOLDEN_TIMES}", GameColors.Gold, x, y - h * 0.1f, big = true)
@@ -300,7 +300,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                                     effects.burst(e.lantern.x * w, e.lantern.y * h, Color(0xFF8B8794), 14, w * 0.6f)
                                     hintWord = round.needed?.id
                                     hintUntil = clock + hintTime
-                                    sounds.play(GameSound.WRONG)
+                                    sounds.play(GameSound.WRONG, pitch = GameSounds.natural())
                                     haptics.reject()
                                 }
                                 is GameEvent.Missed -> {
@@ -477,9 +477,9 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                         game = round,
                         level = level.number,
                         starsWon = vm.starsWon,
-                        onStarLand = { i ->
+                        onStarLand = { _ ->
                             haptics.tick()
-                            sounds.play(GameSound.STAR, pitch = GameSounds.starPitch(i))
+                            sounds.play(GameSound.STAR, pitch = GameSounds.natural())
                         },
                         onNext = vm::nextLevel,
                         onAgain = vm::again,

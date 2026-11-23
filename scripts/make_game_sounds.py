@@ -1,10 +1,11 @@
-"""Makes the sounds of «فوانيس» (the Practice game) from scratch: soft chimes, a muted crack, shimmers and dings, no music.
+"""Makes the sounds of «فوانيس» (the Practice game) from scratch, as sounds of nature: no musical tones, no music.
 
     python scripts/make_game_sounds.py
 
-Writes 16-bit mono WAV files to app/src/main/res/raw/game_*.wav. Every sound is made here from sine waves and noise
-(no recordings, nothing to license); the same seed gives the same files. The game plays them through SoundPool
-(`ui/game/GameSounds.kt`), the right-word chime at a higher pitch as a run of right words grows.
+Writes 16-bit mono WAV files to app/src/main/res/raw/game_*.wav. Every sound is shaped here from noise and the rising
+"plip" of a water drop (no recordings, nothing to license); the same seed gives the same files. No notes, scales, chords
+or melodies: water drops, a twig snapping, a candle blown out, wings, wind, sand, a heartbeat, a flame, a knock on wood,
+a splash, a stone into water, rain. The game plays them through SoundPool (`ui/game/GameSounds.kt`).
 """
 import array
 import math
@@ -31,74 +32,72 @@ def add(into, sound, at=0.0, gain=1.0):
     return into
 
 
-def chime(freq, seconds, partials=((1.0, 1.0, 1.0), (2.0, 0.42, 0.62), (3.0, 0.2, 0.42), (4.2, 0.11, 0.3), (5.4, 0.06, 0.22)),
-          decay=0.45, attack=0.002):
-    """A struck glass or bell tone: partials (ratio, amplitude, share of [decay]) fading on their own."""
-    n = int(seconds * RATE)
-    out = [0.0] * n
-    for ratio, amp, share in partials:
-        f = freq * ratio
-        if f >= RATE / 2 * 0.92:
-            continue
-        tau = decay * share
-        w = 2 * math.pi * f / RATE
-        phase = random.random() * 2 * math.pi
-        for i in range(n):
-            t = i / RATE
-            env = math.exp(-t / tau) * min(1.0, t / attack)
-            out[i] += amp * env * math.sin(w * i + phase)
-    return out
+def white(seconds):
+    return [random.uniform(-1, 1) for _ in range(int(seconds * RATE))]
 
 
-def sweep(f0, f1, seconds, attack=0.02, curve=1.0, vibrato=0.0, vibrato_rate=6.0):
-    """A sine gliding from [f0] to [f1], swelling in and fading out."""
-    n = int(seconds * RATE)
-    out = [0.0] * n
-    phase = 0.0
-    for i in range(n):
-        p = i / n
-        f = f0 + (f1 - f0) * (p ** curve)
-        f *= 1 + vibrato * p * math.sin(2 * math.pi * vibrato_rate * i / RATE)
-        phase += 2 * math.pi * f / RATE
-        env = min(1.0, (i / RATE) / attack) * (1 - p) ** 1.6
-        out[i] = env * math.sin(phase)
-    return out
-
-
-def noise(seconds, low=0.0, high=1.0, fade=0.05):
-    """Noise between two one-pole filters ([low] and [high] as fractions 0..1 of how much passes), fading out over [fade]."""
-    n = int(seconds * RATE)
-    out = [0.0] * n
-    lp = 0.0
-    lp2 = 0.0
-    for i in range(n):
-        x = random.uniform(-1, 1)
-        lp += high * (x - lp)          # keeps the low part up to [high]
-        lp2 += low * (lp - lp2)        # what is below [low]
-        env = math.exp(-(i / RATE) / fade)
-        out[i] = (lp - lp2) * env
-    return out
-
-
-def sparkle(seconds, grains, lo=3000, hi=7500, gain=0.12, density=None):
-    """Tiny high pings scattered over [seconds]; [density] (0..1 -> 0..1) shapes when they come."""
-    out = silence(seconds)
-    for _ in range(grains):
-        u = random.random()
-        if density:
-            u = density(u)
-        at = u * seconds * 0.85
-        f = random.uniform(lo, hi)
-        add(out, chime(f, 0.12, partials=((1.0, 1.0, 1.0),), decay=random.uniform(0.025, 0.07)), at, gain * random.uniform(0.5, 1.0))
-    return out
-
-
-def lowpass(sound, a):
+def envelope(sound, attack, decay, hold=0.0):
+    """Rises over [attack] seconds, holds, then falls away with time constant [decay]."""
     out = []
-    y = 0.0
+    for i, v in enumerate(sound):
+        t = i / RATE
+        if t < attack:
+            g = t / attack
+        elif t < attack + hold:
+            g = 1.0
+        else:
+            g = math.exp(-(t - attack - hold) / decay)
+        out.append(v * g)
+    return out
+
+
+def lowpass(sound, cutoff):
+    a = 1 - math.exp(-2 * math.pi * cutoff / RATE)
+    out, y = [], 0.0
     for v in sound:
         y += a * (v - y)
         out.append(y)
+    return out
+
+
+def highpass(sound, cutoff):
+    low = lowpass(sound, cutoff)
+    return [v - l for v, l in zip(sound, low)]
+
+
+def bandpass(sound, center, q, center_end=None):
+    """A resonant band of [sound] around [center] Hz (gliding to [center_end] over the sound, if given)."""
+    out = []
+    x1 = x2 = y1 = y2 = 0.0
+    n = len(sound)
+    coeffs = None
+    for i, x in enumerate(sound):
+        if coeffs is None or i % 32 == 0:
+            f = center if center_end is None else center * (center_end / center) ** (i / max(1, n - 1))
+            w = 2 * math.pi * f / RATE
+            alpha = math.sin(w) / (2 * q)
+            a0 = 1 + alpha
+            coeffs = (alpha / a0, 0.0, -alpha / a0, -2 * math.cos(w) / a0, (1 - alpha) / a0)
+        b0, b1, b2, a1, a2 = coeffs
+        y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2, x1, y2, y1 = x1, x, y1, y
+        out.append(y)
+    return out
+
+
+def drop(f0, rise=2.4, glide=0.045, decay=0.03, seconds=0.14, click=0.25):
+    """A water drop: the bubble it leaves rings at a pitch that rises fast as it shrinks ("plip"), with a tiny tap."""
+    n = int(seconds * RATE)
+    out = [0.0] * n
+    k = math.log(rise) / glide
+    phase = 0.0
+    for i in range(n):
+        t = i / RATE
+        f = f0 * math.exp(k * min(t, glide * 1.6))
+        phase += 2 * math.pi * f / RATE
+        out[i] = math.sin(phase) * math.exp(-t / decay) * min(1.0, t / 0.0008)
+    if click:
+        add(out, envelope(highpass(white(0.004), 1500), 0.0002, 0.0012), 0, click)
     return out
 
 
@@ -108,7 +107,8 @@ def finish(sound, peak, fade_out=0.012):
     k = peak / top
     n = len(sound)
     fo = int(fade_out * RATE)
-    fi = int(0.0015 * RATE)
+    # A tenth of a millisecond or two: enough against a click, short enough to keep a snap sharp.
+    fi = max(1, int(0.0002 * RATE))
     out = []
     for i, v in enumerate(sound):
         g = k
@@ -130,117 +130,132 @@ def write(name, sound):
         f.writeframes(pcm.tobytes())
     peak = max(abs(v) for v in sound)
     rms = math.sqrt(sum(v * v for v in sound) / len(sound))
-    print(f'{name:14s} {len(sound) / RATE:5.2f} s  peak {peak:4.2f}  rms {rms:5.3f}  {os.path.getsize(path) // 1024} KB')
+    dc = sum(sound) / len(sound)
+    print(f'{name:14s} {len(sound) / RATE:5.2f} s  peak {peak:4.2f}  rms {rms:5.3f}  dc {dc:+.4f}  {os.path.getsize(path) // 1024} KB')
 
 
-def note(semitones_from_a4):
-    return 440.0 * 2 ** (semitones_from_a4 / 12)
+def wind(seconds, start, end, q=1.1, attack=0.08, decay=0.25, hold=0.0):
+    """A breath of wind: noise in a band gliding from [start] to [end] Hz, swelling and dying away."""
+    return envelope(bandpass(white(seconds), start, q, end), attack, decay, hold)
 
 
-C5, D5, E5, G5, A5 = note(3), note(5), note(7), note(10), note(12)
-B5, C6, D6, E6, G6, A6 = note(14), note(15), note(17), note(19), note(22), note(24)
-B6, C7, E7, G7 = note(26), note(27), note(31), note(34)
+def flap(seconds=0.05):
+    """One beat of a bird's wings: a soft "whup" of air."""
+    band = bandpass(white(seconds), random.uniform(700, 1100), 0.7)
+    return envelope(lowpass(band, 2200), 0.006, 0.014)
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
 
-    # A right word: a clear glass chime with a soft tap at its start (pitched up in the game as the run grows).
-    right = chime(A5, 0.75, decay=0.42)
-    add(right, noise(0.01, low=0.25, high=0.9, fade=0.002), 0, 0.22)
-    write('game_right', finish(right, 0.82))
+    # A right word: one clear water drop (each one a little different in the game).
+    write('game_right', finish(drop(1000), 0.85))
 
-    # A wrong lantern: a muted thump, the glass cracking a little.
-    wrong = sweep(190, 105, 0.22, attack=0.003, curve=0.5)
-    for k, at in enumerate((0.0, 0.018, 0.041, 0.07)):
-        add(wrong, noise(0.012, low=0.35, high=0.95, fade=0.004), at, 0.5 * (0.7 ** k))
-    wrong = lowpass(wrong, 0.55)
-    write('game_wrong', finish(wrong, 0.8, fade_out=0.04))
+    # A wrong lantern: a dry twig snapping, with a woody knock under it and a few splinters after.
+    snap = envelope(highpass(white(0.006), 1500), 0.0002, 0.0016)
+    add(snap, envelope(bandpass(white(0.08), 450, 2.5), 0.001, 0.035), 0, 2.5)
+    for at, gain in ((0.012, 0.45), (0.027, 0.3), (0.045, 0.2)):
+        add(snap, envelope(highpass(white(0.003), 2000), 0.0002, 0.0009), at, gain)
+    write('game_wrong', finish(snap + silence(0.12), 0.8, fade_out=0.05))
 
-    # The wanted word floating away: a breath and a falling tone, like a light going out.
-    missed = sweep(640, 300, 0.48, attack=0.03, curve=0.8)
-    add(missed, lowpass(noise(0.35, low=0.02, high=0.25, fade=0.12), 0.5), 0, 0.5)
-    write('game_missed', finish(missed, 0.62, fade_out=0.06))
+    # The wanted word floating away: the lantern's light blown out, "pff".
+    puff = wind(0.45, 950, 480, q=0.9, attack=0.025, decay=0.11)
+    add(puff, envelope(lowpass(white(0.45), 350), 0.025, 0.11), 0, 0.6)
+    write('game_missed', finish(puff, 0.7, fade_out=0.08))
 
-    # A verse built: a quick upward shimmer of chimes over a scatter of sparkles.
-    verse = silence(1.25)
-    for k, f in enumerate((C6, D6, E6, G6, A6, C7)):
-        add(verse, chime(f, 0.9, decay=0.32), 0.04 * k, 0.55 - 0.03 * k)
-    add(verse, sparkle(1.1, 34), 0.05)
-    write('game_verse', finish(verse, 0.8, fade_out=0.15))
+    # A verse built: birds taking off, their wings beating away into the sky, over a soft rush of air.
+    verse = wind(1.0, 1200, 1700, q=0.6, attack=0.3, decay=0.25, hold=0.1)
+    verse = [v * 0.25 for v in verse]
+    t = 0.0
+    for i in range(13):
+        add(verse, flap(), t, 0.95 * 0.88 ** i)
+        t += 0.055 + 0.006 * i + random.uniform(-0.005, 0.005)
+    write('game_verse', finish(verse, 0.8, fade_out=0.12))
 
-    # No mistake in it: brighter sparkles and two high chimes, played with the verse.
-    perfect = silence(1.0)
-    add(perfect, chime(E7, 0.8, decay=0.3), 0.2, 0.5)
-    add(perfect, chime(G7, 0.7, decay=0.28), 0.27, 0.45)
-    add(perfect, sparkle(0.9, 40, lo=5000, hi=9000, gain=0.14), 0.12)
-    write('game_perfect', finish(perfect, 0.6, fade_out=0.12))
+    # No mistake in it: a few drops dripping after, played with the wings.
+    perfect = silence(0.95)
+    for _ in range(6):
+        add(perfect, drop(random.uniform(1300, 2600), decay=random.uniform(0.018, 0.03), click=0.15),
+            random.uniform(0.1, 0.8), random.uniform(0.3, 0.55))
+    write('game_perfect', finish(perfect, 0.55, fade_out=0.1))
 
-    # A longer run (×2, ×3…): a rising rush and a bright ting.
-    combo = silence(0.65)
-    rush = []
-    lp = 0.0
-    n = int(0.26 * RATE)
+    # A longer run (×2, ×3…): a short gust of wind rising.
+    gust = wind(0.45, 400, 1800, q=1.2, attack=0.2, decay=0.08)
+    write('game_combo', finish(gust, 0.6, fade_out=0.06))
+
+    # The hourglass: sand trickling, thick at first and thinning out, over a faint hiss.
+    sand = silence(1.0)
+    t = 0.0
+    while t < 0.95:
+        p = t / 0.95
+        grain = envelope(highpass(white(0.0015), 2200), 0.0001, 0.0005)
+        loud = random.uniform(0.1, 0.6) * (1.6 if random.random() < 0.05 else 1.0)
+        add(sand, grain, t, loud * min(1.0, t / 0.06) * (1 - p) ** 0.6)
+        t += random.expovariate(900 - 500 * p)
+    hiss = highpass(white(1.0), 3000)
+    add(sand, [v * 0.08 * min(1.0, i / (0.06 * RATE)) * max(0.0, 1 - i / len(hiss)) for i, v in enumerate(hiss)])
+    write('game_slow', finish(sand, 0.6, fade_out=0.1))
+
+    # A heart back: a heartbeat, "lub-dub" (a deep body and a knock a phone speaker can carry).
+    def beat(body, knock, decay):
+        b = envelope(bandpass(white(0.25), body, 1.5), 0.006, decay)
+        add(b, envelope(bandpass(white(0.25), knock, 2.0), 0.004, decay * 0.8), 0, 0.7)
+        return b
+    heart = silence(0.6)
+    add(heart, beat(110, 280, 0.045), 0, 1.0)
+    add(heart, beat(140, 340, 0.035), 0.22, 0.75)
+    write('game_life', finish(heart, 0.9, fade_out=0.08))
+
+    # A golden lantern: its flame flaring up with a few crackles.
+    flare = []
+    n = int(0.7 * RATE)
+    y = 0.0
     for i in range(n):
-        p = i / n
-        a = 0.05 + 0.45 * p
-        lp += a * (random.uniform(-1, 1) - lp)
-        rush.append(lp * math.sin(math.pi * p) ** 0.8)
-    add(combo, rush, 0, 0.6)
-    add(combo, chime(C7, 0.4, decay=0.22), 0.22, 0.6)
-    write('game_combo', finish(combo, 0.62, fade_out=0.08))
+        t = i / RATE
+        cutoff = 300 + 2200 * min(1.0, t / 0.08) if t < 0.08 else 600 + 1900 * math.exp(-(t - 0.08) / 0.12)
+        a = 1 - math.exp(-2 * math.pi * cutoff / RATE)
+        y += a * (random.uniform(-1, 1) - y)
+        flare.append(y * min(1.0, t / 0.03) * math.exp(-max(0.0, t - 0.03) / 0.18))
+    for _ in range(10):
+        add(flare, envelope(highpass(white(0.002), 2500), 0.0001, 0.0004), random.uniform(0.05, 0.6), random.uniform(0.2, 0.7))
+    write('game_golden', finish(flare, 0.75, fade_out=0.08))
 
-    # The hourglass: everything slows, a gliding tone falling with a slow wobble, two voices a hair apart.
-    slow = sweep(900, 190, 0.85, attack=0.04, curve=0.7, vibrato=0.025, vibrato_rate=5)
-    add(slow, sweep(906, 191, 0.85, attack=0.04, curve=0.7, vibrato=0.025, vibrato_rate=4.6), 0, 0.8)
-    add(slow, lowpass(noise(0.7, low=0.01, high=0.08, fade=0.3), 0.3), 0, 1.2)
-    write('game_slow', finish(slow, 0.6, fade_out=0.1))
+    # The countdown: a knock on wood for each number, and a splash to go.
+    knock = envelope(bandpass(white(0.1), 650, 4.0), 0.0005, 0.018)
+    add(knock, envelope(bandpass(white(0.1), 1500, 3.0), 0.0005, 0.012), 0, 0.4)
+    write('game_tick', finish(knock, 0.6, fade_out=0.03))
+    splash = envelope(bandpass(white(0.5), 1800, 0.7), 0.004, 0.09)
+    add(splash, envelope(lowpass(white(0.4), 400), 0.004, 0.07), 0, 0.8)
+    for _ in range(4):
+        add(splash, drop(random.uniform(1200, 2400), decay=0.02, click=0.1), random.uniform(0.15, 0.5), random.uniform(0.25, 0.45))
+    write('game_go', finish(splash, 0.7, fade_out=0.1))
 
-    # A heart back: two warm notes going up.
-    warm = ((1.0, 1.0, 1.0), (2.0, 0.28, 0.6), (3.0, 0.08, 0.4))
-    life = silence(1.0)
-    add(life, chime(E5, 0.9, partials=warm, decay=0.5, attack=0.006), 0, 0.8)
-    add(life, chime(B5, 0.9, partials=warm, decay=0.55, attack=0.006), 0.11, 0.8)
-    write('game_life', finish(life, 0.7, fade_out=0.12))
+    # A star landing at the end of a level: a stone dropping into water, "plunk".
+    stone = drop(430, rise=2.1, glide=0.07, decay=0.06, seconds=0.4, click=0.0)
+    add(stone, envelope(lowpass(white(0.05), 900), 0.001, 0.012), 0, 0.5)
+    add(stone, envelope(bandpass(white(0.15), 2000, 0.8), 0.002, 0.03), 0.004, 0.3)
+    write('game_star', finish(stone, 0.85, fade_out=0.08))
 
-    # A golden lantern: two quick bright chimes and a glitter, like a coin.
-    golden = silence(0.8)
-    add(golden, chime(B6, 0.6, decay=0.25), 0, 0.6)
-    add(golden, chime(E7, 0.7, decay=0.3), 0.065, 0.65)
-    add(golden, sparkle(0.7, 26, lo=5000, hi=9500, gain=0.16), 0.05)
-    write('game_golden', finish(golden, 0.75, fade_out=0.1))
+    # A level won (or a new best): a short shower of rain, swelling and passing, after a breath of wind.
+    rain = wind(1.7, 500, 900, q=0.8, attack=0.25, decay=0.3)
+    rain = [v * 0.35 for v in rain]
+    t = 0.05
+    while t < 1.55:
+        density = 70 * math.sin(math.pi * min(1.0, t / 1.5)) ** 1.5 + 4
+        add(rain, drop(random.uniform(1500, 4200), decay=random.uniform(0.008, 0.02), seconds=0.06, click=0.2),
+            t, random.uniform(0.08, 0.35))
+        t += random.expovariate(density)
+    hiss = bandpass(white(1.7), 4000, 0.7)
+    add(rain, [v * 0.12 * math.sin(math.pi * min(1.0, i / (1.6 * RATE))) for i, v in enumerate(hiss)])
+    write('game_clear', finish(rain, 0.8, fade_out=0.15))
 
-    # The countdown: a soft wooden tick for each number, and a brighter chime to go.
-    tick = chime(1250, 0.12, partials=((1.0, 1.0, 1.0), (2.7, 0.3, 0.5)), decay=0.03)
-    add(tick, noise(0.004, low=0.3, high=0.9, fade=0.001), 0, 0.3)
-    write('game_tick', finish(tick, 0.55, fade_out=0.03))
-    go = silence(0.7)
-    add(go, chime(C6, 0.7, decay=0.3), 0, 0.6)
-    add(go, chime(G6, 0.7, decay=0.3), 0.012, 0.5)
-    write('game_go', finish(go, 0.7, fade_out=0.1))
+    # A level lost: the wind dying down, as the lanterns go out.
+    fail = wind(1.2, 900, 240, q=1.0, attack=0.08, decay=0.4)
+    write('game_fail', finish(fail, 0.65, fade_out=0.15))
 
-    # A star landing at the end of a level (played higher for the second and third).
-    star = chime(E6, 1.1, decay=0.6)
-    add(star, sparkle(0.8, 16, gain=0.1), 0.02)
-    write('game_star', finish(star, 0.78, fade_out=0.15))
-
-    # A level won: sparkles thickening, then a bright cluster of chimes.
-    clear = silence(1.7)
-    add(clear, sparkle(0.7, 60, gain=0.13, density=lambda u: u ** 0.5), 0)
-    for k, f in enumerate((C6, E6, G6, C7)):
-        add(clear, chime(f, 1.1, decay=0.6), 0.55 + 0.035 * k, 0.5)
-    write('game_clear', finish(clear, 0.8, fade_out=0.2))
-
-    # A level lost: three soft notes stepping down, muffled.
-    muted = ((1.0, 1.0, 1.0), (2.0, 0.15, 0.5))
-    fail = silence(1.1)
-    for k, f in enumerate((G5, E5, C5)):
-        add(fail, chime(f, 0.7, partials=muted, decay=0.35, attack=0.008), 0.17 * k, 0.7)
-    write('game_fail', finish(lowpass(fail, 0.45), 0.62, fade_out=0.12))
-
-    # A button: a very small soft pop.
-    tap = sweep(760, 480, 0.05, attack=0.002, curve=0.6)
-    write('game_tap', finish(tap, 0.42, fade_out=0.015))
+    # A button: a pebble's soft tap.
+    tap = envelope(bandpass(white(0.04), 2200, 3.0), 0.0003, 0.006)
+    write('game_tap', finish(tap, 0.45, fade_out=0.01))
 
 
 if __name__ == '__main__':
