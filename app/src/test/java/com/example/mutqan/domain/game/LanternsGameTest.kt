@@ -214,6 +214,33 @@ class LanternsGameTest {
         assertTrue("no helper lantern in the first six seconds", seen)
     }
 
+    /** The word wanted is أَنَّ; beside it float إِنَّ (hamza below), أُنَّ (another vowel) and أَنَّ with only a stop sign more. */
+    private class NearSource : GameSource {
+        private val verse = GameVerse(
+            1,
+            listOf(GameWord(11, WordKey.of("قَالَ")), GameWord(12, WordKey.of("أَنَّ")), GameWord(13, WordKey.of("ٱللَّهَ"))),
+            given = 1
+        )
+        private var sent = false
+        override fun nextVerse(): GameVerse? = if (sent) null else verse.also { sent = true }
+        override fun decoys(verse: GameVerse, at: Int, count: Int) =
+            listOf(GameWord(91, WordKey.of("إِنَّ")), GameWord(92, WordKey.of("أُنَّ")), GameWord(93, WordKey.of("أَنَّۖ")))
+    }
+
+    @Test
+    fun aWordThatDiffersOnlyByTheHamzaOrAVowelIsWrong() {
+        val g = LanternsGame(NearSource(), Random(4), levelDials).also { it.start() }
+        val near = g.waitForDecoy()
+        assertTrue("a word like the right one, not the right one: ${near.word}", near.word!!.id in listOf(91, 92))
+        g.tap(near.id)
+        assertEquals(1, g.wrong)
+        assertEquals(1, g.placed)
+        assertEquals(LanternsGame.START_LIVES - 1, g.lives)
+        // The word with the same letters and marks is the right one (a stop sign is no part of the word).
+        g.tap(g.waitForNeeded().id)
+        assertEquals(2, g.placed)
+    }
+
     @Test
     fun theWrongWordsAreAskedForTheWantedWordsPlace() {
         val source = FakeSource()

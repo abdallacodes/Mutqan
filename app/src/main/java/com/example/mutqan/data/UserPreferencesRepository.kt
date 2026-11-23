@@ -1,5 +1,6 @@
 package com.example.mutqan.data
 
+import com.example.mutqan.domain.game.GameSeen
 import com.example.mutqan.domain.game.GameSlips
 import com.example.mutqan.domain.game.LanternsLevels
 import com.example.mutqan.domain.game.PlayedVerse
@@ -70,6 +71,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_LANTERNS_HIFZ     = booleanPreferencesKey("lanterns_from_hifz")
         private val KEY_LANTERNS_STARS    = stringPreferencesKey("lanterns_stars")
         private val KEY_LANTERNS_SLIPS    = stringPreferencesKey("lanterns_slips")
+        private val KEY_LANTERNS_SEEN     = stringPreferencesKey("lanterns_seen")
         private val KEY_LANTERNS_SOUND    = booleanPreferencesKey("lanterns_sound")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
@@ -289,6 +291,17 @@ class UserPreferencesRepository(private val context: Context) {
         if (played.isEmpty()) return
         context.dataStore.edit { prefs ->
             prefs[KEY_LANTERNS_SLIPS] = GameSlips.format(GameSlips.after(GameSlips.parse(prefs[KEY_LANTERNS_SLIPS]), played))
+        }
+    }
+
+    /** Verses lately drawn for rounds of «فوانيس» (ayah ids), the most recent first: the next rounds draw others while there are. */
+    val lanternsSeen: Flow<List<Int>> = context.dataStore.data.map { prefs -> GameSeen.parse(prefs[KEY_LANTERNS_SEEN]) }
+
+    /** Remembers that a round drew [drawn] (in the order they come). */
+    suspend fun recordLanternsSeen(drawn: List<Int>) {
+        if (drawn.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            prefs[KEY_LANTERNS_SEEN] = GameSeen.format(GameSeen.after(GameSeen.parse(prefs[KEY_LANTERNS_SEEN]), drawn))
         }
     }
 

@@ -5,7 +5,10 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** A word on a lantern: [id] draws it (a Quran word id), [key] compares it (the text without marks). */
+/**
+ * A word on a lantern: [id] draws it (a Quran word id), [key] compares it ([WordKey]: letter for letter and mark for mark,
+ * so أَنَّ and إِنَّ are two words, and عَلِمَ and عُلِمَ).
+ */
 data class GameWord(val id: Int, val key: String)
 
 /**

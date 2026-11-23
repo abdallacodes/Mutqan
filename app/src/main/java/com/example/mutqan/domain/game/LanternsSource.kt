@@ -1,6 +1,5 @@
 package com.example.mutqan.domain.game
 
-import com.example.mutqan.domain.QuizText
 import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranWord
@@ -32,6 +31,12 @@ class LanternsSource internal constructor(
     private var index = 0
 
     val isEmpty: Boolean get() = verses.isEmpty()
+
+    /**
+     * The verses to keep from coming again soon, the first to come first: a level's all, the open round's first few (it
+     * rarely goes through them all).
+     */
+    val drawn: List<Int> = verses.map { it.ayahId }.let { if (once) it else it.take(OPEN_DRAWN) }
 
     /** The words to build in all the verses. */
     val toBuild: Int = verses.sumOf { it.words.size - it.given }
@@ -74,48 +79,66 @@ class LanternsSource internal constructor(
         const val MAX_WORDS = 14
         private const val ROUND_VERSES = 60
 
+        /** Of the open round's verses, the first this many count as drawn. */
+        private const val OPEN_DRAWN = 20
+
+        /** The most slipped verses the open round puts first. */
+        private const val OPEN_SLIPPED = 8
+
         /** Words of the verse before shown to start from when none is given (its end marker apart). */
         private const val CUE_WORDS = 3
 
         /** Look-alike words read for each word of a verse. */
         private const val ALIKE_EACH = 2
 
-        fun key(word: QuranWord): String = QuizText.normalize(word.hafs)
+        /** How words are compared: letter for letter and mark for mark (أَنَّ is not إِنَّ), see [WordKey]. */
+        fun key(word: QuranWord): String = WordKey.of(word.hafs)
+
+        /** The verses with their lengths; those with the same words (a refrain) share a twin. */
+        private fun lengths(ayahs: List<QuranAyah>): List<VerseLength> {
+            val twins = HashMap<String, Int>()
+            return ayahs.map { VerseLength(it.id, it.wordsCount, twins.getOrPut(WordKey.ofVerse(it.text)) { it.id }) }
+        }
 
         /**
-         * Reads an open round from [pages] (the memorised pages, or a juz): up to sixty verses, the ones in [slipped]
-         * that are on those pages first (most recent first), then the others in random order; their words and the words
+         * Reads an open round from [pages] (the memorised pages, or a juz): up to sixty verses, a few slipped ones first
+         * when they are due, then verses not drawn lately in random order ([LevelVerses.order]); their words and the words
          * of the verses on either side of each. Call off the main thread.
          */
         fun load(
             quran: QuranRepository,
             pages: Collection<Int>,
             random: Random = Random.Default,
-            slipped: List<Int> = emptyList()
+            slipped: List<Int> = emptyList(),
+            recent: List<Int> = emptyList()
         ): LanternsSource {
             val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
-            val slipOrder = slipped.withIndex().associate { (i, id) -> id to i }
-            val first = ayahs.filter { it.id in slipOrder }.sortedBy { slipOrder[it.id] }.take(ROUND_VERSES / 2)
-            val chosen = (first + ayahs.filter { it.id !in slipOrder }.shuffled(random)).take(ROUND_VERSES)
-            return read(quran, chosen.map { it.id }, given = { size -> if (size >= 10) 2 else 1 }, next = null, chance = 0f, once = false, random = random)
+            val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, OPEN_SLIPPED).take(ROUND_VERSES)
+            return read(quran, ids, given = { size -> if (size >= 10) 2 else 1 }, next = null, chance = 0f, once = false, random = random)
         }
 
         /**
-         * Reads a level from [pages]: verses no longer than the level allows whose words to build add up to the level's
-         * words ([LevelVerses.pick], the slipped ones first), with the level's words given, the end of the verse before
-         * for a verse started from nothing, and look-alike words from [next] when the level has them. Call off the main
-         * thread.
+         * Reads a level from [pages]: verses no longer than the level allows (a few longer ones when a small hifz has too
+         * few verses otherwise) whose words to build add up to the level's words ([LevelVerses.pick]: no verse twice,
+         * not the ones drawn lately, a few slipped ones when due), with the level's words given, the end of the verse
+         * before for a verse started from nothing, and look-alike words from [next] when the level has them. Call off
+         * the main thread.
          */
         fun forLevel(
             quran: QuranRepository,
             pages: Collection<Int>,
             rules: LevelRules,
             slipped: List<Int>,
+            recent: List<Int>,
             next: NextWords?,
             random: Random = Random.Default
         ): LanternsSource {
-            val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..rules.longestVerse }
-            val ids = LevelVerses.pick(ayahs.map { VerseLength(it.id, it.wordsCount) }, rules.words, rules.given, slipped, random)
+            val all = lengths(ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS })
+            val pool = LevelVerses.withEnough(
+                reach = all.filter { it.words <= rules.longestVerse },
+                beyond = all.filter { it.words > rules.longestVerse }
+            )
+            val ids = LevelVerses.pick(pool, rules.words, rules.given, slipped, recent, random)
             return read(
                 quran, ids,
                 given = { rules.given },

@@ -4,10 +4,12 @@ import com.example.mutqan.quran.QuranRepository
 
 /**
  * Where else in the Quran the two words before a word come too, followed by a different word: the look-alike
- * continuations a reader mixes up. Built once from the words of every ayah and kept for the life of the app.
+ * continuations a reader mixes up. Built once from the words of every ayah and kept for the life of the app. Words are
+ * the same when [WordKey] says so: أَنَّ and إِنَّ are different words, so one following the same two words as the other is a
+ * look-alike.
  */
 class NextWords internal constructor(
-    /** Each ayah's words as numbers (the same letters, the same number); index 0 is ayah id 1. */
+    /** Each ayah's words as numbers (the same word, the same number); index 0 is ayah id 1. */
     private val ids: Array<IntArray>,
     /** Every word that has two words before it, packed as (those two words) << 21 | ayah id << 8 | its index; sorted. */
     private val places: LongArray
@@ -55,27 +57,10 @@ class NextWords internal constructor(
         /** Packs two word numbers (each under 2^15) into one. */
         private fun pair(a: Int, b: Int): Long = (a.toLong() shl 15) or b.toLong()
 
-        /**
-         * The letters of a word, its alef forms as one alef, alef maqsura as ya and ta marbuta as ha; marks and signs left
-         * out. How two words are compared here.
-         */
-        fun letters(word: String): String {
-            val out = StringBuilder(word.length)
-            for (c in word) {
-                when (c) {
-                    'آ', 'أ', 'إ', 'ٱ' -> out.append('ا')
-                    'ى' -> out.append('ي')
-                    'ة' -> out.append('ه')
-                    in 'ء'..'ي' -> out.append(c)
-                }
-            }
-            return out.toString()
-        }
-
         /** Builds the index from every ayah's words in order, ayah id 1 first. */
         fun build(ayahs: List<List<String>>): NextWords {
             val numbers = HashMap<String, Int>()
-            val ids = Array(ayahs.size) { a -> IntArray(ayahs[a].size) { w -> numbers.getOrPut(letters(ayahs[a][w])) { numbers.size } } }
+            val ids = Array(ayahs.size) { a -> IntArray(ayahs[a].size) { w -> numbers.getOrPut(WordKey.of(ayahs[a][w])) { numbers.size } } }
             require(numbers.size < (1 shl 15)) { "too many different words: ${numbers.size}" }
             var count = 0
             for (words in ids) count += (words.size - 2).coerceAtLeast(0)

@@ -155,53 +155,128 @@ object LanternsLevels {
     }
 }
 
-/** A verse that may go into a level: its id and how many words it has. */
-data class VerseLength(val ayahId: Int, val words: Int)
+/**
+ * A verse that may go into a round: its id and how many words it has. [twin] is the same for verses with exactly the
+ * same words (a refrain the Quran says again and again): they count as one verse.
+ */
+data class VerseLength(val ayahId: Int, val words: Int, val twin: Int = ayahId)
 
+/**
+ * Which verses a round holds. The same verse must not keep coming: verses with the same words are one verse, the verses
+ * drawn lately wait while others are left, and a slipped verse comes back only after a while and never in great number.
+ */
 object LevelVerses {
     /** The fewest words a verse leaves to build to be worth a place in a level. */
     const val LEAST_TO_BUILD = 2
 
+    /** A slipped verse waits until this many other verses have been drawn before it comes back (fewer where there are few). */
+    const val COOL_DOWN = 12
+
+    /** The fewest different verses a level should draw from: with fewer, the next longer verses are let in too. */
+    const val MIN_POOL = 24
+
+    /** A verse as the round sees it: [play] stands for every verse with the same words. */
+    private class Verse(val play: VerseLength, val slipRank: Int?, val seenRank: Int?) {
+        val words: Int get() = play.words
+    }
+
+    /**
+     * The verses as three lists, each to be taken before the next: the slipped ones that are due (not among the last
+     * [COOL_DOWN] drawn; the most recent slip first), the ones not drawn lately in random order, and the rest, the one
+     * drawn longest ago first. Of verses with the same words the one played is the slipped one, else the one drawn longest
+     * ago (or never).
+     */
+    private fun tiers(verses: List<VerseLength>, slipped: List<Int>, recent: List<Int>, random: Random): List<List<Verse>> {
+        val slipOrder = slipped.withIndex().associate { (i, id) -> id to i }
+        val seenOrder = HashMap<Int, Int>()
+        recent.forEachIndexed { i, id -> seenOrder.putIfAbsent(id, i) }
+        val all = verses.groupBy { it.twin }.values.map { same ->
+            val play = same.filter { it.ayahId in slipOrder }.minByOrNull { slipOrder.getValue(it.ayahId) }
+                ?: same.shuffled(random).maxBy { seenOrder[it.ayahId] ?: Int.MAX_VALUE }
+            Verse(
+                play = play,
+                slipRank = same.mapNotNull { slipOrder[it.ayahId] }.minOrNull(),
+                seenRank = same.mapNotNull { seenOrder[it.ayahId] }.minOrNull()
+            )
+        }
+        val wait = min(COOL_DOWN, all.size / 3)
+        val due = all.filter { it.slipRank != null && (it.seenRank == null || it.seenRank >= wait) }.sortedBy { it.slipRank }
+        val rest = all.filter { verse -> due.none { it === verse } }
+        val fresh = rest.filter { it.seenRank == null }.shuffled(random)
+        val seen = rest.filter { it.seenRank != null }.sortedByDescending { it.seenRank }
+        return listOf(due, fresh, seen)
+    }
+
+    /**
+     * Verses for the open round in the order to play them: the slipped ones that are due first (at most [maxSlipped]),
+     * then the ones not drawn lately in random order, then the rest, the one drawn longest ago first.
+     */
+    fun order(candidates: List<VerseLength>, slipped: List<Int>, recent: List<Int>, random: Random, maxSlipped: Int): List<Int> {
+        val (due, fresh, seen) = tiers(candidates.distinctBy { it.ayahId }, slipped, recent, random)
+        return (due.take(maxSlipped) + fresh + due.drop(maxSlipped) + seen).map { it.play.ayahId }
+    }
+
+    /**
+     * [reach] (the verses a level allows) and, when those are fewer than [MIN_POOL] different verses, the shortest of
+     * [beyond] as well until there are enough (or none is left): a small hifz of long verses would otherwise bring the
+     * same few verses round after round.
+     */
+    fun withEnough(reach: List<VerseLength>, beyond: List<VerseLength>): List<VerseLength> {
+        val have = reach.map { it.twin }.toMutableSet()
+        if (have.size >= MIN_POOL) return reach
+        val extra = ArrayList<VerseLength>()
+        for (verse in beyond.sortedBy { it.words }) {
+            if (have.size >= MIN_POOL) break
+            if (have.add(verse.twin)) extra += beyond.filter { it.twin == verse.twin }
+        }
+        return reach + extra
+    }
+
     /**
      * Verses for a level whose words to build (their words less [given] each) add up to [target], or as near as the
-     * verses allow: those in [slipped] first, most recent first and up to half the words, then the others in random
-     * order. A verse comes once, unless there are too few to fill the level. Returned in the order to play them.
+     * verses allow. Verses with the same words count as one. The ones not drawn lately come first (in random order),
+     * then the one drawn longest ago ([recent] holds the ids drawn, the latest first); slipped verses that are due
+     * ([slipped], the most recent slip first) come before all, but are at most a third of the words. A verse comes once,
+     * unless there are too few to fill the level. Returned in the order to play them.
      */
-    fun pick(candidates: List<VerseLength>, target: Int, given: Int, slipped: List<Int>, random: Random): List<Int> {
-        fun build(verse: VerseLength) = verse.words - given
-        val usable = candidates.distinctBy { it.ayahId }.filter { build(it) >= LEAST_TO_BUILD }
+    fun pick(candidates: List<VerseLength>, target: Int, given: Int, slipped: List<Int>, recent: List<Int>, random: Random): List<Int> {
+        fun build(verse: Verse) = verse.words - given
+        val usable = candidates.distinctBy { it.ayahId }.filter { it.words - given >= LEAST_TO_BUILD }
         if (usable.isEmpty() || target <= 0) return emptyList()
-        val slipOrder = slipped.withIndex().associate { (i, id) -> id to i }
-        val order = usable.filter { it.ayahId in slipOrder }.sortedBy { slipOrder[it.ayahId] } +
-            usable.filter { it.ayahId !in slipOrder }.shuffled(random)
+        val tiers = tiers(usable, slipped, recent, random)
+        val due = tiers[0]
 
         // The fewest words any verse here leaves to build: what a level's last verse needs at least.
-        val least = usable.minOf { build(it) }
-        val chosen = ArrayList<VerseLength>()
-        val used = HashSet<Int>()
+        val least = usable.minOf { it.words - given }
+        val chosen = ArrayList<Verse>()
+        val used = HashSet<Verse>()
         var left = target
         var slipWords = 0
         var guard = 0
         while (left > 0 && guard++ < MAX_STEPS) {
-            val slipsFull = slipWords >= target / 2
-            val open = order.indices.filter { it !in used && !(slipsFull && order[it].ayahId in slipOrder) }
-            if (open.isEmpty()) {
+            val slipsFull = slipWords >= target / 3
+            var open = tiers.mapIndexed { i, tier -> tier.filter { it !in used && !(i == 0 && slipsFull) } }
+            // Nothing else is left: the slipped ones come after all.
+            if (open.all { it.isEmpty() }) open = tiers.map { tier -> tier.filter { it !in used } }
+            if (open.all { it.isEmpty() }) {
                 // Too few verses to fill the level: they come again.
                 if (used.isEmpty()) break
                 used.clear()
                 continue
             }
-            val pickAt = open.firstOrNull { build(order[it]) == left }
-                // One that leaves room for at least one more verse after it.
-                ?: open.firstOrNull { build(order[it]) <= left - least }
-                ?: open.minBy { abs(build(order[it]) - left) }
-            val verse = order[pickAt]
-            used += pickAt
-            chosen += verse
-            left -= build(verse)
-            if (verse.ayahId in slipOrder) slipWords += build(verse)
+            // From the first list that has a fit: the exact words left, or a verse that leaves room for one more after
+            // it, or one a word off.
+            val next = open.firstNotNullOfOrNull { tier ->
+                tier.firstOrNull { build(it) == left }
+                    ?: tier.firstOrNull { build(it) <= left - least }
+                    ?: tier.firstOrNull { abs(build(it) - left) <= 1 }
+            } ?: open.flatten().minBy { abs(build(it) - left) }
+            used += next
+            chosen += next
+            left -= build(next)
+            if (due.any { it === next }) slipWords += build(next)
         }
-        return chosen.shuffled(random).map { it.ayahId }
+        return chosen.shuffled(random).map { it.play.ayahId }
     }
 
     private const val MAX_STEPS = 200

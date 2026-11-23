@@ -157,10 +157,12 @@ class LanternsViewModel(appContext: Context) : ViewModel() {
                 val amma = quran.pagesOfJuz(AMMA)
                 val pages = if (prefs.lanternsFromHifz.first() && hifz.isNotEmpty()) hifz else amma
                 val slipped = prefs.lanternsSlips.first().keys.toList()
+                val recent = prefs.lanternsSeen.first()
                 fun read(on: List<Int>): LanternsSource =
-                    if (rules == null) LanternsSource.load(quran, on, slipped = slipped)
-                    else LanternsSource.forLevel(quran, on, rules, slipped, if (rules.lookAlike > 0f) NextWords.get(quran) else null)
-                read(pages).takeUnless { it.isEmpty } ?: read(amma)
+                    if (rules == null) LanternsSource.load(quran, on, slipped = slipped, recent = recent)
+                    else LanternsSource.forLevel(quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null)
+                // The verses of this round are noted at once, so the next round (or a replay) draws others.
+                (read(pages).takeUnless { it.isEmpty } ?: read(amma)).also { prefs.recordLanternsSeen(it.drawn) }
             }
             if (source.isEmpty) {
                 nothingToPlay = true

@@ -27,7 +27,7 @@ class LevelCurveTest {
     private fun source(rules: LevelRules, random: Random): Pair<LanternsSource, Set<String>> {
         val lengths = List(120) { LanternsSource.MIN_WORDS + random.nextInt(rules.longestVerse - LanternsSource.MIN_WORDS + 1) }
         val pool = lengths.mapIndexed { i, words -> VerseLength(1 + i, words) }
-        val ids = LevelVerses.pick(pool, rules.words, rules.given, emptyList(), random)
+        val ids = LevelVerses.pick(pool, rules.words, rules.given, emptyList(), emptyList(), random)
         var next = 1
         val verses = ids.map { id -> GameVerse(id, List(lengths[id - 1]) { w -> GameWord(next++, "v${id}w$w") }, rules.given) }
         val alike = HashSet<String>()
