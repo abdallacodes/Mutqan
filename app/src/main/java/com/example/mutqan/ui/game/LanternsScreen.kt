@@ -395,7 +395,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             SparksLayer(effects = effects, clock = { clock }, slow = hud.slow)
         }
 
-        if (game != null && inRound) {
+        // The top of a round, while it is played (an end screen shows its own numbers over the sky).
+        if (game != null && vm.phase == LanternsViewModel.Phase.PLAYING) {
             Column(
                 Modifier
                     .fillMaxWidth()

@@ -89,6 +89,9 @@ private val NodeColumn = NodeHeight + 18.dp
 /** Locked levels shown above the next one, dark, so the climb goes on out of sight. */
 private const val LEVELS_AHEAD = 4
 
+/** In a test build, where any level opens with a long press: enough of them to reach the late ones. */
+private const val LEVELS_AHEAD_TEST = 40
+
 /** Where a level's lantern hangs across the map, as a fraction of the width: a path winding up the sky. */
 private fun nodeX(level: Int): Float = 0.5f + 0.27f * sin((level - 1) * 0.9f)
 
@@ -108,7 +111,7 @@ internal fun LevelMap(
 ) {
     BackHandler(onBack = onBack)
     val next = stars.size + 1
-    val count = next + LEVELS_AHEAD
+    val count = next + if (anyLevel) LEVELS_AHEAD_TEST else LEVELS_AHEAD
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (next - 3).coerceAtLeast(0))
     Column(
         Modifier
@@ -321,7 +324,8 @@ internal fun LevelCard(level: Int, stars: Int, onStart: () -> Unit, onClose: () 
     BackHandler(onBack = onClose)
     val rules = remember(level) { LanternsLevels.rules(level) }
     val news = remember(level) { LanternsLevels.news(level) }
-    val isNew = news != LevelNews.FASTER && news != LevelNews.FASTER_LONGER
+    // Level 1 is the way in, not news.
+    val isNew = news != LevelNews.FASTER && news != LevelNews.FASTER_LONGER && news != LevelNews.START
     Box(
         Modifier
             .fillMaxSize()
