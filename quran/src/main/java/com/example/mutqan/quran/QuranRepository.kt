@@ -342,6 +342,27 @@ class QuranRepository private constructor(context: Context) {
         return all
     }
 
+    /** Every word's id and Hafs text (not the end markers), in order: for indexes built over the whole Quran. */
+    fun wordTexts(): List<Pair<Int, String>> =
+        db.rawQuery("SELECT id, hafs FROM words WHERE is_end = 0 ORDER BY id", null).use { c ->
+            val out = ArrayList<Pair<Int, String>>(c.count)
+            while (c.moveToNext()) out += c.getInt(0) to c.getString(1)
+            out
+        }
+
+    /** The words with [ids] (in no particular order); unknown ids are left out. */
+    fun wordsByIds(ids: Collection<Int>): List<QuranWord> =
+        ids.distinct().chunked(400).flatMap { chunk ->
+            db.rawQuery(
+                "SELECT id, surah, ayah, word, glyph, hafs, is_end, page FROM words WHERE id IN (${chunk.joinToString(",")})",
+                null
+            ).use { c ->
+                c.readAll {
+                    QuranWord(it.getInt(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getString(4), it.getString(5), it.getInt(6) != 0, it.getInt(7))
+                }
+            }
+        }
+
     /** Lines of a page ready for [MushafPageView]. */
     fun page(page: Int): MushafPageData {
         pageCache.get(page)?.let { return it }

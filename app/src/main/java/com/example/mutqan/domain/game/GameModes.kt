@@ -19,19 +19,22 @@ object GameModes {
     const val CALM_VERSES = 7
 
     /** A slow, steady sky with the next word always up; no helpers, since nothing can be lost. */
-    val calmDials = Dials(speed = 0.06f, interval = 1.7f, sky = 3, helperEvery = NEVER, ahead = 1)
+    val calmDials = Dials(speed = 0.06f, interval = 1.7f, sky = 4, helperEvery = NEVER, ahead = 1)
+
+    /** The share of wrong lanterns that are traps in a calm sitting: some, to think about, nothing to lose. */
+    const val CALM_TRAPS = 0.35f
 
     /** No heart is lost and the round waits after each verse while its meaning is read. */
     val calmRules = RoundRules(forgiving = true, waitAfterVerse = true)
 
     /**
-     * As fast as a late level and quicker with every right word in a row, five lanterns with the two words after the
+     * As fast as a late level and quicker with every right word in a row, six lanterns with the two words after the
      * wanted one among them, some wind, golden lanterns, and now and then an hourglass.
      */
     val masteryDials = Dials(
         speed = 0.17f,
         interval = 0.8f,
-        sky = 5,
+        sky = 6,
         helperEvery = 45f,
         helpersAtOnce = true,
         wind = 0.02f,
@@ -43,8 +46,8 @@ object GameModes {
     /** One heart: a single slip ends the run. */
     val masteryRules = RoundRules(lives = 1)
 
-    /** The share of wrong lanterns that carry a look-alike word, where the verse has one. */
-    const val MASTERY_LOOK_ALIKE = 0.8f
+    /** The share of wrong lanterns that are traps (look-alike words and near forms), where the word has some. */
+    const val MASTERY_TRAPS = 0.95f
 
     /** Seconds the wanted word shows after a slip in a calm sitting. */
     const val CALM_HINT = 3f

@@ -3,6 +3,7 @@ package com.example.mutqan.ui.game
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -63,6 +64,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -125,10 +127,12 @@ import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranWord
 import com.example.mutqan.ui.components.MushafText
+import com.example.mutqan.ui.mushaf.AddVersesToGroupSheet
 import com.example.mutqan.ui.components.rememberHaptics
 import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.ui.time.TrackTime
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 private val LanternWidth = 112.dp
@@ -185,6 +189,9 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     val source by vm.source.collectAsState()
     val soundOn by vm.sound.collectAsState()
     var choosingSource by remember { mutableStateOf(false) }
+    var showingSimilar by remember { mutableStateOf(false) }
+    var addingToGroup by remember { mutableStateOf<List<Int>?>(null) }
+    val similarScope = rememberCoroutineScope()
     val sounds = rememberGameSounds(soundOn)
     val haptics = rememberHaptics()
     val density = LocalDensity.current
@@ -260,6 +267,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
         val margin = (lanternW / 2f + with(density) { 4.dp.toPx() }) / area.width + round.dials.wind * 1.4f
         round.laneXs = List(count) { margin + (1f - 2f * margin) * it / (count - 1) }
         round.lanternHeight = lanternH / area.height
+        round.lanternWidth = lanternW / area.width
         round.escapeY = ((panelBottom - lanternH * 0.15f) / area.height).coerceIn(0.1f, 0.5f)
     }
 
@@ -508,6 +516,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                         level = level?.number ?: 1,
                         starsWon = vm.starsWon,
                         nextLevel = vm.nextAfter(level?.number ?: 1),
+                        similarCount = vm.roundSimilar.size,
+                        onSimilar = { showingSimilar = true },
                         onStarLand = { _ ->
                             haptics.tick()
                             sounds.play(GameSound.STAR, pitch = GameSounds.natural())
@@ -519,6 +529,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                     )
                     GameMode.CALM -> CalmOverOverlay(
                         game = round,
+                        similarCount = vm.roundSimilar.size,
+                        onSimilar = { showingSimilar = true },
                         onMore = vm::again,
                         onDone = { if (vm.isBreak) onBack() else vm.toMenu() },
                         onOpenVerse = onOpenVerse
@@ -527,6 +539,8 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                         game = round,
                         best = masteryBest,
                         newRecord = vm.newRecord,
+                        similarCount = vm.roundSimilar.size,
+                        onSimilar = { showingSimilar = true },
                         onAgain = vm::again,
                         onBack = vm::toMenu,
                         onOpenVerse = onOpenVerse
@@ -543,6 +557,37 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 meaning = vm.meanings[waitingVerse.ayahId],
                 last = hud.versesDone >= vm.roundVerses,
                 onNext = vm::proceed
+            )
+        }
+        if (showingSimilar && vm.phase == LanternsViewModel.Phase.OVER) {
+            RoundSimilarOverlay(items = vm.roundSimilar, onAdd = { addingToGroup = it }, onClose = { showingSimilar = false })
+        }
+        addingToGroup?.let { ayahIds ->
+            val groups by vm.groups.collectAsState()
+            AddVersesToGroupSheet(
+                title = stringResource(R.string.game_similar_sheet_title),
+                subtitle = pluralStringResource(R.plurals.count_ayahs, ayahIds.size, ayahIds.size),
+                createLabel = stringResource(R.string.game_similar_create),
+                emptyText = stringResource(R.string.game_similar_no_groups),
+                groups = groups,
+                memberOf = emptySet(),
+                onPick = { entry ->
+                    similarScope.launch {
+                        val added = vm.addToGroup(entry.group.id, ayahIds)
+                        addingToGroup = null
+                        val text = context.resources.getQuantityString(R.plurals.game_similar_added, added, added, entry.group.description)
+                        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onCreate = { name ->
+                    similarScope.launch {
+                        vm.createGroup(name, ayahIds)
+                        addingToGroup = null
+                        val text = context.resources.getQuantityString(R.plurals.game_similar_added, ayahIds.size, ayahIds.size, name)
+                        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onDismiss = { addingToGroup = null }
             )
         }
         if (choosingSource && vm.phase == LanternsViewModel.Phase.MENU) {

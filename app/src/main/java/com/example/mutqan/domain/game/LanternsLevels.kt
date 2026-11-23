@@ -37,13 +37,13 @@ data class Dials(
 enum class LevelNews {
     START,
     ONE_GIVEN,
-    FOURTH_LANTERN,
+    FIFTH_LANTERN,
     LOOK_ALIKE,
     GOLDEN,
-    FIFTH_LANTERN,
+    SIXTH_LANTERN,
     WIND,
     NONE_GIVEN,
-    SIXTH_LANTERN,
+    SEVENTH_LANTERN,
 
     /** Only faster, with a word more to build. */
     FASTER_LONGER,
@@ -63,6 +63,8 @@ data class LevelRules(
     val longestVerse: Int,
     /** The chance that a wrong lantern carries a word from a look-alike verse, where the verse has one. */
     val lookAlike: Float,
+    /** The chance that a wrong lantern is a trap (a word easy to take for the one wanted), where the word has some. */
+    val traps: Float,
     /** Seconds the wanted word shows after a slip. */
     val hintTime: Float,
     val dials: Dials
@@ -98,7 +100,8 @@ object LanternsLevels {
         val dials = Dials(
             speed = toward(START_SPEED, END_SPEED, 0.955f, k),
             interval = toward(START_INTERVAL, END_INTERVAL, 0.955f, k),
-            sky = 3 + MORE_LANTERNS_AT.count { n >= it },
+            // The wanted word, the next, and two wrong ones at least: the right words are never most of the sky.
+            sky = 4 + MORE_LANTERNS_AT.count { n >= it },
             helperEvery = toward(14f, 40f, 0.95f, k),
             helpersAtOnce = true,
             wind = if (n < WIND_FROM) 0f else toward(0.015f, 0.05f, 0.93f, n - WIND_FROM),
@@ -118,12 +121,17 @@ object LanternsLevels {
             },
             longestVerse = min(7 + k / 2, LanternsSource.MAX_WORDS),
             lookAlike = if (n < LOOK_ALIKE_FROM) 0f else toward(0.3f, 0.8f, 0.93f, n - LOOK_ALIKE_FROM),
+            traps = toward(FIRST_TRAPS, MOST_TRAPS, 0.93f, k),
             hintTime = toward(2f, 0.8f, 0.95f, k),
             dials = dials
         )
     }
 
     private const val GOLDEN_SHARE = 0.1f
+
+    /** The share of wrong lanterns that are traps: half at level 1, heading for nearly all. */
+    private const val FIRST_TRAPS = 0.5f
+    private const val MOST_TRAPS = 0.9f
 
     /** Level 1's pace: about what level 7 was before (the first levels were too slow for a reader who knows the verses). */
     private const val START_SPEED = 0.095f
@@ -139,13 +147,13 @@ object LanternsLevels {
     fun news(level: Int): LevelNews = when (level) {
         1 -> LevelNews.START
         ONE_GIVEN_FROM -> LevelNews.ONE_GIVEN
-        MORE_LANTERNS_AT[0] -> LevelNews.FOURTH_LANTERN
+        MORE_LANTERNS_AT[0] -> LevelNews.FIFTH_LANTERN
         LOOK_ALIKE_FROM -> LevelNews.LOOK_ALIKE
         GOLDEN_FROM -> LevelNews.GOLDEN
-        MORE_LANTERNS_AT[1] -> LevelNews.FIFTH_LANTERN
+        MORE_LANTERNS_AT[1] -> LevelNews.SIXTH_LANTERN
         WIND_FROM -> LevelNews.WIND
         NONE_GIVEN_FROM -> LevelNews.NONE_GIVEN
-        MORE_LANTERNS_AT[2] -> LevelNews.SIXTH_LANTERN
+        MORE_LANTERNS_AT[2] -> LevelNews.SEVENTH_LANTERN
         else -> if (rules(level).words > rules(level - 1).words) LevelNews.FASTER_LONGER else LevelNews.FASTER
     }
 

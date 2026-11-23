@@ -7,9 +7,10 @@ import kotlin.random.Random
 
 /**
  * The verses of a round of «فوانيس» and the wrong words beside them, all read before the round starts so the game loop
- * never waits. The wrong words are mostly from the verse itself and the verses next to it: they look right, and only
- * memory tells them apart. In the harder levels some come from look-alike verses: where the two words before the one
- * wanted are followed by another word elsewhere in the Quran, that word floats up too.
+ * never waits. Many wrong words are traps: words easy to take for the one wanted if it is not remembered exactly — the
+ * same word with other marks, another person or pronoun, another joining letter ([WordTraps]), and from the harder
+ * levels the word that follows the same words in a look-alike verse ([NextWords]). The others come from the rest of the
+ * verse and the verses next to it.
  */
 class LanternsSource internal constructor(
     private val verses: List<GameVerse>,
@@ -17,10 +18,10 @@ class LanternsSource internal constructor(
     private val pool: List<GameWord>,
     /** Every word of the round by id, to draw them. */
     val words: Map<Int, QuranWord>,
-    /** For a verse, by the index of a word in it: words that follow the same words before it in other verses. */
-    private val lookAlikes: Map<Int, Map<Int, List<GameWord>>> = emptyMap(),
-    /** The chance a wrong lantern carries a look-alike word, where there is one. */
-    private val lookAlikeChance: Float = 0f,
+    /** For a verse, by the index of a word in it: wrong words easy to take for it, the closest first. */
+    private val traps: Map<Int, Map<Int, List<GameWord>>> = emptyMap(),
+    /** The chance a wrong lantern is one of those traps, where the word has some. */
+    private val trapChance: Float = 0f,
     /** For a verse started from nothing: the first words of the verses around it. */
     private val openings: Map<Int, List<GameWord>> = emptyMap(),
     /** A level's verses come once each, and then there are none; the open round's go round and round. */
@@ -33,8 +34,9 @@ class LanternsSource internal constructor(
     val isEmpty: Boolean get() = verses.isEmpty()
 
     /**
-     * The verses to keep from coming again soon, the first to come first: a level's all, the open round's first few (it
-     * rarely goes through them all).
+     * The verses to keep from coming again soon, the first to come first: a level's all; an endless round's first few
+     * only (it rarely reaches far: the ones it reached are noted when it ends, so a slipped verse is not pushed out of the
+     * recent ones by verses never seen).
      */
     val drawn: List<Int> = verses.map { it.ayahId }.let { if (once) it else it.take(OPEN_DRAWN) }
 
@@ -56,13 +58,14 @@ class LanternsSource internal constructor(
                 if (word.key != right.key && word.key !in out) out[word.key] = word
             }
         }
-        // A look-alike word, now and then, comes first: the one most like what memory expects.
-        val alike = lookAlikes[verse.ayahId]?.get(at).orEmpty()
-        if (alike.isNotEmpty() && random.nextFloat() < lookAlikeChance) take(alike, 1, shuffle = false)
+        // A trap, most of the time in the harder levels: one of the few words closest to the one wanted.
+        val close = traps[verse.ayahId]?.get(at).orEmpty()
+        if (close.isNotEmpty() && random.nextFloat() < trapChance) take(close.take(TRAP_PICK), 1)
         // A verse started from nothing: the openings of the verses around it look right too.
         if (at == 0 && verse.given == 0) take(openings[verse.ayahId].orEmpty(), out.size + count / 2)
-        // Half the time from the verse itself first, else from the verses beside it first; then the rest of the round.
-        val own = verse.words
+        // Half the time from the rest of the verse first (a word ahead of its turn), else from the verses beside it
+        // first; then the rest of the round. Words already in place are no trap.
+        val own = verse.words.drop(at + 1)
         val near = neighbours[verse.ayahId].orEmpty()
         if (random.nextBoolean()) {
             take(own, out.size + count / 2 + 1); take(near, count)
@@ -79,8 +82,8 @@ class LanternsSource internal constructor(
         const val MAX_WORDS = 14
         private const val ROUND_VERSES = 60
 
-        /** Of the open round's verses, the first this many count as drawn. */
-        private const val OPEN_DRAWN = 20
+        /** Of an endless round's verses, the first this many count as drawn when it starts. */
+        private const val OPEN_DRAWN = 3
 
         /** The most slipped verses the open round puts first. */
         private const val OPEN_SLIPPED = 8
@@ -93,6 +96,12 @@ class LanternsSource internal constructor(
 
         /** Look-alike words read for each word of a verse. */
         private const val ALIKE_EACH = 2
+
+        /** Near forms read for each word of a verse. */
+        private const val NEAR_EACH = 4
+
+        /** A trap is one of a word's closest this many. */
+        private const val TRAP_PICK = 3
 
         /** How words are compared: letter for letter and mark for mark (أَنَّ is not إِنَّ), see [WordKey]. */
         fun key(word: QuranWord): String = WordKey.of(word.hafs)
@@ -121,11 +130,12 @@ class LanternsSource internal constructor(
             recent: List<Int> = emptyList(),
             given: (size: Int) -> Int = ::calmGiven,
             next: NextWords? = null,
+            nearForms: WordTraps? = null,
             chance: Float = 0f
         ): LanternsSource {
             val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
             val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, OPEN_SLIPPED).take(ROUND_VERSES)
-            return read(quran, ids, given = given, next = next.takeIf { chance > 0f }, chance = chance, once = false, random = random)
+            return read(quran, ids, given = given, next = next, nearForms = nearForms, chance = chance, once = false, random = random)
         }
 
         /**
@@ -137,11 +147,12 @@ class LanternsSource internal constructor(
             pages: Collection<Int>,
             slipped: List<Int>,
             recent: List<Int>,
+            nearForms: WordTraps? = null,
             random: Random = Random.Default
         ): LanternsSource {
             val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
             val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, CALM_SLIPPED).take(GameModes.CALM_VERSES)
-            return read(quran, ids, given = ::calmGiven, next = null, chance = 0f, once = true, random = random)
+            return read(quran, ids, given = ::calmGiven, next = null, nearForms = nearForms, chance = GameModes.CALM_TRAPS, once = true, random = random)
         }
 
         /**
@@ -158,6 +169,7 @@ class LanternsSource internal constructor(
             slipped: List<Int>,
             recent: List<Int>,
             next: NextWords?,
+            nearForms: WordTraps? = null,
             random: Random = Random.Default
         ): LanternsSource {
             val all = lengths(ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS })
@@ -170,7 +182,8 @@ class LanternsSource internal constructor(
                 quran, ids,
                 given = { rules.given },
                 next = next.takeIf { rules.lookAlike > 0f },
-                chance = rules.lookAlike,
+                nearForms = nearForms,
+                chance = rules.traps,
                 once = true,
                 random = random
             )
@@ -184,6 +197,7 @@ class LanternsSource internal constructor(
             ayahIds: List<Int>,
             given: (size: Int) -> Int,
             next: NextWords?,
+            nearForms: WordTraps?,
             chance: Float,
             once: Boolean,
             random: Random
@@ -218,13 +232,25 @@ class LanternsSource internal constructor(
                 val around = (-3..3).map { verse.ayahId + it }.filter { it != verse.ayahId && sameSurah(it, verse.ayahId) }
                 verse.ayahId to around.mapNotNull { id -> wordsOf(id).firstOrNull()?.let(::game) }
             }
-            val lookAlikes = if (next == null) emptyMap() else verses.associate { verse ->
+            // For each word to build: the words that follow the same words in look-alike verses, then near forms of
+            // the word itself (their words read in one go).
+            val nearIds = HashSet<Int>()
+            val planned = verses.associate { verse ->
                 verse.ayahId to (verse.given until verse.words.size).associateWith { at ->
-                    next.lookAlikes(verse.ayahId, at, ALIKE_EACH).mapNotNull { place -> wordsOf(place.ayahId).getOrNull(place.index)?.let(::game) }
+                    val alike = next?.lookAlikes(verse.ayahId, at, ALIKE_EACH).orEmpty()
+                        .mapNotNull { place -> wordsOf(place.ayahId).getOrNull(place.index)?.let(::game) }
+                    val near = nearForms?.traps(verse.words[at].key, NEAR_EACH).orEmpty().onEach { nearIds += it.second }
+                    alike to near
+                }
+            }
+            if (nearIds.isNotEmpty()) for (word in quran.wordsByIds(nearIds)) words[word.id] = word
+            val traps = planned.mapValues { (_, byAt) ->
+                byAt.mapValues { (_, found) ->
+                    (found.first + found.second.mapNotNull { (key, id) -> if (id in words) GameWord(id, key) else null }).distinctBy { it.key }
                 }.filterValues { it.isNotEmpty() }
             }
             val pool = verses.flatMap { it.words }
-            return LanternsSource(verses, neighbours, pool, words, lookAlikes, chance, openings, once, random)
+            return LanternsSource(verses, neighbours, pool, words, traps, chance, openings, once, random)
         }
     }
 }

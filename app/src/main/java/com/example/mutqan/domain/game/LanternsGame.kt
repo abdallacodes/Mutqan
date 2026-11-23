@@ -74,7 +74,7 @@ class Lantern internal constructor(
         x = baseX + (SWAY + wider) * sin(time * SWAY_SPEED + phase) + gust
     }
 
-    private companion object {
+    internal companion object {
         const val SWAY = 0.018f
         const val SWAY_SPEED = 1.35f
     }
@@ -179,6 +179,9 @@ class LanternsGame(
 
     /** A lantern's height, as a fraction of the screen's. */
     var lanternHeight = 0.17f
+
+    /** A lantern's width, as a fraction of the screen's: columns closer than this keep clear of each other. */
+    var lanternWidth = 0.27f
 
     private var nextId = 1L
     private var spawnIn = 0.4f
@@ -349,12 +352,17 @@ class LanternsGame(
         val word = when {
             // The right word is not always the newest lantern: it comes in its turn among the others, but soon.
             !hasNeeded && (full || spawnsWithoutNeeded >= 1 || random.nextFloat() < 0.55f) -> needed
-            // The words after it come before the sky fills with wrong ones (a place is kept for each).
-            ahead.isNotEmpty() && (rising.size + ahead.size >= target() || random.nextFloat() < 0.6f) -> ahead.first()
+            // The words after it come before the sky fills with wrong ones (a place is kept for each), but not always
+            // straight after a tap: then the newest lantern would always be the next word.
+            ahead.isNotEmpty() && (rising.size + ahead.size >= target() || random.nextFloat() < 0.45f) -> ahead.first()
             else -> {
                 val shown = rising.mapNotNull { it.word?.key }.toSet()
                 val keep = wanted.mapTo(HashSet()) { it.key }
-                source.decoys(verse, placed, target() + DECOYS_SPARE).firstOrNull { it.key !in keep && it.key !in shown }
+                // Wrong words for the word wanted and for the ones after it, so the right word is not simply the one that
+                // has been up longest.
+                val at = placed + random.nextInt(wanted.size)
+                source.decoys(verse, at, target() + DECOYS_SPARE).firstOrNull { it.key !in keep && it.key !in shown }
+                    ?: source.decoys(verse, placed, target() + DECOYS_SPARE).firstOrNull { it.key !in keep && it.key !in shown }
                     ?: missing.firstOrNull() ?: needed
             }
         }
@@ -389,11 +397,15 @@ class LanternsGame(
         golden = golden
     ).also { it.born = time }
 
-    /** A column whose last lantern, and its neighbours' last lanterns, have risen clear of where a new one starts. */
+    /**
+     * A column whose last lantern, and the last lanterns of columns too close to it to pass side by side, have risen
+     * clear of where a new one starts.
+     */
     private fun freeLane(): Int? {
         val clear = SPAWN_Y - lanternHeight * 1.08f
+        val room = lanternWidth * 1.08f + 2f * (Lantern.SWAY + dials.wind * 0.4f)
         val free = laneXs.indices.filter { lane ->
-            lanterns.none { it.state == LanternState.RISING && kotlin.math.abs(it.lane - lane) <= 1 && it.y > clear }
+            lanterns.none { it.state == LanternState.RISING && kotlin.math.abs(laneXs[it.lane] - laneXs[lane]) < room && it.y > clear }
         }
         return free.randomOrNull(random)
     }

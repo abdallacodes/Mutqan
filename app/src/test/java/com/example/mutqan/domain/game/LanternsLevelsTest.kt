@@ -52,13 +52,13 @@ class LanternsLevelsTest {
         val first = LanternsLevels.rules(1)
         assertEquals(LanternsLevels.FIRST_WORDS, first.words)
         assertEquals(2, first.given)
-        assertEquals(3, first.dials.sky)
+        assertEquals(4, first.dials.sky)
         assertTrue(first.dials.helpersAtOnce)
         val late = LanternsLevels.rules(120)
         assertEquals(LanternsLevels.MOST_WORDS, late.words)
         assertTrue(late.dials.speed < 0.26f)
         assertTrue(late.dials.interval > 0.55f)
-        assertEquals(6, late.dials.sky)
+        assertEquals(7, late.dials.sky)
         assertTrue(LanternsLevels.dawn(120) < 0.85f)
         assertEquals(0f, LanternsLevels.dawn(1))
     }
@@ -384,6 +384,23 @@ class WordKeyTest {
     }
 
     @Test
+    fun marksTheNextWordPutsOnAWordAreNoPartOfIt() {
+        // A shadda on the first letter from the word before merging into it.
+        assertEquals(WordKey.of("رَبِّكَ"), WordKey.of("رَّبِّكَ"))
+        // A sukun on the last letter, written or not by what follows.
+        assertEquals(WordKey.of("هُمۡ"), WordKey.of("هُم"))
+        assertEquals(WordKey.of("مِنۡ"), WordKey.of("مِّن"))
+        // A madda on the last letter before a hamza; a silent alef after it does not count as the last letter.
+        assertEquals(WordKey.of("إِذَا"), WordKey.of("إِذَآ"))
+        assertEquals(WordKey.of("ءَامَنُواْ"), WordKey.of("ءَامَنُوٓاْ"))
+        // But a vowel is a vowel, and a madda inside the word belongs to it.
+        assertNotEquals(WordKey.of("مِن"), WordKey.of("مَن"))
+        assertNotEquals(WordKey.of("عَلَيۡهِمۡ"), WordKey.of("عَلَيۡهِمُ"))
+        assertNotEquals(WordKey.of("ٱلسَّمَآءِ"), WordKey.of("ٱلسَّمَاءِ"))
+        assertNotEquals(WordKey.of("رَبِّكَ"), WordKey.of("رَبَّكَ"))
+    }
+
+    @Test
     fun aVerseIsTheKeysOfItsWords() {
         assertEquals(
             WordKey.ofVerse("۞ فَبِأَيِّ ءَالَآءِ رَبِّكُمَا تُكَذِّبَانِ"),
@@ -391,5 +408,41 @@ class WordKeyTest {
         )
         assertNotEquals(WordKey.ofVerse("إِنَّ هَٰذَا"), WordKey.ofVerse("أَنَّ هَٰذَا"))
         assertEquals("", WordKey.ofVerse(" ۞ "))
+    }
+}
+
+class WordTrapsTest {
+
+    private val words = listOf(
+        "إِنَّ", "أَنَّ", "وَإِن", "إِن", "مِن", "مَن", "يَعۡلَمُونَ", "تَعۡلَمُونَ", "رَبِّهِمۡ", "رَبِّكُمۡ",
+        "فَمَن", "وَمَن", "ٱلۡكِتَٰبَ", "كِتَٰبٗا", "مُؤۡمِنُونَ", "مُؤۡمِنِينَ", "بِٱللَّهِ", "لِلَّهِ", "ٱللَّهِ", "ٱلسَّمَآءِ", "ٱلسَّمَآءُ"
+    ).mapIndexed { i, w -> (i + 1) to w }
+    private val traps = WordTraps.build(words)
+    private fun of(word: String) = traps.traps(WordKey.of(word), 8).map { it.first }
+
+    @Test
+    fun theSameLettersWithOtherMarksComeFirst() {
+        assertTrue(WordKey.of("أَنَّ") in of("إِنَّ").take(3))
+        assertTrue(WordKey.of("مَن") in of("مِن"))
+        assertTrue(WordKey.of("ٱلسَّمَآءُ") in of("ٱلسَّمَآءِ"))
+    }
+
+    @Test
+    fun anotherPersonPronounJoiningLetterOrEnding() {
+        assertTrue(WordKey.of("تَعۡلَمُونَ") in of("يَعۡلَمُونَ"))
+        assertTrue(WordKey.of("رَبِّكُمۡ") in of("رَبِّهِمۡ"))
+        assertTrue(WordKey.of("وَمَن") in of("فَمَن"))
+        assertTrue(WordKey.of("مُؤۡمِنِينَ") in of("مُؤۡمِنُونَ"))
+        assertTrue(WordKey.of("لِلَّهِ") in of("بِٱللَّهِ") || WordKey.of("ٱللَّهِ") in of("بِٱللَّهِ"))
+    }
+
+    @Test
+    fun neverTheWordItselfAndOnlyRealWords() {
+        val all = words.map { WordKey.of(it.second) }.toSet()
+        for ((_, w) in words) {
+            val found = of(w)
+            assertTrue(WordKey.of(w) !in found)
+            assertTrue(found.all { it in all })
+        }
     }
 }

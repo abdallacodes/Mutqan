@@ -11,7 +11,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.UserPreferencesRepository
 import com.example.mutqan.domain.PassageStates
+import com.example.mutqan.data.local.dao.GroupWithCount
 import com.example.mutqan.domain.PracticeScope
+import com.example.mutqan.domain.SimilarLibrary
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.TafsirLibrary
 import com.example.mutqan.domain.TafsirSource
@@ -23,6 +25,7 @@ import com.example.mutqan.domain.game.LanternsSource
 import com.example.mutqan.domain.game.LevelNews
 import com.example.mutqan.domain.game.LevelRules
 import com.example.mutqan.domain.game.NextWords
+import com.example.mutqan.domain.game.WordTraps
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranWord
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +47,12 @@ import kotlinx.coroutines.withContext
 class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? = null) : ViewModel() {
 
     enum class Phase { MENU, MAP, LOADING, PLAYING, OVER }
+
+    /** A verse to show: its id, its words (to draw in the Mushaf's fonts), and the words (1-based) it shares with another. */
+    data class ShownVerse(val ayahId: Int, val words: List<QuranWord>, val matched: List<IntRange> = emptyList())
+
+    /** A verse of the round that has mutashabihat: the verse, the closest of them, and how many more there are. */
+    data class RoundSimilar(val verse: ShownVerse, val similar: List<ShownVerse>, val more: Int)
 
     /**
      * Where the verses come from: the pages of [scope] (the Practice screen's choice); all the hifz when that choice has
@@ -88,6 +97,13 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
     /** The level whose card is open, over the menu or the map; null for none. */
     var card by mutableStateOf<Int?>(null)
         private set
+
+    /** The verses of the round just over that have mutashabihat, with them (read when the round ends). */
+    var roundSimilar by mutableStateOf<List<RoundSimilar>>(emptyList())
+        private set
+
+    /** The user's mutashabihat groups, to add verses to. */
+    val groups: StateFlow<List<GroupWithCount>> = study.allGroupsWithMemberCount().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     /** Whether the mastery run just over is a new record. */
     var newRecord by mutableStateOf(false)
@@ -134,7 +150,7 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
 
     init {
         // The look-alike words' index takes a moment to build: build it while the menu shows.
-        viewModelScope.launch(Dispatchers.Default) { runCatching { NextWords.get(quran) } }
+        viewModelScope.launch(Dispatchers.Default) { runCatching { NextWords.get(quran); WordTraps.get(quran) } }
         if (breakPages != null) startCalm()
     }
 
@@ -218,6 +234,7 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
         newRecord = false
         starsWon = 0
         nothingToPlay = false
+        roundSimilar = emptyList()
         this.mode = mode
         level = rules
         viewModelScope.launch {
@@ -226,14 +243,15 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
                 val amma = quran.pagesOfJuz(AMMA)
                 val slipped = prefs.lanternsSlips.first().keys.toList()
                 val recent = prefs.lanternsSeen.first()
+                val near = WordTraps.get(quran)
                 fun read(on: Collection<Int>): LanternsSource = when {
-                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent)
+                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent, near)
                     mode == GameMode.MASTERY -> LanternsSource.load(
                         quran, on, slipped = slipped, recent = recent,
-                        given = { 0 }, next = NextWords.get(quran), chance = GameModes.MASTERY_LOOK_ALIKE
+                        given = { 0 }, next = NextWords.get(quran), nearForms = near, chance = GameModes.MASTERY_TRAPS
                     )
                     rules != null -> LanternsSource.forLevel(
-                        quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null
+                        quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null, near
                     )
                     else -> error("a level without its rules")
                 }
@@ -272,7 +290,10 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
         val rules = level
         val mode = mode
         if (mode == GameMode.CHALLENGE && rules != null && round.cleared) starsWon = LanternsLevels.stars(round.slips)
+        viewModelScope.launch { roundSimilar = withContext(Dispatchers.IO) { similarOf(round.played.map { it.ayahId }.distinct()) } }
         viewModelScope.launch {
+            // The verses the round reached, the last first: an endless round noted only its first few when it began.
+            prefs.recordLanternsSeen(round.played.map { it.ayahId }.reversed())
             prefs.recordLanternsSlips(round.played)
             when (mode) {
                 GameMode.CHALLENGE -> if (rules != null && round.cleared) prefs.recordLanternsLevel(rules.number, starsWon)
@@ -282,9 +303,36 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
         }
     }
 
+    /** Of [ayahIds], those with mutashabihat, each with the closest of them (best match first). */
+    private suspend fun similarOf(ayahIds: List<Int>): List<RoundSimilar> {
+        val data = SimilarLibrary.load(context)
+        val index = quran.ayahIndex
+        fun shown(id: Int, matched: List<IntRange> = emptyList()): ShownVerse? =
+            if (id !in index) null
+            else ShownVerse(id, quran.wordsOfAyah(index.surahOf(id), index.ayahOf(id)).filter { !it.isEnd && it.hafs.isNotBlank() }, matched)
+        return ayahIds.mapNotNull { id ->
+            val matches = data.similarTo(id).sortedByDescending { it.score }
+            if (matches.isEmpty()) return@mapNotNull null
+            val verse = shown(id) ?: return@mapNotNull null
+            val similar = matches.take(MOST_SIMILAR).mapNotNull { shown(it.ayahId, it.matchedWords) }
+            RoundSimilar(verse, similar, (matches.size - MOST_SIMILAR).coerceAtLeast(0))
+        }
+    }
+
+    /** Puts [ayahIds] in the group [groupId]; returns how many were not in it already. */
+    suspend fun addToGroup(groupId: Int, ayahIds: List<Int>): Int = ayahIds.count { study.addAyahToGroup(groupId, it) }
+
+    /** Starts a new group called [name] with [ayahIds]. */
+    suspend fun createGroup(name: String, ayahIds: List<Int>) {
+        study.createGroup(name, ayahIds)
+    }
+
     private companion object {
         const val AMMA = 30
         const val MASTERY_HINT = 1f
+
+        /** The mutashabihat shown for each verse; the others are counted. */
+        const val MOST_SIMILAR = 6
     }
 }
 
