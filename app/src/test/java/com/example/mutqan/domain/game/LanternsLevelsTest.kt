@@ -56,8 +56,8 @@ class LanternsLevelsTest {
         assertTrue(first.dials.helpersAtOnce)
         val late = LanternsLevels.rules(120)
         assertEquals(LanternsLevels.MOST_WORDS, late.words)
-        assertTrue(late.dials.speed < 0.21f)
-        assertTrue(late.dials.interval > 0.62f)
+        assertTrue(late.dials.speed < 0.26f)
+        assertTrue(late.dials.interval > 0.55f)
         assertEquals(6, late.dials.sky)
         assertTrue(LanternsLevels.dawn(120) < 0.85f)
         assertEquals(0f, LanternsLevels.dawn(1))
@@ -82,6 +82,32 @@ class LanternsLevelsTest {
         assertEquals(listOf(3, 1, 2), LanternsLevels.withStars(kept, 9, 3))
         assertEquals("3122", LanternsLevels.formatStars(listOf(3, 1, 2, 2)))
         assertEquals(emptyList<Int>(), LanternsLevels.parseStars(null))
+    }
+}
+
+class LevelLeapTest {
+
+    @Test
+    fun threeStarsOnTheFurthestLevelOpenTwo() {
+        assertEquals(1, LanternsLevels.furthestOpen(emptyList()))
+        assertEquals(3, LanternsLevels.furthestOpen(listOf(3, 2)))
+        assertEquals(4, LanternsLevels.furthestOpen(listOf(3, 3)))
+        // Leapt over level 3: it stays open (no stars) and level 4 can be won.
+        val leapt = LanternsLevels.withStars(listOf(3, 3), 4, 2)
+        assertEquals(listOf(3, 3, 0, 2), leapt)
+        assertEquals(5, LanternsLevels.furthestOpen(leapt))
+        // Winning the one leapt over later fills it in.
+        assertEquals(listOf(3, 3, 1, 2), LanternsLevels.withStars(leapt, 3, 1))
+        // Beyond what is open: not kept.
+        assertEquals(listOf(3, 2), LanternsLevels.withStars(listOf(3, 2), 5, 3))
+    }
+
+    @Test
+    fun theLevelsKeepTheWantedWordAndTheNextUpAndQuickenWithARun() {
+        assertEquals(1, LanternsLevels.rules(1).dials.ahead)
+        assertEquals(1, LanternsLevels.rules(40).dials.ahead)
+        assertTrue(LanternsLevels.rules(1).dials.flow > 0f)
+        assertTrue(LanternsLevels.rules(1).dials.speed > 0.09f)
     }
 }
 

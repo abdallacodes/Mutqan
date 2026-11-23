@@ -8,10 +8,11 @@ import kotlin.random.Random
  * Plays every level many times with a simulated player and checks that each level is passed less often than the one
  * before it (beyond what chance in so many plays allows), and clearly less often than five levels before.
  *
- * The player looks for a word once it is the one wanted (having seen its lantern before does not help): it finds it
- * after a moment that grows with the lanterns in the sky (and with the wind), and taps it if it is still there. Now and
- * then it mixes a word up: more often when a look-alike word is in the sky, and at the start of a verse begun from
- * nothing. It catches the helpers it sees.
+ * The player looks for a word once it is the one wanted: it finds it after a moment that grows with the lanterns in the
+ * sky (and with the wind), and taps it if it is still there; a word whose lantern it already saw coming (the levels keep
+ * the next word up) takes half the search. Now and then it mixes a word up: more often when a look-alike
+ * word is in the sky, at the start of a verse begun from nothing, and the faster and fuller the sky. It catches the helpers
+ * it sees.
  */
 class LevelCurveTest {
 
@@ -21,6 +22,10 @@ class LevelCurveTest {
         val slip = 0.012f
         val alikeSlip = 0.07f
         val startSlip = 0.06f
+
+        /** More mix-ups in a hurry: for each screen height a second the lanterns rise beyond a calm pace, and for each lantern. */
+        val rushSlip = 0.25f
+        val crowdSlip = 0.003f
     }
 
     /** A level's verses as the app would choose them from pages of verses of every length, with made-up words. */
@@ -82,10 +87,14 @@ class LevelCurveTest {
                 continue
             }
             val wanted = visible.firstOrNull { it.kind == LanternKind.WORD && it.word?.key == game.needed?.key } ?: continue
-            if (t - maxOf(wantedSince, seenAt.getValue(wanted.id)) < look) continue
+            val seen = seenAt.getValue(wanted.id)
+            // Seen coming, it is still told apart from the others, but half the search is done.
+            val wait = if (seen + look <= wantedSince) (player.react + player.readEach * words * 0.5f) * (1f + rules.dials.wind * 6f) else look
+            if (t - maxOf(wantedSince, seen) < wait) continue
             var chance = player.slip
             if (visible.any { it.word?.key in alike }) chance += player.alikeSlip
             if (game.verse?.given == 0 && game.placed == 0) chance += player.startSlip
+            chance += player.rushSlip * (rules.dials.speed * game.tempo - CALM_PACE).coerceAtLeast(0f) + player.crowdSlip * words
             val wrong = visible.firstOrNull { it.kind == LanternKind.WORD && it.word?.key != game.needed?.key }
             game.tap(if (wrong != null && random.nextFloat() < chance) wrong.id else wanted.id)
             busyUntil = t + 0.3f
@@ -103,7 +112,8 @@ class LevelCurveTest {
             assertTrue("level ${i + 1} (${passed[i]}) passed more often than level $i (${passed[i - 1]})", passed[i] <= passed[i - 1] + CHANCE)
         }
         for (i in 5 until passed.size) {
-            assertTrue("level ${i + 1} (${passed[i]}) not harder than level ${i - 4} (${passed[i - 5]})", passed[i] < passed[i - 5] || passed[i - 5] == 1f)
+            // Levels nearly always passed cannot show it.
+            assertTrue("level ${i + 1} (${passed[i]}) not harder than level ${i - 4} (${passed[i - 5]})", passed[i] < passed[i - 5] || passed[i - 5] >= SURE)
         }
         assertTrue("the first level should be easy: ${passed.first()}", passed.first() > 0.95f)
         assertTrue("level 40 should still be possible: ${passed.last()}", passed.last() > 0.1f)
@@ -114,5 +124,11 @@ class LevelCurveTest {
 
         /** What chance alone can add to a pass rate measured over [PLAYS] plays (over two standard errors). */
         const val CHANCE = 0.05f
+
+        /** A pace with no hurry in it, in screen heights a second. */
+        const val CALM_PACE = 0.1f
+
+        /** A pass rate this high is as good as always. */
+        const val SURE = 0.995f
     }
 }

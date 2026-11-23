@@ -23,7 +23,14 @@ data class Dials(
     /** How far the wind pushes all the lanterns sideways, as a fraction of the width; 0 is still air. */
     val wind: Float = 0f,
     /** The share of word lanterns that come golden (three times the points when right); 0 is none. */
-    val golden: Float = 0f
+    val golden: Float = 0f,
+    /**
+     * How many words after the wanted one are kept in the sky too, so the next is already up when it is wanted (a word
+     * tapped before its turn is a slip): 0 is the wanted word alone.
+     */
+    val ahead: Int = 0,
+    /** How much faster the whole sky moves for each right word in a row (up to [LanternsGame.FLOW_RUN]); 0 keeps it steady. */
+    val flow: Float = 0f
 )
 
 /** What a level brings that the one before it did not: shown on its card on the map. */
@@ -89,13 +96,17 @@ object LanternsLevels {
         val n = level.coerceAtLeast(1)
         val k = n - 1
         val dials = Dials(
-            speed = toward(0.068f, 0.21f, 0.955f, k),
-            interval = toward(1.5f, 0.62f, 0.955f, k),
+            speed = toward(START_SPEED, END_SPEED, 0.955f, k),
+            interval = toward(START_INTERVAL, END_INTERVAL, 0.955f, k),
             sky = 3 + MORE_LANTERNS_AT.count { n >= it },
             helperEvery = toward(14f, 40f, 0.95f, k),
             helpersAtOnce = true,
             wind = if (n < WIND_FROM) 0f else toward(0.015f, 0.05f, 0.93f, n - WIND_FROM),
-            golden = if (n < GOLDEN_FROM) 0f else GOLDEN_SHARE
+            golden = if (n < GOLDEN_FROM) 0f else GOLDEN_SHARE,
+            ahead = 1,
+            // A run quickens the sky, up to a top pace the late levels reach on their own (so it matters most early on,
+            // where the levels were too slow for a reader who knows the verses).
+            flow = FLOW
         )
         return LevelRules(
             number = n,
@@ -113,6 +124,17 @@ object LanternsLevels {
     }
 
     private const val GOLDEN_SHARE = 0.1f
+
+    /** Level 1's pace: about what level 7 was before (the first levels were too slow for a reader who knows the verses). */
+    private const val START_SPEED = 0.095f
+    private const val START_INTERVAL = 1.2f
+
+    /** Where the pace heads (never quite there): faster than before, since the next word is up and reading it can start early. */
+    private const val END_SPEED = 0.26f
+    private const val END_INTERVAL = 0.55f
+
+    /** Each right word in a row makes the sky this much faster (up to [LanternsGame]'s top pace). */
+    private const val FLOW = 0.04f
 
     fun news(level: Int): LevelNews = when (level) {
         1 -> LevelNews.START
@@ -145,12 +167,19 @@ object LanternsLevels {
     fun formatStars(stars: List<Int>): String = stars.joinToString("") { it.coerceIn(0, 3).toString() }
 
     /**
-     * The stars kept after winning [level] with [stars]: the better of old and new for a level played before, one more
-     * level for the next one. A level further on (only reachable in a test build) is not kept.
+     * The furthest level open: the one after the furthest won, or the two after it when that one was won with three
+     * stars (a reader who finds the levels easy leaps over one). The levels before it are open too.
+     */
+    fun furthestOpen(stars: List<Int>): Int = if (stars.isEmpty()) 1 else stars.size + if (stars.last() >= 3) 2 else 1
+
+    /**
+     * The stars kept after winning [level] with [stars]: the better of old and new for a level played before; a level
+     * further on that is open gets its stars, and a level leapt over keeps none (0) until it is won. A level beyond the
+     * open ones (only reachable in a test build) is not kept.
      */
     fun withStars(kept: List<Int>, level: Int, stars: Int): List<Int> = when {
         level in 1..kept.size -> kept.toMutableList().also { it[level - 1] = maxOf(it[level - 1], stars) }
-        level == kept.size + 1 -> kept + stars
+        level in (kept.size + 1)..furthestOpen(kept) -> kept + List(level - kept.size - 1) { 0 } + stars
         else -> kept
     }
 }

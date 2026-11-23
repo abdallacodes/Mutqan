@@ -85,6 +85,9 @@ class LanternsSource internal constructor(
         /** The most slipped verses the open round puts first. */
         private const val OPEN_SLIPPED = 8
 
+        /** The most slipped verses a calm sitting puts first. */
+        private const val CALM_SLIPPED = 2
+
         /** Words of the verse before shown to start from when none is given (its end marker apart). */
         private const val CUE_WORDS = 3
 
@@ -100,21 +103,45 @@ class LanternsSource internal constructor(
             return ayahs.map { VerseLength(it.id, it.wordsCount, twins.getOrPut(WordKey.ofVerse(it.text)) { it.id }) }
         }
 
+        /** Words given at the start of a verse in a calm sitting: one, two for a long verse. */
+        private fun calmGiven(size: Int): Int = if (size >= 10) 2 else 1
+
         /**
-         * Reads an open round from [pages] (the memorised pages, or a juz): up to sixty verses, a few slipped ones first
-         * when they are due, then verses not drawn lately in random order ([LevelVerses.order]); their words and the words
-         * of the verses on either side of each. Call off the main thread.
+         * Reads an open round from [pages] (the memorised pages, or a juz): up to sixty verses that go round and round, a
+         * few slipped ones first when they are due, then verses not drawn lately in random order ([LevelVerses.order]);
+         * their words and the words of the verses on either side of each. [given] words of each verse are in place from
+         * the start (with none, the end of the verse before shows), and wrong lanterns carry look-alike words from [next]
+         * by [chance]. Call off the main thread.
          */
         fun load(
             quran: QuranRepository,
             pages: Collection<Int>,
             random: Random = Random.Default,
             slipped: List<Int> = emptyList(),
-            recent: List<Int> = emptyList()
+            recent: List<Int> = emptyList(),
+            given: (size: Int) -> Int = ::calmGiven,
+            next: NextWords? = null,
+            chance: Float = 0f
         ): LanternsSource {
             val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
             val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, OPEN_SLIPPED).take(ROUND_VERSES)
-            return read(quran, ids, given = { size -> if (size >= 10) 2 else 1 }, next = null, chance = 0f, once = false, random = random)
+            return read(quran, ids, given = given, next = next.takeIf { chance > 0f }, chance = chance, once = false, random = random)
+        }
+
+        /**
+         * Reads a calm sitting from [pages]: [GameModes.CALM_VERSES] verses, once each (a slipped one or two first when
+         * due, then verses not drawn lately), one word given (two in a long verse). Call off the main thread.
+         */
+        fun calm(
+            quran: QuranRepository,
+            pages: Collection<Int>,
+            slipped: List<Int>,
+            recent: List<Int>,
+            random: Random = Random.Default
+        ): LanternsSource {
+            val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
+            val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, CALM_SLIPPED).take(GameModes.CALM_VERSES)
+            return read(quran, ids, given = ::calmGiven, next = null, chance = 0f, once = true, random = random)
         }
 
         /**

@@ -241,6 +241,69 @@ class LanternsGameTest {
         assertEquals(2, g.placed)
     }
 
+    private fun rising(g: LanternsGame) = g.lanterns.filter { it.state == LanternState.RISING && it.kind == LanternKind.WORD }
+
+    @Test
+    fun theWordAfterTheWantedOneIsAlreadyUp() {
+        val g = LanternsGame(FakeSource(), Random(3), levelDials.copy(ahead = 1)).also { it.start() }
+        val first = g.waitForNeeded()
+        // Within moments the word after it is up too, before it is wanted.
+        var waited = 0f
+        while (rising(g).none { it.word?.key == "c" } && waited < 3f) { g.update(0.02f); waited += 0.02f }
+        assertTrue("the next word took $waited s to come up", waited < 3f)
+        g.tap(first.id)
+        // So once the wanted word is tapped, the next is there at once.
+        assertTrue(rising(g).any { it.word?.key == g.needed?.key })
+    }
+
+    @Test
+    fun aWordTappedBeforeItsTurnIsASlip() {
+        val g = LanternsGame(FakeSource(), Random(3), levelDials.copy(ahead = 1)).also { it.start() }
+        var early: Lantern? = null
+        repeat(400) { if (early == null) { g.update(0.02f); early = rising(g).firstOrNull { it.word?.key == "c" && it.y < 0.95f } } }
+        g.tap(early!!.id)
+        assertEquals(1, g.wrong)
+        assertEquals(1, g.placed)
+    }
+
+    @Test
+    fun aCalmRoundLosesNoHeartAndWaitsAfterEachVerse() {
+        val g = LanternsGame(FakeSource(), Random(2), levelDials, RoundRules(forgiving = true, waitAfterVerse = true)).also { it.start() }
+        repeat(5) { if (!g.over) g.tap(g.waitForDecoy().id) }
+        assertFalse(g.over)
+        assertEquals(LanternsGame.START_LIVES, g.lives)
+        assertEquals(5, g.slips)
+        repeat(3) { g.tap(g.waitForNeeded().id) }
+        assertTrue(g.waiting)
+        // It waits, however long, until it is told to go on.
+        repeat(500) { g.update(0.02f) }
+        assertEquals(1, g.verse?.ayahId)
+        g.proceed()
+        assertFalse(g.waiting)
+        assertEquals(2, g.verse?.ayahId)
+    }
+
+    @Test
+    fun withOneHeartASingleSlipEndsTheRound() {
+        val g = LanternsGame(FakeSource(), Random(2), levelDials, RoundRules(lives = 1)).also { it.start() }
+        assertEquals(1, g.startLives)
+        g.tap(g.waitForDecoy().id)
+        assertTrue(g.over)
+    }
+
+    @Test
+    fun aRunQuickensTheSkyAndASlipLetsItSettle() {
+        val g = LanternsGame(FakeSource(), Random(2), levelDials.copy(flow = 0.05f, ahead = 1)).also { it.start() }
+        repeat(3) { g.tap(g.waitForNeeded().id) }
+        repeat(200) { g.update(0.02f) }
+        repeat(2) { g.tap(g.waitForNeeded().id) }
+        repeat(60) { g.update(0.02f) }
+        assertTrue("tempo ${g.tempo} after a run of five", g.tempo > 1.15f)
+        g.tap(g.waitForDecoy().id)
+        repeat(150) { g.update(0.02f) }
+        assertTrue("tempo ${g.tempo} after a slip", g.tempo < 1.05f)
+    }
+
     @Test
     fun theWrongWordsAreAskedForTheWantedWordsPlace() {
         val source = FakeSource()
