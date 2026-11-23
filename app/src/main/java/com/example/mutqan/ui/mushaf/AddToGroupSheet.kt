@@ -45,11 +45,38 @@ private const val SEARCH_FROM = 6
  * Where an ayah goes in the user's mutashabihat groups: tap a group to put the ayah in it, or start a new group with
  * it. [memberOf] are the groups that already hold the ayah (shown, not tappable).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddToGroupSheet(
     surah: Int,
     ayah: Int,
+    groups: List<GroupWithCount>,
+    memberOf: Set<Int>,
+    onPick: (GroupWithCount) -> Unit,
+    onCreate: (String) -> Unit,
+    onDismiss: () -> Unit
+) = AddVersesToGroupSheet(
+    title = stringResource(R.string.add_to_group_title),
+    subtitle = stringResource(R.string.peek_group_ayah_ref, SurahData.nameOf(surah), ayah),
+    createLabel = stringResource(R.string.add_to_group_create),
+    emptyText = stringResource(R.string.add_to_group_empty),
+    groups = groups,
+    memberOf = memberOf,
+    onPick = onPick,
+    onCreate = onCreate,
+    onDismiss = onDismiss
+)
+
+/**
+ * Where some ayahs go in the user's mutashabihat groups ([title] and [subtitle] say which): tap a group to put them in
+ * it, or start a new group with them. [memberOf] are groups already holding them (shown, not tappable).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddVersesToGroupSheet(
+    title: String,
+    subtitle: String,
+    createLabel: String,
+    emptyText: String,
     groups: List<GroupWithCount>,
     memberOf: Set<Int>,
     onPick: (GroupWithCount) -> Unit,
@@ -68,12 +95,12 @@ fun AddToGroupSheet(
     ModalBottomSheet(contentWindowInsets = FolioSheetInsets, onDismissRequest = onDismiss, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = stringResource(R.string.add_to_group_title),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
             Text(
-                text = stringResource(R.string.peek_group_ayah_ref, SurahData.nameOf(surah), ayah),
+                text = subtitle,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
@@ -93,7 +120,7 @@ fun AddToGroupSheet(
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PaperButton(
-                            text = stringResource(R.string.add_to_group_create),
+                            text = createLabel,
                             onClick = { onCreate(newName.trim()) },
                             enabled = newName.isNotBlank()
                         )
@@ -114,7 +141,7 @@ fun AddToGroupSheet(
 
             if (groups.isEmpty()) {
                 Text(
-                    text = stringResource(R.string.add_to_group_empty),
+                    text = emptyText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)

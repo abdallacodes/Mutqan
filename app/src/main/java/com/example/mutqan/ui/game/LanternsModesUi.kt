@@ -24,6 +24,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -337,7 +341,14 @@ internal fun MeaningCard(verse: GameVerse, words: Map<Int, QuranWord>, meaning: 
 
 /** A calm sitting done: the verses built (each opens in the Mushaf), and another sitting or the end. */
 @Composable
-internal fun CalmOverOverlay(game: LanternsGame, onMore: () -> Unit, onDone: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> Unit) {
+internal fun CalmOverOverlay(
+    game: LanternsGame,
+    similarCount: Int,
+    onSimilar: () -> Unit,
+    onMore: () -> Unit,
+    onDone: () -> Unit,
+    onOpenVerse: (page: Int, ayahId: Int) -> Unit
+) {
     BackHandler(onBack = onDone)
     Scrim(color = Color(0xE0050816)) {
         Column(
@@ -377,6 +388,7 @@ internal fun CalmOverOverlay(game: LanternsGame, onMore: () -> Unit, onDone: () 
             PlayedVerses(game, onOpenVerse)
             Spacer(Modifier.height(22.dp))
             GameButton(stringResource(R.string.game_calm_more), onMore, Modifier.widthIn(min = 220.dp))
+            SimilarButton(similarCount, onSimilar)
             Spacer(Modifier.height(10.dp))
             GameButton(stringResource(R.string.game_calm_finish), onDone, Modifier.widthIn(min = 220.dp), primary = false)
         }
@@ -389,6 +401,8 @@ internal fun MasteryOverOverlay(
     game: LanternsGame,
     best: Int,
     newRecord: Boolean,
+    similarCount: Int,
+    onSimilar: () -> Unit,
     onAgain: () -> Unit,
     onBack: () -> Unit,
     onOpenVerse: (page: Int, ayahId: Int) -> Unit
@@ -439,8 +453,129 @@ internal fun MasteryOverOverlay(
             PlayedVerses(game, onOpenVerse)
             Spacer(Modifier.height(22.dp))
             GameButton(stringResource(R.string.game_again), onAgain, Modifier.widthIn(min = 220.dp))
+            SimilarButton(similarCount, onSimilar)
             Spacer(Modifier.height(10.dp))
             GameButton(stringResource(R.string.game_back), onBack, Modifier.widthIn(min = 220.dp), primary = false)
+        }
+    }
+}
+
+/** The way from an end screen to the mutashabihat of the round's verses, when some have them. */
+@Composable
+internal fun SimilarButton(count: Int, onClick: () -> Unit) {
+    if (count <= 0) return
+    Spacer(Modifier.height(10.dp))
+    GameButton(pluralStringResource(R.plurals.game_similar_button, count, count), onClick, Modifier.widthIn(min = 240.dp), primary = false)
+}
+
+/**
+ * The mutashabihat of the round's verses: each verse that has some, with the closest of them (the words they share in
+ * gold), each chosen or not, and a button that puts the verse and the chosen ones in a mutashabihat group.
+ */
+@Composable
+internal fun RoundSimilarOverlay(
+    items: List<LanternsViewModel.RoundSimilar>,
+    onAdd: (List<Int>) -> Unit,
+    onClose: () -> Unit
+) {
+    BackHandler(onBack = onClose)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val index = remember(context) { com.example.mutqan.quran.QuranRepository.getInstance(context).ayahIndex }
+    fun ref(id: Int) = if (id in index) "${com.example.mutqan.data.SurahData.nameOf(index.surahOf(id))} · ${index.ayahOf(id)}" else ""
+    // Opaque: the end screen behind it would show its buttons through.
+    Scrim(color = Color(0xFF060A1A)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                stringResource(R.string.game_similar_title),
+                style = TextStyle(fontFamily = AmiriFontFamily, fontWeight = FontWeight.Bold, fontSize = 28.sp, color = GameColors.Gold),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                stringResource(R.string.game_similar_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyColumn(
+                Modifier.weight(1f).widthIn(max = 560.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(items.size, key = { items[it].verse.ayahId }) { i ->
+                    val item = items[i]
+                    // The ones chosen to go in a group with the verse: all of them to begin with.
+                    var chosen by remember(item) { mutableStateOf(item.similar.map { it.ayahId }.toSet()) }
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(GameColors.Panel)
+                            .border(1.dp, GameColors.Gold.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                            .padding(14.dp)
+                    ) {
+                        Text(ref(item.verse.ayahId), style = MaterialTheme.typography.labelLarge, color = GameColors.Gold)
+                        MushafText(span = remember(item) { MushafSpan.of(item.verse.words) }, size = 22.sp, color = GameColors.Gold)
+                        Spacer(Modifier.height(6.dp))
+                        for (other in item.similar) {
+                            val on = other.ayahId in chosen
+                            val shared = remember(other) {
+                                other.matched.flatMap { r -> r.mapNotNull { pos -> other.words.getOrNull(pos - 1)?.id } }
+                                    .associateWith { GameColors.Gold }
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable(role = Role.Checkbox) { chosen = if (on) chosen - other.ayahId else chosen + other.ayahId }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(
+                                    imageVector = if (on) Icons.Filled.CheckCircle
+                                    else Icons.Outlined.Circle,
+                                    contentDescription = null,
+                                    tint = if (on) GameColors.Gold else Color.White.copy(alpha = 0.4f),
+                                    modifier = Modifier.padding(top = 6.dp).height(22.dp).width(22.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(ref(other.ayahId), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.65f))
+                                    MushafText(
+                                        span = remember(other) { MushafSpan.of(other.words) },
+                                        size = 20.sp,
+                                        color = Color.White.copy(alpha = if (on) 0.92f else 0.5f),
+                                        wordColors = if (on) shared else emptyMap()
+                                    )
+                                }
+                            }
+                        }
+                        if (item.more > 0) {
+                            Text(
+                                pluralStringResource(R.plurals.game_similar_more, item.more, item.more),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.55f),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        GameButton(
+                            pluralStringResource(R.plurals.game_similar_add, chosen.size + 1, chosen.size + 1),
+                            { onAdd(listOf(item.verse.ayahId) + item.similar.map { it.ayahId }.filter { it in chosen }) },
+                            Modifier.fillMaxWidth(),
+                            primary = false
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            GameButton(stringResource(R.string.game_back), onClose, Modifier.widthIn(min = 220.dp))
         }
     }
 }

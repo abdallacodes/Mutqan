@@ -798,8 +798,7 @@
     <string name="game_new_label">New</string>
     <string name="game_news_start">Build the verses word by word before their lanterns fly away. The first two words of each verse are given.</string>
     <string name="game_news_one_given">From now on only the first word of each verse is given.</string>
-    <string name="game_news_fourth">A fourth lantern in the sky.</string>
-    <string name="game_news_look_alike">Words from look-alike verses: they follow the same words somewhere else in the Quran, so take care.</string>
+        <string name="game_news_look_alike">Words from look-alike verses: they follow the same words somewhere else in the Quran, so take care.</string>
     <string name="game_news_golden">Golden lanterns: if one carries the right word, it scores triple.</string>
     <string name="game_news_fifth">A fifth lantern in the sky.</string>
     <string name="game_news_wind">Wind sways the lanterns from side to side.</string>
@@ -1548,4 +1547,36 @@
     <string name="game_score_label">Points</string>
     <string name="game_leap_to">Leap to level %1$d</string>
     <string name="reading_quiz_game">Break: Lanterns</string>
+    <!-- Lanterns: the mutashabihat of a round's verses. -->
+    <plurals name="game_similar_button">
+        <item quantity="one">Look-alikes of %d verse</item>
+        <item quantity="other">Look-alikes of %d verses</item>
+    </plurals>
+    <string name="game_similar_title">Look-alikes of the round\'s verses</string>
+    <string name="game_similar_hint">Shared words are in gold. Choose which go with the verse into a mutashabihat group.</string>
+    <plurals name="game_similar_more">
+        <item quantity="one">and %d more like it</item>
+        <item quantity="other">and %d more like it</item>
+    </plurals>
+    <plurals name="game_similar_add">
+        <item quantity="one">Add the verse to a group</item>
+        <item quantity="other">Add %d verses to a group</item>
+    </plurals>
+    <string name="game_similar_sheet_title">Add the verses to a mutashabihat group</string>
+    <string name="game_similar_create">Create and add the verses</string>
+    <string name="game_similar_no_groups">No groups yet. Start your first one with these verses.</string>
+    <plurals name="game_similar_added">
+        <item quantity="zero">All the verses were already in “%2$s”</item>
+        <item quantity="one">Added %1$d verse to “%2$s”</item>
+        <item quantity="other">Added %1$d verses to “%2$s”</item>
+    </plurals>
+    <string name="game_news_seventh">A seventh lantern in the sky.</string>
+    <string name="game_news_short_one_given">One word given</string>
+    <string name="game_news_short_fifth">A fifth lantern</string>
+    <string name="game_news_short_look_alike">Look-alike verses</string>
+    <string name="game_news_short_golden">Golden lanterns</string>
+    <string name="game_news_short_sixth">A sixth lantern</string>
+    <string name="game_news_short_wind">Wind</string>
+    <string name="game_news_short_none_given">No words given</string>
+    <string name="game_news_short_seventh">A seventh lantern</string>
 </resources>

@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
@@ -87,7 +88,7 @@ private val RowHeight = 150.dp
 private val NodeColumn = NodeHeight + 18.dp
 
 /** Locked levels shown above the next one, dark, so the climb goes on out of sight. */
-private const val LEVELS_AHEAD = 4
+private const val LEVELS_AHEAD = 10
 
 /** In a test build, where any level opens with a long press: enough of them to reach the late ones. */
 private const val LEVELS_AHEAD_TEST = 40
@@ -174,6 +175,30 @@ internal fun LevelMap(
 
 private enum class NodeKind { WON, NEXT, LOCKED }
 
+/** A level's news on the map: a small gold tag with a sparkle, softer once the level is reached. */
+@Composable
+private fun NewsTag(text: String, reached: Boolean, modifier: Modifier = Modifier) {
+    // Read in its own language's direction, wherever it sits on the map.
+    CompositionLocalProvider(LocalLayoutDirection provides if (LocalConfiguration.current.layoutDirection == android.util.LayoutDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        Row(
+            modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(GameColors.Panel.copy(alpha = 0.85f))
+                .border(1.dp, GameColors.Gold.copy(alpha = if (reached) 0.35f else 0.7f), RoundedCornerShape(14.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = GameColors.Gold, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (reached) Color.White.copy(alpha = 0.7f) else GameColors.Gold
+            )
+        }
+    }
+}
+
 @Composable
 private fun LevelNode(
     level: Int,
@@ -221,6 +246,22 @@ private fun LevelNode(
                 }
             }
             val nodeW = with(density) { NodeWidth.toPx() }
+            // What the level brings, beside it on the open side of the path: something to look forward to.
+            newsShort(level)?.let { news ->
+                val onRight = x < width / 2f
+                val gap = with(density) { 10.dp.toPx() }
+                val room = with(density) { (if (onRight) width - x - nodeW / 2f - gap * 2 else x - nodeW / 2f - gap * 2).toDp() }
+                NewsTag(
+                    text = news,
+                    reached = kind != NodeKind.LOCKED,
+                    modifier = Modifier
+                        .align(if (onRight) Alignment.CenterStart else Alignment.CenterEnd)
+                        .absoluteOffset {
+                            IntOffset(if (onRight) (x + nodeW / 2f + gap).roundToInt() else -(width - x + nodeW / 2f + gap).roundToInt(), 0)
+                        }
+                        .widthIn(max = room)
+                )
+            }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -303,18 +344,32 @@ internal fun StarCount(total: Int, modifier: Modifier = Modifier) {
     }
 }
 
+/** What a level that brings something new brings, in a few words for the map; null for a level that is only faster. */
+@Composable
+private fun newsShort(level: Int): String? = when (LanternsLevels.news(level)) {
+    LevelNews.ONE_GIVEN -> stringResource(R.string.game_news_short_one_given)
+    LevelNews.FIFTH_LANTERN -> stringResource(R.string.game_news_short_fifth)
+    LevelNews.LOOK_ALIKE -> stringResource(R.string.game_news_short_look_alike)
+    LevelNews.GOLDEN -> stringResource(R.string.game_news_short_golden)
+    LevelNews.SIXTH_LANTERN -> stringResource(R.string.game_news_short_sixth)
+    LevelNews.WIND -> stringResource(R.string.game_news_short_wind)
+    LevelNews.NONE_GIVEN -> stringResource(R.string.game_news_short_none_given)
+    LevelNews.SEVENTH_LANTERN -> stringResource(R.string.game_news_short_seventh)
+    LevelNews.START, LevelNews.FASTER, LevelNews.FASTER_LONGER -> null
+}
+
 /** What a level brings, for its card. */
 @Composable
 private fun newsText(level: Int): String = when (LanternsLevels.news(level)) {
     LevelNews.START -> stringResource(R.string.game_news_start)
     LevelNews.ONE_GIVEN -> stringResource(R.string.game_news_one_given)
-    LevelNews.FOURTH_LANTERN -> stringResource(R.string.game_news_fourth)
+    LevelNews.FIFTH_LANTERN -> stringResource(R.string.game_news_fifth)
     LevelNews.LOOK_ALIKE -> stringResource(R.string.game_news_look_alike)
     LevelNews.GOLDEN -> stringResource(R.string.game_news_golden)
-    LevelNews.FIFTH_LANTERN -> stringResource(R.string.game_news_fifth)
+    LevelNews.SIXTH_LANTERN -> stringResource(R.string.game_news_sixth)
     LevelNews.WIND -> stringResource(R.string.game_news_wind)
     LevelNews.NONE_GIVEN -> stringResource(R.string.game_news_none_given)
-    LevelNews.SIXTH_LANTERN -> stringResource(R.string.game_news_sixth)
+    LevelNews.SEVENTH_LANTERN -> stringResource(R.string.game_news_seventh)
     LevelNews.FASTER_LONGER -> stringResource(R.string.game_news_faster_longer)
     LevelNews.FASTER -> stringResource(R.string.game_news_faster)
 }
@@ -432,6 +487,8 @@ internal fun LevelOverOverlay(
     starsWon: Int,
     /** The level the next button goes to: the one after, or further on after a leap. */
     nextLevel: Int,
+    similarCount: Int,
+    onSimilar: () -> Unit,
     onStarLand: (Int) -> Unit,
     onNext: () -> Unit,
     onAgain: () -> Unit,
@@ -500,6 +557,7 @@ internal fun LevelOverOverlay(
             } else {
                 GameButton(stringResource(R.string.game_try_again), onAgain, Modifier.widthIn(min = 240.dp))
             }
+            SimilarButton(similarCount, onSimilar)
             Spacer(Modifier.height(10.dp))
             GameButton(stringResource(R.string.game_levels), onMap, Modifier.widthIn(min = 240.dp), primary = false)
         }

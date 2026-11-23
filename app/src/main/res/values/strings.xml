@@ -874,8 +874,7 @@
     <string name="game_new_label">جديد</string>
     <string name="game_news_start">ابنِ الآيات كلمةً كلمة قبل أن تطير فوانيسها. أول كلمتين من كل آية معطاتان.</string>
     <string name="game_news_one_given">من الآن تُعطى كلمة واحدة فقط من أول كل آية.</string>
-    <string name="game_news_fourth">فانوس رابع في السماء.</string>
-    <string name="game_news_look_alike">كلمات من آيات متشابهة: تأتي بعد الكلمات نفسها في موضع آخر من القرآن، فانتبه.</string>
+        <string name="game_news_look_alike">كلمات من آيات متشابهة: تأتي بعد الكلمات نفسها في موضع آخر من القرآن، فانتبه.</string>
     <string name="game_news_golden">فوانيس ذهبية: إن حملت الكلمة الصحيحة فنقاطها ثلاثة أضعاف.</string>
     <string name="game_news_fifth">فانوس خامس في السماء.</string>
     <string name="game_news_wind">ريح تميل بالفوانيس يمنةً ويسرة.</string>
@@ -1764,4 +1763,51 @@
     <string name="game_score_label">النقاط</string>
     <string name="game_leap_to">اقفز إلى المرحلة %1$d</string>
     <string name="reading_quiz_game">استراحة: فوانيس</string>
+    <!-- «فوانيس»: the mutashabihat of a round's verses. -->
+    <plurals name="game_similar_button">
+        <item quantity="zero">متشابهات الجولة</item>
+        <item quantity="one">متشابهات آية من الجولة</item>
+        <item quantity="two">متشابهات آيتين من الجولة</item>
+        <item quantity="few">متشابهات %d آيات من الجولة</item>
+        <item quantity="many">متشابهات %d آية من الجولة</item>
+        <item quantity="other">متشابهات %d آية من الجولة</item>
+    </plurals>
+    <string name="game_similar_title">متشابهات آيات الجولة</string>
+    <string name="game_similar_hint">الكلمات المشتركة بالذهبي. اختر ما تضمّه إلى الآية في مجموعة متشابهات.</string>
+    <plurals name="game_similar_more">
+        <item quantity="zero">ولا غيرها</item>
+        <item quantity="one">وآية أخرى تشبهها</item>
+        <item quantity="two">وآيتان أخريان تشبهانها</item>
+        <item quantity="few">و%d آيات أخرى تشبهها</item>
+        <item quantity="many">و%d آية أخرى تشبهها</item>
+        <item quantity="other">و%d آية أخرى تشبهها</item>
+    </plurals>
+    <plurals name="game_similar_add">
+        <item quantity="zero">أضف إلى مجموعة متشابهات</item>
+        <item quantity="one">أضف الآية إلى مجموعة متشابهات</item>
+        <item quantity="two">أضف الآيتين إلى مجموعة متشابهات</item>
+        <item quantity="few">أضف %d آيات إلى مجموعة متشابهات</item>
+        <item quantity="many">أضف %d آية إلى مجموعة متشابهات</item>
+        <item quantity="other">أضف %d آية إلى مجموعة متشابهات</item>
+    </plurals>
+    <string name="game_similar_sheet_title">أضف الآيات إلى مجموعة متشابهات</string>
+    <string name="game_similar_create">أنشئ وأضف الآيات</string>
+    <string name="game_similar_no_groups">لا توجد مجموعات بعد. أنشئ أولى مجموعاتك بهذه الآيات.</string>
+    <plurals name="game_similar_added">
+        <item quantity="zero">كل الآيات في «%2$s» من قبل</item>
+        <item quantity="one">أُضيفت آية إلى «%2$s»</item>
+        <item quantity="two">أُضيفت آيتان إلى «%2$s»</item>
+        <item quantity="few">أُضيفت %1$d آيات إلى «%2$s»</item>
+        <item quantity="many">أُضيفت %1$d آية إلى «%2$s»</item>
+        <item quantity="other">أُضيفت %1$d آية إلى «%2$s»</item>
+    </plurals>
+    <string name="game_news_seventh">فانوس سابع في السماء.</string>
+    <string name="game_news_short_one_given">كلمة واحدة معطاة</string>
+    <string name="game_news_short_fifth">الفانوس الخامس</string>
+    <string name="game_news_short_look_alike">كلمات من آيات متشابهة</string>
+    <string name="game_news_short_golden">فوانيس ذهبية</string>
+    <string name="game_news_short_sixth">الفانوس السادس</string>
+    <string name="game_news_short_wind">الريح</string>
+    <string name="game_news_short_none_given">بلا كلمات معطاة</string>
+    <string name="game_news_short_seventh">الفانوس السابع</string>
 </resources>
