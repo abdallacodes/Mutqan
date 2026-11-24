@@ -264,7 +264,7 @@ object LevelVerses {
     /**
      * Verses for the open round in the order to play them: the slipped ones that are due first (at most [maxSlipped]),
      * then the ones not drawn lately in random order ([favoured] ones first by the chance [favour]), then the rest, the
-     * one drawn longest ago first.
+     * one drawn longest ago first. A verse's look-alikes among them ([partners]) come right after it, a few at most.
      */
     fun order(
         candidates: List<VerseLength>,
@@ -273,10 +273,31 @@ object LevelVerses {
         random: Random,
         maxSlipped: Int,
         favoured: Set<Int> = emptySet(),
-        favour: Float = 0f
+        favour: Float = 0f,
+        partners: (Int) -> List<Int> = { emptyList() }
     ): List<Int> {
-        val (due, fresh, seen) = tiers(candidates.distinctBy { it.ayahId }, slipped, recent, random, favoured, favour)
-        return (due.take(maxSlipped) + fresh + due.drop(maxSlipped) + seen).map { it.play.ayahId }
+        val unique = candidates.distinctBy { it.ayahId }
+        val (due, fresh, seen) = tiers(unique, slipped, recent, random, favoured, favour)
+        val all = due.take(maxSlipped) + fresh + due.drop(maxSlipped) + seen
+        val byTwin = all.associateBy { it.play.twin }
+        val twinOf = unique.associate { it.ayahId to it.twin }
+        val placed = HashSet<Int>()
+        val out = ArrayList<Int>(all.size)
+        for (verse in all) {
+            if (!placed.add(verse.play.twin)) continue
+            out += verse.play.ayahId
+            var more = 0
+            for (other in partners(verse.play.ayahId)) {
+                if (more >= MAX_CHAIN - 1) break
+                val twin = twinOf[other] ?: continue
+                val partner = byTwin[twin] ?: continue
+                if (placed.add(twin)) {
+                    out += partner.play.ayahId
+                    more++
+                }
+            }
+        }
+        return out
     }
 
     /**
@@ -300,8 +321,9 @@ object LevelVerses {
      * verses allow. Verses with the same words count as one. The ones not drawn lately come first (in random order),
      * then the one drawn longest ago ([recent] holds the ids drawn, the latest first); slipped verses that are due
      * ([slipped], the most recent slip first) come before all, but are at most a third of the words; of the others,
-     * [favoured] ones (with look-alikes) come first by the chance [favour]. A verse comes once, unless there are too few
-     * to fill the level. Returned in the order to play them.
+     * [favoured] ones (with look-alikes) come first by the chance [favour]. In a round on mutashabihat, a look-alike of
+     * the verse just chosen ([partners]) comes next when one fits, a few in a row at most. A verse comes once, unless
+     * there are too few to fill the level. Returned in the order to play them.
      */
     fun pick(
         candidates: List<VerseLength>,
@@ -311,7 +333,8 @@ object LevelVerses {
         recent: List<Int>,
         random: Random,
         favoured: Set<Int> = emptySet(),
-        favour: Float = 0f
+        favour: Float = 0f,
+        partners: (Int) -> List<Int> = { emptyList() }
     ): List<Int> {
         fun build(verse: Verse) = verse.words - given
         val usable = candidates.distinctBy { it.ayahId }.filter { it.words - given >= LEAST_TO_BUILD }
@@ -321,6 +344,9 @@ object LevelVerses {
 
         // The fewest words any verse here leaves to build: what a level's last verse needs at least.
         val least = usable.minOf { it.words - given }
+        val twinOf = usable.associate { it.ayahId to it.twin }
+        var chain = 0
+        var paired = false
         val chosen = ArrayList<Verse>()
         val used = HashSet<Verse>()
         var left = target
@@ -337,20 +363,30 @@ object LevelVerses {
                 used.clear()
                 continue
             }
-            // From the first list that has a fit: the exact words left, or a verse that leaves room for one more after
-            // it, or one a word off.
-            val next = open.firstNotNullOfOrNull { tier ->
-                tier.firstOrNull { build(it) == left }
-                    ?: tier.firstOrNull { build(it) <= left - least }
-                    ?: tier.firstOrNull { abs(build(it) - left) <= 1 }
-            } ?: open.flatten().minBy { abs(build(it) - left) }
+            // A fit: the exact words left, or a verse that leaves room for one more after it, or one a word off.
+            fun fit(list: List<Verse>): Verse? = list.firstOrNull { build(it) == left }
+                ?: list.firstOrNull { build(it) <= left - least }
+                ?: list.firstOrNull { abs(build(it) - left) <= 1 }
+            // A look-alike of the verse just chosen, when one fits; else from the first list that has a fit.
+            val prev = chosen.lastOrNull()
+            val partner = if (prev == null || chain >= MAX_CHAIN) null else {
+                val twins = partners(prev.play.ayahId).mapNotNullTo(HashSet()) { twinOf[it] } - prev.play.twin
+                if (twins.isEmpty()) null else fit(open.flatten().filter { it.play.twin in twins })
+            }
+            val next = partner ?: open.firstNotNullOfOrNull { fit(it) } ?: open.flatten().minBy { abs(build(it) - left) }
+            chain = if (partner != null) chain + 1 else 1
+            if (partner != null) paired = true
             used += next
             chosen += next
             left -= build(next)
             if (due.any { it === next }) slipWords += build(next)
         }
-        return chosen.shuffled(random).map { it.play.ayahId }
+        // Look-alikes stay side by side; otherwise the order is drawn anew.
+        return (if (paired) chosen else chosen.shuffled(random)).map { it.play.ayahId }
     }
+
+    /** A verse and its look-alikes in a row: this many at most. */
+    const val MAX_CHAIN = 3
 
     private const val MAX_STEPS = 200
 }

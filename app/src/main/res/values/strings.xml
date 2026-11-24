@@ -1850,4 +1850,7 @@
         <item quantity="many">و%d آية أخرى أبعد شبهًا</item>
         <item quantity="other">و%d آية أخرى أبعد شبهًا</item>
     </plurals>
+    <string name="game_focus_alike">ركّز على المتشابهات</string>
+    <string name="game_focus_alike_hint">آيات لها متشابهات في حفظك، وتأتي متشابهتها بعدها مباشرة لتفرّق بينهما.</string>
+    <string name="game_focus_short">المتشابهات</string>
 </resources>

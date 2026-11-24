@@ -194,12 +194,19 @@ class LanternsSource internal constructor(
             chance: Float = 0f,
             alike: AlikeVerses = AlikeVerses(),
             favour: Float = 0f,
-            known: Set<Int> = emptySet()
+            known: Set<Int> = emptySet(),
+            focus: Boolean = false
         ): LanternsSource {
-            val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
-            val favoured = if (favour > 0f) ayahs.map { it.id }.filterTo(HashSet()) { alike.has(it) } else emptySet()
-            val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, OPEN_SLIPPED, favoured, favour).take(ROUND_VERSES)
-            return read(quran, ids, given, next, alike, pages.toSet() + known, nearForms, chance, once = false, random = random)
+            val all = lengths(ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS })
+            val knownPages = pages.toSet() + known
+            val focused = if (focus) focusOf(quran, all, alike, next, knownPages) else null
+            val ids = if (focused != null) {
+                LevelVerses.order(focused.first, slipped, recent, random, OPEN_SLIPPED, focused.second.favoured, 1f, focused.second::partnersOf)
+            } else {
+                val favoured = if (favour > 0f) all.map { it.ayahId }.filterTo(HashSet()) { alike.has(it) } else emptySet()
+                LevelVerses.order(all, slipped, recent, random, OPEN_SLIPPED, favoured, favour)
+            }.take(ROUND_VERSES)
+            return read(quran, ids, given, next, alike, knownPages, nearForms, chance, once = false, random = random)
         }
 
         /**
@@ -215,11 +222,18 @@ class LanternsSource internal constructor(
             next: NextWords? = null,
             alike: AlikeVerses = AlikeVerses(),
             random: Random = Random.Default,
-            known: Set<Int> = emptySet()
+            known: Set<Int> = emptySet(),
+            focus: Boolean = false
         ): LanternsSource {
-            val ayahs = ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS }
-            val ids = LevelVerses.order(lengths(ayahs), slipped, recent, random, CALM_SLIPPED).take(GameModes.CALM_VERSES)
-            return read(quran, ids, ::calmGiven, next, alike, pages.toSet() + known, nearForms, GameModes.CALM_TRAPS, once = true, random = random)
+            val all = lengths(ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS })
+            val knownPages = pages.toSet() + known
+            val focused = if (focus) focusOf(quran, all, alike, next, knownPages) else null
+            val ids = if (focused != null) {
+                LevelVerses.order(focused.first, slipped, recent, random, CALM_SLIPPED, focused.second.favoured, 1f, focused.second::partnersOf)
+            } else {
+                LevelVerses.order(all, slipped, recent, random, CALM_SLIPPED)
+            }.take(GameModes.CALM_VERSES)
+            return read(quran, ids, ::calmGiven, next, alike, knownPages, nearForms, GameModes.CALM_TRAPS, once = true, random = random)
         }
 
         /**
@@ -239,20 +253,58 @@ class LanternsSource internal constructor(
             nearForms: WordTraps? = null,
             alike: AlikeVerses = AlikeVerses(),
             random: Random = Random.Default,
-            known: Set<Int> = emptySet()
+            known: Set<Int> = emptySet(),
+            focus: Boolean = false
         ): LanternsSource {
             val all = lengths(ayahsOn(quran, pages).filter { it.wordsCount in MIN_WORDS..MAX_WORDS })
             val pool = LevelVerses.withEnough(
                 reach = all.filter { it.words <= rules.longestVerse },
                 beyond = all.filter { it.words > rules.longestVerse }
             )
-            val favoured = if (rules.lookAlike > 0f) pool.map { it.ayahId }.filterTo(HashSet()) { alike.has(it) } else emptySet()
-            val ids = LevelVerses.pick(pool, rules.words, rules.given, slipped, recent, random, favoured, rules.lookAlike)
-            return read(quran, ids, { rules.given }, next, alike, pages.toSet() + known, nearForms, rules.traps, once = true, random = random)
+            val knownPages = pages.toSet() + known
+            val focused = if (focus) focusOf(quran, pool, alike, next, knownPages) else null
+            val ids = if (focused != null) {
+                LevelVerses.pick(focused.first, rules.words, rules.given, slipped, recent, random, focused.second.favoured, 1f, focused.second::partnersOf)
+            } else {
+                val favoured = if (rules.lookAlike > 0f) pool.map { it.ayahId }.filterTo(HashSet()) { alike.has(it) } else emptySet()
+                LevelVerses.pick(pool, rules.words, rules.given, slipped, recent, random, favoured, rules.lookAlike)
+            }
+            return read(quran, ids, { rules.given }, next, alike, knownPages, nearForms, rules.traps, once = true, random = random)
         }
 
         private fun ayahsOn(quran: QuranRepository, pages: Collection<Int>): List<QuranAyah> =
             pages.distinct().flatMap { quran.ayahsOnPage(it) }.distinctBy { it.id }
+
+        /** A round on mutashabihat needs at least this many different verses with look-alikes to draw from only them. */
+        private const val MIN_FOCUS = 6
+
+        /**
+         * For a round on mutashabihat: the verses of [pool] to draw from (those with a look-alike the reader knows, when
+         * there are [MIN_FOCUS] or more; else all, those first) and the focus; null when no verse has one.
+         */
+        private fun focusOf(
+            quran: QuranRepository,
+            pool: List<VerseLength>,
+            alike: AlikeVerses,
+            next: NextWords?,
+            known: Set<Int>
+        ): Pair<List<VerseLength>, AlikeFocus>? {
+            val index = quran.ayahIndex
+            val focus = AlikeFocus.build(
+                pool.map { it.ayahId },
+                alike,
+                close = { next?.closeAlikes(it).orEmpty() },
+                known = { it in index && index.firstPageOf(it) in known }
+            )
+            if (focus.isEmpty) return null
+            val only = pool.filter { it.ayahId in focus.favoured }
+            return (if (only.distinctBy { it.twin }.size >= MIN_FOCUS) only else pool) to focus
+        }
+
+        /** Finds the look-alikes of the verses on [pages] ahead of a round on mutashabihat (a moment's work, kept). */
+        fun warmLookAlikes(quran: QuranRepository, pages: Collection<Int>, next: NextWords) {
+            for (ayah in ayahsOn(quran, pages)) if (ayah.wordsCount in MIN_WORDS..MAX_WORDS) next.closeAlikes(ayah.id)
+        }
 
         private fun read(
             quran: QuranRepository,

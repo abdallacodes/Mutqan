@@ -132,6 +132,9 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
     val masteryBest: StateFlow<Int> = prefs.lanternsMasteryBest.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
     val sound: StateFlow<Boolean> = prefs.lanternsSound.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Whether rounds draw verses that have look-alikes, each followed by its look-alike. */
+    val alikeFocus: StateFlow<Boolean> = prefs.lanternsAlikeFocus.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val source: StateFlow<Source?> = combine(
         prefs.practiceScope, study.coveredPages(), study.revisionLogs(), study.selfRatedStrength()
     ) { scope, covered, logs, rated ->
@@ -158,7 +161,10 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
 
     init {
         // The look-alike words' index takes a moment to build: build it while the menu shows.
-        viewModelScope.launch(Dispatchers.Default) { runCatching { NextWords.get(quran); WordTraps.get(quran) } }
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { NextWords.get(quran); WordTraps.get(quran) }
+            if (prefs.lanternsAlikeFocus.first()) warmFocus()
+        }
         if (breakPages != null) startCalm()
     }
 
@@ -169,6 +175,23 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
     /** Chooses where the verses come from: the same choice as the Practice screen's, kept for both. */
     fun setScope(scope: PracticeScope) {
         viewModelScope.launch { prefs.setPracticeScope(scope) }
+    }
+
+    fun setAlikeFocus(on: Boolean) {
+        viewModelScope.launch {
+            prefs.setLanternsAlikeFocus(on)
+            if (on) warmFocus()
+        }
+    }
+
+    /** Finds the look-alikes of the verses rounds draw from, so a round on mutashabihat starts without a wait. */
+    private fun warmFocus() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching {
+                val pages = source.filterNotNull().first().pages
+                LanternsSource.warmLookAlikes(quran, pages, NextWords.get(quran))
+            }
+        }
     }
 
     fun openMap() {
@@ -258,14 +281,16 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
                 val alike = AlikeVerses(study.groupMates()) { id -> similar.similarTo(id).sortedByDescending { it.score }.map { it.ayahId } }
                 // The pages the reader knows: words from them are the ones they reach for.
                 val known = study.coveredPages().first()?.let { c -> c.indices.filter { c[it] }.mapTo(HashSet()) { it + 1 } }.orEmpty()
+                // A round on mutashabihat: verses with look-alikes, each followed by its look-alike.
+                val focus = prefs.lanternsAlikeFocus.first()
                 fun read(on: Collection<Int>): LanternsSource = when {
-                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent, near, next, alike, known = known)
+                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent, near, next, alike, known = known, focus = focus)
                     mode == GameMode.MASTERY -> LanternsSource.load(
                         quran, on, slipped = slipped, recent = recent,
                         given = { 0 }, next = next, nearForms = near, chance = GameModes.MASTERY_TRAPS,
-                        alike = alike, favour = GameModes.MASTERY_FAVOUR, known = known
+                        alike = alike, favour = GameModes.MASTERY_FAVOUR, known = known, focus = focus
                     )
-                    rules != null -> LanternsSource.forLevel(quran, on, rules, slipped, recent, next, near, alike, known = known)
+                    rules != null -> LanternsSource.forLevel(quran, on, rules, slipped, recent, next, near, alike, known = known, focus = focus)
                     else -> error("a level without its rules")
                 }
                 val source = read(pages).takeUnless { it.isEmpty } ?: read(amma)

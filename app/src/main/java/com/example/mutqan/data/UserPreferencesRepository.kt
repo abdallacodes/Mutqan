@@ -74,6 +74,7 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_LANTERNS_SEEN     = stringPreferencesKey("lanterns_seen")
         private val KEY_LANTERNS_MASTERY  = intPreferencesKey("lanterns_mastery_best")
         private val KEY_LANTERNS_SOUND    = booleanPreferencesKey("lanterns_sound")
+        private val KEY_LANTERNS_ALIKE_FOCUS = booleanPreferencesKey("lanterns_alike_focus")
         private val KEY_REMINDER_ON       = booleanPreferencesKey("reminder_on")
         private val KEY_REMINDER_MINUTES  = intPreferencesKey("reminder_minutes")
         private val KEY_REMINDER_OFFERED  = booleanPreferencesKey("reminder_offer_closed")
@@ -332,6 +333,13 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setLanternsSound(on: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_LANTERNS_SOUND] = on }
+    }
+
+    /** «فوانيس» draws verses that have look-alikes, each followed by its look-alike (off by default). */
+    val lanternsAlikeFocus: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[KEY_LANTERNS_ALIKE_FOCUS] ?: false }
+
+    suspend fun setLanternsAlikeFocus(on: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_LANTERNS_ALIKE_FOCUS] = on }
     }
 
     /** Every how many minutes of reading in the Mushaf a quiz on the pages read is offered; 0 is never. */

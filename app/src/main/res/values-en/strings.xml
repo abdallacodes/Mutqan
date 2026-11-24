@@ -1608,4 +1608,7 @@
         <item quantity="one">and %d more, less alike</item>
         <item quantity="other">and %d more, less alike</item>
     </plurals>
+    <string name="game_focus_alike">Focus on look-alikes</string>
+    <string name="game_focus_alike_hint">Verses that have look-alikes in your hifz, each followed right away by its look-alike, to tell them apart.</string>
+    <string name="game_focus_short">look-alikes</string>
 </resources>

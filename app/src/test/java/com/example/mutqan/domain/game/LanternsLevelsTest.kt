@@ -114,6 +114,28 @@ class LevelLeapTest {
 class LevelVersesTest {
 
     @Test
+    fun aLookAlikeComesRightAfterItsVerse() {
+        val pool = List(20) { VerseLength(it + 1, 5) }
+        val partners = mapOf(1 to listOf(11), 11 to listOf(1), 2 to listOf(12), 12 to listOf(2))
+        repeat(20) { seed ->
+            val ids = LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed), setOf(1, 2, 11, 12), 1f) { partners[it].orEmpty() }
+            assertEquals(4, ids.size)
+            for (i in ids.indices step 2) assertEquals("$ids", partners.getValue(ids[i]).single(), ids[i + 1])
+        }
+    }
+
+    @Test
+    fun theOpenRoundPlaysALookAlikeRightAfterItsVerse() {
+        val pool = List(10) { VerseLength(it + 1, 5) }
+        val partners = mapOf(3 to listOf(7, 9), 7 to listOf(3))
+        repeat(10) { seed ->
+            val ids = LevelVerses.order(pool, emptyList(), emptyList(), Random(seed), 8, partners = { partners[it].orEmpty() })
+            assertEquals(10, ids.toSet().size)
+            assertEquals("$ids", 1, kotlin.math.abs(ids.indexOf(3) - ids.indexOf(7)))
+        }
+    }
+
+    @Test
     fun versesWithLookAlikesComeFirstByTheirChance() {
         val pool = List(40) { VerseLength(it + 1, 5) }
         val favoured = (1..40 step 4).toSet()
@@ -603,5 +625,22 @@ class WordTrapsTest {
             assertTrue(WordKey.of(w) !in found)
             assertTrue(found.all { it in all })
         }
+    }
+}
+
+class AlikeFocusTest {
+
+    @Test
+    fun aVerseCountsWhenALookAlikeIsKnownOrInTheReadersGroups() {
+        val alike = AlikeVerses(mates = mapOf(1 to listOf(9))) { id -> if (id == 2) listOf(3) else if (id == 4) listOf(8) else emptyList() }
+        val close = { id: Int -> if (id == 5) listOf(6) else emptyList() }
+        val known = { id: Int -> id == 3 || id == 6 }
+        val focus = AlikeFocus.build(listOf(1, 2, 3, 4, 5, 6, 7), alike, close, known)
+        // 1 has a group mate (counted even on a page not known), 2 a known ready-list look-alike, 5 a known close one;
+        // 4's look-alike is on a page not known, and the rest have none.
+        assertEquals(setOf(1, 2, 5), focus.favoured)
+        assertEquals(listOf(3), focus.partnersOf(2))
+        assertEquals(emptyList<Int>(), focus.partnersOf(1))
+        assertEquals(listOf(6), focus.partnersOf(5))
     }
 }

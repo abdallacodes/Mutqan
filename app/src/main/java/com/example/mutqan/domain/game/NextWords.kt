@@ -125,6 +125,20 @@ class NextWords internal constructor(
         return sharing.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key }).take(most).map { it.key }
     }
 
+    private val close = java.util.concurrent.ConcurrentHashMap<Int, IntArray>()
+
+    /**
+     * The verses much like [ayahId] as a whole (half their words or more shared in order, [likeness] [CLOSE] or more),
+     * leaving out those with its very words: mutashabihat the ready lists may miss. Kept once found.
+     */
+    fun closeAlikes(ayahId: Int): List<Int> {
+        close[ayahId]?.let { return it.toList() }
+        val v = ids.getOrNull(ayahId - 1) ?: return emptyList()
+        val found = lookAlikes(ayahId).filter { other -> !ids[other - 1].contentEquals(v) && likeness(ayahId, other) >= CLOSE }
+        close[ayahId] = found.toIntArray()
+        return found
+    }
+
     /**
      * How alike two verses are as a whole (0 to 1): the words they share in order, twice, over the words of both. A long
      * verse that only holds a short one's words is not much like it.
@@ -198,6 +212,9 @@ class NextWords internal constructor(
 
         /** Verses found sharing much with one, at most. */
         const val MOST_LOOK_ALIKES = 12
+
+        /** Two verses this alike or more ([likeness]) are much alike. */
+        const val CLOSE = 0.5f
 
         /** What a verse from the reader's own mutashabihat groups adds; one from the ready lists. */
         const val FROM_GROUP = 3f

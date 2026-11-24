@@ -187,6 +187,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     val masteryBest by vm.masteryBest.collectAsState()
     val stars by vm.stars.collectAsState()
     val source by vm.source.collectAsState()
+    val focusOn by vm.alikeFocus.collectAsState()
     val soundOn by vm.sound.collectAsState()
     var choosingSource by remember { mutableStateOf(false) }
     var showingSimilar by remember { mutableStateOf(false) }
@@ -477,6 +478,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
                 starsTotal = stars.sum(),
                 masteryBest = masteryBest,
                 source = source,
+                focus = focusOn,
                 failed = vm.nothingToPlay,
                 onCalm = vm::startCalm,
                 onLevel = { vm.openCard(next) },
@@ -591,7 +593,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             )
         }
         if (choosingSource && vm.phase == LanternsViewModel.Phase.MENU) {
-            SourcePicker(source = source, onPick = vm::setScope, onClose = { choosingSource = false })
+            SourcePicker(source = source, focus = focusOn, onPick = vm::setScope, onFocus = vm::setAlikeFocus, onClose = { choosingSource = false })
         }
         vm.card?.let { number ->
             LevelCard(

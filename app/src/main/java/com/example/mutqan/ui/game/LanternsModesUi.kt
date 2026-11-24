@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -75,6 +76,7 @@ internal fun ModesMenu(
     starsTotal: Int,
     masteryBest: Int,
     source: LanternsViewModel.Source?,
+    focus: Boolean,
     failed: Boolean,
     onCalm: () -> Unit,
     onLevel: () -> Unit,
@@ -148,7 +150,7 @@ internal fun ModesMenu(
             )
         }
         Spacer(Modifier.height(14.dp))
-        SourceLine(source, onSource)
+        SourceLine(source, focus, onSource)
         if (failed) {
             Spacer(Modifier.height(8.dp))
             Text(stringResource(R.string.game_nothing), style = MaterialTheme.typography.bodyMedium, color = GameColors.Red, textAlign = TextAlign.Center)
@@ -207,10 +209,13 @@ private fun ModeCard(
 private fun scopeName(scope: PracticeScope): String =
     stringResource(ScopePreset.entries.firstOrNull { it.scope == scope }?.label ?: R.string.practice_chip_custom)
 
-/** «Verses from: all my hifz · 104 pages» (or Juz 'Amma, when nothing is memorised); a tap changes it. */
+/**
+ * «Verses from: all my hifz · 104 pages» (or Juz 'Amma, when nothing is memorised), and «· look-alikes» when rounds
+ * dwell on mutashabihat; a tap changes it.
+ */
 @Composable
-private fun SourceLine(source: LanternsViewModel.Source?, onClick: () -> Unit) {
-    val text = when {
+private fun SourceLine(source: LanternsViewModel.Source?, focus: Boolean, onClick: () -> Unit) {
+    val base = when {
         source == null -> " "
         source.amma -> stringResource(R.string.game_source_amma)
         else -> {
@@ -219,6 +224,7 @@ private fun SourceLine(source: LanternsViewModel.Source?, onClick: () -> Unit) {
             stringResource(R.string.game_source_from, "$name · $pages")
         }
     }
+    val text = if (focus && source != null) base + " · " + stringResource(R.string.game_focus_short) else base
     Row(
         Modifier
             .clip(RoundedCornerShape(16.dp))
@@ -236,10 +242,19 @@ private fun SourceLine(source: LanternsViewModel.Source?, onClick: () -> Unit) {
     }
 }
 
-/** Where the verses come from: the same one-tap choices as the Practice screen, kept for both. */
+/**
+ * Where the verses come from: the same one-tap choices as the Practice screen, kept for both; and whether rounds dwell
+ * on mutashabihat (verses with look-alikes, each followed by its look-alike).
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SourcePicker(source: LanternsViewModel.Source?, onPick: (PracticeScope) -> Unit, onClose: () -> Unit) {
+internal fun SourcePicker(
+    source: LanternsViewModel.Source?,
+    focus: Boolean,
+    onPick: (PracticeScope) -> Unit,
+    onFocus: (Boolean) -> Unit,
+    onClose: () -> Unit
+) {
     BackHandler(onBack = onClose)
     Scrim {
         Column(
@@ -269,6 +284,14 @@ internal fun SourcePicker(source: LanternsViewModel.Source?, onPick: (PracticeSc
             }
             Text(
                 stringResource(if (source?.amma == true) R.string.game_source_amma_hint else R.string.game_source_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Box(Modifier.fillMaxWidth().height(1.dp).background(GameColors.Gold.copy(alpha = 0.2f)))
+            GameChip(stringResource(R.string.game_focus_alike), selected = focus, enabled = true) { onFocus(!focus) }
+            Text(
+                stringResource(R.string.game_focus_alike_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
