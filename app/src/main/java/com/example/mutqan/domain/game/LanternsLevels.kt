@@ -274,7 +274,8 @@ object LevelVerses {
         maxSlipped: Int,
         favoured: Set<Int> = emptySet(),
         favour: Float = 0f,
-        partners: (Int) -> List<Int> = { emptyList() }
+        partners: (Int) -> List<Int> = { emptyList() },
+        onlyAfter: Set<Int> = emptySet()
     ): List<Int> {
         val unique = candidates.distinctBy { it.ayahId }
         val (due, fresh, seen) = tiers(unique, slipped, recent, random, favoured, favour)
@@ -284,6 +285,8 @@ object LevelVerses {
         val placed = HashSet<Int>()
         val out = ArrayList<Int>(all.size)
         for (verse in all) {
+            // A verse from beyond the pages drawn from comes only right after the verse it looks like.
+            if (verse.play.ayahId in onlyAfter) continue
             if (!placed.add(verse.play.twin)) continue
             out += verse.play.ayahId
             var more = 0
@@ -334,7 +337,8 @@ object LevelVerses {
         random: Random,
         favoured: Set<Int> = emptySet(),
         favour: Float = 0f,
-        partners: (Int) -> List<Int> = { emptyList() }
+        partners: (Int) -> List<Int> = { emptyList() },
+        onlyAfter: Set<Int> = emptySet()
     ): List<Int> {
         fun build(verse: Verse) = verse.words - given
         val usable = candidates.distinctBy { it.ayahId }.filter { it.words - given >= LEAST_TO_BUILD }
@@ -354,9 +358,9 @@ object LevelVerses {
         var guard = 0
         while (left > 0 && guard++ < MAX_STEPS) {
             val slipsFull = slipWords >= target / 3
-            var open = tiers.mapIndexed { i, tier -> tier.filter { it !in used && !(i == 0 && slipsFull) } }
+            var open = tiers.mapIndexed { i, tier -> tier.filter { it !in used && !(i == 0 && slipsFull) && it.play.ayahId !in onlyAfter } }
             // Nothing else is left: the slipped ones come after all.
-            if (open.all { it.isEmpty() }) open = tiers.map { tier -> tier.filter { it !in used } }
+            if (open.all { it.isEmpty() }) open = tiers.map { tier -> tier.filter { it !in used && it.play.ayahId !in onlyAfter } }
             if (open.all { it.isEmpty() }) {
                 // Too few verses to fill the level: they come again.
                 if (used.isEmpty()) break
@@ -371,7 +375,9 @@ object LevelVerses {
             val prev = chosen.lastOrNull()
             val partner = if (prev == null || chain >= MAX_CHAIN) null else {
                 val twins = partners(prev.play.ayahId).mapNotNullTo(HashSet()) { twinOf[it] } - prev.play.twin
-                if (twins.isEmpty()) null else fit(open.flatten().filter { it.play.twin in twins })
+                val waiting = tiers.flatten().filter { it !in used && it.play.twin in twins }
+                // The pair matters more than the exact length: a look-alike may run a few words over.
+                if (twins.isEmpty()) null else fit(waiting) ?: waiting.firstOrNull { build(it) <= left + PAIR_SLACK }
             }
             val next = partner ?: open.firstNotNullOfOrNull { fit(it) } ?: open.flatten().minBy { abs(build(it) - left) }
             chain = if (partner != null) chain + 1 else 1
@@ -387,6 +393,9 @@ object LevelVerses {
 
     /** A verse and its look-alikes in a row: this many at most. */
     const val MAX_CHAIN = 3
+
+    /** Words a look-alike may run over what a level has left, to come after its verse. */
+    const val PAIR_SLACK = 6
 
     private const val MAX_STEPS = 200
 }

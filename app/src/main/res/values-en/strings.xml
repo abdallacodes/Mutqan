@@ -1635,4 +1635,5 @@
         <item quantity="one">%d juz</item>
         <item quantity="other">%d juz</item>
     </plurals>
+    <string name="game_alike_of">Like %1$s</string>
 </resources>

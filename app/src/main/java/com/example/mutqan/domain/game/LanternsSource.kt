@@ -201,12 +201,12 @@ class LanternsSource internal constructor(
             val knownPages = pages.toSet() + known
             val focused = if (focus) focusOf(quran, all, alike, next, knownPages) else null
             val ids = if (focused != null) {
-                LevelVerses.order(focused.first, slipped, recent, random, OPEN_SLIPPED, focused.second.favoured, 1f, focused.second::partnersOf)
+                LevelVerses.order(focused.verses, slipped, recent, random, OPEN_SLIPPED, focused.focus.favoured, 1f, focused.focus::partnersOf, focused.onlyAfter)
             } else {
                 val favoured = if (favour > 0f) all.map { it.ayahId }.filterTo(HashSet()) { alike.has(it) } else emptySet()
                 LevelVerses.order(all, slipped, recent, random, OPEN_SLIPPED, favoured, favour)
             }.take(ROUND_VERSES)
-            return read(quran, ids, given, next, alike, knownPages, nearForms, chance, once = false, random = random)
+            return read(quran, ids, given, next, alike, knownPages, nearForms, chance, once = false, random = random, focus = focused?.focus)
         }
 
         /**
@@ -229,11 +229,11 @@ class LanternsSource internal constructor(
             val knownPages = pages.toSet() + known
             val focused = if (focus) focusOf(quran, all, alike, next, knownPages) else null
             val ids = if (focused != null) {
-                LevelVerses.order(focused.first, slipped, recent, random, CALM_SLIPPED, focused.second.favoured, 1f, focused.second::partnersOf)
+                LevelVerses.order(focused.verses, slipped, recent, random, CALM_SLIPPED, focused.focus.favoured, 1f, focused.focus::partnersOf, focused.onlyAfter)
             } else {
                 LevelVerses.order(all, slipped, recent, random, CALM_SLIPPED)
             }.take(GameModes.CALM_VERSES)
-            return read(quran, ids, ::calmGiven, next, alike, knownPages, nearForms, GameModes.CALM_TRAPS, once = true, random = random)
+            return read(quran, ids, ::calmGiven, next, alike, knownPages, nearForms, GameModes.CALM_TRAPS, once = true, random = random, focus = focused?.focus)
         }
 
         /**
@@ -264,12 +264,12 @@ class LanternsSource internal constructor(
             val knownPages = pages.toSet() + known
             val focused = if (focus) focusOf(quran, pool, alike, next, knownPages) else null
             val ids = if (focused != null) {
-                LevelVerses.pick(focused.first, rules.words, rules.given, slipped, recent, random, focused.second.favoured, 1f, focused.second::partnersOf)
+                LevelVerses.pick(focused.verses, rules.words, rules.given, slipped, recent, random, focused.focus.favoured, 1f, focused.focus::partnersOf, focused.onlyAfter)
             } else {
                 val favoured = if (rules.lookAlike > 0f) pool.map { it.ayahId }.filterTo(HashSet()) { alike.has(it) } else emptySet()
                 LevelVerses.pick(pool, rules.words, rules.given, slipped, recent, random, favoured, rules.lookAlike)
             }
-            return read(quran, ids, { rules.given }, next, alike, knownPages, nearForms, rules.traps, once = true, random = random)
+            return read(quran, ids, { rules.given }, next, alike, knownPages, nearForms, rules.traps, once = true, random = random, focus = focused?.focus)
         }
 
         private fun ayahsOn(quran: QuranRepository, pages: Collection<Int>): List<QuranAyah> =
@@ -278,9 +278,13 @@ class LanternsSource internal constructor(
         /** A round on mutashabihat needs at least this many different verses with look-alikes to draw from only them. */
         private const val MIN_FOCUS = 6
 
+        /** What a round on mutashabihat draws from: [verses], of which [onlyAfter] come only right after the verse they look like. */
+        private class Focused(val verses: List<VerseLength>, val onlyAfter: Set<Int>, val focus: AlikeFocus)
+
         /**
-         * For a round on mutashabihat: the verses of [pool] to draw from (those with a look-alike the reader knows, when
-         * there are [MIN_FOCUS] or more; else all, those first) and the focus; null when no verse has one.
+         * For a round on mutashabihat: the verses of [pool] that have a look-alike the reader knows and the round can play
+         * (all of [pool] when fewer than [MIN_FOCUS], those first), and those look-alikes, which may be outside [pool]
+         * (they come only right after their verse); null when no verse of [pool] has one.
          */
         private fun focusOf(
             quran: QuranRepository,
@@ -288,17 +292,23 @@ class LanternsSource internal constructor(
             alike: AlikeVerses,
             next: NextWords?,
             known: Set<Int>
-        ): Pair<List<VerseLength>, AlikeFocus>? {
+        ): Focused? {
             val index = quran.ayahIndex
             val focus = AlikeFocus.build(
                 pool.map { it.ayahId },
                 alike,
                 close = { next?.closeAlikes(it).orEmpty() },
-                known = { it in index && index.firstPageOf(it) in known }
+                known = { it in index && index.firstPageOf(it) in known },
+                playable = { it in index && (next?.wordCount(it) ?: MIN_WORDS) in MIN_WORDS..MAX_WORDS },
+                same = { a, b -> next?.sameWords(a, b) == true }
             )
             if (focus.isEmpty) return null
             val only = pool.filter { it.ayahId in focus.favoured }
-            return (if (only.distinctBy { it.twin }.size >= MIN_FOCUS) only else pool) to focus
+            val drawn = if (only.distinctBy { it.twin }.size >= MIN_FOCUS) only else pool
+            val inPool = drawn.mapTo(HashSet()) { it.ayahId }
+            val beyond = drawn.flatMap { focus.partnersOf(it.ayahId) }.filter { it !in inPool }.distinct()
+            val extra = beyond.mapNotNull { quran.ayahById(it) }.let(::lengths)
+            return Focused(drawn + extra, extra.mapTo(HashSet()) { it.ayahId }, focus)
         }
 
         /** Finds the look-alikes of the verses on [pages] ahead of a round on mutashabihat (a moment's work, kept). */
@@ -316,7 +326,8 @@ class LanternsSource internal constructor(
             nearForms: WordTraps?,
             chance: Float,
             once: Boolean,
-            random: Random
+            random: Random,
+            focus: AlikeFocus? = null
         ): LanternsSource {
             val index = quran.ayahIndex
             val words = HashMap<Int, QuranWord>()
@@ -339,6 +350,12 @@ class LanternsSource internal constructor(
                     all(id - 1).takeLast(CUE_WORDS + 1).onEach { words[it.id] = it }.map { it.id }
                 } else emptyList()
                 GameVerse(id, list.map(::game), given = start, cue = cue)
+            }.let { built ->
+                // A verse right after the one it looks like (a round on mutashabihat) says so.
+                built.mapIndexed { i, verse ->
+                    val before = built.getOrNull(i - 1)
+                    if (before != null && focus != null && verse.ayahId in focus.partnersOf(before.ayahId)) verse.copy(alikeOf = before.ayahId) else verse
+                }
             }
             val neighbours = verses.associate { verse ->
                 val around = listOf(verse.ayahId - 1, verse.ayahId + 1).filter { it in index }.flatMap { id -> wordsOf(id).map(::game) }

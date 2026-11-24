@@ -1885,4 +1885,5 @@
         <item quantity="many">%d جزءًا</item>
         <item quantity="other">%d جزء</item>
     </plurals>
+    <string name="game_alike_of">تشبه %1$s</string>
 </resources>

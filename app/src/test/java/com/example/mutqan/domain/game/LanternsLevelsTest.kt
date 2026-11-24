@@ -118,10 +118,32 @@ class LevelVersesTest {
         val pool = List(20) { VerseLength(it + 1, 5) }
         val partners = mapOf(1 to listOf(11), 11 to listOf(1), 2 to listOf(12), 12 to listOf(2))
         repeat(20) { seed ->
-            val ids = LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed), setOf(1, 2, 11, 12), 1f) { partners[it].orEmpty() }
+            val ids = LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed), setOf(1, 2, 11, 12), 1f, partners = { partners[it].orEmpty() })
             assertEquals(4, ids.size)
             for (i in ids.indices step 2) assertEquals("$ids", partners.getValue(ids[i]).single(), ids[i + 1])
         }
+    }
+
+    @Test
+    fun aLookAlikeFromBeyondComesOnlyRightAfterItsVerse() {
+        val pool = List(10) { VerseLength(it + 1, 5) } + VerseLength(50, 5)
+        val partners = mapOf(1 to listOf(50))
+        repeat(10) { seed ->
+            val level = LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed), setOf(1), 1f, { partners[it].orEmpty() }, setOf(50))
+            assertEquals("$level", listOf(1, 50), level.take(2))
+            assertEquals(1, level.count { it == 50 })
+            val open = LevelVerses.order(pool, emptyList(), emptyList(), Random(seed), 8, setOf(1), 1f, { partners[it].orEmpty() }, setOf(50))
+            assertEquals("$open", listOf(1, 50), open.take(2))
+            assertEquals(1, open.count { it == 50 })
+        }
+    }
+
+    @Test
+    fun aLookAlikeMayRunAFewWordsOverTheLevel() {
+        val pool = List(10) { VerseLength(it + 1, 5) } + VerseLength(50, 5)
+        // Four words to build, three in the first verse: its look-alike (three more) still comes.
+        val ids = LevelVerses.pick(pool, 4, 2, emptyList(), emptyList(), Random(1), setOf(1), 1f, { if (it == 1) listOf(50) else emptyList() }, setOf(50))
+        assertEquals(listOf(1, 50), ids)
     }
 
     @Test
@@ -640,7 +662,17 @@ class AlikeFocusTest {
         // 4's look-alike is on a page not known, and the rest have none.
         assertEquals(setOf(1, 2, 5), focus.favoured)
         assertEquals(listOf(3), focus.partnersOf(2))
-        assertEquals(emptyList<Int>(), focus.partnersOf(1))
+        // A look-alike may be beyond the pages drawn from.
+        assertEquals(listOf(9), focus.partnersOf(1))
         assertEquals(listOf(6), focus.partnersOf(5))
+    }
+
+    @Test
+    fun aVerseCountsOnlyWithALookAlikeTheRoundCanPlay() {
+        val alike = AlikeVerses(mates = mapOf(1 to listOf(9))) { id -> if (id == 2) listOf(3) else emptyList() }
+        val close = { id: Int -> if (id == 5) listOf(6) else emptyList() }
+        val focus = AlikeFocus.build(listOf(1, 2, 5), alike, close, known = { true }, playable = { it != 3 }, same = { a, b -> a == 5 && b == 6 })
+        // 2's look-alike is too long to play, and 5's says the very same words.
+        assertEquals(setOf(1), focus.favoured)
     }
 }

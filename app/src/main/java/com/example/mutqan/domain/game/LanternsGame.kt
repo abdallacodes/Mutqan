@@ -14,8 +14,9 @@ data class GameWord(val id: Int, val key: String)
 /**
  * A verse to build, its words in order; the first [given] are shown placed from the start. With none given, [cue] holds
  * the last words of the verse before it (its end marker included), shown to start from: word ids, for drawing only.
+ * [alikeOf] is the verse just before it when this one is its look-alike (a round on mutashabihat); 0 otherwise.
  */
-data class GameVerse(val ayahId: Int, val words: List<GameWord>, val given: Int, val cue: List<Int> = emptyList())
+data class GameVerse(val ayahId: Int, val words: List<GameWord>, val given: Int, val cue: List<Int> = emptyList(), val alikeOf: Int = 0)
 
 /** Where the verses and the wrong words come from. Called from the game loop: no slow work. */
 interface GameSource {

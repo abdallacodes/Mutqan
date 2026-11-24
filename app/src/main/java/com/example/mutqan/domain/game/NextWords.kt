@@ -39,6 +39,16 @@ class NextWords internal constructor(
     /** A word that could come at a place: where it is in the Quran, and how close it looks (the higher, the closer). */
     data class Candidate(val place: Place, val score: Float)
 
+    /** How many words [ayahId] has (0 for none known). */
+    fun wordCount(ayahId: Int): Int = ids.getOrNull(ayahId - 1)?.size ?: 0
+
+    /** Whether two verses say the very same words. */
+    fun sameWords(a: Int, b: Int): Boolean {
+        val v = ids.getOrNull(a - 1) ?: return false
+        val s = ids.getOrNull(b - 1) ?: return false
+        return v.contentEquals(s)
+    }
+
     /** The Quran word id at [place], or null when the ids are not known. */
     fun wordId(place: Place): Int? = firstWord.getOrNull(place.ayahId - 1)?.takeIf { it > 0 }?.plus(place.index)
 

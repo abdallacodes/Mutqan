@@ -1012,6 +1012,15 @@ private fun VersePanel(
                 )
             }
         }
+        // Right after the verse it looks like: say which, so the two are told apart.
+        val like = verse.alikeOf
+        if (like > 0 && like in index) {
+            Text(
+                text = stringResource(R.string.game_alike_of, "${SurahData.nameOf(index.surahOf(like))} · ${index.ayahOf(like)}"),
+                style = MaterialTheme.typography.labelMedium,
+                color = GameColors.Gold.copy(alpha = 0.75f)
+            )
+        }
         val inPlace = verse.words.take(placed).mapNotNull { words[it.id] }
         // A long verse shows its last words, after an ellipsis: nine, or fewer when two lines cannot hold them (a narrow
         // screen, wide words), so the word just built is never the one cut off.
