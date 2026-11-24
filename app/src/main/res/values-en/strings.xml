@@ -1586,6 +1586,7 @@
     <string name="vault_delete_folder_title">Delete the folder?</string>
     <string name="vault_delete_folder_body">The folder “%1$s” and its subfolders are deleted; their groups move to Uncategorized.</string>
     <string name="group_members_title">Verses in the group</string>
+    <string name="group_own_hint">In colour: the words a verse has that the others in the group don\'t.</string>
     <string name="group_in_surah">In %1$s</string>
     <string name="group_in_other_surahs">In other surahs</string>
     <string name="group_similar_title">Verses like these</string>

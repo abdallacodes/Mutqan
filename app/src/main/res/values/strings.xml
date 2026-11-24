@@ -1817,6 +1817,7 @@
     <string name="vault_delete_folder_title">حذف المجلد؟</string>
     <string name="vault_delete_folder_body">سيُحذف مجلد «%1$s» ومجلداته الفرعية، وتنتقل مجموعاته إلى «غير مصنف».</string>
     <string name="group_members_title">آيات المجموعة</string>
+    <string name="group_own_hint">الملوّن ما تنفرد به كل آية عن بقية آيات المجموعة.</string>
     <string name="group_in_surah">في سورة %1$s</string>
     <string name="group_in_other_surahs">في سور أخرى</string>
     <string name="group_similar_title">آيات تشبهها</string>

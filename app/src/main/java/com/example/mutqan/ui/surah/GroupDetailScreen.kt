@@ -96,6 +96,7 @@ fun GroupDetailScreen(
     val inSurahTitle = if (inSurah) stringResource(R.string.group_in_surah, SurahData.nameOf(currentSurahId)) else ""
     val otherSurahsTitle = stringResource(R.string.group_in_other_surahs)
     val membersTitle = stringResource(R.string.group_members_title)
+    val ownHint = stringResource(R.string.group_own_hint)
     val emptyTexts = listOf(
         stringResource(if (inSurah) R.string.no_context_verses else R.string.no_linked_verses),
         stringResource(R.string.no_clash_verses)
@@ -182,6 +183,16 @@ fun GroupDetailScreen(
                 }
                 parts.forEachIndexed { i, (title, verses) ->
                     item(key = "head-$i") { SectionHead(title = title, first = i == 0 && notes.isBlank()) }
+                    if (i == 0 && list.size >= 2) {
+                        item(key = "own-hint") {
+                            Text(
+                                text = ownHint,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 4.dp)
+                            )
+                        }
+                    }
                     if (verses.isEmpty()) {
                         item(key = "empty-$i") {
                             Text(
@@ -193,7 +204,7 @@ fun GroupDetailScreen(
                         }
                     }
                     items(verses, key = { "m-${it.ref.verseId}" }) { member ->
-                        MemberRow(member.ref, member.shared) {
+                        MemberRow(member.ref, member.own) {
                             peekAt(member.ref.verseId, member.ref.surahId, member.ref.ayahNumber, member.ref.pageNumber)
                         }
                     }
@@ -249,9 +260,9 @@ fun GroupDetailScreen(
 private fun verseRef(surahId: Int, ayah: Int, page: Int): String =
     stringResource(R.string.saved_ref, SurahData.nameOf(surahId), ayah) + " · " + stringResource(R.string.page_n, page)
 
-/** A verse of the group: where it is, and its words with those the other verses share in colour; tapping shows it. */
+/** A verse of the group: where it is, and its words with its own (none of the others has them) in colour; tapping shows it. */
 @Composable
-private fun MemberRow(ref: MemberVerseRef, shared: List<IntRange>, onClick: () -> Unit) {
+private fun MemberRow(ref: MemberVerseRef, own: List<IntRange>, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
         Column(
             modifier = Modifier
@@ -265,7 +276,7 @@ private fun MemberRow(ref: MemberVerseRef, shared: List<IntRange>, onClick: () -
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.tertiary
             )
-            AyahText(ayahId = ref.verseId, size = 22.sp, marked = shared, markColor = MaterialTheme.colorScheme.primary)
+            AyahText(ayahId = ref.verseId, size = 22.sp, marked = own, markColor = MaterialTheme.colorScheme.primary)
         }
         Hairline(Modifier.fillMaxWidth())
     }

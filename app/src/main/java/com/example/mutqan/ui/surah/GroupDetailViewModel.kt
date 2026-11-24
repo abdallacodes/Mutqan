@@ -31,8 +31,8 @@ class GroupDetailViewModel(
     private val study: StudyRepository
 ) : ViewModel() {
 
-    /** A verse of the group: where it is, and its words (1-based ranges) that the other verses of the group have too. */
-    data class Member(val ref: MemberVerseRef, val shared: List<IntRange>)
+    /** A verse of the group: where it is, and its own words (1-based ranges): those none of the other verses of the group has. */
+    data class Member(val ref: MemberVerseRef, val own: List<IntRange>)
 
     /** A verse like the group's that is not in it: where it is, and its words shared with the verse of the group it is most like. */
     data class Suggestion(val ayahId: Int, val surahId: Int, val ayahNumber: Int, val page: Int, val shared: List<IntRange>)
@@ -46,9 +46,9 @@ class GroupDetailViewModel(
         .map { groups -> groups.firstOrNull { it.id == groupId } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** The group's verses in reading order, each with its shared words; null while they are read. */
+    /** The group's verses in reading order, each with its own words; null while they are read. */
     val members: StateFlow<List<Member>?> = study.membersForGroup(groupId)
-        .map { refs -> withShared(refs) }
+        .map { refs -> withOwn(refs) }
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -61,13 +61,11 @@ class GroupDetailViewModel(
     /** Puts [ayahIds] in the group; returns how many were not in it already. */
     suspend fun add(ayahIds: Collection<Int>): Int = ayahIds.count { study.addAyahToGroup(groupId, it) }
 
-    private fun withShared(refs: List<MemberVerseRef>): List<Member> {
+    private fun withOwn(refs: List<MemberVerseRef>): List<Member> {
         if (refs.size < 2) return refs.map { Member(it, emptyList()) }
         val next = NextWords.get(quran)
-        return refs.map { ref ->
-            val ranges = refs.filter { it.verseId != ref.verseId }.flatMap { other -> next.sharedWords(other.verseId, ref.verseId) }
-            Member(ref, merge(ranges))
-        }
+        val ids = refs.map { it.verseId }
+        return refs.map { ref -> Member(ref, next.ownWords(ref.verseId, ids)) }
     }
 
     private suspend fun suggest(ids: List<Int>): Suggestions {
@@ -97,16 +95,6 @@ class GroupDetailViewModel(
     private companion object {
         /** Look-alikes shown at most. */
         const val MOST_SHOWN = 40
-
-        /** [ranges] as few as can be: overlapping and touching ones joined, in order. */
-        fun merge(ranges: List<IntRange>): List<IntRange> {
-            val out = ArrayList<IntRange>()
-            for (r in ranges.sortedBy { it.first }) {
-                val last = out.lastOrNull()
-                if (last != null && r.first <= last.last + 1) out[out.size - 1] = last.first..maxOf(last.last, r.last) else out += r
-            }
-            return out
-        }
     }
 }
 

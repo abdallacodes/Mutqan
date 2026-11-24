@@ -125,12 +125,35 @@ class NextWords internal constructor(
         return sharing.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key }).take(most).map { it.key }
     }
 
-    /** How alike two verses are: the words they share in order, over the words of the shorter (0 to 1). */
+    /**
+     * How alike two verses are as a whole (0 to 1): the words they share in order, twice, over the words of both. A long
+     * verse that only holds a short one's words is not much like it.
+     */
     fun likeness(ayahId: Int, other: Int): Float {
         val v = ids.getOrNull(ayahId - 1) ?: return 0f
         val s = ids.getOrNull(other - 1) ?: return 0f
         if (v.isEmpty() || s.isEmpty()) return 0f
-        return shared(v, s).size.toFloat() / min(v.size, s.size)
+        return 2f * shared(v, s).size / (v.size + s.size)
+    }
+
+    /** The words of [ayahId] that none of [others] has, laid side by side with each, as ranges of word numbers from 1. */
+    fun ownWords(ayahId: Int, others: Collection<Int>): List<IntRange> {
+        val v = ids.getOrNull(ayahId - 1) ?: return emptyList()
+        val sharedWith = BooleanArray(v.size)
+        for (other in others) {
+            if (other == ayahId) continue
+            val s = ids.getOrNull(other - 1) ?: continue
+            for ((i, _) in shared(v, s)) sharedWith[i] = true
+        }
+        val out = ArrayList<IntRange>()
+        var i = 0
+        while (i < v.size) {
+            if (sharedWith[i]) { i++; continue }
+            val start = i
+            while (i < v.size && !sharedWith[i]) i++
+            out += (start + 1)..i
+        }
+        return out
     }
 
     /** Calls [hit] with each place (another ayah, a word index) the indexes find for each word [i] of [v]. */

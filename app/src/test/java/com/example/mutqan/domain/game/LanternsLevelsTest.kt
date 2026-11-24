@@ -420,6 +420,21 @@ class NextWordsTest {
     }
 
     @Test
+    fun aLongVerseHoldingAShortOneIsLessAlikeThanOneOfItsLength() {
+        val next = NextWords.build(words("a b c d", "x y z a b c d u v w o", "q b c d"))
+        assertTrue(next.likeness(1, 3) > next.likeness(1, 2))
+    }
+
+    @Test
+    fun aVerseOwnWordsAreThoseNoneOfTheOthersHas() {
+        val next = NextWords.build(words("a b c d e", "a b x d e", "q b c d e"))
+        // Against ayah 2 alone: "c" is its own; against both: only "a"/"c" shared by one or the other, nothing own.
+        assertEquals(listOf(3..3), next.ownWords(1, listOf(2)))
+        assertEquals(emptyList<IntRange>(), next.ownWords(1, listOf(2, 3)))
+        assertEquals(listOf(1..1, 3..3), next.ownWords(3, listOf(2)))
+    }
+
+    @Test
     fun theWordsTwoVersesShareAreFoundWordForWord() {
         val next = NextWords.build(words("a b c d", "x a b y d"))
         assertEquals(listOf(2..3, 5..5), next.sharedWords(1, 2))
