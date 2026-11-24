@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.mutqan.domain.QuizRetries
 import com.example.mutqan.domain.QuizRetry
 import com.example.mutqan.domain.PracticeScope
+import com.example.mutqan.domain.ScopePlace
 import com.example.mutqan.domain.AdviceMemory
 import com.example.mutqan.domain.sync.SyncMemory
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +92,10 @@ class UserPreferencesRepository(private val context: Context) {
         private val KEY_PRACTICE_TIERS    = intPreferencesKey("practice_tier_mask")
         private val KEY_PRACTICE_LAST     = intPreferencesKey("practice_last_pages")
         private val KEY_PRACTICE_UNIT     = intPreferencesKey("practice_last_unit")
+        // The part of the Mushaf the questions are kept to (kept on this device only).
+        private val KEY_PRACTICE_PLACE_KIND  = intPreferencesKey("practice_place_kind")
+        private val KEY_PRACTICE_PLACE_IDS   = stringPreferencesKey("practice_place_ids")
+        private val KEY_PRACTICE_PLACE_PAGES = stringPreferencesKey("practice_place_pages")
         private val KEY_SYNC_UID          = stringPreferencesKey("sync_uid")
         private val KEY_SYNC_HASH         = stringPreferencesKey("sync_local_hash")
         private val KEY_SYNC_VERSION      = longPreferencesKey("sync_remote_version")
@@ -461,7 +466,12 @@ class UserPreferencesRepository(private val context: Context) {
 
     /** Which pages the practice questions are about (see PracticeScope); nothing chosen means every memorised page. */
     val practiceScope: Flow<PracticeScope> = context.dataStore.data.map { prefs ->
-        PracticeScope.fromStored(prefs[KEY_PRACTICE_TIERS] ?: 0, prefs[KEY_PRACTICE_LAST] ?: 0, prefs[KEY_PRACTICE_UNIT] ?: 0)
+        PracticeScope.fromStored(
+            prefs[KEY_PRACTICE_TIERS] ?: 0,
+            prefs[KEY_PRACTICE_LAST] ?: 0,
+            prefs[KEY_PRACTICE_UNIT] ?: 0,
+            ScopePlace.fromStored(prefs[KEY_PRACTICE_PLACE_KIND] ?: 0, prefs[KEY_PRACTICE_PLACE_IDS], prefs[KEY_PRACTICE_PLACE_PAGES])
+        )
     }
 
     suspend fun setPracticeScope(scope: PracticeScope) {
@@ -469,6 +479,16 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[KEY_PRACTICE_TIERS] = scope.tierMask
             prefs[KEY_PRACTICE_LAST] = scope.recentAmount
             prefs[KEY_PRACTICE_UNIT] = scope.recentUnit.code
+            val place = scope.place
+            if (place == null) {
+                prefs.remove(KEY_PRACTICE_PLACE_KIND)
+                prefs.remove(KEY_PRACTICE_PLACE_IDS)
+                prefs.remove(KEY_PRACTICE_PLACE_PAGES)
+            } else {
+                prefs[KEY_PRACTICE_PLACE_KIND] = place.kind.code
+                prefs[KEY_PRACTICE_PLACE_IDS] = ScopePlace.encode(place.ids)
+                prefs[KEY_PRACTICE_PLACE_PAGES] = ScopePlace.encode(place.pages)
+            }
         }
     }
 

@@ -263,6 +263,7 @@ fun PracticeScreen(
     val gameBest by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsMasteryBest }.collectAsState(initial = 0)
     val gameStars by remember(context) { UserPreferencesRepository(context.applicationContext).lanternsStars }.collectAsState(initial = emptyList())
     var choosing by remember { mutableStateOf(false) }
+    var placing by remember { mutableStateOf(false) }
     var pickingJuz by remember { mutableStateOf(false) }
     var openSkill by remember { mutableStateOf<Skill?>(null) }
     val scroll = rememberScrollState()
@@ -319,7 +320,7 @@ fun PracticeScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scroll).padding(bottom = LocalDockInset.current)) {
-            ScopeChoice(scope = scope, preview = preview, onPick = viewModel::setScope, onCustom = { choosing = true })
+            ScopeChoice(scope = scope, preview = preview, onPick = viewModel::setScope, onPlaces = { placing = true }, onCustom = { choosing = true })
             DailyHero(
                 question = daily,
                 note = if (quizWeek > 0) stringResource(R.string.ex_this_week, quizWeek) else null,
@@ -393,20 +394,45 @@ fun PracticeScreen(
             onDismiss = { choosing = false }
         )
     }
+
+    if (placing) {
+        PlaceSheet(
+            place = scope.place,
+            onApply = { place ->
+                placing = false
+                // Chosen from the row of chips: the place is the whole choice (every memorised page in it).
+                viewModel.setScope(PracticeScope(place = place))
+            },
+            onDismiss = { placing = false }
+        )
+    }
 }
 
 // ── Which pages ─────────────────────────────────────────────────────────────────
 
-/** "Questions from 241 pages", and the one-tap choices: all the hifz, revised today, this week, the weak pages, or custom. */
+/**
+ * "Questions from 241 pages" (with the place, when one is chosen), and the one-tap choices: all the hifz, revised today,
+ * this week, the weak pages, chosen surahs, juz or pages, or custom.
+ */
 @Composable
-private fun ScopeChoice(scope: PracticeScope, preview: PracticeScope.Preview?, onPick: (PracticeScope) -> Unit, onCustom: () -> Unit) {
+private fun ScopeChoice(
+    scope: PracticeScope,
+    preview: PracticeScope.Preview?,
+    onPick: (PracticeScope) -> Unit,
+    onPlaces: () -> Unit,
+    onCustom: () -> Unit
+) {
     val preset = ScopePreset.entries.firstOrNull { it.scope == scope }
+    val place = scope.place
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = when {
                 preview == null -> " "
                 preview.total == 0 -> stringResource(R.string.scope_none_match)
-                else -> stringResource(R.string.practice_scope_from, pluralStringResource(R.plurals.scope_span_pages, preview.total, preview.total))
+                else -> {
+                    val pages = pluralStringResource(R.plurals.scope_span_pages, preview.total, preview.total)
+                    stringResource(R.string.practice_scope_from, if (place == null) pages else placeLabel(place) + " · " + pages)
+                }
             },
             style = MaterialTheme.typography.bodyMedium,
             color = if (preview != null && preview.total == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -422,7 +448,8 @@ private fun ScopeChoice(scope: PracticeScope, preview: PracticeScope.Preview?, o
             ScopePreset.entries.forEach { p ->
                 ScopeChip(text = stringResource(p.label), selected = p == preset, onClick = { onPick(p.scope) })
             }
-            ScopeChip(text = stringResource(R.string.practice_chip_custom), selected = preset == null, onClick = onCustom, opens = true)
+            ScopeChip(text = stringResource(R.string.practice_chip_places), selected = place != null, onClick = onPlaces, opens = true)
+            ScopeChip(text = stringResource(R.string.practice_chip_custom), selected = preset == null && place == null, onClick = onCustom, opens = true)
         }
     }
 }

@@ -238,6 +238,11 @@ class QuranRepository private constructor(context: Context) {
         db.rawQuery("SELECT MIN(first_page), MAX(last_page) FROM ayahs WHERE juz = ?", arrayOf(juz.toString()))
             .use { c -> if (c.moveToFirst() && !c.isNull(0)) (c.getInt(0)..c.getInt(1)).toList() else emptyList() }
 
+    /** Surah number -> its pages (the page its first verse starts on to the page its last verse ends on), for all 114. */
+    fun pagesBySurah(): Map<Int, IntRange> =
+        db.rawQuery("SELECT surah, MIN(first_page), MAX(last_page) FROM ayahs GROUP BY surah ORDER BY surah", null)
+            .use { c -> buildMap { while (c.moveToNext()) put(c.getInt(0), c.getInt(1)..c.getInt(2)) } }
+
     /** Juz number -> its pages, for all 30 juz. */
     fun pagesByJuz(): Map<Int, List<Int>> =
         db.rawQuery("SELECT juz, MIN(first_page), MAX(last_page) FROM ayahs GROUP BY juz ORDER BY juz", null)

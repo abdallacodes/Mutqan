@@ -89,14 +89,16 @@ private fun tierColor(tier: PlanTier): Color = when (tier) {
     PlanTier.STRONG -> DifficultySmooth
 }
 
-/** A choice in a line of words: "Reviewed in the last 2 weeks · Weak, Fair". */
+/** A choice in a line of words: "Al-Baqarah · Reviewed in the last 2 weeks · Weak, Fair". */
 @Composable
 fun scopeSummary(scope: PracticeScope): String {
-    val reach = when (scope.reach) {
+    val reachOnly = when (scope.reach) {
         PracticeScope.Reach.ALL -> stringResource(R.string.scope_reach_all)
         PracticeScope.Reach.COUNT -> stringResource(R.string.scope_reach_count, span(RecencyUnit.PAGES, scope.recentAmount))
         PracticeScope.Reach.TIME -> stringResource(R.string.scope_reach_time, span(scope.recentUnit, scope.recentAmount))
     }
+    val place = scope.place
+    val reach = if (place == null) reachOnly else placeLabel(place) + " · " + reachOnly
     if (scope.tiers.isEmpty()) return reach
     val separator = stringResource(R.string.scope_list_separator)
     val levels = listOf(PlanTier.WEAK, PlanTier.FAIR, PlanTier.STRONG)
@@ -125,8 +127,9 @@ fun ScopeLine(scope: PracticeScope, onChange: () -> Unit, modifier: Modifier = M
 // ── The sheet ───────────────────────────────────────────────────────────────
 
 /**
- * Where the choice is made: which pages (all, the latest ones reviewed, or those reviewed within a stretch of time),
- * then which levels of those. It shows how many pages the choice gives while it is being made.
+ * Where the choice is made: where in the Mushaf (anywhere, or chosen surahs, juz or pages), which pages (all, the latest
+ * ones reviewed, or those reviewed within a stretch of time), then which levels of those. It shows how many pages the
+ * choice gives while it is being made.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,6 +139,7 @@ fun ScopeSheet(
     onChange: (PracticeScope) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var placing by remember { mutableStateOf(false) }
     ModalBottomSheet(
         contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDismiss,
@@ -154,6 +158,17 @@ fun ScopeSheet(
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
+
+            SectionLabel(stringResource(R.string.place_section_label), modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = scope.place?.let { placeLabel(it) } ?: stringResource(R.string.place_anywhere),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f)
+                )
+                PaperLink(stringResource(R.string.place_choose), onClick = { placing = true })
+            }
 
             SectionLabel(stringResource(R.string.scope_pages_label), modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
             PaperChoice(
@@ -244,6 +259,16 @@ fun ScopeSheet(
             }
         }
     }
+    if (placing) {
+        PlaceSheet(
+            place = scope.place,
+            onApply = { place ->
+                placing = false
+                onChange(scope.copy(place = place))
+            },
+            onDismiss = { placing = false }
+        )
+    }
 }
 
 /** The number and, for a stretch of time, its unit, with the usual choices a tap away. */
@@ -320,7 +345,7 @@ private val TIME_PRESETS = listOf(
 
 /** Asks for a number; [onDone] gets it, or null when the question is dismissed. */
 @Composable
-private fun NumberDialog(initial: Int, onDone: (Int?) -> Unit) {
+internal fun NumberDialog(initial: Int, onDone: (Int?) -> Unit) {
     var text by remember { mutableStateOf(initial.toString()) }
     val amount = text.toIntOrNull()?.takeIf { it > 0 }
     PaperDialog(

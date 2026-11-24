@@ -190,6 +190,7 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
     val focusOn by vm.alikeFocus.collectAsState()
     val soundOn by vm.sound.collectAsState()
     var choosingSource by remember { mutableStateOf(false) }
+    var choosingPlace by remember { mutableStateOf(false) }
     var showingSimilar by remember { mutableStateOf(false) }
     var addingToGroup by remember { mutableStateOf<List<Int>?>(null) }
     val similarScope = rememberCoroutineScope()
@@ -593,7 +594,24 @@ fun LanternsScreen(onBack: () -> Unit, onOpenVerse: (page: Int, ayahId: Int) -> 
             )
         }
         if (choosingSource && vm.phase == LanternsViewModel.Phase.MENU) {
-            SourcePicker(source = source, focus = focusOn, onPick = vm::setScope, onFocus = vm::setAlikeFocus, onClose = { choosingSource = false })
+            SourcePicker(
+                source = source,
+                focus = focusOn,
+                onPick = vm::setScope,
+                onPlaces = { choosingPlace = true },
+                onFocus = vm::setAlikeFocus,
+                onClose = { choosingSource = false }
+            )
+        }
+        if (choosingPlace && vm.phase == LanternsViewModel.Phase.MENU) {
+            com.example.mutqan.ui.practice.PlaceSheet(
+                place = source?.scope?.place,
+                onApply = { place ->
+                    choosingPlace = false
+                    vm.setScope(com.example.mutqan.domain.PracticeScope(place = place))
+                },
+                onDismiss = { choosingPlace = false }
+            )
         }
         vm.card?.let { number ->
             LevelCard(

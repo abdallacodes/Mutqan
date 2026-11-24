@@ -62,6 +62,7 @@ import com.example.mutqan.quran.MushafSpan
 import com.example.mutqan.quran.QuranWord
 import com.example.mutqan.ui.components.MushafText
 import com.example.mutqan.ui.practice.ScopePreset
+import com.example.mutqan.ui.practice.placeLabel
 import com.example.mutqan.ui.theme.AmiriFontFamily
 
 /**
@@ -220,7 +221,12 @@ private fun SourceLine(source: LanternsViewModel.Source?, focus: Boolean, onClic
         source.amma -> stringResource(R.string.game_source_amma)
         else -> {
             val pages = pluralStringResource(R.plurals.scope_span_pages, source.pages.size, source.pages.size)
-            val name = if (source.widened) stringResource(R.string.practice_chip_all) else scopeName(source.scope)
+            val place = source.scope.place
+            val name = when {
+                source.widened -> stringResource(R.string.practice_chip_all)
+                place != null -> placeLabel(place)
+                else -> scopeName(source.scope)
+            }
             stringResource(R.string.game_source_from, "$name · $pages")
         }
     }
@@ -252,6 +258,7 @@ internal fun SourcePicker(
     source: LanternsViewModel.Source?,
     focus: Boolean,
     onPick: (PracticeScope) -> Unit,
+    onPlaces: () -> Unit,
     onFocus: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
@@ -278,7 +285,8 @@ internal fun SourcePicker(
                 ScopePreset.entries.forEach { preset ->
                     GameChip(stringResource(preset.label), selected = preset.scope == current, enabled = source?.amma != true) { onPick(preset.scope) }
                 }
-                if (current != null && ScopePreset.entries.none { it.scope == current }) {
+                GameChip(stringResource(R.string.practice_chip_places), selected = current?.place != null, enabled = source?.amma != true) { onPlaces() }
+                if (current != null && current.place == null && ScopePreset.entries.none { it.scope == current }) {
                     GameChip(stringResource(R.string.practice_chip_custom), selected = true, enabled = false) {}
                 }
             }

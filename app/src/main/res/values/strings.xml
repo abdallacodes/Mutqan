@@ -1853,4 +1853,36 @@
     <string name="game_focus_alike">ركّز على المتشابهات</string>
     <string name="game_focus_alike_hint">آيات لها متشابهات في حفظك، وتأتي متشابهتها بعدها مباشرة لتفرّق بينهما.</string>
     <string name="game_focus_short">المتشابهات</string>
+    <!-- Practice: where in the Mushaf the questions come from. -->
+    <string name="practice_chip_places">سور وأجزاء</string>
+    <string name="place_sheet_title">من أين في المصحف؟</string>
+    <string name="place_tab_surahs">السور</string>
+    <string name="place_tab_juz">الأجزاء</string>
+    <string name="place_tab_pages">الصفحات</string>
+    <string name="place_from_page">من صفحة</string>
+    <string name="place_to_page">إلى صفحة</string>
+    <string name="place_anywhere">من كل المصحف</string>
+    <string name="place_choose">اختر</string>
+    <string name="place_choose_some">اختر سورة أو جزءًا على الأقل</string>
+    <string name="place_section_label">من أين</string>
+    <string name="place_label_juz">الجزء %1$d</string>
+    <string name="place_label_juz_list">الأجزاء %1$s</string>
+    <string name="place_label_page">الصفحة %1$d</string>
+    <string name="place_label_pages">الصفحات %1$d–%2$d</string>
+    <plurals name="place_label_surahs">
+        <item quantity="zero">لا سور</item>
+        <item quantity="one">سورة واحدة</item>
+        <item quantity="two">سورتان</item>
+        <item quantity="few">%d سور</item>
+        <item quantity="many">%d سورة</item>
+        <item quantity="other">%d سورة</item>
+    </plurals>
+    <plurals name="place_label_juzs">
+        <item quantity="zero">لا أجزاء</item>
+        <item quantity="one">جزء واحد</item>
+        <item quantity="two">جزآن</item>
+        <item quantity="few">%d أجزاء</item>
+        <item quantity="many">%d جزءًا</item>
+        <item quantity="other">%d جزء</item>
+    </plurals>
 </resources>

@@ -1611,4 +1611,28 @@
     <string name="game_focus_alike">Focus on look-alikes</string>
     <string name="game_focus_alike_hint">Verses that have look-alikes in your hifz, each followed right away by its look-alike, to tell them apart.</string>
     <string name="game_focus_short">look-alikes</string>
+    <!-- Practice: where in the Mushaf the questions come from. -->
+    <string name="practice_chip_places">Surahs &amp; juz</string>
+    <string name="place_sheet_title">Where in the Quran?</string>
+    <string name="place_tab_surahs">Surahs</string>
+    <string name="place_tab_juz">Juz</string>
+    <string name="place_tab_pages">Pages</string>
+    <string name="place_from_page">From page</string>
+    <string name="place_to_page">To page</string>
+    <string name="place_anywhere">Anywhere in the Quran</string>
+    <string name="place_choose">Choose</string>
+    <string name="place_choose_some">Choose at least one surah or juz</string>
+    <string name="place_section_label">Where</string>
+    <string name="place_label_juz">Juz %1$d</string>
+    <string name="place_label_juz_list">Juz %1$s</string>
+    <string name="place_label_page">Page %1$d</string>
+    <string name="place_label_pages">Pages %1$d–%2$d</string>
+    <plurals name="place_label_surahs">
+        <item quantity="one">%d surah</item>
+        <item quantity="other">%d surahs</item>
+    </plurals>
+    <plurals name="place_label_juzs">
+        <item quantity="one">%d juz</item>
+        <item quantity="other">%d juz</item>
+    </plurals>
 </resources>

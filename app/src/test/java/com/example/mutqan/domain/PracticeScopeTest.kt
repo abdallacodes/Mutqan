@@ -30,6 +30,45 @@ class PracticeScopeTest {
     private fun pages(scope: PracticeScope, logs: List<RevisionLog> = emptyList()) =
         scope.pages(covered, states, selfRated, logs, total, now)
 
+    private fun place(vararg pages: Int) = ScopePlace(ScopePlace.Kind.PAGES, pages.toSet(), pages.toSet())
+
+    @Test
+    fun `a place keeps the memorised pages in it`() {
+        assertEquals(setOf(4, 5, 6), pages(PracticeScope(place = place(4, 5, 6, 7, 8))))
+        // With a level too: the weak pages of the place.
+        assertEquals(setOf(5, 6), pages(PracticeScope(tiers = setOf(PlanTier.WEAK), place = place(4, 5, 6, 7))))
+    }
+
+    @Test
+    fun `a place with none of it memorised gives its pages as they are`() {
+        assertEquals(setOf(8, 9), pages(PracticeScope(place = place(8, 9))))
+    }
+
+    @Test
+    fun `a place with what was reviewed lately keeps only those`() {
+        val logs = listOf(log(1, 2, now - day), log(7, 8, now - 2 * day))
+        // Reviewed this week, in pages 7-9: page 7 is not memorised, so nothing is left.
+        assertEquals(emptySet<Int>(), pages(PracticeScope(recentAmount = 1, recentUnit = RecencyUnit.WEEKS, place = place(7, 8, 9)), logs))
+        assertEquals(setOf(1, 2), pages(PracticeScope(recentAmount = 1, recentUnit = RecencyUnit.WEEKS, place = place(1, 2, 3)), logs))
+    }
+
+    @Test
+    fun `a place is not every page`() {
+        assertTrue(!PracticeScope(place = place(1)).isAll)
+        assertTrue(PracticeScope().isAll)
+    }
+
+    @Test
+    fun `a place is kept as runs and read back`() {
+        assertEquals("1-3,7,10-12", ScopePlace.encode(setOf(12, 1, 2, 3, 7, 10, 11)))
+        assertEquals(setOf(1, 2, 3, 7, 10, 11, 12), ScopePlace.decode("1-3,7,10-12"))
+        assertEquals(emptySet<Int>(), ScopePlace.decode("x,5-2,"))
+        val kept = ScopePlace.fromStored(ScopePlace.Kind.SURAHS.code, "2,3", "2-76")
+        assertEquals(ScopePlace(ScopePlace.Kind.SURAHS, setOf(2, 3), (2..76).toSet()), kept)
+        assertEquals(null, ScopePlace.fromStored(0, "2", "2-49"))
+        assertEquals(null, ScopePlace.fromStored(ScopePlace.Kind.JUZ.code, "", "1-21"))
+    }
+
     @Test
     fun `nothing chosen means every memorised page`() {
         assertEquals(setOf(1, 2, 3, 4, 5, 6), pages(PracticeScope()))
