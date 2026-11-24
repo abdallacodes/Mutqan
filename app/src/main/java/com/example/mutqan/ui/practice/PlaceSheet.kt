@@ -1,6 +1,11 @@
 package com.example.mutqan.ui.practice
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -8,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -133,11 +137,11 @@ fun PlaceSheet(place: ScopePlace?, onApply: (ScopePlace?) -> Unit, onDismiss: ()
             )
             Spacer(Modifier.height(8.dp))
         }
+        // One height for every tab, so the sheet keeps its size when switching between them: about half the screen.
+        val bodyHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp.coerceIn(260.dp, 440.dp)
         val p = parts
-        if (p == null) {
-            Spacer(Modifier.height(240.dp))
-        } else when (tab) {
-            0 -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+        Box(Modifier.fillMaxWidth().height(bodyHeight)) { if (p != null) when (tab) {
+            0 -> LazyColumn(Modifier.fillMaxSize()) {
                 items(p.surahs.keys.sorted(), key = { it }) { id ->
                     val on = id in surahs
                     val pages = p.surahs.getValue(id)
@@ -174,7 +178,7 @@ fun PlaceSheet(place: ScopePlace?, onApply: (ScopePlace?) -> Unit, onDismiss: ()
                 }
             }
             1 -> FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = PaperSpace.Gutter, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -214,7 +218,7 @@ fun PlaceSheet(place: ScopePlace?, onApply: (ScopePlace?) -> Unit, onDismiss: ()
                     )
                 }
             }
-        }
+        } }
 
         Column(Modifier.padding(horizontal = PaperSpace.Gutter).padding(top = 12.dp, bottom = 24.dp)) {
             val chosen = p?.let { current(it) }
