@@ -113,6 +113,23 @@ class LevelLeapTest {
 
 class LevelVersesTest {
 
+    @Test
+    fun versesWithLookAlikesComeFirstByTheirChance() {
+        val pool = List(40) { VerseLength(it + 1, 5) }
+        val favoured = (1..40 step 4).toSet()
+        repeat(10) { seed ->
+            val ids = LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed), favoured, 1f)
+            assertEquals(4, ids.size)
+            assertTrue("$ids", ids.all { it in favoured })
+        }
+        // Without the chance, a level draws them as any other.
+        val plain = (0 until 50).sumOf { seed -> LevelVerses.pick(pool, 12, 2, emptyList(), emptyList(), Random(seed)).count { it in favoured } }
+        assertTrue("$plain of 200", plain in 20..80)
+        // The open round too.
+        val open = LevelVerses.order(pool, emptyList(), emptyList(), Random(1), 8, favoured, 1f)
+        assertEquals(favoured, open.take(favoured.size).toSet())
+    }
+
     private fun candidates(random: Random, count: Int = 80, longest: Int = 14) =
         List(count) { VerseLength(1000 + it, 3 + random.nextInt(longest - 2)) }
 
@@ -300,25 +317,80 @@ class NextWordsTest {
 
     /** Each letter a word of its own, in Arabic letters. */
     private fun words(vararg verses: String): List<List<String>> {
-        val letters = "بتثجحخدذرزسشصض"
-        return verses.map { verse -> verse.split(' ').map { w -> w.map { letters["abcdefgkqxzmnp".indexOf(it)] }.joinToString("") } }
+        val letters = "بتثجحخدذرزسشصضطظعغفقكلمنهوي"
+        val names = "abcdefgkqxzmnphijlorstuvwy"
+        return verses.map { verse -> verse.split(' ').map { w -> w.map { letters[names.indexOf(it)] }.joinToString("") } }
     }
+
+    private fun places(found: List<NextWords.Candidate>) = found.map { it.place }
 
     @Test
     fun findsTheWordThatFollowsTheSameTwoWordsElsewhere() {
         val next = NextWords.build(words("a b c d", "x a b e", "a b c f", "q a b g"))
-        // Word 2 of ayah 1 is "c": after "a b", ayah 2 has "e" and ayah 4 "g"; ayah 3 has "c" too, so not a look-alike.
-        assertEquals(setOf(NextWords.Place(2, 3), NextWords.Place(4, 3)), next.lookAlikes(1, 2, 5).toSet())
-        assertEquals(1, next.lookAlikes(1, 2, 1).size)
-        // Word 3 ("d"), after "b c": ayah 3 goes on with "f".
-        assertEquals(listOf(NextWords.Place(3, 3)), next.lookAlikes(1, 3, 5))
-        assertTrue(next.lookAlikes(1, 1, 5).isEmpty())
+        val found = next.candidates(1)
+        // Word 2 of ayah 1 is "c": after "a b", ayah 2 has "e" and ayah 4 "g"; ayah 3 has "c" too, so it is no candidate.
+        assertEquals(setOf(NextWords.Place(2, 3), NextWords.Place(4, 3)), places(found[2]).toSet())
+        assertEquals(1, next.candidates(1, max = 1)[2].size)
+        // Word 3 ("d"), after "a b c" (both verses start so): ayah 3 goes on with "f".
+        assertEquals(listOf(NextWords.Place(3, 3)), places(found[3]))
+        // Word 1 ("b"): no verse starting with "a" has another word next.
+        assertTrue(found[1].isEmpty())
     }
 
     @Test
-    fun threeWordsMatchingComeBeforeTwo() {
-        val next = NextWords.build(words("k a b c", "z a b d", "k a b e"))
-        assertEquals(listOf(NextWords.Place(3, 3), NextWords.Place(2, 3)), next.lookAlikes(1, 3, 5))
+    fun theMoreWordsAgreeOnBothSidesTheCloser() {
+        // Word 3 of ayah 1 ("c", before "d"): ayah 2 has "x" with "d" after it too, ayah 3 "y" with another word after.
+        val next = NextWords.build(words("p a b c d", "q a b x d", "r a b y z"))
+        assertEquals(listOf(NextWords.Place(2, 3), NextWords.Place(3, 3)), places(next.candidates(1)[3]))
+    }
+
+    @Test
+    fun aWordPutInBeforeTheSameWordsIsACandidate() {
+        // وَمَا ٱلۡحَيَوٰةُ ٱلدُّنۡيَآ إِلَّا ... and وَمَا هَٰذِهِ ٱلۡحَيَوٰةُ ٱلدُّنۡيَآ إِلَّا ...: after "w", "t" may come before "h d a".
+        val next = NextWords.build(words("w h d a l", "w t h d a k"))
+        assertEquals(NextWords.Place(2, 1), next.candidates(1)[1].first().place)
+    }
+
+    @Test
+    fun aLookAlikeVerseGivesItsWordsWhereAFewDiffer() {
+        // The same three words, then each its own: the look-alike's words stand in each place, the swap in the middle too.
+        val next = NextWords.build(words("a b c l w f", "a b c h k g", "m n o p"))
+        val plain = next.candidates(1)
+        assertEquals(listOf(NextWords.Place(2, 3)), places(plain[3]))
+        assertTrue("not known to look alike", plain[4].isEmpty())
+        val known = next.candidates(1, alike = mapOf(2 to NextWords.FROM_LIST))
+        assertEquals(listOf(NextWords.Place(2, 4)), places(known[4]))
+        assertEquals(listOf(NextWords.Place(2, 5)), places(known[5]))
+    }
+
+    @Test
+    fun aVerseFoundSharingMuchIsLaidBesideToo() {
+        // Four words agree (after "b": "c d e" in both), so the other verse is laid beside without being known.
+        val next = NextWords.build(words("a b c d e x y", "q b c d e u v"))
+        assertEquals(listOf(NextWords.Place(2, 6)), places(next.candidates(1)[6]))
+    }
+
+    @Test
+    fun theOpeningOfALookAlikeVerseIsACandidateForTheFirstWord() {
+        // ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِۛ and تَنزِيلُ ٱلۡكِتَٰبِ لَا رَيۡبَ فِيهِ.
+        val next = NextWords.build(words("d k l r f h", "t k l r f m"))
+        val known = next.candidates(1, alike = mapOf(2 to NextWords.FROM_LIST))
+        assertEquals(listOf(NextWords.Place(2, 0)), places(known[0]))
+    }
+
+    @Test
+    fun aMatchByChanceIsLeftOutUnlessTheReaderKnowsTheVerse() {
+        // Only the first word agrees: too weak, unless the other verse is one the reader knows.
+        val next = NextWords.build(words("q a c d e", "q b f g h"))
+        assertTrue(next.candidates(1)[1].isEmpty())
+        assertEquals(listOf(NextWords.Place(2, 1)), places(next.candidates(1, near = { it == 2 })[1]))
+    }
+
+    @Test
+    fun aVerseTheReaderKnowsComesFirst() {
+        val next = NextWords.build(words("p a b c d e", "q a b x d v", "r a b y u v"))
+        assertEquals(NextWords.Place(2, 3), next.candidates(1)[3].first().place)
+        assertEquals(NextWords.Place(3, 3), next.candidates(1, near = { it == 3 })[3].first().place)
     }
 
     @Test
@@ -332,13 +404,75 @@ class NextWordsTest {
                 listOf("قَالَ", "ٱللَّهُ", "أَنُّ")
             )
         )
-        // After the same two words ayah 1 has أَنَّ: ayah 2 has إِنَّ and ayah 5 أَنُّ, both another word (a look-alike);
-        // ayahs 3 and 4 have the same word (a stop sign is no part of it).
-        assertEquals(setOf(NextWords.Place(2, 2), NextWords.Place(5, 2)), next.lookAlikes(1, 2, 5).toSet())
+        // After the same two words ayah 1 has أَنَّ: ayah 2 has إِنَّ and ayah 5 أَنُّ, both another word; ayahs 3 and 4
+        // have the same word (a stop sign is no part of it).
+        assertEquals(setOf(NextWords.Place(2, 2), NextWords.Place(5, 2)), places(next.candidates(1)[2]).toSet())
+    }
+
+    @Test
+    fun theWordsTwoVersesShareAreFoundWordForWord() {
+        val next = NextWords.build(words("a b c d", "x a b y d"))
+        assertEquals(listOf(2..3, 5..5), next.sharedWords(1, 2))
+    }
+
+    @Test
+    fun aPlaceIsAWordIdWhenTheIdsAreKnown() {
+        val next = NextWords.build(words("a b", "c d e"), intArrayOf(10, 13))
+        assertEquals(15, next.wordId(NextWords.Place(2, 2)))
+        assertEquals(null, NextWords.build(words("a b")).wordId(NextWords.Place(1, 1)))
+    }
+}
+
+class TrapsMixTest {
+
+    private val verse = GameVerse(1, List(4) { GameWord(it + 1, "w$it") }, given = 1)
+
+    private fun source(traps: Traps, seed: Int) = LanternsSource(
+        listOf(verse), emptyMap(), verse.words, emptyMap(),
+        traps = mapOf(1 to mapOf(2 to traps)), trapChance = 1f, once = true, random = Random(seed)
+    )
+
+    @Test
+    fun aTrapIsMostOftenAWordThatCouldComeNextTheCloserTheLikelier() {
+        val traps = Traps(listOf(GameWord(10, "close"), GameWord(11, "far")), listOf(5f, 2f), listOf(GameWord(20, "near")))
+        val first = HashMap<String, Int>()
+        val source = source(traps, 7)
+        repeat(2000) { source.decoys(verse, 2, 4).first().key.let { first[it] = (first[it] ?: 0) + 1 } }
+        val follows = (first["close"] ?: 0) + (first["far"] ?: 0)
+        assertTrue("follows $follows", follows in 1350..1650)
+        assertTrue("near ${first["near"]}", (first["near"] ?: 0) in 350..650)
+        assertTrue("the closer first: $first", (first["close"] ?: 0) > 3 * (first["far"] ?: 0))
+    }
+
+    @Test
+    fun withOnlyOneKindThatKindComes() {
+        val near = source(Traps(emptyList(), emptyList(), listOf(GameWord(20, "near"))), 3)
+        repeat(50) { assertEquals("near", near.decoys(verse, 2, 4).first().key) }
+        val follows = source(Traps(listOf(GameWord(10, "next")), listOf(2f), emptyList()), 3)
+        repeat(50) { assertEquals("next", follows.decoys(verse, 2, 4).first().key) }
+    }
+
+    @Test
+    fun theOtherKindStandsBehindIncaseTheFirstIsUp() {
+        val traps = Traps(listOf(GameWord(10, "next")), listOf(3f), listOf(GameWord(20, "near")))
+        val source = source(traps, 5)
+        repeat(50) { assertEquals(setOf("next", "near"), source.decoys(verse, 2, 4).take(2).map { it.key }.toSet()) }
     }
 }
 
 class WordKeyTest {
+
+    @Test
+    fun aTanweenRunOnIntoBaIsThePlainTanween() {
+        assertEquals(WordKey.of("أَلِيمٌ"), WordKey.of("أَلِيمُۢ"))
+        assertEquals(WordKey.of("كَافِرٍ"), WordKey.of("كَافِرِۭ"))
+        assertEquals(WordKey.of("أَبَدًا"), WordKey.of("أَبَدَۢا"))
+        assertEquals(WordKey.of("أَبَدٗا"), WordKey.of("أَبَدَۢا"))
+        assertEquals(WordKey.of("مِنۡ"), WordKey.of("مِنۢ"))
+        // A plain damma is no tanween, and a meem inside a word stays as it is.
+        assertNotEquals(WordKey.of("أَلِيمُ"), WordKey.of("أَلِيمٌ"))
+        assertEquals(WordKey.of("أَنبِـُٔونِي"), WordKey.of("أَنۢبِـُٔونِي"))
+    }
 
     @Test
     fun hamzaAboveAndBelowAreTwoWords() {

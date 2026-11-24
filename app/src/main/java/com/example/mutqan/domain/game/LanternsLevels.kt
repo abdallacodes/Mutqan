@@ -61,7 +61,11 @@ data class LevelRules(
     val given: Int,
     /** The longest verse (in words) the level may hold. */
     val longestVerse: Int,
-    /** The chance that a wrong lantern carries a word from a look-alike verse, where the verse has one. */
+    /**
+     * The chance that a verse with look-alikes (the reader's mutashabihat groups, the ready lists) is put before the
+     * others when the level's verses are drawn: from [LanternsLevels.LOOK_ALIKE_FROM] on, the verses readers mix up
+     * come more often.
+     */
     val lookAlike: Float,
     /** The chance that a wrong lantern is a trap (a word easy to take for the one wanted), where the word has some. */
     val traps: Float,
@@ -74,12 +78,12 @@ data class LevelRules(
  * The levels of «فوانيس», each harder than the one before it.
  *
  * Small dials turn a notch at every level: the lanterns rise faster and come more often, the helpers come more rarely,
- * the hint after a slip shows for less time, and there is a word more to build (up to [MOST_WORDS]); later the wind
- * blows harder and look-alike words come more often. They grow more slowly as the levels go up but never stop, so a
- * late level is still a little harder than the one before it and still playable. A few levels bring one big step
- * each, never taken back: a word fewer given (levels 5 and 25), a lantern more in the sky (8, 18, 30), wrong words from
- * look-alike verses (10), wind (20). Golden lanterns (15) only add points. A level is a number of words to build, not of
- * verses, so drawing short verses cannot make it easier.
+ * the hint after a slip shows for less time, and there is a word more to build (up to [MOST_WORDS]); more of the wrong
+ * lanterns are traps; later the wind blows harder and verses with look-alikes come more often. They grow more slowly as
+ * the levels go up but never stop, so a late level is still a little harder than the one before it and still playable.
+ * A few levels bring one big step each, never taken back: a word fewer given (levels 5 and 25), a lantern more in the
+ * sky (8, 18, 30), verses with look-alikes (10), wind (20). Golden lanterns (15) only add points. A level is a number of
+ * words to build, not of verses, so drawing short verses cannot make it easier.
  */
 object LanternsLevels {
     const val FIRST_WORDS = 10
@@ -129,9 +133,12 @@ object LanternsLevels {
 
     private const val GOLDEN_SHARE = 0.1f
 
-    /** The share of wrong lanterns that are traps: half at level 1, heading for nearly all. */
+    /**
+     * The share of wrong lanterns that are traps: half at level 1, heading for four in five (most of them words that
+     * could really come next, which take more telling apart than any other wrong word).
+     */
     private const val FIRST_TRAPS = 0.5f
-    private const val MOST_TRAPS = 0.9f
+    private const val MOST_TRAPS = 0.8f
 
     /** Level 1's pace: about what level 7 was before (the first levels were too slow for a reader who knows the verses). */
     private const val START_SPEED = 0.095f
@@ -219,11 +226,18 @@ object LevelVerses {
 
     /**
      * The verses as three lists, each to be taken before the next: the slipped ones that are due (not among the last
-     * [COOL_DOWN] drawn; the most recent slip first), the ones not drawn lately in random order, and the rest, the one
-     * drawn longest ago first. Of verses with the same words the one played is the slipped one, else the one drawn longest
-     * ago (or never).
+     * [COOL_DOWN] drawn; the most recent slip first), the ones not drawn lately in random order (of them, each of
+     * [favoured] put first by the chance [favour]), and the rest, the one drawn longest ago first. Of verses with the
+     * same words the one played is the slipped one, else the one drawn longest ago (or never).
      */
-    private fun tiers(verses: List<VerseLength>, slipped: List<Int>, recent: List<Int>, random: Random): List<List<Verse>> {
+    private fun tiers(
+        verses: List<VerseLength>,
+        slipped: List<Int>,
+        recent: List<Int>,
+        random: Random,
+        favoured: Set<Int> = emptySet(),
+        favour: Float = 0f
+    ): List<List<Verse>> {
         val slipOrder = slipped.withIndex().associate { (i, id) -> id to i }
         val seenOrder = HashMap<Int, Int>()
         recent.forEachIndexed { i, id -> seenOrder.putIfAbsent(id, i) }
@@ -239,17 +253,29 @@ object LevelVerses {
         val wait = min(COOL_DOWN, all.size / 3)
         val due = all.filter { it.slipRank != null && (it.seenRank == null || it.seenRank >= wait) }.sortedBy { it.slipRank }
         val rest = all.filter { verse -> due.none { it === verse } }
-        val fresh = rest.filter { it.seenRank == null }.shuffled(random)
+        val fresh = rest.filter { it.seenRank == null }.shuffled(random).let { list ->
+            if (favour <= 0f || favoured.isEmpty()) list
+            else list.partition { it.play.ayahId in favoured && random.nextFloat() < favour }.let { (first, after) -> first + after }
+        }
         val seen = rest.filter { it.seenRank != null }.sortedByDescending { it.seenRank }
         return listOf(due, fresh, seen)
     }
 
     /**
      * Verses for the open round in the order to play them: the slipped ones that are due first (at most [maxSlipped]),
-     * then the ones not drawn lately in random order, then the rest, the one drawn longest ago first.
+     * then the ones not drawn lately in random order ([favoured] ones first by the chance [favour]), then the rest, the
+     * one drawn longest ago first.
      */
-    fun order(candidates: List<VerseLength>, slipped: List<Int>, recent: List<Int>, random: Random, maxSlipped: Int): List<Int> {
-        val (due, fresh, seen) = tiers(candidates.distinctBy { it.ayahId }, slipped, recent, random)
+    fun order(
+        candidates: List<VerseLength>,
+        slipped: List<Int>,
+        recent: List<Int>,
+        random: Random,
+        maxSlipped: Int,
+        favoured: Set<Int> = emptySet(),
+        favour: Float = 0f
+    ): List<Int> {
+        val (due, fresh, seen) = tiers(candidates.distinctBy { it.ayahId }, slipped, recent, random, favoured, favour)
         return (due.take(maxSlipped) + fresh + due.drop(maxSlipped) + seen).map { it.play.ayahId }
     }
 
@@ -273,14 +299,24 @@ object LevelVerses {
      * Verses for a level whose words to build (their words less [given] each) add up to [target], or as near as the
      * verses allow. Verses with the same words count as one. The ones not drawn lately come first (in random order),
      * then the one drawn longest ago ([recent] holds the ids drawn, the latest first); slipped verses that are due
-     * ([slipped], the most recent slip first) come before all, but are at most a third of the words. A verse comes once,
-     * unless there are too few to fill the level. Returned in the order to play them.
+     * ([slipped], the most recent slip first) come before all, but are at most a third of the words; of the others,
+     * [favoured] ones (with look-alikes) come first by the chance [favour]. A verse comes once, unless there are too few
+     * to fill the level. Returned in the order to play them.
      */
-    fun pick(candidates: List<VerseLength>, target: Int, given: Int, slipped: List<Int>, recent: List<Int>, random: Random): List<Int> {
+    fun pick(
+        candidates: List<VerseLength>,
+        target: Int,
+        given: Int,
+        slipped: List<Int>,
+        recent: List<Int>,
+        random: Random,
+        favoured: Set<Int> = emptySet(),
+        favour: Float = 0f
+    ): List<Int> {
         fun build(verse: Verse) = verse.words - given
         val usable = candidates.distinctBy { it.ayahId }.filter { it.words - given >= LEAST_TO_BUILD }
         if (usable.isEmpty() || target <= 0) return emptyList()
-        val tiers = tiers(usable, slipped, recent, random)
+        val tiers = tiers(usable, slipped, recent, random, favoured, favour)
         val due = tiers[0]
 
         // The fewest words any verse here leaves to build: what a level's last verse needs at least.

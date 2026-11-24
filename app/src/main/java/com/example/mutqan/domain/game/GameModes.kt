@@ -46,8 +46,11 @@ object GameModes {
     /** One heart: a single slip ends the run. */
     val masteryRules = RoundRules(lives = 1)
 
-    /** The share of wrong lanterns that are traps (look-alike words and near forms), where the word has some. */
+    /** The share of wrong lanterns that are traps (words that could come next, and near forms), where the word has some. */
     const val MASTERY_TRAPS = 0.95f
+
+    /** The chance a verse with look-alikes is put before the others in an endless run. */
+    const val MASTERY_FAVOUR = 0.5f
 
     /** Seconds the wanted word shows after a slip in a calm sitting. */
     const val CALM_HINT = 3f

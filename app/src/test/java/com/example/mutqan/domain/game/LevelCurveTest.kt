@@ -36,11 +36,13 @@ class LevelCurveTest {
         var next = 1
         val verses = ids.map { id -> GameVerse(id, List(lengths[id - 1]) { w -> GameWord(next++, "v${id}w$w") }, rules.given) }
         val alike = HashSet<String>()
-        // Most words have traps (near forms: about four in five in the Quran), a third a look-alike next word too.
+        // Most words have traps: near forms (about four in five in the Quran), and words that could come next (most).
         val traps = verses.associate { verse ->
-            verse.ayahId to verse.words.indices.filter { random.nextFloat() < 0.8f }.associateWith { at ->
-                List(if (rules.lookAlike > 0f && random.nextFloat() < 0.3f) 3 else 2) { t -> GameWord(next++, "trap${verse.ayahId}_${at}_$t").also { alike += it.key } }
-            }
+            verse.ayahId to verse.words.indices.filter { random.nextFloat() < 0.9f }.associateWith { at ->
+                val follows = if (random.nextFloat() < 0.75f) List(2) { t -> GameWord(next++, "next${verse.ayahId}_${at}_$t").also { alike += it.key } } else emptyList()
+                val near = if (random.nextFloat() < 0.8f) List(2) { t -> GameWord(next++, "trap${verse.ayahId}_${at}_$t").also { alike += it.key } } else emptyList()
+                Traps(follows, List(follows.size) { 3f }, near)
+            }.filterValues { !it.isEmpty }
         }
         val neighbours = verses.associate { it.ayahId to List(6) { w -> GameWord(next++, "n${it.ayahId}_$w") } }
         val source = LanternsSource(

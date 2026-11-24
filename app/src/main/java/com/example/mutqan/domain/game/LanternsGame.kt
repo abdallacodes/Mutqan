@@ -91,8 +91,8 @@ sealed interface GameEvent {
     data object Over : GameEvent
 }
 
-/** A verse played in a round, and how many mistakes were made in it. */
-data class PlayedVerse(val ayahId: Int, val mistakes: Int, val done: Boolean)
+/** A verse played in a round, how many mistakes were made in it, and the words of the wrong lanterns tapped in it ([taken]: word ids). */
+data class PlayedVerse(val ayahId: Int, val mistakes: Int, val done: Boolean, val taken: List<Int> = emptyList())
 
 /** How a round is played beyond its sky: its hearts, whether a slip costs one, and whether it waits after a verse. */
 data class RoundRules(
@@ -188,6 +188,7 @@ class LanternsGame(
     private var powerIn = fixed?.let { it.helperEvery * HELPER_FIRST } ?: POWER_FIRST
     private var spawnsWithoutNeeded = 0
     private var verseMistakes = 0
+    private val verseTaken = ArrayList<Int>()
 
     /** When the word wanted now became the one wanted ([time]). */
     private var neededSince = 0f
@@ -219,6 +220,7 @@ class LanternsGame(
         placed = next.given.coerceIn(0, next.words.size - 1)
         neededSince = time
         verseMistakes = 0
+        verseTaken.clear()
         spawnsWithoutNeeded = 0
         spawnIn = 0.5f
     }
@@ -456,6 +458,7 @@ class LanternsGame(
         wrong++
         combo = 0
         verseMistakes++
+        lantern.word?.let { if (it.id !in verseTaken) verseTaken += it.id }
         events += GameEvent.Wrong(lantern)
         loseLight()
     }
@@ -465,7 +468,7 @@ class LanternsGame(
         val bonus = (VERSE_POINTS + WORD_BONUS * (verse.words.size - verse.given)) * if (perfect) 2 else 1
         score += bonus
         versesDone++
-        played += PlayedVerse(verse.ayahId, verseMistakes, done = true)
+        played += PlayedVerse(verse.ayahId, verseMistakes, done = true, taken = verseTaken.toList())
         events += GameEvent.VerseDone(verse.ayahId, bonus, perfect)
         if (fixed == null && level < MAX_LEVEL) {
             level++
@@ -488,7 +491,7 @@ class LanternsGame(
         lives--
         if (lives <= 0) {
             lives = 0
-            verse?.let { if (played.none { p -> p.ayahId == it.ayahId }) played += PlayedVerse(it.ayahId, verseMistakes, done = false) }
+            verse?.let { if (played.none { p -> p.ayahId == it.ayahId }) played += PlayedVerse(it.ayahId, verseMistakes, done = false, taken = verseTaken.toList()) }
             finish()
         }
     }

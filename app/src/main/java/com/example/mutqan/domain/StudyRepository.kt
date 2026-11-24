@@ -346,6 +346,15 @@ class StudyRepository(
         }
     }
 
+    /** For each ayah in one of the user's mutashabihat groups, the other ayahs of its groups: the ones the user mixes it up with. */
+    suspend fun groupMates(): Map<Int, List<Int>> = withContext(Dispatchers.IO) {
+        val out = HashMap<Int, LinkedHashSet<Int>>()
+        for (members in dao.getAllSimilarityMembersSync().groupBy({ it.groupId }, { it.verseId }).values) {
+            for (a in members) for (b in members) if (a != b) out.getOrPut(a) { LinkedHashSet() } += b
+        }
+        out.mapValues { it.value.toList() }
+    }
+
     /** Puts [ayahId] into the group [groupId]; false when it was already there. */
     suspend fun addAyahToGroup(groupId: Int, ayahId: Int): Boolean = withContext(Dispatchers.IO) {
         if (dao.getMemberAyahIds(groupId).contains(ayahId)) false

@@ -874,7 +874,7 @@
     <string name="game_new_label">جديد</string>
     <string name="game_news_start">ابنِ الآيات كلمةً كلمة قبل أن تطير فوانيسها. أول كلمتين من كل آية معطاتان.</string>
     <string name="game_news_one_given">من الآن تُعطى كلمة واحدة فقط من أول كل آية.</string>
-        <string name="game_news_look_alike">كلمات من آيات متشابهة: تأتي بعد الكلمات نفسها في موضع آخر من القرآن، فانتبه.</string>
+        <string name="game_news_look_alike">آيات لها متشابهات تأتي أكثر: الكلمات التي تأتي بعد الكلمات نفسها في آية تشبهها تنتظرك، فانتبه.</string>
     <string name="game_news_golden">فوانيس ذهبية: إن حملت الكلمة الصحيحة فنقاطها ثلاثة أضعاف.</string>
     <string name="game_news_fifth">فانوس خامس في السماء.</string>
     <string name="game_news_wind">ريح تميل بالفوانيس يمنةً ويسرة.</string>
@@ -1774,6 +1774,7 @@
     </plurals>
     <string name="game_similar_title">متشابهات آيات الجولة</string>
     <string name="game_similar_hint">الكلمات المشتركة بالذهبي. اختر ما تضمّه إلى الآية في مجموعة متشابهات.</string>
+    <string name="game_similar_taken">منها الكلمة التي اخترتها مكان كلمة الآية</string>
     <plurals name="game_similar_more">
         <item quantity="zero">ولا غيرها</item>
         <item quantity="one">وآية أخرى تشبهها</item>
@@ -1804,7 +1805,7 @@
     <string name="game_news_seventh">فانوس سابع في السماء.</string>
     <string name="game_news_short_one_given">كلمة واحدة معطاة</string>
     <string name="game_news_short_fifth">الفانوس الخامس</string>
-    <string name="game_news_short_look_alike">كلمات من آيات متشابهة</string>
+    <string name="game_news_short_look_alike">آيات لها متشابهات</string>
     <string name="game_news_short_golden">فوانيس ذهبية</string>
     <string name="game_news_short_sixth">الفانوس السادس</string>
     <string name="game_news_short_wind">الريح</string>

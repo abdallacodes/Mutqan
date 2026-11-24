@@ -342,6 +342,16 @@ class QuranRepository private constructor(context: Context) {
         return all
     }
 
+    /** The id of every ayah's first word (an ayah's words have the ids after it, its end marker last); index 0 is ayah id 1. */
+    fun firstWordIds(): IntArray {
+        val out = IntArray(TOTAL_AYAHS)
+        db.rawQuery(
+            "SELECT a.id, MIN(w.id) FROM words w JOIN ayahs a ON a.surah = w.surah AND a.ayah = w.ayah WHERE w.is_end = 0 GROUP BY a.id",
+            null
+        ).use { c -> while (c.moveToNext()) out[c.getInt(0) - 1] = c.getInt(1) }
+        return out
+    }
+
     /** Every word's id and Hafs text (not the end markers), in order: for indexes built over the whole Quran. */
     fun wordTexts(): List<Pair<Int, String>> =
         db.rawQuery("SELECT id, hafs FROM words WHERE is_end = 0 ORDER BY id", null).use { c ->

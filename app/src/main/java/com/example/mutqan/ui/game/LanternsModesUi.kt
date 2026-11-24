@@ -525,9 +525,10 @@ internal fun RoundSimilarOverlay(
                         Spacer(Modifier.height(6.dp))
                         for (other in item.similar) {
                             val on = other.ayahId in chosen
+                            // The words it shares in gold; the word taken for the verse's own in red.
                             val shared = remember(other) {
                                 other.matched.flatMap { r -> r.mapNotNull { pos -> other.words.getOrNull(pos - 1)?.id } }
-                                    .associateWith { GameColors.Gold }
+                                    .associateWith { GameColors.Gold } + listOfNotNull(other.taken).associateWith { GameColors.Red }
                             }
                             Row(
                                 Modifier
@@ -547,6 +548,13 @@ internal fun RoundSimilarOverlay(
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(ref(other.ayahId), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.65f))
+                                    if (other.taken != null) {
+                                        Text(
+                                            stringResource(R.string.game_similar_taken),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = GameColors.Red
+                                        )
+                                    }
                                     MushafText(
                                         span = remember(other) { MushafSpan.of(other.words) },
                                         size = 20.sp,

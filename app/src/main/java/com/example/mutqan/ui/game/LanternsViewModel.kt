@@ -17,6 +17,7 @@ import com.example.mutqan.domain.SimilarLibrary
 import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.domain.TafsirLibrary
 import com.example.mutqan.domain.TafsirSource
+import com.example.mutqan.domain.game.AlikeVerses
 import com.example.mutqan.domain.game.GameMode
 import com.example.mutqan.domain.game.GameModes
 import com.example.mutqan.domain.game.LanternsGame
@@ -25,6 +26,7 @@ import com.example.mutqan.domain.game.LanternsSource
 import com.example.mutqan.domain.game.LevelNews
 import com.example.mutqan.domain.game.LevelRules
 import com.example.mutqan.domain.game.NextWords
+import com.example.mutqan.domain.game.PlayedVerse
 import com.example.mutqan.domain.game.WordTraps
 import com.example.mutqan.quran.QuranRepository
 import com.example.mutqan.quran.QuranWord
@@ -48,8 +50,11 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
 
     enum class Phase { MENU, MAP, LOADING, PLAYING, OVER }
 
-    /** A verse to show: its id, its words (to draw in the Mushaf's fonts), and the words (1-based) it shares with another. */
-    data class ShownVerse(val ayahId: Int, val words: List<QuranWord>, val matched: List<IntRange> = emptyList())
+    /**
+     * A verse to show: its id, its words (to draw in the Mushaf's fonts), the words (1-based) it shares with another, and
+     * the word of it taken in the round for the other's ([taken]: a word id), if one was.
+     */
+    data class ShownVerse(val ayahId: Int, val words: List<QuranWord>, val matched: List<IntRange> = emptyList(), val taken: Int? = null)
 
     /** A verse of the round that has mutashabihat: the verse, the closest of them, and how many more there are. */
     data class RoundSimilar(val verse: ShownVerse, val similar: List<ShownVerse>, val more: Int)
@@ -77,6 +82,9 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
     /** The words of the round by id, to draw them on the lanterns. */
     var words: Map<Int, QuranWord> = emptyMap()
         private set
+
+    /** Where the round being played or just played takes its verses and wrong words from. */
+    private var roundSource: LanternsSource? = null
 
     /** The meaning of each verse of a calm sitting (المختصر في التفسير, as kept), by ayah id. */
     var meanings: Map<Int, String> = emptyMap()
@@ -244,15 +252,20 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
                 val slipped = prefs.lanternsSlips.first().keys.toList()
                 val recent = prefs.lanternsSeen.first()
                 val near = WordTraps.get(quran)
+                val next = NextWords.get(quran)
+                // The verses each one is known to look like: the reader's own groups first, then the ready lists.
+                val similar = SimilarLibrary.load(context)
+                val alike = AlikeVerses(study.groupMates()) { id -> similar.similarTo(id).sortedByDescending { it.score }.map { it.ayahId } }
+                // The pages the reader knows: words from them are the ones they reach for.
+                val known = study.coveredPages().first()?.let { c -> c.indices.filter { c[it] }.mapTo(HashSet()) { it + 1 } }.orEmpty()
                 fun read(on: Collection<Int>): LanternsSource = when {
-                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent, near)
+                    mode == GameMode.CALM -> LanternsSource.calm(quran, on, slipped, recent, near, next, alike, known = known)
                     mode == GameMode.MASTERY -> LanternsSource.load(
                         quran, on, slipped = slipped, recent = recent,
-                        given = { 0 }, next = NextWords.get(quran), nearForms = near, chance = GameModes.MASTERY_TRAPS
+                        given = { 0 }, next = next, nearForms = near, chance = GameModes.MASTERY_TRAPS,
+                        alike = alike, favour = GameModes.MASTERY_FAVOUR, known = known
                     )
-                    rules != null -> LanternsSource.forLevel(
-                        quran, on, rules, slipped, recent, if (rules.lookAlike > 0f) NextWords.get(quran) else null, near
-                    )
+                    rules != null -> LanternsSource.forLevel(quran, on, rules, slipped, recent, next, near, alike, known = known)
                     else -> error("a level without its rules")
                 }
                 val source = read(pages).takeUnless { it.isEmpty } ?: read(amma)
@@ -271,6 +284,7 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
                 return@launch
             }
             words = round.words
+            roundSource = round
             levelWords = round.toBuild
             roundVerses = round.drawn.size
             game = when (mode) {
@@ -290,7 +304,7 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
         val rules = level
         val mode = mode
         if (mode == GameMode.CHALLENGE && rules != null && round.cleared) starsWon = LanternsLevels.stars(round.slips)
-        viewModelScope.launch { roundSimilar = withContext(Dispatchers.IO) { similarOf(round.played.map { it.ayahId }.distinct()) } }
+        viewModelScope.launch { roundSimilar = withContext(Dispatchers.IO) { similarOf(round.played.toList()) } }
         viewModelScope.launch {
             // The verses the round reached, the last first: an endless round noted only its first few when it began.
             prefs.recordLanternsSeen(round.played.map { it.ayahId }.reversed())
@@ -303,19 +317,31 @@ class LanternsViewModel(appContext: Context, private val breakPages: Set<Int>? =
         }
     }
 
-    /** Of [ayahIds], those with mutashabihat, each with the closest of them (best match first). */
-    private suspend fun similarOf(ayahIds: List<Int>): List<RoundSimilar> {
+    /**
+     * Of the verses [played], those with mutashabihat, each with the closest of them: first the verses whose words were
+     * taken for its own in the round (a word that comes after the same words there), then the ready list's, best match
+     * first.
+     */
+    private suspend fun similarOf(played: List<PlayedVerse>): List<RoundSimilar> {
         val data = SimilarLibrary.load(context)
+        val next = NextWords.get(quran)
+        val from = roundSource
         val index = quran.ayahIndex
-        fun shown(id: Int, matched: List<IntRange> = emptyList()): ShownVerse? =
+        fun shown(id: Int, matched: List<IntRange> = emptyList(), taken: Int? = null): ShownVerse? =
             if (id !in index) null
-            else ShownVerse(id, quran.wordsOfAyah(index.surahOf(id), index.ayahOf(id)).filter { !it.isEnd && it.hafs.isNotBlank() }, matched)
-        return ayahIds.mapNotNull { id ->
-            val matches = data.similarTo(id).sortedByDescending { it.score }
-            if (matches.isEmpty()) return@mapNotNull null
+            else ShownVerse(id, quran.wordsOfAyah(index.surahOf(id), index.ayahOf(id)).filter { !it.isEnd && it.hafs.isNotBlank() }, matched, taken)
+        val takenIn = LinkedHashMap<Int, MutableList<Int>>()
+        for (verse in played) takenIn.getOrPut(verse.ayahId) { ArrayList() } += verse.taken
+        return takenIn.mapNotNull { (id, takenWords) ->
+            // The verse each wrong word taken came from, when it comes after the same words there, and the word taken.
+            val takenFrom = LinkedHashMap<Int, Int>()
+            for (word in takenWords) from?.lookAlikeOf(id, word)?.let { takenFrom.putIfAbsent(it, word) }
+            val matches = data.similarTo(id).sortedByDescending { it.score }.filter { it.ayahId !in takenFrom }
+            if (takenFrom.isEmpty() && matches.isEmpty()) return@mapNotNull null
             val verse = shown(id) ?: return@mapNotNull null
-            val similar = matches.take(MOST_SIMILAR).mapNotNull { shown(it.ayahId, it.matchedWords) }
-            RoundSimilar(verse, similar, (matches.size - MOST_SIMILAR).coerceAtLeast(0))
+            val first = takenFrom.entries.mapNotNull { (other, word) -> shown(other, next.sharedWords(id, other), word) }
+            val rest = matches.take((MOST_SIMILAR - first.size).coerceAtLeast(0)).mapNotNull { shown(it.ayahId, it.matchedWords) }
+            RoundSimilar(verse, first + rest, (matches.size - rest.size).coerceAtLeast(0))
         }
     }
 
