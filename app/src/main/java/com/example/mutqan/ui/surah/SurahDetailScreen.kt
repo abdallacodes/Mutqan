@@ -1,5 +1,13 @@
 package com.example.mutqan.ui.surah
 
+import com.example.mutqan.ui.components.SectionHead
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.IconMedallion
+import com.example.mutqan.ui.components.Folio
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -101,79 +109,28 @@ fun SurahDetailScreen(
     ) { innerPadding ->
 
         LazyColumn(
-            modifier            = Modifier
+            modifier       = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-
-            stickyHeader {
-                GroupsSectionHeader(count = groupsWithVerses.size)
-            }
-
-            if (groupsWithVerses.isEmpty()) {
-                item {
-                    EmptyGroupsHint(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-            } else {
-                items(groupsWithVerses, key = { it.group.id }) { gwv ->
-                    SurahGroupCard(
-                        gwv         = gwv,
-                        onClick     = { onGroupClick(gwv.group.id) },
-                        modifier    = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
-
-            item { Spacer(Modifier.height(32.dp)) }
-        }
-    }
-}
-
-// ── Top section header ────────────────────────────────────────────────────────
-
-@Composable
-private fun GroupsSectionHeader(count: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(28.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text          = stringResource(R.string.linked_groups_header),
-                style         = MaterialTheme.typography.labelMedium,
-                fontWeight    = FontWeight.Black,
-                color         = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text  = stringResource(R.string.linked_groups_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (count > 0) {
-            Surface(
-                shape  = RoundedCornerShape(12.dp),
-                color  = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text       = "$count",
-                    modifier   = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    style      = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Black,
-                    color      = MaterialTheme.colorScheme.primary
+            item(key = "head") {
+                SectionHead(
+                    title = stringResource(R.string.linked_groups_header) +
+                        if (groupsWithVerses.isNotEmpty()) " (${groupsWithVerses.size})" else "",
+                    first = true
                 )
+            }
+            item(key = "hint") {
+                Text(
+                    text     = stringResource(if (groupsWithVerses.isEmpty()) R.string.no_groups_for_surah else R.string.linked_groups_hint),
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
+                )
+            }
+            items(groupsWithVerses, key = { it.group.id }) { gwv ->
+                SurahGroupCard(gwv = gwv, onClick = { onGroupClick(gwv.group.id) })
             }
         }
     }
@@ -181,143 +138,68 @@ private fun GroupsSectionHeader(count: Int) {
 
 // ── Group card ────────────────────────────────────────────────────────────────
 
+/**
+ * A group with verses in this surah, in the look of the app's hub rows: its name, its notes' first lines, how many of
+ * its verses are here and elsewhere, and how well it is mastered.
+ */
 @Composable
-private fun SurahGroupCard(
-    gwv: GroupWithVerses,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val quality     = gwv.group.masterQuality
+private fun SurahGroupCard(gwv: GroupWithVerses, onClick: () -> Unit) {
+    val quality = gwv.group.masterQuality
     val healthColor = when {
         quality >= 0.70f -> DifficultySmooth
         quality >= 0.40f -> DifficultyStruggled
         else          -> DifficultyCritical
     }
-    val primary     = MaterialTheme.colorScheme.primary
-    val tertiary    = MaterialTheme.colorScheme.tertiary
-    val stripeColor = if (gwv.hasExternal) tertiary else primary
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(14.dp)
-            )
-            .clickable(onClick = onClick)
+    val total = gwv.internalVerses.size + gwv.externalVerses.size
+    val where = pluralStringResource(R.plurals.count_ayahs, total, total) + " · " +
+        stringResource(R.string.group_meta_in_surah, gwv.internalVerses.size) + " · " +
+        stringResource(R.string.group_meta_other_surahs, gwv.externalVerses.size)
+    Folio(
+        modifier       = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 5.dp),
+        onClick        = onClick,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(
-                    color = stripeColor,
-                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
-                )
-        )
-
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.Top
-            ) {
+            IconMedallion(Icons.Outlined.Layers)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text       = gwv.group.description,
-                    style      = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color      = MaterialTheme.colorScheme.onSurface,
-                    modifier   = Modifier.weight(1f),
-                    maxLines   = 3,
-                    overflow   = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(8.dp))
-                
-                Surface(
-                    shape  = RoundedCornerShape(12.dp),
-                    color  = healthColor.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, healthColor.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text       = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
-                        modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                        style      = MaterialTheme.typography.labelSmall,
-                        color      = healthColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            if (gwv.group.memorizationNotes.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text     = gwv.group.memorizationNotes,
-                    style    = MaterialTheme.typography.bodySmall,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text     = gwv.group.description,
+                    style    = MaterialTheme.typography.titleMedium,
+                    color    = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MetaBadge(
-                    text = (gwv.internalVerses.size + gwv.externalVerses.size).let { pluralStringResource(R.plurals.count_ayahs, it, it) },
-                    borderColor = MaterialTheme.colorScheme.outline
-                )
-                MetaBadge(
-                    text = stringResource(R.string.group_meta_in_surah, gwv.internalVerses.size),
-                    borderColor = primary.copy(alpha = 0.5f)
-                )
-                MetaBadge(
-                    text = stringResource(R.string.group_meta_other_surahs, gwv.externalVerses.size),
-                    borderColor = tertiary.copy(alpha = 0.5f)
+                if (gwv.group.memorizationNotes.isNotBlank()) {
+                    Text(
+                        text     = gwv.group.memorizationNotes,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text  = where,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
+            Text(
+                text       = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
+                style      = MaterialTheme.typography.labelMedium,
+                color      = healthColor,
+                fontWeight = FontWeight.Bold
+            )
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint     = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
         }
-    }
-}
-
-@Composable
-private fun MetaBadge(text: String, borderColor: Color) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun EmptyGroupsHint(modifier: Modifier = Modifier) {
-    Box(
-        modifier         = modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text       = stringResource(R.string.no_groups_for_surah),
-            style      = MaterialTheme.typography.bodySmall,
-            color      = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign  = TextAlign.Center,
-            lineHeight = 20.sp
-        )
     }
 }

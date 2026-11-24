@@ -410,6 +410,16 @@ class NextWordsTest {
     }
 
     @Test
+    fun versesSharingFourWordsAreLookAlikes() {
+        val next = NextWords.build(words("a b c d e", "x b c d e", "q r s t", "y b c z w", "a b c d e"))
+        // Ayah 2 shares four words, ayah 5 all of them; ayah 4 only two.
+        assertEquals(setOf(2, 5), next.lookAlikes(1).toSet())
+        assertEquals(0.8f, next.likeness(1, 2), 0.001f)
+        assertEquals(1f, next.likeness(1, 5), 0.001f)
+        assertEquals(0f, next.likeness(1, 3), 0.001f)
+    }
+
+    @Test
     fun theWordsTwoVersesShareAreFoundWordForWord() {
         val next = NextWords.build(words("a b c d", "x a b y d"))
         assertEquals(listOf(2..3, 5..5), next.sharedWords(1, 2))

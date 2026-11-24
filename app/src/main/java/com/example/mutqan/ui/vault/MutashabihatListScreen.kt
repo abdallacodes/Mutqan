@@ -1,5 +1,13 @@
 package com.example.mutqan.ui.vault
 
+import com.example.mutqan.ui.components.SectionHead
+import com.example.mutqan.ui.components.PaperSpace
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.IconMedallion
+import com.example.mutqan.ui.components.Folio
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ColumnScope
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -118,6 +126,10 @@ fun MutashabihatListScreen(
     // Move state
     var movingFolder by remember { mutableStateOf<VaultFolderEntity?>(null) }
     var movingGroup by remember { mutableStateOf<GroupWithCount?>(null) }
+
+    // A delete asks first.
+    var deletingFolder by remember { mutableStateOf<VaultFolderEntity?>(null) }
+    var deletingGroup by remember { mutableStateOf<GroupWithCount?>(null) }
     
     var showHelpDialog by remember { mutableStateOf(false) }
 
@@ -211,41 +223,29 @@ fun MutashabihatListScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(innerPadding),
+                    contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
-                    
                     if (folders.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.label_folders),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
+                        item(key = "folders-head") { SectionHead(title = stringResource(R.string.label_folders), first = true) }
                         items(folders, key = { "f_${it.id}" }) { folder ->
                             FolderCard(
                                 folder = folder,
                                 onClick = { viewModel.navigateToFolder(folder) },
                                 onRename = { showRenameFolderDialog = folder },
-                                onDelete = { viewModel.deleteFolder(folder) },
+                                onDelete = { deletingFolder = folder },
                                 onMove = { movingFolder = folder },
                                 onTest = { onStartTest(folder.id, null) }
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(8.dp)) }
                     }
 
                     if (groups.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = if (currentFolderId == null) stringResource(R.string.label_uncategorized) else "GROUPS",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 4.dp)
+                        item(key = "groups-head") {
+                            SectionHead(
+                                // At the top with folders beside them, the groups in none of them.
+                                title = stringResource(if (currentFolderId == null && folders.isNotEmpty()) R.string.label_uncategorized else R.string.label_groups_header),
+                                first = folders.isEmpty()
                             )
                         }
                         items(groups, key = { "g_${it.group.id}" }) { item ->
@@ -254,14 +254,12 @@ fun MutashabihatListScreen(
                                 item     = item,
                                 onView   = { onViewGroup(item.group.id, currentSurahId) },
                                 onEdit   = { onEditGroup(item.group.id) },
-                                onDelete = { viewModel.deleteGroup(item) },
+                                onDelete = { deletingGroup = item },
                                 onMove   = { movingGroup = item },
                                 onTest   = { onStartTest(null, item.group.id) }
                             )
                         }
                     }
-                    
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
 
@@ -313,6 +311,36 @@ fun MutashabihatListScreen(
         )
     }
 
+    deletingFolder?.let { folder ->
+        PaperDialog(
+            onDismissRequest = { deletingFolder = null },
+            title = { Text(stringResource(R.string.vault_delete_folder_title)) },
+            text = { Text(stringResource(R.string.vault_delete_folder_body, folder.name)) },
+            confirmButton = {
+                PaperLink(text = stringResource(R.string.btn_delete), onClick = {
+                    deletingFolder = null
+                    viewModel.deleteFolder(folder)
+                })
+            },
+            dismissButton = { PaperLink(text = stringResource(R.string.btn_cancel), onClick = { deletingFolder = null }, soft = true) }
+        )
+    }
+
+    deletingGroup?.let { item ->
+        PaperDialog(
+            onDismissRequest = { deletingGroup = null },
+            title = { Text(stringResource(R.string.vault_delete_group_title)) },
+            text = { Text(stringResource(R.string.vault_delete_group_body, item.group.description)) },
+            confirmButton = {
+                PaperLink(text = stringResource(R.string.btn_delete), onClick = {
+                    deletingGroup = null
+                    viewModel.deleteGroup(item)
+                })
+            },
+            dismissButton = { PaperLink(text = stringResource(R.string.btn_cancel), onClick = { deletingGroup = null }, soft = true) }
+        )
+    }
+
     // Move Dialogs
     movingFolder?.let { folder ->
         MoveItemDialog(
@@ -340,6 +368,66 @@ fun MutashabihatListScreen(
 
 private var pendingImportUri: android.net.Uri? = null
 
+/**
+ * A folder or a group in the vault, in the look of the app's hub rows: a raised card with an icon, a name and a line
+ * under it, an optional [note], then the test button and a menu of what else can be done with it.
+ */
+@Composable
+private fun VaultRow(
+    title: String,
+    subtitle: String?,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    onTest: () -> Unit,
+    note: (@Composable () -> Unit)? = null,
+    menu: @Composable ColumnScope.(close: () -> Unit) -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    Folio(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 5.dp),
+        onClick = onClick,
+        contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            IconMedallion(icon)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            note?.invoke()
+            Row {
+                IconButton(onClick = onTest) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.cd_start_test), tint = MaterialTheme.colorScheme.primary)
+                }
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) { menu { showMenu = false } }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun FolderCard(
     folder: VaultFolderEntity,
@@ -349,65 +437,28 @@ private fun FolderCard(
     onMove: () -> Unit,
     onTest: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Surface(
-        onClick  = onClick,
-        shape    = RoundedCornerShape(14.dp),
-        color    = FolioTheme.colors.folio,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier          = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Folder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = folder.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            IconButton(onClick = onTest) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = stringResource(R.string.cd_start_test),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), modifier = Modifier.size(20.dp))
-                }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.btn_move)) },
-                        onClick = { onMove(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.MoveUp, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.btn_rename)) },
-                        onClick = { onRename(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.btn_delete)) },
-                        onClick = { onDelete(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Delete, null) }
-                    )
-                }
-            }
-        }
+    VaultRow(
+        title = folder.name,
+        subtitle = null,
+        icon = Icons.Default.Folder,
+        onClick = onClick,
+        onTest = onTest
+    ) { close ->
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.btn_move)) },
+            onClick = { close(); onMove() },
+            leadingIcon = { Icon(Icons.Default.MoveUp, null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.btn_rename)) },
+            onClick = { close(); onRename() },
+            leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) },
+            onClick = { close(); onDelete() },
+            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+        )
     }
 }
 
@@ -432,14 +483,10 @@ private fun FolderNameDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name) }) {
-                Text(stringResource(R.string.btn_save))
-            }
+            PaperLink(text = stringResource(R.string.btn_save), onClick = { if (name.isNotBlank()) onConfirm(name.trim()) })
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.btn_cancel))
-            }
+            PaperLink(text = stringResource(R.string.btn_cancel), onClick = onDismiss, soft = true)
         }
     )
 }
@@ -482,9 +529,7 @@ private fun MoveItemDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.btn_cancel))
-            }
+            PaperLink(text = stringResource(R.string.btn_cancel), onClick = onDismiss, soft = true)
         }
     )
 }
@@ -518,126 +563,45 @@ private fun GroupCard(
     onMove: () -> Unit,
     onTest: () -> Unit
 ) {
-    val quality       = item.group.masterQuality
-    val strengthColor = when {
-        quality >= 0.70f -> DifficultySmooth
-        quality >= 0.40f -> DifficultyStruggled
-        else          -> DifficultyCritical
-    }
-    val versesLabel   = pluralStringResource(R.plurals.count_ayahs, item.memberCount, item.memberCount)
-
-    var showMenu by remember { mutableStateOf(false) }
-
-    Surface(
-        onClick  = onView,
-        shape    = RoundedCornerShape(14.dp),
-        color    = FolioTheme.colors.folio,
-        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier          = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(strengthColor, CircleShape)
+    val quality = item.group.masterQuality
+    val color = strengthColor(quality)
+    val verses = pluralStringResource(R.plurals.count_ayahs, item.memberCount, item.memberCount)
+    val surahs = item.surahIds.joinToString(stringResource(R.string.scope_list_separator)) { SurahData.nameOf(it) }
+    VaultRow(
+        title = item.group.description,
+        subtitle = if (surahs.isEmpty()) verses else "$verses · $surahs",
+        icon = Icons.Outlined.Layers,
+        onClick = onView,
+        onTest = onTest,
+        note = {
+            Text(
+                text = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.Bold
             )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text       = item.group.description,
-                    style      = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color      = MaterialTheme.colorScheme.onSurface,
-                    maxLines   = 2,
-                    overflow   = TextOverflow.Ellipsis
-                )
-                val surahIds = item.surahIds
-                if (surahIds.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = surahIds.joinToString(" · ") { id ->
-                            "${id}. ${SurahData.nameOf(id)}"
-                        },
-                        style    = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape  = RoundedCornerShape(12.dp),
-                        color  = MaterialTheme.colorScheme.background,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                    ) {
-                        Text(
-                            text     = versesLabel,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style    = MaterialTheme.typography.labelSmall,
-                            color    = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Surface(
-                        shape  = RoundedCornerShape(12.dp),
-                        color  = strengthColor.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, strengthColor.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text      = stringResource(R.string.percent_value, (quality * 100).roundToInt()),
-                            modifier  = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style     = MaterialTheme.typography.labelSmall,
-                            color     = strengthColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            IconButton(onClick = onTest) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = stringResource(R.string.cd_start_test),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-            }
-
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), modifier = Modifier.size(20.dp))
-                }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.cd_view_group)) },
-                        onClick = { onView(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Visibility, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.cd_edit_group)) },
-                        onClick = { onEdit(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Edit, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.btn_move)) },
-                        onClick = { onMove(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.MoveUp, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.btn_delete)) },
-                        onClick = { onDelete(); showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Delete, null) }
-                    )
-                }
-            }
         }
+    ) { close ->
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.cd_view_group)) },
+            onClick = { close(); onView() },
+            leadingIcon = { Icon(Icons.Default.Visibility, null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.cd_edit_group)) },
+            onClick = { close(); onEdit() },
+            leadingIcon = { Icon(Icons.Default.Edit, null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.btn_move)) },
+            onClick = { close(); onMove() },
+            leadingIcon = { Icon(Icons.Default.MoveUp, null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) },
+            onClick = { close(); onDelete() },
+            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+        )
     }
 }
 

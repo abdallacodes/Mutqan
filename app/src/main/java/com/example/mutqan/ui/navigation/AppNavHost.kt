@@ -714,7 +714,9 @@ fun AppNavHost(
                     groupId        = groupId,
                     currentSurahId = surahId,
                     onBack         = { navController.popBackStack() },
-                    onOpenMushaf   = { page -> navController.openMushaf(page) }
+                    onOpenMushaf   = { page -> navController.openMushaf(page) },
+                    onEditGroup    = { id -> navController.navigate(Routes.editGroup(id)) },
+                    onStartTest    = { id -> navController.navigate(Routes.similarityTest(null, id)) }
                 )
             }
 

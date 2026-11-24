@@ -1811,4 +1811,42 @@
     <string name="game_news_short_wind">الريح</string>
     <string name="game_news_short_none_given">بلا كلمات معطاة</string>
     <string name="game_news_short_seventh">الفانوس السابع</string>
+    <!-- Mutashabihat: a group and its look-alikes, deleting from the vault. -->
+    <string name="vault_delete_group_title">حذف المجموعة؟</string>
+    <string name="vault_delete_group_body">ستُحذف مجموعة «%1$s» وربط آياتها بها، ولا يمكن التراجع.</string>
+    <string name="vault_delete_folder_title">حذف المجلد؟</string>
+    <string name="vault_delete_folder_body">سيُحذف مجلد «%1$s» ومجلداته الفرعية، وتنتقل مجموعاته إلى «غير مصنف».</string>
+    <string name="group_members_title">آيات المجموعة</string>
+    <string name="group_in_surah">في سورة %1$s</string>
+    <string name="group_in_other_surahs">في سور أخرى</string>
+    <string name="group_similar_title">آيات تشبهها</string>
+    <string name="group_similar_hint">من قوائم المتشابهات الجاهزة، ومن آيات تشاركها كلمات كثيرة. الكلمات المشتركة ملوّنة؛ اختر ما تضيفه إلى المجموعة.</string>
+    <string name="group_similar_loading">نبحث عن الآيات التي تشبهها…</string>
+    <string name="group_similar_none">لم نجد آيات أخرى تشبه آيات هذه المجموعة.</string>
+    <string name="group_similar_clear">إلغاء الاختيار</string>
+    <string name="cd_preview_verse">معاينة الآية</string>
+    <plurals name="group_similar_add">
+        <item quantity="zero">أضف إلى المجموعة</item>
+        <item quantity="one">أضف آية إلى المجموعة</item>
+        <item quantity="two">أضف آيتين إلى المجموعة</item>
+        <item quantity="few">أضف %d آيات إلى المجموعة</item>
+        <item quantity="many">أضف %d آية إلى المجموعة</item>
+        <item quantity="other">أضف %d آية إلى المجموعة</item>
+    </plurals>
+    <plurals name="group_similar_added">
+        <item quantity="zero">كانت كلها في المجموعة من قبل</item>
+        <item quantity="one">أُضيفت آية إلى المجموعة</item>
+        <item quantity="two">أُضيفت آيتان إلى المجموعة</item>
+        <item quantity="few">أُضيفت %d آيات إلى المجموعة</item>
+        <item quantity="many">أُضيفت %d آية إلى المجموعة</item>
+        <item quantity="other">أُضيفت %d آية إلى المجموعة</item>
+    </plurals>
+    <plurals name="group_similar_more">
+        <item quantity="zero">ولا غيرها</item>
+        <item quantity="one">وآية أخرى أبعد شبهًا</item>
+        <item quantity="two">وآيتان أخريان أبعد شبهًا</item>
+        <item quantity="few">و%d آيات أخرى أبعد شبهًا</item>
+        <item quantity="many">و%d آية أخرى أبعد شبهًا</item>
+        <item quantity="other">و%d آية أخرى أبعد شبهًا</item>
+    </plurals>
 </resources>

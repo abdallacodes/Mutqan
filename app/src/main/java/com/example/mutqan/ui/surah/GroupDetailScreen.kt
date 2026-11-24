@@ -1,26 +1,26 @@
 package com.example.mutqan.ui.surah
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,376 +28,307 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mutqan.ui.components.PaperHeader
 import com.example.mutqan.R
 import com.example.mutqan.data.SurahData
-import com.example.mutqan.ui.theme.AmiriFontFamily
 import com.example.mutqan.data.local.dao.MemberVerseRef
+import com.example.mutqan.ui.components.AyahText
+import com.example.mutqan.ui.components.Folio
+import com.example.mutqan.ui.components.Hairline
+import com.example.mutqan.ui.components.PaperButton
+import com.example.mutqan.ui.components.PaperHeader
+import com.example.mutqan.ui.components.PaperLink
+import com.example.mutqan.ui.components.PaperSpace
 import com.example.mutqan.ui.components.QuickPeekBottomSheet
 import com.example.mutqan.ui.components.QuickPeekTarget
+import com.example.mutqan.ui.components.SectionHead
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/**
+ * One of the user's mutashabihat groups: its notes, its verses in the Mushaf's script with the words they share in
+ * colour (split into this surah and the others when opened from a surah), and the verses that look like them and are
+ * not in it yet, from the ready lists and from verses that share many words with them, to choose and add.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupDetailScreen(
     groupId: Int,
     currentSurahId: Int,
     onBack: () -> Unit,
-    onOpenMushaf: (Int) -> Unit
+    onOpenMushaf: (Int) -> Unit,
+    onEditGroup: ((Int) -> Unit)? = null,
+    onStartTest: ((Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val viewModel: GroupDetailViewModel = viewModel(
+        key = "group-$groupId-$currentSurahId",
         factory = GroupDetailViewModelFactory(context, groupId, currentSurahId)
     )
+    val group by viewModel.group.collectAsState()
+    val members by viewModel.members.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
+    val scope = rememberCoroutineScope()
 
-    val group         by viewModel.group.collectAsState()
-    val contextVerses by viewModel.contextVerses.collectAsState()
-    val clashVerses   by viewModel.clashVerses.collectAsState()
+    val inSurah = currentSurahId > 0
+    var peek by remember { mutableStateOf<QuickPeekTarget?>(null) }
+    var chosen by remember { mutableStateOf(emptySet<Int>()) }
+    // Chosen ones that came into the group (or went from the list) are chosen no more.
+    val offered = remember(suggestions) { suggestions?.shown.orEmpty().map { it.ayahId }.toSet() }
+    LaunchedEffect(offered) { if (chosen.any { it !in offered }) chosen = chosen.filterTo(HashSet()) { it in offered } }
 
-    val isUnifiedVaultView = currentSurahId <= 0
-    val currentSurahName = if (isUnifiedVaultView) "" else SurahData.nameOf(currentSurahId)
+    val inSurahTitle = if (inSurah) stringResource(R.string.group_in_surah, SurahData.nameOf(currentSurahId)) else ""
+    val otherSurahsTitle = stringResource(R.string.group_in_other_surahs)
+    val membersTitle = stringResource(R.string.group_members_title)
+    val emptyTexts = listOf(
+        stringResource(if (inSurah) R.string.no_context_verses else R.string.no_linked_verses),
+        stringResource(R.string.no_clash_verses)
+    )
 
-    var quickPeekTarget by remember { mutableStateOf<QuickPeekTarget?>(null) }
+    fun peekAt(ayahId: Int, surahId: Int, ayah: Int, page: Int) {
+        peek = QuickPeekTarget(verseId = ayahId, surahId = surahId, ayahNumber = ayah, pageNumber = page)
+    }
 
     Scaffold(
         topBar = {
             PaperHeader(
                 title = group?.description ?: stringResource(R.string.group_detail_fallback_title),
-                subtitle = if (isUnifiedVaultView) stringResource(R.string.mutashabihat_breadcrumb_all) else stringResource(R.string.mutashabihat_breadcrumb, currentSurahName),
-                onBack = onBack
+                subtitle = members?.let { pluralStringResource(R.plurals.count_ayahs, it.size, it.size) },
+                onBack = onBack,
+                actions = {
+                    if (onStartTest != null && (members?.size ?: 0) >= 2) {
+                        IconButton(onClick = { onStartTest(groupId) }) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.cd_start_test), tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    if (onEditGroup != null) {
+                        IconButton(onClick = { onEditGroup(groupId) }) {
+                            Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.cd_edit_group), tint = MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
+                }
             )
+        },
+        bottomBar = {
+            if (chosen.isNotEmpty()) {
+                AddBar(
+                    count = chosen.size,
+                    onAdd = {
+                        val picked = chosen.toList()
+                        scope.launch {
+                            val added = viewModel.add(picked)
+                            chosen = emptySet()
+                            Toast.makeText(
+                                context,
+                                context.resources.getQuantityString(R.plurals.group_similar_added, added, added),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    onClear = { chosen = emptySet() }
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-
         LazyColumn(
-            modifier            = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
+            val notes = group?.memorizationNotes.orEmpty()
+            if (notes.isNotBlank()) {
+                item(key = "notes") {
+                    Folio(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.group_notes_detail_label),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
 
-            val memorizationNotes = group?.memorizationNotes.orEmpty()
-            if (memorizationNotes.isNotBlank()) {
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        shape    = RoundedCornerShape(14.dp),
-                        color    = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
+            val list = members
+            if (list != null) {
+                val parts = if (inSurah) {
+                    listOf(
+                        inSurahTitle to list.filter { it.ref.surahId == currentSurahId },
+                        otherSurahsTitle to list.filter { it.ref.surahId != currentSurahId }
+                    )
+                } else {
+                    listOf(membersTitle to list)
+                }
+                parts.forEachIndexed { i, (title, verses) ->
+                    item(key = "head-$i") { SectionHead(title = title, first = i == 0 && notes.isBlank()) }
+                    if (verses.isEmpty()) {
+                        item(key = "empty-$i") {
                             Text(
-                                text       = stringResource(R.string.group_notes_detail_label),
-                                style      = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color      = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text  = memorizationNotes,
+                                text = emptyTexts[i],
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp)
                             )
+                        }
+                    }
+                    items(verses, key = { "m-${it.ref.verseId}" }) { member ->
+                        MemberRow(member.ref, member.shared) {
+                            peekAt(member.ref.verseId, member.ref.surahId, member.ref.ayahNumber, member.ref.pageNumber)
                         }
                     }
                 }
             }
 
-            if (isUnifiedVaultView) {
-                val allVerses = (contextVerses + clashVerses).sortedWith(
-                    compareBy<MemberVerseRef> { it.surahId }.thenBy { it.ayahNumber }
+            item(key = "similar-head") { SectionHead(title = stringResource(R.string.group_similar_title)) }
+            val found = suggestions
+            item(key = "similar-hint") {
+                Text(
+                    text = stringResource(
+                        when {
+                            found == null -> R.string.group_similar_loading
+                            found.shown.isEmpty() -> R.string.group_similar_none
+                            else -> R.string.group_similar_hint
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 8.dp)
                 )
-
-                stickyHeader {
-                    DetailSectionHeader(
-                        label = stringResource(R.string.section_all_linked_verses),
-                        subtitle = stringResource(R.string.section_all_linked_verses_subtitle),
-                        accent = MaterialTheme.colorScheme.primary,
-                        count = allVerses.size
+            }
+            if (found != null) {
+                items(found.shown, key = { "s-${it.ayahId}" }) { s ->
+                    SuggestionRow(
+                        suggestion = s,
+                        on = s.ayahId in chosen,
+                        onToggle = { chosen = if (s.ayahId in chosen) chosen - s.ayahId else chosen + s.ayahId },
+                        onPeek = { peekAt(s.ayahId, s.surahId, s.ayahNumber, s.page) }
                     )
                 }
-
-                if (allVerses.isEmpty()) {
-                    item {
-                        DetailEmptyHint(
-                            message = stringResource(R.string.no_linked_verses),
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                } else {
-                    items(allVerses, key = { "all_${it.verseId}" }) { ref ->
-                        VerseRefCard(
-                            ref = ref,
-                            accentColor = MaterialTheme.colorScheme.primary,
-                            showSurahName = true,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            onClick = {
-                                quickPeekTarget = QuickPeekTarget(
-                                    verseId = ref.verseId,
-                                    surahId = ref.surahId,
-                                    ayahNumber = ref.ayahNumber,
-                                    pageNumber = ref.pageNumber
-                                )
-                            }
-                        )
-                    }
-                }
-            } else {
-                stickyHeader {
-                    DetailSectionHeader(
-                        label    = stringResource(R.string.section_context),
-                        subtitle = stringResource(R.string.section_context_subtitle, currentSurahName),
-                        accent   = MaterialTheme.colorScheme.primary,
-                        count    = contextVerses.size
-                    )
-                }
-
-                if (contextVerses.isEmpty()) {
-                    item {
-                        DetailEmptyHint(
-                            message  = stringResource(R.string.no_context_verses),
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                } else {
-                    items(contextVerses, key = { "ctx_${it.verseId}" }) { ref ->
-                        VerseRefCard(
-                            ref           = ref,
-                            accentColor   = MaterialTheme.colorScheme.primary,
-                            showSurahName = false,
-                            modifier      = Modifier.padding(horizontal = 16.dp),
-                            onClick       = {
-                                quickPeekTarget = QuickPeekTarget(
-                                    verseId    = ref.verseId,
-                                    surahId    = ref.surahId,
-                                    ayahNumber = ref.ayahNumber,
-                                    pageNumber = ref.pageNumber
-                                )
-                            }
-                        )
-                    }
-                }
-
-                item { Spacer(Modifier.height(4.dp)) }
-
-                stickyHeader {
-                    DetailSectionHeader(
-                        label    = stringResource(R.string.section_clashes),
-                        subtitle = stringResource(R.string.section_clashes_subtitle),
-                        accent   = MaterialTheme.colorScheme.tertiary,
-                        count    = clashVerses.size
-                    )
-                }
-
-                if (clashVerses.isEmpty()) {
-                    item {
-                        DetailEmptyHint(
-                            message  = stringResource(R.string.no_clash_verses),
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                } else {
-                    items(clashVerses, key = { "cls_${it.verseId}" }) { ref ->
-                        VerseRefCard(
-                            ref           = ref,
-                            accentColor   = MaterialTheme.colorScheme.tertiary,
-                            showSurahName = true,
-                            modifier      = Modifier.padding(horizontal = 16.dp),
-                            onClick       = {
-                                quickPeekTarget = QuickPeekTarget(
-                                    verseId    = ref.verseId,
-                                    surahId    = ref.surahId,
-                                    ayahNumber = ref.ayahNumber,
-                                    pageNumber = ref.pageNumber
-                                )
-                            }
+                if (found.more > 0) {
+                    item(key = "similar-more") {
+                        Text(
+                            text = pluralStringResource(R.plurals.group_similar_more, found.more, found.more),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = PaperSpace.Gutter, vertical = 12.dp)
                         )
                     }
                 }
             }
-
-            item { Spacer(Modifier.height(32.dp)) }
         }
     }
 
-    quickPeekTarget?.let { target ->
-        QuickPeekBottomSheet(
-            target    = target,
-            onDismiss = { quickPeekTarget = null },
-            onOpenMushaf = onOpenMushaf
-        )
+    peek?.let { target ->
+        QuickPeekBottomSheet(target = target, onDismiss = { peek = null }, onOpenMushaf = onOpenMushaf)
     }
 }
 
-// ── Verse reference card ──────────────────────────────────────────────────────
-
+/** Where a verse is: its surah and number, and its page. */
 @Composable
-private fun VerseRefCard(
-    ref: MemberVerseRef,
-    accentColor: Color,
-    showSurahName: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
+private fun verseRef(surahId: Int, ayah: Int, page: Int): String =
+    stringResource(R.string.saved_ref, SurahData.nameOf(surahId), ayah) + " · " + stringResource(R.string.page_n, page)
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(14.dp)
-            )
-            .clickable(onClick = onClick)
-    ) {
-        Box(
+/** A verse of the group: where it is, and its words with those the other verses share in colour; tapping shows it. */
+@Composable
+private fun MemberRow(ref: MemberVerseRef, shared: List<IntRange>, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
+        Column(
             modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(
-                    color = accentColor,
-                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
-                )
-        )
+                .fillMaxWidth()
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = verseRef(ref.surahId, ref.ayahNumber, ref.pageNumber),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+            AyahText(ayahId = ref.verseId, size = 22.sp, marked = shared, markColor = MaterialTheme.colorScheme.primary)
+        }
+        Hairline(Modifier.fillMaxWidth())
+    }
+}
 
+/** A look-alike not in the group: chosen or not (the row is the switch), the words it shares in colour, and an eye to see it. */
+@Composable
+private fun SuggestionRow(suggestion: GroupDetailViewModel.Suggestion, on: Boolean, onToggle: () -> Unit, onPeek: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
         Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
+                .fillMaxWidth()
+                .clickable(role = Role.Checkbox, onClick = onToggle)
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                if (showSurahName) {
-                    Text(
-                        text          = SurahData.nameOf(ref.surahId),
-                        style         = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = if (isArabic) AmiriFontFamily else FontFamily.Default
-                        ),
-                        color         = accentColor,
-                        fontWeight    = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                }
+            Icon(
+                imageVector = if (on) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                contentDescription = null,
+                tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(top = 2.dp).size(24.dp)
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text       = stringResource(R.string.ayah_n, ref.ayahNumber),
-                    style      = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onSurface
+                    text = verseRef(suggestion.surahId, suggestion.ayahNumber, suggestion.page),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+                AyahText(
+                    ayahId = suggestion.ayahId,
+                    size = 22.sp,
+                    color = if (on) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+                    marked = suggestion.shared,
+                    markColor = MaterialTheme.colorScheme.primary
                 )
             }
-
-            Surface(
-                shape  = RoundedCornerShape(12.dp),
-                color  = accentColor.copy(alpha = 0.10f),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text       = stringResource(R.string.page_n, ref.pageNumber),
-                    modifier   = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                    style      = MaterialTheme.typography.labelSmall,
-                    color      = accentColor,
-                    fontWeight = FontWeight.SemiBold
-                )
+            IconButton(onClick = onPeek) {
+                Icon(Icons.Outlined.Visibility, contentDescription = stringResource(R.string.cd_preview_verse), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        Hairline(Modifier.fillMaxWidth())
     }
 }
 
-// ── Sticky section header ─────────────────────────────────────────────────────
-
+/** At the foot while look-alikes are chosen: the button that adds them, and a link that clears the choice. */
 @Composable
-private fun DetailSectionHeader(
-    label: String,
-    subtitle: String,
-    accent: Color,
-    count: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
+private fun AddBar(count: Int, onAdd: () -> Unit, onClear: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.background, shadowElevation = 8.dp) {
+        Row(
             modifier = Modifier
-                .width(3.dp)
-                .height(28.dp)
-                .background(accent, RoundedCornerShape(2.dp))
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text          = label,
-                style         = MaterialTheme.typography.labelMedium,
-                fontWeight    = FontWeight.Black,
-                color         = accent,
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = PaperSpace.Gutter, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PaperButton(
+                text = pluralStringResource(R.plurals.group_similar_add, count, count),
+                onClick = onAdd,
+                modifier = Modifier.weight(1f)
             )
-            Text(
-                text  = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            PaperLink(text = stringResource(R.string.group_similar_clear), onClick = onClear, soft = true)
         }
-        if (count > 0) {
-            Surface(
-                shape  = RoundedCornerShape(12.dp),
-                color  = accent.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text       = "$count",
-                    modifier   = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    style      = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Black,
-                    color      = accent
-                )
-            }
-        }
-    }
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun DetailEmptyHint(message: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier         = modifier
-            .fillMaxWidth()
-            .padding(vertical = 20.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text       = message,
-            style      = MaterialTheme.typography.bodySmall,
-            color      = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign  = TextAlign.Center,
-            lineHeight = 20.sp
-        )
     }
 }

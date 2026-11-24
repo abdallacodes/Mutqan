@@ -75,9 +75,7 @@ class NextWords internal constructor(
                 // ...or a word more there, this verse's words after it.
                 if (same) 0 else run(v, i, s, j + 1)
             )
-            // A word this verse has and the other leaves out: no candidate, but the verses agree.
-            val skipped = if (same) 0 else run(v, i + 1, s, j)
-            if (before + max(after, skipped) + (if (same) 1 else 0) >= SHARING) sharing.merge(other, 1, Int::plus)
+            if (agreement(v, i, s, j) >= SHARING) sharing.merge(other, 1, Int::plus)
             if (same) return
             if (left == 0 && !framed) return
             var score = before + after + bonus
@@ -91,15 +89,7 @@ class NextWords internal constructor(
             if (had == null || had.score < score) best[i][word] = Candidate(Place(other, j), score)
         }
 
-        for (i in 0 until n) {
-            if (i == 1) forEach(byStart, v[0].toLong(), START_SHIFT) { p ->
-                val other = (p and AYAH_IN_START).toInt()
-                if (ids[other - 1].size > 1) offer(1, other, 1, 0f, false)
-            }
-            if (i >= 2) forEach(byPair, pair(v[i - 2], v[i - 1]), SHIFT) { p -> offer(i, ayahOf(p), indexOf(p), 0f, false) }
-            if (i >= 1 && i + 1 < n) forEach(bySkip, pair(v[i - 1], v[i + 1]), SHIFT) { p -> offer(i, ayahOf(p), indexOf(p), 0f, false) }
-            if (i >= 1) forEach(bySkip, pair(v[i - 1], v[i]), SHIFT) { p -> offer(i, ayahOf(p), indexOf(p), 0f, false) }
-        }
+        forEachHit(v) { i, other, j -> offer(i, other, j, 0f, false) }
 
         // The verses that look like this one, laid beside it: the known ones, and those found sharing much with it.
         val beside = LinkedHashMap<Int, Float>()
@@ -119,6 +109,41 @@ class NextWords internal constructor(
                 .map { (word, c) -> c.copy(score = c.score + TIE * min((count[i][word] ?: 1) - 1, MOST_TIES)) }
                 .sortedByDescending { it.score }
                 .take(max)
+        }
+    }
+
+    /**
+     * The verses that share much with [ayahId] (four words or more agreeing around one place), the most such places
+     * first, at most [most]: look-alikes the ready lists may not have. Verses with the very same words are among them.
+     */
+    fun lookAlikes(ayahId: Int, most: Int = MOST_LOOK_ALIKES): List<Int> {
+        val v = ids.getOrNull(ayahId - 1) ?: return emptyList()
+        val sharing = HashMap<Int, Int>()
+        forEachHit(v) { i, other, j ->
+            if (other != ayahId && agreement(v, i, ids[other - 1], j) >= SHARING) sharing.merge(other, 1, Int::plus)
+        }
+        return sharing.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key }).take(most).map { it.key }
+    }
+
+    /** How alike two verses are: the words they share in order, over the words of the shorter (0 to 1). */
+    fun likeness(ayahId: Int, other: Int): Float {
+        val v = ids.getOrNull(ayahId - 1) ?: return 0f
+        val s = ids.getOrNull(other - 1) ?: return 0f
+        if (v.isEmpty() || s.isEmpty()) return 0f
+        return shared(v, s).size.toFloat() / min(v.size, s.size)
+    }
+
+    /** Calls [hit] with each place (another ayah, a word index) the indexes find for each word [i] of [v]. */
+    private inline fun forEachHit(v: IntArray, hit: (i: Int, other: Int, j: Int) -> Unit) {
+        val n = v.size
+        for (i in 0 until n) {
+            if (i == 1) forEach(byStart, v[0].toLong(), START_SHIFT) { p ->
+                val other = (p and AYAH_IN_START).toInt()
+                if (ids[other - 1].size > 1) hit(1, other, 1)
+            }
+            if (i >= 2) forEach(byPair, pair(v[i - 2], v[i - 1]), SHIFT) { p -> hit(i, ayahOf(p), indexOf(p)) }
+            if (i >= 1 && i + 1 < n) forEach(bySkip, pair(v[i - 1], v[i + 1]), SHIFT) { p -> hit(i, ayahOf(p), indexOf(p)) }
+            if (i >= 1) forEach(bySkip, pair(v[i - 1], v[i]), SHIFT) { p -> hit(i, ayahOf(p), indexOf(p)) }
         }
     }
 
@@ -147,6 +172,9 @@ class NextWords internal constructor(
     companion object {
         /** Candidates kept for each word. */
         const val MOST = 4
+
+        /** Verses found sharing much with one, at most. */
+        const val MOST_LOOK_ALIKES = 12
 
         /** What a verse from the reader's own mutashabihat groups adds; one from the ready lists. */
         const val FROM_GROUP = 3f
@@ -192,6 +220,19 @@ class NextWords internal constructor(
 
         /** Packs two word numbers (each under 2^15) into one. */
         private fun pair(a: Int, b: Int): Long = (a.toLong() shl 15) or b.toLong()
+
+        /**
+         * How much [v] and [s] agree around word [i] of [v] and word [j] of [s]: the words before that are the same (the
+         * start of both counting as half), the word itself, and the words after (one more or one fewer between).
+         */
+        private fun agreement(v: IntArray, i: Int, s: IntArray, j: Int): Float {
+            if (i !in v.indices || j !in s.indices) return 0f
+            var left = 0
+            while (left < MAX_LEFT && i - left - 1 >= 0 && j - left - 1 >= 0 && v[i - left - 1] == s[j - left - 1]) left++
+            val before = left + if (left < MAX_LEFT && i - left == 0 && j - left == 0) START else 0f
+            if (v[i] == s[j]) return before + 1 + run(v, i + 1, s, j + 1)
+            return before + maxOf(run(v, i + 1, s, j + 1), run(v, i, s, j + 1), run(v, i + 1, s, j))
+        }
 
         /** How many words of [v] from [i] and of [s] from [j] are the same, one for one (at most [MAX_RIGHT]). */
         private fun run(v: IntArray, i: Int, s: IntArray, j: Int): Int {

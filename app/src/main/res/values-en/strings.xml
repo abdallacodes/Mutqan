@@ -1580,4 +1580,31 @@
     <string name="game_news_short_wind">Wind</string>
     <string name="game_news_short_none_given">No words given</string>
     <string name="game_news_short_seventh">A seventh lantern</string>
+    <!-- Mutashabihat: a group and its look-alikes, deleting from the vault. -->
+    <string name="vault_delete_group_title">Delete the group?</string>
+    <string name="vault_delete_group_body">The group “%1$s” and the links of its verses to it are deleted. This can\'t be undone.</string>
+    <string name="vault_delete_folder_title">Delete the folder?</string>
+    <string name="vault_delete_folder_body">The folder “%1$s” and its subfolders are deleted; their groups move to Uncategorized.</string>
+    <string name="group_members_title">Verses in the group</string>
+    <string name="group_in_surah">In %1$s</string>
+    <string name="group_in_other_surahs">In other surahs</string>
+    <string name="group_similar_title">Verses like these</string>
+    <string name="group_similar_hint">From the ready lists, and verses that share many words with them. Shared words are in colour; pick the ones to add to the group.</string>
+    <string name="group_similar_loading">Looking for verses like these…</string>
+    <string name="group_similar_none">No other verses look like the ones in this group.</string>
+    <string name="group_similar_clear">Clear</string>
+    <string name="cd_preview_verse">Preview the verse</string>
+    <plurals name="group_similar_add">
+        <item quantity="one">Add %d verse to the group</item>
+        <item quantity="other">Add %d verses to the group</item>
+    </plurals>
+    <plurals name="group_similar_added">
+        <item quantity="zero">They were all in the group already</item>
+        <item quantity="one">Added %d verse to the group</item>
+        <item quantity="other">Added %d verses to the group</item>
+    </plurals>
+    <plurals name="group_similar_more">
+        <item quantity="one">and %d more, less alike</item>
+        <item quantity="other">and %d more, less alike</item>
+    </plurals>
 </resources>

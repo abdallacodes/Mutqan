@@ -7,53 +7,105 @@ import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
 import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
-import com.example.mutqan.domain.StudyRepository
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.example.mutqan.domain.SimilarLibrary
+import com.example.mutqan.domain.StudyRepository
+import com.example.mutqan.domain.game.NextWords
+import com.example.mutqan.quran.QuranRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
+/**
+ * One of the user's mutashabihat groups: its verses (each with the words it shares with the others), and the verses
+ * that look like them and are not in it yet, to choose from and add.
+ */
 class GroupDetailViewModel(
     val groupId: Int,
     val currentSurahId: Int,
+    private val appContext: Context,
     private val dao: StudyDao,
     private val study: StudyRepository
 ) : ViewModel() {
 
-    private val _group = MutableStateFlow<SimilarityGroupEntity?>(null)
-    val group: StateFlow<SimilarityGroupEntity?> = _group.asStateFlow()
+    /** A verse of the group: where it is, and its words (1-based ranges) that the other verses of the group have too. */
+    data class Member(val ref: MemberVerseRef, val shared: List<IntRange>)
 
-    /**
-     * Verses that belong to [currentSurahId] — the "home" context for this group.
-     */
-    val contextVerses: StateFlow<List<MemberVerseRef>> = study
-        .membersForGroup(groupId)
-        .map { list -> list.filter { it.surahId == currentSurahId } }
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
+    /** A verse like the group's that is not in it: where it is, and its words shared with the verse of the group it is most like. */
+    data class Suggestion(val ayahId: Int, val surahId: Int, val ayahNumber: Int, val page: Int, val shared: List<IntRange>)
 
-    /**
-     * Verses from every Surah other than [currentSurahId] — the "clashes".
-     */
-    val clashVerses: StateFlow<List<MemberVerseRef>> = study
-        .membersForGroup(groupId)
-        .map { list -> list.filter { it.surahId != currentSurahId } }
-        .stateIn(
-            scope        = viewModelScope,
-            started      = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
+    /** The look-alikes found: the closest [shown], and how many more there are. */
+    data class Suggestions(val shown: List<Suggestion>, val more: Int)
 
-    init {
-        viewModelScope.launch {
-            _group.value = dao.getGroupById(groupId)
+    private val quran = QuranRepository.getInstance(appContext)
+
+    val group: StateFlow<SimilarityGroupEntity?> = dao.observeGroups()
+        .map { groups -> groups.firstOrNull { it.id == groupId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The group's verses in reading order, each with its shared words; null while they are read. */
+    val members: StateFlow<List<Member>?> = study.membersForGroup(groupId)
+        .map { refs -> withShared(refs) }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The verses like the group's that are not in it, the most alike first; null while they are found. */
+    val suggestions: StateFlow<Suggestions?> = study.membersForGroup(groupId)
+        .map { refs -> suggest(refs.map { it.verseId }) }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Puts [ayahIds] in the group; returns how many were not in it already. */
+    suspend fun add(ayahIds: Collection<Int>): Int = ayahIds.count { study.addAyahToGroup(groupId, it) }
+
+    private fun withShared(refs: List<MemberVerseRef>): List<Member> {
+        if (refs.size < 2) return refs.map { Member(it, emptyList()) }
+        val next = NextWords.get(quran)
+        return refs.map { ref ->
+            val ranges = refs.filter { it.verseId != ref.verseId }.flatMap { other -> next.sharedWords(other.verseId, ref.verseId) }
+            Member(ref, merge(ranges))
+        }
+    }
+
+    private suspend fun suggest(ids: List<Int>): Suggestions {
+        if (ids.isEmpty()) return Suggestions(emptyList(), 0)
+        val listed = SimilarLibrary.load(appContext)
+        val next = NextWords.get(quran)
+        val index = quran.ayahIndex
+        val inGroup = ids.toSet()
+        // Each look-alike with the verse of the group it is most like, and how alike they are.
+        val closest = HashMap<Int, Pair<Int, Float>>()
+        for (member in ids) {
+            val found = listed.similarTo(member).map { it.ayahId } + next.lookAlikes(member)
+            for (other in found) {
+                if (other in inGroup || other !in index) continue
+                val likeness = next.likeness(member, other)
+                val had = closest[other]
+                if (had == null || had.second < likeness) closest[other] = member to likeness
+            }
+        }
+        val ranked = closest.entries.sortedWith(compareByDescending<Map.Entry<Int, Pair<Int, Float>>> { it.value.second }.thenBy { it.key })
+        val shown = ranked.take(MOST_SHOWN).map { (other, best) ->
+            Suggestion(other, index.surahOf(other), index.ayahOf(other), index.firstPageOf(other), next.sharedWords(best.first, other))
+        }
+        return Suggestions(shown, (ranked.size - shown.size).coerceAtLeast(0))
+    }
+
+    private companion object {
+        /** Look-alikes shown at most. */
+        const val MOST_SHOWN = 40
+
+        /** [ranges] as few as can be: overlapping and touching ones joined, in order. */
+        fun merge(ranges: List<IntRange>): List<IntRange> {
+            val out = ArrayList<IntRange>()
+            for (r in ranges.sortedBy { it.first }) {
+                val last = out.lastOrNull()
+                if (last != null && r.first <= last.last + 1) out[out.size - 1] = last.first..maxOf(last.last, r.last) else out += r
+            }
+            return out
         }
     }
 }
@@ -68,6 +120,7 @@ class GroupDetailViewModelFactory(
         GroupDetailViewModel(
             groupId        = groupId,
             currentSurahId = currentSurahId,
+            appContext     = context.applicationContext,
             dao            = AppDatabase.getInstance(context).studyDao(),
             study          = StudyRepository.create(context)
         ) as T
