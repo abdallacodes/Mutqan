@@ -304,6 +304,61 @@ class LanternsGameTest {
         assertTrue("tempo ${g.tempo} after a slip", g.tempo < 1.05f)
     }
 
+    /** Seconds until a lantern of the word wanted now has risen to where it can be read. */
+    private fun LanternsGame.secondsUntilWantedReadable(): Float {
+        var t = 0f
+        while (t < 30f) {
+            if (lanterns.any { it.state == LanternState.RISING && it.word?.key == needed?.key && it.y <= LanternsGame.READ_LINE }) return t
+            update(0.02f)
+            t += 0.02f
+        }
+        return t
+    }
+
+    private fun calm(dials: Dials = GameModes.calmDials, seed: Int = 4) =
+        LanternsGame(FakeSource(), Random(seed), dials, GameModes.calmRules).also { it.start() }
+
+    @Test
+    fun theCalmSkyBringsTheWantedWordWithoutAWait() {
+        for (seed in 1..6) {
+            val brought = calm(seed = seed)
+            val plain = calm(GameModes.calmDials.copy(catchUp = 1f), seed)
+            val quick = brought.secondsUntilWantedReadable()
+            val slow = plain.secondsUntilWantedReadable()
+            assertTrue("seed $seed: the first word took $quick s (without bringing $slow s)", quick < 2.5f && quick < slow / 2)
+            // And after each right word, the next is readable within moments.
+            repeat(2) {
+                brought.tap(brought.lanterns.first { it.state == LanternState.RISING && it.word?.key == brought.needed?.key && it.y <= LanternsGame.READ_LINE }.id)
+                val next = brought.secondsUntilWantedReadable()
+                assertTrue("seed $seed: the next word took $next s", next < 2.5f)
+            }
+        }
+    }
+
+    @Test
+    fun onceTheWantedWordIsUpTheCalmSkySettles() {
+        val g = calm()
+        g.secondsUntilWantedReadable()
+        repeat(150) { g.update(0.02f) }
+        assertTrue("tempo ${g.tempo} with the wanted word up", g.tempo < 1.2f)
+    }
+
+    @Test
+    fun theCalmSkyBringingWordsKeepsLanternsApart() {
+        val g = calm(seed = 9)
+        repeat(1500) { step ->
+            g.update(0.02f)
+            // Now and then a right word, so the sky keeps bringing the next one.
+            if (step % 120 == 0) g.lanterns.firstOrNull { it.state == LanternState.RISING && it.word?.key == g.needed?.key && it.y < 0.95f }?.let { g.tap(it.id) }
+            if (g.waiting) g.proceed()
+            val rising = g.lanterns.filter { it.state == LanternState.RISING }
+            for (a in rising) for (b in rising) {
+                if (a === b || kotlin.math.abs(a.lane - b.lane) > 1) continue
+                assertTrue("lanterns ${a.id} and ${b.id} overlap", kotlin.math.abs(a.y - b.y) >= g.lanternHeight * 1.0f)
+            }
+        }
+    }
+
     @Test
     fun theWrongWordsAreAskedForTheWantedWordsPlace() {
         val source = FakeSource()

@@ -18,8 +18,12 @@ object GameModes {
     /** A calm sitting: this many verses (a few minutes, a break), then what was built. */
     const val CALM_VERSES = 7
 
-    /** A slow, steady sky with the next word always up; no helpers, since nothing can be lost. */
-    val calmDials = Dials(speed = 0.06f, interval = 1.7f, sky = 4, helperEvery = NEVER, ahead = 1)
+    /**
+     * A slow, steady sky with the next word always up; no helpers, since nothing can be lost. The sky brings the word
+     * wanted up quickly when it is not where it can be read yet, then rises calmly again: the verse goes at the reader's
+     * pace, not the sky's.
+     */
+    val calmDials = Dials(speed = 0.06f, interval = 1.2f, sky = 4, helperEvery = NEVER, ahead = 1, catchUp = 4f)
 
     /** The share of wrong lanterns that are traps in a calm sitting: some, to think about, nothing to lose. */
     const val CALM_TRAPS = 0.35f

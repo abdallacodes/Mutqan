@@ -236,9 +236,11 @@ class LanternsGame(
         time += step
         if (slowLeft > 0f) slowLeft = (slowLeft - step).coerceAtLeast(0f)
         // The run quickens the whole sky together (lanterns side by side never drift into each other), and a slip
-        // lets it settle back, not jump.
-        val aim = min(1f + dials.flow * min(combo, FLOW_RUN), maxOf(1f, TOP_SPEED / dials.speed))
-        tempo += (aim - tempo) * min(1f, step * TEMPO_EASE)
+        // lets it settle back, not jump. Where the dials say so, the sky also brings the word wanted up when it is not
+        // up yet where it can be read, then settles.
+        val bringing = dials.catchUp > 1f && celebrating <= 0f && !waiting && wantedBelowReach()
+        val aim = if (bringing) dials.catchUp else min(1f + dials.flow * min(combo, FLOW_RUN), maxOf(1f, TOP_SPEED / dials.speed))
+        tempo += (aim - tempo) * min(1f, step * if (bringing) CATCH_EASE else TEMPO_EASE)
         val move = (if (slowLeft > 0f) step * SLOW_FACTOR else step) * tempo
 
         age(step)
@@ -306,6 +308,12 @@ class LanternsGame(
     }
 
     private fun speedNow(): Float = dials.speed
+
+    /** True while no lantern of the word wanted now has risen to [READ_LINE] (none sent up yet, or still low). */
+    private fun wantedBelowReach(): Boolean {
+        val key = needed?.key ?: return false
+        return lanterns.none { it.state == LanternState.RISING && it.kind == LanternKind.WORD && it.word?.key == key && it.y <= READ_LINE }
+    }
 
     private fun wordLanternsRising(): List<Lantern> =
         lanterns.filter { it.state == LanternState.RISING && it.kind == LanternKind.WORD }
@@ -554,6 +562,12 @@ class LanternsGame(
 
         /** How quickly the tempo follows the run, a share a second. */
         private const val TEMPO_EASE = 2.5f
+
+        /** How quickly the sky gathers speed to bring the word wanted ([Dials.catchUp]), a share a second. */
+        private const val CATCH_EASE = 5f
+
+        /** Where (screen height down) a lantern's middle has risen far enough to be read and tapped at ease. */
+        const val READ_LINE = 0.8f
 
         /** At most this many seconds pass before the next lantern when the word wanted is not in the sky. */
         private const val NEEDED_SOON = 0.6f
