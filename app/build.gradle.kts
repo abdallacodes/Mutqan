@@ -16,8 +16,8 @@ android {
         applicationId = "com.mutqan.quran"
         minSdk = 24
         targetSdk = 36
-        versionCode = 70301
-        versionName = "7.3.1"
+        versionCode = 70400
+        versionName = "7.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
