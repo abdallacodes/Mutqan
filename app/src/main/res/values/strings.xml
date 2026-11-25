@@ -37,7 +37,6 @@
     <string name="btn_save">حفظ</string>
     <string name="btn_edit">تعديل</string>
     <string name="btn_delete">حذف</string>
-    <string name="btn_add">إضافة</string>
 
     <!-- ── Revision Log Screen ──────────────────────────────────────────────── -->
     <string name="journal_title">دفتر المراجعة</string>
@@ -121,31 +120,12 @@
     <string name="section_memorization_notes">ملاحظات الحفظ</string>
     <string name="placeholder_memorization_notes">تلميحات، روابط بين الكلمات، أو أي ما يساعدك على تمييز هذه المجموعة…</string>
     <string name="section_mastery">مستوى الإتقان</string>
-    <string name="section_link_verse">ربط آية</string>
-    <string name="linked_verses_header">الآيات المرتبطة  (%d)</string>
     <string name="group_desc_placeholder">مثال: وَإِذْ قَالَ رَبُّكَ / وَإِذْ قَالَ اللَّهُ</string>
-    <string name="cd_save_group">حفظ المجموعة</string>
     <string name="cd_more_options">خيارات إضافية</string>
     <string name="cd_drag_handle">مقبض السحب</string>
     <string name="cd_verse_blank">فراغ</string>
     <string name="cd_another_verse">آية أخرى</string>
-    <string name="cd_delete_verse">حذف الآية</string>
-    <string name="cd_peek_verse">معاينة الآية</string>
-    <string name="section_search_by_text">أو ابحث بالنص</string>
-    <string name="label_filter_surah">تصفية حسب السورة</string>
-    <string name="label_filter_juz_range">نطاق الأجزاء</string>
-    <string name="label_juz_start">من جزء</string>
-    <string name="label_juz_end">إلى جزء</string>
     <string name="all_surahs">كل السور</string>
-    <string name="placeholder_search_arabic">اكتب كلمات عربية للبحث…</string>
-    <string name="label_surah">السورة</string>
-    <string name="label_ayah">الآية</string>
-    <string name="placeholder_ayah_range">1–…</string>
-    <string name="error_invalid_ref">سورة/آية غير صحيحة</string>
-    <string name="snackbar_no_verse">لم يُعثر على هذه الآية.</string>
-    <string name="snackbar_already_member">هذه الآية موجودة في المجموعة بالفعل.</string>
-    <string name="snackbar_verse_added">تمت إضافة الآية.</string>
-    <string name="snackbar_desc_required">أدخل وصفًا قبل إضافة الآيات.</string>
     <string name="label_page">صفحة\u00A0%d</string>
     <string name="group_notes_detail_label">ملاحظات الحفظ</string>
 
@@ -255,7 +235,6 @@
 
     <!-- ── New group hints ────────────────────────────────────────────────── -->
     <string name="hint_add_two_verses">أضف آيتين على الأقل لتعريف مجموعة تشابه.</string>
-    <string name="hint_group_ready">المجموعة جاهزة للحفظ!</string>
 
     <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
 
@@ -358,8 +337,6 @@
     <string name="error_folder_name_exists">اسم المجلد موجود بالفعل</string>
     <string name="subject_name_label">اسم الموضوع</string>
     <string name="subject_start_ayah_label">آية البداية</string>
-    <string name="search_filters_title">خيارات البحث</string>
-    <string name="search_no_results_filtered">لا توجد نتائج بالمرشحات الحالية</string>
     <string name="error_unknown">خطأ غير معروف</string>
     <string name="err_open_output">تعذّر فتح ملف الحفظ</string>
     <string name="err_open_input">تعذّر فتح الملف المحدد</string>
@@ -1604,20 +1581,6 @@
     <string name="add_to_group_row">%1$s · %2$s</string>
     <string name="add_to_group_already">الآية في هذه المجموعة</string>
     <string name="add_to_group_done">أُضيفت الآية إلى «%1$s»</string>
-    <string name="suggested_title">آيات مقترحة</string>
-    <string name="suggested_subtitle">آيات تشبه ما في هذه المجموعة، الأقرب أولًا</string>
-    <string name="suggested_none">لا توجد اقتراحات لآيات هذه المجموعة.</string>
-    <string name="suggested_more">المزيد</string>
-    <string name="suggested_not_similar">ليست مشابهة</string>
-    <string name="suggested_add">أضف إلى المجموعة</string>
-    <plurals name="suggested_hits">
-        <item quantity="zero">تشبه %d من آيات المجموعة</item>
-        <item quantity="one">تشبه آية من المجموعة</item>
-        <item quantity="two">تشبه آيتين من المجموعة</item>
-        <item quantity="few">تشبه %d آيات من المجموعة</item>
-        <item quantity="many">تشبه %d آيةً من المجموعة</item>
-        <item quantity="other">تشبه %d آية من المجموعة</item>
-    </plurals>
 
     <!-- Juz map (Structural Flow): quarter strip, quarter cards and the joint test -->
     <string name="map_cd_tracked">الربع %1$d، %2$d٪</string>
@@ -1849,6 +1812,29 @@
         <item quantity="few">و%d آيات أخرى أبعد شبهًا</item>
         <item quantity="many">و%d آية أخرى أبعد شبهًا</item>
         <item quantity="other">و%d آية أخرى أبعد شبهًا</item>
+    </plurals>
+    <!-- The mutashabihat group editor. -->
+    <string name="group_add_verses">أضف آيات</string>
+    <string name="group_find_verse">ابحث عن آية لتضيفها</string>
+    <string name="group_add_search_hint">كلمات من الآية، أو البقرة ٢٥٥</string>
+    <string name="group_add_tips">اكتب كلمات من الآية، أو اسم السورة ورقم الآية (البقرة ٢٥٥، أو ٢:٢٥٥)، ثم اختر ما تضيفه إلى المجموعة.</string>
+    <string name="group_in_cd">في المجموعة</string>
+    <string name="cd_remove_from_group">أخرجها من المجموعة</string>
+    <string name="group_verse_removed">أُخرجت الآية من المجموعة</string>
+    <string name="group_undo">تراجع</string>
+    <string name="group_save_needs_name">اكتب وصف المجموعة لتحفظها.</string>
+    <string name="group_leave_title">تخرج دون حفظ؟</string>
+    <string name="group_leave_text">ما غيّرته في هذه المجموعة لم يُحفظ بعد.</string>
+    <string name="group_leave_text_unsaveable">ما غيّرته لم يُحفظ، ولا تُحفظ المجموعة حتى يكون لها وصف وآيتان على الأقل.</string>
+    <string name="group_keep_editing">تابع التعديل</string>
+    <string name="group_leave_discard">اخرج دون حفظ</string>
+    <plurals name="group_similar_show_more">
+        <item quantity="zero">اعرض المزيد</item>
+        <item quantity="one">اعرض آية أخرى</item>
+        <item quantity="two">اعرض آيتين أخريين</item>
+        <item quantity="few">اعرض %d آيات أخرى</item>
+        <item quantity="many">اعرض %d آية أخرى</item>
+        <item quantity="other">اعرض %d آية أخرى</item>
     </plurals>
     <string name="game_focus_alike">ركّز على المتشابهات</string>
     <string name="game_focus_alike_hint">آيات لها متشابهات في حفظك، وتأتي متشابهتها بعدها مباشرة لتفرّق بينهما.</string>

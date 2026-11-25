@@ -210,9 +210,17 @@ class VerseSearchViewModel(
         pickList.value = listId
     }
 
+    /** True while verses are picked for a group being edited: like those picked for a list, they stay ticked from one search to the next. */
+    private var pickingForGroup = false
+
+    /** Picks verses for the group being edited (the editor adds the ticked ones itself). */
+    fun pickForGroup() {
+        pickingForGroup = true
+    }
+
     fun setQuery(text: String) {
-        // Verses picked for a list stay picked through several searches; a look-alike group is one search's.
-        if (pickList.value == 0 && text.trim() != query.value.trim()) chosen.value = emptySet()
+        // Verses picked for a list or a group stay picked through several searches; a look-alike group is one search's.
+        if (pickList.value == 0 && !pickingForGroup && text.trim() != query.value.trim()) chosen.value = emptySet()
         query.value = text
     }
 

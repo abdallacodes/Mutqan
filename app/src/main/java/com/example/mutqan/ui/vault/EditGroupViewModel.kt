@@ -5,359 +5,163 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.mutqan.data.local.AppDatabase
-import com.example.mutqan.data.local.dao.MemberVerseRef
 import com.example.mutqan.data.local.dao.StudyDao
 import com.example.mutqan.data.local.entity.SimilarityGroupEntity
-import com.example.mutqan.data.local.entity.SimilarityMemberEntity
-import com.example.mutqan.domain.GroupSuggestion
-import com.example.mutqan.domain.GroupSuggestions
-import com.example.mutqan.domain.SimilarData
-import com.example.mutqan.domain.SimilarLibrary
-import com.example.mutqan.domain.StudyRepository
-import com.example.mutqan.quran.QuranAyah
 import com.example.mutqan.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// ── Verse-add feedback ────────────────────────────────────────────────────────
-
-sealed interface AddVerseResult {
-    data object Idle : AddVerseResult
-    data object Added : AddVerseResult
-    data object InvalidRef : AddVerseResult          // Surah/Ayah not found in DB
-    data object AlreadyMember : AddVerseResult       // verse already in this group
-    data object DescriptionRequired : AddVerseResult // must enter description before adding verse
+/** What the editor's fields hold: the group's description, its notes, how well it is known, and its folder. */
+data class GroupForm(
+    val description: String = "",
+    val notes: String = "",
+    val quality: Float = DEFAULT_QUALITY,
+    val folderId: Int? = null
+) {
+    companion object {
+        const val DEFAULT_QUALITY = 0.5f
+    }
 }
 
-/** An ayah proposed for the group, with where it is in the Quran. */
-data class SuggestedAyah(val suggestion: GroupSuggestion, val surah: Int, val ayah: Int)
-
-// ── UI State ──────────────────────────────────────────────────────────────────
-
-data class EditGroupUiState(
-    val description: String = "",
-    val memorizationNotes: String = "",
-    val masterQuality: Float = 0.5f,
-    val folderId: Int? = null,
-    // ── Verse picker fields ──
-    val selectedSurahId: Int? = null,   // set when user picks from dropdown
-    val surahFilterQuery: String = "",  // live filter text inside the surah dropdown
-    val ayahInput: String = "",         // manual ayah entry or filled by search pick
-    val textSearchQuery: String = "",   // Arabic text search field
-    // ── New search filters ──
-    val searchFilterSurahId: Int? = null,
-    val searchFilterJuzStart: Int? = null,
-    val searchFilterJuzEnd: Int? = null,
-    // ── Feedback ──
-    val addVerseResult: AddVerseResult = AddVerseResult.Idle,
-    val isSaved: Boolean = false
-)
-
-// ── ViewModel ─────────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+/**
+ * The mutashabihat group editor. It works on a copy: the fields and the verses change here only, and [save] writes
+ * them together, so leaving without saving leaves the group as it was (the screen asks first, see [changed]).
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class EditGroupViewModel(
+    private val appContext: Context,
+    /** The group being edited; null for a new one. */
+    private val groupId: Int?,
+    folderId: Int?,
     private val dao: StudyDao,
-    private val study: StudyRepository,
-    private val quran: QuranRepository,
-    private val similar: suspend () -> SimilarData
+    private val quran: QuranRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(EditGroupUiState())
-    val uiState: StateFlow<EditGroupUiState> = _uiState.asStateFlow()
+    /** The group as the editor found it: its fields and its verses. */
+    private data class Stored(val form: GroupForm, val ayahIds: List<Int>)
 
-    // Holds the DB id after the group row is first persisted
-    private val _savedGroupId = MutableStateFlow<Int?>(null)
+    private val stored = MutableStateFlow<Stored?>(null)
+    private val _form = MutableStateFlow<GroupForm?>(null)
+    /** The verses of the copy, in reading order; null while the group is read. */
+    private val ayahIds = MutableStateFlow<List<Int>?>(null)
+    /** The group's id once it has one (a new group gets it when first saved). */
+    private var savedId: Int? = groupId
+    private var saving = false
 
-    /**
-     * Live member list: emits immediately when [_savedGroupId] is set,
-     * and re-emits on every subsequent DB mutation.
-     */
-    val members: StateFlow<List<MemberVerseRef>> = _savedGroupId
-        .flatMapLatest { id ->
-            if (id == null) flowOf(emptyList()) else study.membersForGroup(id)
-        }
-        .stateIn(
-            scope   = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
+    /** The fields; null while the group is read. */
+    val form: StateFlow<GroupForm?> = _form.asStateFlow()
 
-    private val dismissed = MutableStateFlow<Set<Int>>(emptySet())
-
-    /**
-     * Ayahs that resemble the ones already in the group, best first (the screen shows a few at a time). Empty until the
-     * group has its first ayah, and it re-ranks each time an ayah is added or set aside.
-     */
-    val suggestions: StateFlow<List<SuggestedAyah>> = combine(members, dismissed) { list, hidden -> list.map { it.verseId } to hidden }
-        .mapLatest { (ids, hidden) ->
-            if (ids.isEmpty()) emptyList()
-            else {
-                val index = quran.ayahIndex
-                GroupSuggestions.rank(similar(), ids, hidden)
-                    .filter { it.ayahId in index }
-                    .map { SuggestedAyah(it, index.surahOf(it.ayahId), index.ayahOf(it.ayahId)) }
-            }
-        }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Puts a suggested ayah into the group. */
-    fun addSuggestion(ayahId: Int) {
-        val groupId = _savedGroupId.value ?: return
-        viewModelScope.launch { dao.insertSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = ayahId)) }
-    }
-
-    /** Hides a suggestion the user says is not similar; it stays hidden until the editor is closed. */
-    fun dismissSuggestion(ayahId: Int) = dismissed.update { it + ayahId }
-
-    /**
-     * Live Arabic text search results.
-     * Uses the improved DAO search with filters.
-     */
-    val textSearchResults: StateFlow<List<QuranAyah>> = _uiState
-        .debounce(300L)
-        .flatMapLatest { state ->
-            val query = state.textSearchQuery
-            if (query.length < 2) return@flatMapLatest flowOf(emptyList())
-            
-            flow {
-                val results = quran.search(
-                    query = query,
-                    surah = state.searchFilterSurahId,
-                    juzStart = state.searchFilterJuzStart,
-                    juzEnd = state.searchFilterJuzEnd
-                )
-                emit(results)
-            }
-        }
+    /** The copy's verses, each with its own words; null while the group is read. */
+    val members: StateFlow<List<GroupMember>?> = ayahIds
+        .mapLatest { ids -> ids?.let { list -> GroupVerses.withOwn(quran, list.mapNotNull { GroupVerses.ref(quran.ayahIndex, it) }) } }
         .flowOn(Dispatchers.IO)
-        .stateIn(
-            scope   = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Set initial folder for a new group. */
-    fun setInitialFolder(folderId: Int?) {
-        _uiState.update { it.copy(folderId = folderId) }
-    }
+    /** The verses like the copy's that are not in it, the most alike first; null while they are found. */
+    val lookAlikes: StateFlow<LookAlikes?> = ayahIds
+        .mapLatest { ids -> ids?.let { GroupVerses.lookAlikes(appContext, quran, it) } }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Load an existing group into the editor (edit mode). */
-    fun loadGroup(groupId: Int) {
+    /** True when the copy differs from the group as it was found. */
+    val changed: StateFlow<Boolean> = combine(stored, _form, ayahIds) { s, f, ids ->
+        s != null && f != null && ids != null && (f != s.form || ids != s.ayahIds)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    init {
         viewModelScope.launch {
-            val group = dao.getGroupById(groupId) ?: return@launch
-            _savedGroupId.value = groupId
-            _uiState.update {
-                it.copy(
-                    description        = group.description,
-                    memorizationNotes  = group.memorizationNotes,
-                    masterQuality      = group.masterQuality,
-                    folderId           = group.folderId,
-                    isSaved            = true
+            val found = withContext(Dispatchers.IO) {
+                val group = groupId?.let { dao.getGroupById(it) }
+                if (group == null) Stored(GroupForm(folderId = folderId), emptyList())
+                else Stored(
+                    GroupForm(group.description, group.memorizationNotes, group.masterQuality, group.folderId),
+                    dao.getMemberAyahIds(group.id).sorted()
                 )
             }
+            stored.value = found
+            _form.value = found.form
+            ayahIds.value = found.ayahIds
         }
     }
 
-    // ── Field update handlers ──────────────────────────────────────────────────
+    fun onDescriptionChange(value: String) = _form.update { it?.copy(description = value) }
 
-    fun onDescriptionChange(value: String) =
-        _uiState.update { it.copy(description = value) }
+    fun onNotesChange(value: String) = _form.update { it?.copy(notes = value) }
 
-    fun onMemorizationNotesChange(value: String) =
-        _uiState.update { it.copy(memorizationNotes = value) }
+    fun onQualityChange(value: Float) = _form.update { it?.copy(quality = value) }
 
-    fun onQualityChange(q: Float) =
-        _uiState.update { it.copy(masterQuality = q) }
-
-    fun onSurahSelected(id: Int) = _uiState.update {
-        it.copy(selectedSurahId = id, surahFilterQuery = "", addVerseResult = AddVerseResult.Idle)
+    /** Puts [ids] in the copy; returns how many were not in it already. */
+    fun add(ids: Collection<Int>): Int {
+        val now = ayahIds.value ?: return 0
+        val index = quran.ayahIndex
+        val fresh = ids.distinct().filter { it !in now && it in index }
+        if (fresh.isNotEmpty()) ayahIds.value = (now + fresh).sorted()
+        return fresh.size
     }
 
-    fun onSurahFilterChange(v: String) = _uiState.update {
-        it.copy(surahFilterQuery = v, selectedSurahId = null, addVerseResult = AddVerseResult.Idle)
-    }
+    /** Takes [ayahId] out of the copy. */
+    fun remove(ayahId: Int) = ayahIds.update { it?.minus(ayahId) }
 
-    fun onAyahInputChange(v: String) = _uiState.update {
-        it.copy(ayahInput = v.filter(Char::isDigit).take(3), addVerseResult = AddVerseResult.Idle)
-    }
+    /** Whether the copy can be saved: a group needs a description and two verses at least. */
+    fun canSave(form: GroupForm?, count: Int): Boolean = form != null && form.description.isNotBlank() && count >= MIN_VERSES
 
-    fun onTextSearchChange(v: String) = _uiState.update {
-        it.copy(textSearchQuery = v, addVerseResult = AddVerseResult.Idle)
-    }
-
-    // ── New search filter handlers (Mutually Exclusive) ──
-    fun onSearchFilterSurahSelected(id: Int?) = _uiState.update { 
-        it.copy(
-            searchFilterSurahId = id,
-            searchFilterJuzStart = null, // Clear Juz when Surah is selected
-            searchFilterJuzEnd = null
-        ) 
-    }
-    
-    fun onSearchFilterJuzRangeChange(start: Int?, end: Int?) = _uiState.update {
-        it.copy(
-            searchFilterJuzStart = start, 
-            searchFilterJuzEnd = end,
-            searchFilterSurahId = null // Clear Surah when Juz is selected
-        )
-    }
-
-    /**
-     * Called when the user clicks the "Check" (V) icon on a search result.
-     * Adds the verse but DOES NOT clear the search query or filters.
-     */
-    fun onVerseSearchAdd(verse: QuranAyah) {
-        val state = _uiState.value
+    /** Writes the copy (the fields, and the verses put in and taken out), then calls [onSaved]. */
+    fun save(onSaved: () -> Unit) {
+        val f = _form.value ?: return
+        val ids = ayahIds.value ?: return
+        val before = stored.value ?: return
+        if (saving || !canSave(f, ids.size)) return
+        saving = true
         viewModelScope.launch {
-            // Auto-persist the group header on the first verse add
-            if (_savedGroupId.value == null) {
-                if (state.description.isBlank()) {
-                    _uiState.update { it.copy(addVerseResult = AddVerseResult.DescriptionRequired) }
-                    return@launch
-                }
-                val newId = dao.insertSimilarityGroup(
+            val id = withContext(Dispatchers.IO) {
+                dao.saveSimilarityGroup(
                     SimilarityGroupEntity(
-                        description        = state.description.trim(),
-                        masterQuality      = state.masterQuality,
-                        memorizationNotes  = state.memorizationNotes.trim(),
-                        folderId           = state.folderId
-                    )
+                        id = savedId ?: 0,
+                        description = f.description.trim(),
+                        masterQuality = f.quality,
+                        memorizationNotes = f.notes.trim(),
+                        folderId = f.folderId
+                    ),
+                    before = before.ayahIds,
+                    after = ids
                 )
-                _savedGroupId.value = newId.toInt()
-                _uiState.update { it.copy(isSaved = true) }
             }
-
-            val groupId = _savedGroupId.value ?: return@launch
-            if (members.value.any { it.verseId == verse.id }) {
-                _uiState.update { it.copy(addVerseResult = AddVerseResult.AlreadyMember) }
-                return@launch
-            }
-
-            dao.insertSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = verse.id))
-            _uiState.update { it.copy(addVerseResult = AddVerseResult.Added) }
+            savedId = id
+            stored.value = Stored(f, ids)
+            saving = false
+            onSaved()
         }
     }
 
-    fun clearAddResult() = _uiState.update { it.copy(addVerseResult = AddVerseResult.Idle) }
-
-    // ── Persistence ───────────────────────────────────────────────────────────
-
-    fun saveGroup() {
-        val state = _uiState.value
-        if (state.description.isBlank()) return
-        viewModelScope.launch {
-            val existingId = _savedGroupId.value
-            if (existingId == null) {
-                val newId = dao.insertSimilarityGroup(
-                    SimilarityGroupEntity(
-                        description        = state.description.trim(),
-                        masterQuality      = state.masterQuality,
-                        memorizationNotes  = state.memorizationNotes.trim(),
-                        folderId           = state.folderId
-                    )
-                )
-                _savedGroupId.value = newId.toInt()
-            } else {
-                dao.updateSimilarityGroup(
-                    SimilarityGroupEntity(
-                        id                 = existingId,
-                        description        = state.description.trim(),
-                        masterQuality      = state.masterQuality,
-                        memorizationNotes  = state.memorizationNotes.trim(),
-                        folderId           = state.folderId
-                    )
-                )
-            }
-            _uiState.update { it.copy(isSaved = true) }
-        }
-    }
-
-    fun addVerse() {
-        val state   = _uiState.value
-        val surahId = state.selectedSurahId
-        val ayah    = state.ayahInput.toIntOrNull()
-
-        viewModelScope.launch {
-            if (_savedGroupId.value == null) {
-                if (state.description.isBlank()) {
-                    _uiState.update { it.copy(addVerseResult = AddVerseResult.DescriptionRequired) }
-                    return@launch
-                }
-                val newId = dao.insertSimilarityGroup(
-                    SimilarityGroupEntity(
-                        description        = state.description.trim(),
-                        masterQuality      = state.masterQuality,
-                        memorizationNotes  = state.memorizationNotes.trim(),
-                        folderId           = state.folderId
-                    )
-                )
-                _savedGroupId.value = newId.toInt()
-                _uiState.update { it.copy(isSaved = true) }
-            }
-
-            val groupId = _savedGroupId.value ?: return@launch
-            val verse   = if (surahId != null && ayah != null) {
-                withContext(Dispatchers.IO) { quran.ayah(surahId, ayah) }
-            } else null
-
-            if (verse == null) {
-                _uiState.update { it.copy(addVerseResult = AddVerseResult.InvalidRef) }
-                return@launch
-            }
-
-            if (members.value.any { it.verseId == verse.id }) {
-                _uiState.update { it.copy(addVerseResult = AddVerseResult.AlreadyMember) }
-                return@launch
-            }
-
-            dao.insertSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = verse.id))
-            _uiState.update {
-                it.copy(
-                    selectedSurahId  = null,
-                    surahFilterQuery = "",
-                    ayahInput        = "",
-                    textSearchQuery  = "",
-                    addVerseResult   = AddVerseResult.Added
-                )
-            }
-        }
-    }
-
-    fun removeMember(member: MemberVerseRef) {
-        val groupId = _savedGroupId.value ?: return
-        viewModelScope.launch {
-            dao.deleteSimilarityMember(SimilarityMemberEntity(groupId = groupId, verseId = member.verseId))
-        }
+    companion object {
+        /** Verses a group needs at least. */
+        const val MIN_VERSES = 2
     }
 }
 
-class EditGroupViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+class EditGroupViewModelFactory(
+    private val context: Context,
+    private val groupId: Int?,
+    private val folderId: Int?
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         EditGroupViewModel(
+            context.applicationContext,
+            groupId,
+            folderId,
             AppDatabase.getInstance(context).studyDao(),
-            StudyRepository.create(context),
-            QuranRepository.getInstance(context),
-            { SimilarLibrary.load(context.applicationContext) }
+            QuranRepository.getInstance(context)
         ) as T
 }

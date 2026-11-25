@@ -37,7 +37,6 @@
     <string name="btn_save">SAVE</string>
     <string name="btn_edit">EDIT</string>
     <string name="btn_delete">DELETE</string>
-    <string name="btn_add">ADD</string>
 
     <!-- ── Revision Log Screen ──────────────────────────────────────────────── -->
     <string name="journal_title">THE JOURNAL</string>
@@ -109,31 +108,12 @@
     <string name="section_memorization_notes">MEMORIZATION NOTES</string>
     <string name="placeholder_memorization_notes">Mnemonics, patterns, word links, or anything that helps you keep this group distinct…</string>
     <string name="section_mastery">MEMORIZATION QUALITY</string>
-    <string name="section_link_verse">LINK A VERSE</string>
-    <string name="linked_verses_header">LINKED VERSES  (%d)</string>
     <string name="group_desc_placeholder">e.g.  \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0631\u064e\u0628\u064f\u0651\u0643\u064e / \u0648\u064e\u0625\u0650\u0630\u0652 \u0642\u064e\u0627\u0644\u064e \u0627\u0644\u0644\u064e\u0651\u0647\u064f</string>
-    <string name="cd_save_group">Save group</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_drag_handle">Drag handle</string>
     <string name="cd_verse_blank">blank</string>
     <string name="cd_another_verse">Another verse</string>
-    <string name="cd_delete_verse">Delete verse</string>
-    <string name="cd_peek_verse">Preview verse</string>
-    <string name="section_search_by_text">OR SEARCH BY TEXT</string>
-    <string name="label_filter_surah">Filter by Surah</string>
-    <string name="label_filter_juz_range">Juz Range</string>
-    <string name="label_juz_start">From Juz</string>
-    <string name="label_juz_end">To Juz</string>
     <string name="all_surahs">All Surahs</string>
-    <string name="placeholder_search_arabic">Type Arabic words to search…</string>
-    <string name="label_surah">Surah</string>
-    <string name="label_ayah">Ayah</string>
-    <string name="placeholder_ayah_range">1\u2013\u2026</string>
-    <string name="error_invalid_ref">Invalid Surah/Ayah</string>
-    <string name="snackbar_no_verse">No verse found for that Surah/Ayah.</string>
-    <string name="snackbar_already_member">That verse is already in this group.</string>
-    <string name="snackbar_verse_added">Verse added.</string>
-    <string name="snackbar_desc_required">Enter a description before adding verses.</string>
     <string name="label_page">Page\u00A0%d</string>
     <string name="group_notes_detail_label">Memorization notes</string>
 
@@ -239,7 +219,6 @@
 
     <!-- ── New group hints ────────────────────────────────────────────────── -->
     <string name="hint_add_two_verses">Add at least two verses to identify a similarity group.</string>
-    <string name="hint_group_ready">Group ready to save!</string>
 
     <!-- ── Heatmap coachmark ──────────────────────────────────────────────── -->
 
@@ -334,8 +313,6 @@
     <string name="error_folder_name_exists">Folder name already exists</string>
     <string name="subject_name_label">Subject name</string>
     <string name="subject_start_ayah_label">Start ayah</string>
-    <string name="search_filters_title">SEARCH FILTERS</string>
-    <string name="search_no_results_filtered">No results found with current filters</string>
     <string name="error_unknown">Unknown error</string>
     <string name="err_open_output">Couldn\'t open the output file</string>
     <string name="err_open_input">Couldn\'t open the selected file</string>
@@ -1404,16 +1381,6 @@
     <string name="add_to_group_row">%1$s · %2$s</string>
     <string name="add_to_group_already">Ayah is in this group</string>
     <string name="add_to_group_done">Ayah added to “%1$s”</string>
-    <string name="suggested_title">Suggested ayahs</string>
-    <string name="suggested_subtitle">Ayahs that resemble the ones in this group, closest first</string>
-    <string name="suggested_none">No suggestions for the ayahs in this group.</string>
-    <string name="suggested_more">Show more</string>
-    <string name="suggested_not_similar">Not similar</string>
-    <string name="suggested_add">Add to the group</string>
-    <plurals name="suggested_hits">
-        <item quantity="one">Resembles %d ayah of the group</item>
-        <item quantity="other">Resembles %d ayahs of the group</item>
-    </plurals>
 
     <!-- Juz map (Structural Flow): quarter strip, quarter cards and the joint test -->
     <string name="map_cd_tracked">Quarter %1$d, %2$d%%</string>
@@ -1607,6 +1574,25 @@
     <plurals name="group_similar_more">
         <item quantity="one">and %d more, less alike</item>
         <item quantity="other">and %d more, less alike</item>
+    </plurals>
+    <!-- The mutashabihat group editor. -->
+    <string name="group_add_verses">Add verses</string>
+    <string name="group_find_verse">Find a verse to add</string>
+    <string name="group_add_search_hint">Words of the verse, or 2:255</string>
+    <string name="group_add_tips">Type words of the verse, or a surah and verse number (Al-Baqarah 255, or 2:255), then tick what to add to the group.</string>
+    <string name="group_in_cd">In the group</string>
+    <string name="cd_remove_from_group">Take it out of the group</string>
+    <string name="group_verse_removed">Verse taken out of the group</string>
+    <string name="group_undo">Undo</string>
+    <string name="group_save_needs_name">Write the group\'s description to save it.</string>
+    <string name="group_leave_title">Leave without saving?</string>
+    <string name="group_leave_text">What you changed in this group isn\'t saved yet.</string>
+    <string name="group_leave_text_unsaveable">Your changes aren\'t saved, and a group can\'t be saved until it has a description and at least two verses.</string>
+    <string name="group_keep_editing">Keep editing</string>
+    <string name="group_leave_discard">Leave without saving</string>
+    <plurals name="group_similar_show_more">
+        <item quantity="one">Show one more</item>
+        <item quantity="other">Show %d more</item>
     </plurals>
     <string name="game_focus_alike">Focus on look-alikes</string>
     <string name="game_focus_alike_hint">Verses that have look-alikes in your hifz, each followed right away by its look-alike, to tell them apart.</string>

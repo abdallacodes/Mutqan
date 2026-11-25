@@ -221,34 +221,12 @@ fun VerseSearchScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            OutlinedTextField(
+            SearchBox(
                 value = ui.query,
                 onValueChange = viewModel::setQuery,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = PaperSpace.Gutter)
-                    .padding(top = 4.dp, bottom = 8.dp)
-                    .focusRequester(focus),
-                placeholder = { Text(stringResource(R.string.search_field_hint), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (ui.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setQuery(""); focus.requestFocus(); keyboard?.show() }) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear_query))
-                        }
-                    }
-                },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { keyboard?.hide(); viewModel.rememberQuery() }),
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                )
+                hint = stringResource(R.string.search_field_hint),
+                focus = focus,
+                onSearch = viewModel::rememberQuery
             )
 
             if (pickMode) {
@@ -497,6 +475,47 @@ fun VerseSearchScreen(
     }
 }
 
+/** The search's box: a magnifier, the [hint] while empty, a cross that empties it, and the keyboard's search key ([onSearch]). */
+@Composable
+internal fun SearchBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    focus: FocusRequester,
+    onSearch: () -> Unit = {}
+) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PaperSpace.Gutter)
+            .padding(top = 4.dp, bottom = 8.dp)
+            .focusRequester(focus),
+        placeholder = { Text(hint, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange(""); focus.requestFocus(); keyboard?.show() }) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear_query))
+                }
+            }
+        },
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide(); onSearch() }),
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
 @Composable
 private fun goToTitle(goTo: GoTo): String = when (goTo) {
     is GoTo.Page -> stringResource(R.string.quran_go_page, goTo.page)
@@ -590,8 +609,11 @@ private fun CompareRowView(
     }
 }
 
-/** A found verse while picking for a list: whether it is ticked, whether the list holds it already, and what ticks it. */
-private class Pick(val chosen: Boolean, val held: Boolean, val onToggle: () -> Unit)
+/**
+ * A found verse while picking for a list or a group: whether it is ticked, whether the list (or group) holds it already, and
+ * what ticks it. [heldLabel] is what TalkBack says of a verse held already (by default, that the list has it).
+ */
+internal class Pick(val chosen: Boolean, val held: Boolean, val heldLabel: String? = null, val onToggle: () -> Unit)
 
 /** The tick of a verse being picked, as its own button (in a row whose tap does something else). */
 @Composable
@@ -610,7 +632,7 @@ private fun PickBox(pick: Pick) {
 @Composable
 private fun PickMark(pick: Pick) {
     val on = pick.chosen || pick.held
-    val held = stringResource(R.string.list_in_cd)
+    val held = pick.heldLabel ?: stringResource(R.string.list_in_cd)
     Icon(
         imageVector = if (on) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
         contentDescription = if (pick.held) held else null,
@@ -685,7 +707,7 @@ private fun GroupNameDialog(initialName: String, onDismiss: () -> Unit, onConfir
 // ── The choice of where to look ─────────────────────────────────────────────────
 
 @Composable
-private fun ScopeChips(
+internal fun ScopeChips(
     scope: SearchScope,
     hasHifz: Boolean,
     onAll: () -> Unit,
@@ -786,7 +808,7 @@ private fun RecentRow(text: String, onClick: () -> Unit) {
 
 /** The surah the verses below are in; stays at the top while they scroll. */
 @Composable
-private fun SurahHeader(surah: Int, count: Int) {
+internal fun SurahHeader(surah: Int, count: Int) {
     Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter).padding(top = 10.dp, bottom = 6.dp),
@@ -810,7 +832,7 @@ private fun SurahHeader(surah: Int, count: Int) {
 
 /** A found verse: its number, its words with the matched ones marked, and its page, which opens the Mushaf on it. */
 @Composable
-private fun HitRow(hit: SearchHit, tier: PlanTier?, onPeek: () -> Unit, onOpenPage: () -> Unit, pick: Pick? = null) {
+internal fun HitRow(hit: SearchHit, tier: PlanTier?, onPeek: () -> Unit, onOpenPage: () -> Unit, pick: Pick? = null) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PaperSpace.Gutter)) {
         Row(
             modifier = Modifier
@@ -890,7 +912,7 @@ private fun PagePill(page: Int, tier: PlanTier?, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NoVerses(scoped: Boolean, onWiden: () -> Unit) {
+internal fun NoVerses(scoped: Boolean, onWiden: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(PaperSpace.Gutter),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -925,7 +947,7 @@ private fun tierLabel(tier: PlanTier): String = stringResource(
 /** The thirty juz as a grid; any number can be chosen, and the search keeps to them as they are tapped. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun JuzSheet(chosen: Set<Int>, onToggle: (Int) -> Unit, onClear: () -> Unit, onDone: () -> Unit) {
+internal fun JuzSheet(chosen: Set<Int>, onToggle: (Int) -> Unit, onClear: () -> Unit, onDone: () -> Unit) {
     ModalBottomSheet(
         contentWindowInsets = FolioSheetInsets,
         onDismissRequest = onDone,
@@ -989,7 +1011,7 @@ private fun JuzCell(juz: Int, selected: Boolean, onClick: () -> Unit, modifier: 
 /** The surahs, with a box to find one by name or number; a pick keeps the search to it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SurahSheet(chosen: Int?, onPick: (Int?) -> Unit, onDismiss: () -> Unit) {
+internal fun SurahSheet(chosen: Int?, onPick: (Int?) -> Unit, onDismiss: () -> Unit) {
     var filter by remember { mutableStateOf("") }
     val names = remember { SurahData.ALL.map { SurahName(it.id, it.nameArabic, it.nameEnglish, 0) } }
     val shown = remember(filter) {

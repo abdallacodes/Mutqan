@@ -181,6 +181,29 @@ abstract class StudyDao {
     abstract suspend fun getMemberAyahIds(groupId: Int): List<Int>
 
     /**
+     * Writes a group from its editor in one go: its row, and the verses taken out and put in since the editor read
+     * [before] (so a verse added elsewhere meanwhile stays). A new group, or one deleted meanwhile, is written anew with
+     * [after]. Returns the group's id.
+     */
+    @Transaction
+    open suspend fun saveSimilarityGroup(group: SimilarityGroupEntity, before: Collection<Int>, after: Collection<Int>): Int {
+        // A folder deleted while the group was edited: the group goes uncategorised, as the folder's other groups did.
+        val row = if (group.folderId != null && getFolderById(group.folderId) == null) group.copy(folderId = null) else group
+        val kept = row.id != 0 && getGroupById(row.id) != null
+        val id = if (kept) {
+            updateSimilarityGroup(row)
+            row.id
+        } else {
+            insertSimilarityGroup(row.copy(id = 0)).toInt()
+        }
+        val was = if (kept) before.toSet() else emptySet()
+        val now = after.toSet()
+        for (ayahId in was - now) deleteSimilarityMember(SimilarityMemberEntity(groupId = id, verseId = ayahId))
+        for (ayahId in now - was) insertSimilarityMember(SimilarityMemberEntity(groupId = id, verseId = ayahId))
+        return id
+    }
+
+    /**
      * Every (ayah, group) pair in the given group or folder tree, for the self-test quiz.
      * The caller picks one at random.
      */
