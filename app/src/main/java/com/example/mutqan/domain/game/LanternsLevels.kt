@@ -32,10 +32,11 @@ data class Dials(
     /** How much faster the whole sky moves for each right word in a row (up to [LanternsGame.FLOW_RUN]); 0 keeps it steady. */
     val flow: Float = 0f,
     /**
-     * How many times faster the whole sky rises while the word wanted is not yet up where it can be read, so the next
-     * word never keeps the reader waiting (it settles back once the word is up); 1 or less leaves the pace alone.
+     * How many times faster a lantern rises while it comes up from the bottom to where it can be read; it slows to the
+     * sky's pace as it gets there and never closes on a lantern above it. So the next words are soon up while the
+     * lanterns already up keep their pace. 1 or less: one pace all the way.
      */
-    val catchUp: Float = 1f
+    val entrance: Float = 1f
 )
 
 /** What a level brings that the one before it did not: shown on its card on the map. */

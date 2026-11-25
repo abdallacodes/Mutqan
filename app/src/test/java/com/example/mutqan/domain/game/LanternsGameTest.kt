@@ -322,25 +322,47 @@ class LanternsGameTest {
     fun theCalmSkyBringsTheWantedWordWithoutAWait() {
         for (seed in 1..6) {
             val brought = calm(seed = seed)
-            val plain = calm(GameModes.calmDials.copy(catchUp = 1f), seed)
+            val plain = calm(GameModes.calmDials.copy(entrance = 1f), seed)
             val quick = brought.secondsUntilWantedReadable()
             val slow = plain.secondsUntilWantedReadable()
-            assertTrue("seed $seed: the first word took $quick s (without bringing $slow s)", quick < 2.5f && quick < slow / 2)
-            // And after each right word, the next is readable within moments.
+            assertTrue("seed $seed: the first word took $quick s (without bringing $slow s)", quick < 3f && quick < slow / 2)
+            // And after each right word, even tapped the moment it can be read, the next is readable within moments.
             repeat(2) {
                 brought.tap(brought.lanterns.first { it.state == LanternState.RISING && it.word?.key == brought.needed?.key && it.y <= LanternsGame.READ_LINE }.id)
                 val next = brought.secondsUntilWantedReadable()
-                assertTrue("seed $seed: the next word took $next s", next < 2.5f)
+                assertTrue("seed $seed: the next word took $next s", next < 3f)
             }
         }
     }
 
     @Test
-    fun onceTheWantedWordIsUpTheCalmSkySettles() {
+    fun lanternsUpWhereTheyCanBeReadKeepTheCalmPace() {
         val g = calm()
         g.secondsUntilWantedReadable()
-        repeat(150) { g.update(0.02f) }
-        assertTrue("tempo ${g.tempo} with the wanted word up", g.tempo < 1.2f)
+        repeat(60) { g.update(0.02f) }
+        // Every lantern up where it can be read rises at the sky's pace, whatever comes up below it.
+        val up = g.lanterns.filter { it.state == LanternState.RISING && it.y < LanternsGame.READ_LINE - 0.05f && it.y > 0.4f }
+        assertTrue("no lantern up to watch", up.isNotEmpty())
+        val before = up.associateWith { it.y }
+        repeat(50) { g.update(0.02f) }
+        for ((lantern, y) in before) {
+            if (lantern.state != LanternState.RISING) continue
+            val rose = y - lantern.y
+            assertTrue("a lantern up rose $rose in a second", kotlin.math.abs(rose - GameModes.calmDials.speed) < 0.006f)
+        }
+    }
+
+    @Test
+    fun aCalmLanternComesUpQuicklyFromTheBottom() {
+        val g = calm()
+        var lantern: Lantern? = null
+        var waited = 0f
+        while (lantern == null && waited < 5f) { g.update(0.02f); waited += 0.02f; lantern = g.lanterns.firstOrNull { it.state == LanternState.RISING } }
+        val l = lantern!!
+        var t = 0f
+        while (l.y > LanternsGame.READ_LINE && t < 10f) { g.update(0.02f); t += 0.02f }
+        // At the calm pace alone it would take (1.12 - 0.8) / 0.06, over five seconds.
+        assertTrue("the first lantern took $t s to come up", t < 2.2f)
     }
 
     @Test

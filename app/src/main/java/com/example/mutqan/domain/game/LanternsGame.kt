@@ -1,6 +1,8 @@
 package com.example.mutqan.domain.game
 
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
@@ -236,19 +238,33 @@ class LanternsGame(
         time += step
         if (slowLeft > 0f) slowLeft = (slowLeft - step).coerceAtLeast(0f)
         // The run quickens the whole sky together (lanterns side by side never drift into each other), and a slip
-        // lets it settle back, not jump. Where the dials say so, the sky also brings the word wanted up when it is not
-        // up yet where it can be read, then settles.
-        val bringing = dials.catchUp > 1f && celebrating <= 0f && !waiting && wantedBelowReach()
-        val aim = if (bringing) dials.catchUp else min(1f + dials.flow * min(combo, FLOW_RUN), maxOf(1f, TOP_SPEED / dials.speed))
-        tempo += (aim - tempo) * min(1f, step * if (bringing) CATCH_EASE else TEMPO_EASE)
+        // lets it settle back, not jump. Where lanterns come up quickly ([Dials.entrance]) but the word wanted is still
+        // not where it can be read a moment after it became the one wanted (held behind lanterns above it), the whole
+        // sky moves up a little faster until it is.
+        val held = dials.entrance > 1f && celebrating <= 0f && !waiting && time - neededSince > HELD_AFTER && wantedBelowReach()
+        val aim = if (held) HELD_PUSH else min(1f + dials.flow * min(combo, FLOW_RUN), maxOf(1f, TOP_SPEED / dials.speed))
+        tempo += (aim - tempo) * min(1f, step * TEMPO_EASE)
         val move = (if (slowLeft > 0f) step * SLOW_FACTOR else step) * tempo
 
         age(step)
         val wind = dials.wind
         val gust = if (wind > 0f) wind * sin(time * GUST_SPEED) else 0f
-        for (lantern in lanterns) {
-            if (lantern.state != LanternState.RISING) continue
-            lantern.y -= lantern.speed * move
+        val entrance = dials.entrance > 1f
+        // Top first, so a lantern coming up quickly knows where the ones above it have got to.
+        val rising = lanterns.filter { it.state == LanternState.RISING }.let { if (entrance) it.sortedBy { l -> l.y } else it }
+        val room = lanternWidth * 1.08f + 2f * (Lantern.SWAY + wind * 0.4f)
+        rising.forEachIndexed { i, lantern ->
+            var dy = lantern.speed * move
+            if (entrance && lantern.y > READ_LINE) {
+                // Up quickly from the bottom, slowing to the sky's pace as it nears where it can be read, and never
+                // closer than a lantern's height to one above it in a column too near to pass.
+                val ease = ((lantern.y - READ_LINE) / ENTRANCE_TAPER).coerceIn(0f, 1f)
+                val quick = dy * (1f + (dials.entrance - 1f) * ease)
+                val above = (0 until i).map { rising[it] }.filter { abs(laneXs[it.lane] - laneXs[lantern.lane]) < room }.maxOfOrNull { it.y }
+                val free = if (above == null) quick else lantern.y - above - lanternHeight * ENTRANCE_GAP
+                dy = max(dy, min(quick, free))
+            }
+            lantern.y -= dy
             lantern.sway(time, wider = wind * 0.4f, gust = gust)
         }
         escape()
@@ -410,15 +426,16 @@ class LanternsGame(
 
     /**
      * A column whose last lantern, and the last lanterns of columns too close to it to pass side by side, have risen
-     * clear of where a new one starts.
+     * clear of where a new one starts. Where lanterns come up quickly ([Dials.entrance]), the one with the most open
+     * sky above it, so the new lantern is not held behind another on its way up.
      */
     private fun freeLane(): Int? {
         val clear = SPAWN_Y - lanternHeight * 1.08f
         val room = lanternWidth * 1.08f + 2f * (Lantern.SWAY + dials.wind * 0.4f)
-        val free = laneXs.indices.filter { lane ->
-            lanterns.none { it.state == LanternState.RISING && kotlin.math.abs(laneXs[it.lane] - laneXs[lane]) < room && it.y > clear }
-        }
-        return free.randomOrNull(random)
+        fun near(lane: Int) = lanterns.filter { it.state == LanternState.RISING && abs(laneXs[it.lane] - laneXs[lane]) < room }
+        val free = laneXs.indices.filter { lane -> near(lane).none { it.y > clear } }
+        if (dials.entrance <= 1f) return free.randomOrNull(random)
+        return free.shuffled(random).minByOrNull { lane -> near(lane).maxOfOrNull { it.y } ?: -1f }
     }
 
     /** A touch on lantern [id]. */
@@ -563,11 +580,20 @@ class LanternsGame(
         /** How quickly the tempo follows the run, a share a second. */
         private const val TEMPO_EASE = 2.5f
 
-        /** How quickly the sky gathers speed to bring the word wanted ([Dials.catchUp]), a share a second. */
-        private const val CATCH_EASE = 5f
-
         /** Where (screen height down) a lantern's middle has risen far enough to be read and tapped at ease. */
         const val READ_LINE = 0.8f
+
+        /** Over this much of the height above it a lantern coming up ([Dials.entrance]) slows to the sky's pace. */
+        private const val ENTRANCE_TAPER = 0.12f
+
+        /** A lantern coming up quickly keeps this many lantern heights below one above it in a near column. */
+        private const val ENTRANCE_GAP = 1.04f
+
+        /** Seconds the word wanted may be on its way before the sky helps it up ([Dials.entrance]). */
+        private const val HELD_AFTER = 1.2f
+
+        /** How much faster the whole sky moves while it helps a held word up. */
+        private const val HELD_PUSH = 2.5f
 
         /** At most this many seconds pass before the next lantern when the word wanted is not in the sky. */
         private const val NEEDED_SOON = 0.6f
