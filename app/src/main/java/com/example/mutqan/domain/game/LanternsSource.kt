@@ -368,9 +368,21 @@ class LanternsSource internal constructor(
             // For each word to build: the words that could come there instead, the closest first (a word from a verse the
             // reader knows counts more), and near forms of the word itself; their words read in one go.
             fun isKnown(id: Int) = id in index && index.firstPageOf(id) in known
+            // In a round on mutashabihat a verse is told apart from its look-alikes (the one built just before it among
+            // them): their words where the two part are the wrong lanterns to offer, as for the reader's own groups.
+            fun alikeOf(verse: GameVerse): Map<Int, Float> {
+                val base = alike.of(verse.ayahId)
+                if (focus == null) return base
+                val partners = focus.partnersOf(verse.ayahId) + listOfNotNull(verse.alikeOf.takeIf { it > 0 })
+                if (partners.isEmpty()) return base
+                val out = LinkedHashMap<Int, Float>()
+                for (id in partners) out[id] = NextWords.FROM_GROUP
+                for ((id, weight) in base) out.merge(id, weight, ::maxOf)
+                return out
+            }
             val toRead = HashSet<Int>()
             val planned = verses.associate { verse ->
-                val found = next?.candidates(verse.ayahId, alike.of(verse.ayahId), ::isKnown, FOLLOW_EACH).orEmpty()
+                val found = next?.candidates(verse.ayahId, alikeOf(verse), ::isKnown, FOLLOW_EACH).orEmpty()
                 verse.ayahId to (verse.given until verse.words.size).associateWith { at ->
                     val follows = found.getOrNull(at).orEmpty().mapNotNull { c ->
                         next?.wordId(c.place)?.let { id -> Triple(id, c.place.ayahId, c.score) }
