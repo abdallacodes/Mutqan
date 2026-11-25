@@ -159,6 +159,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Difference
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import com.example.mutqan.ui.topics.VerseTheme
@@ -333,6 +334,11 @@ fun MushafViewerScreen(
     var showRevised by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
+    // The places jumped between (a look-alike verse, a page or surah), to go back to; the pill can be tucked into a circle.
+    var trail by rememberSaveable(stateSaver = PlaceTrail.Saver) { mutableStateOf(PlaceTrail()) }
+    var trailOpen by rememberSaveable { mutableStateOf(true) }
+    var showTrailList by remember { mutableStateOf(false) }
+    var showAlikes by remember { mutableStateOf(false) }
 
     // Cover mode: the text is hidden for reciting from memory, and a tap reveals one verse.
     var coverOn by rememberSaveable { mutableStateOf(start.cover) }
@@ -477,6 +483,30 @@ fun MushafViewerScreen(
     }
     var spotlight by rememberSaveable { mutableIntStateOf(startAyah) }
     LaunchedEffect(peekAyahId) { if (peekAyahId != null) spotlight = 0 }
+
+    fun pageInView(page: Int) = if (useSpreadLayout) (page - 1) / 2 == (currentPage - 1) / 2 else page == currentPage
+    /** Where the reader is now: the verse tinted on the page in view, or else the page. */
+    fun hereNow(): Place {
+        val index = quran.ayahIndex
+        val s = spotlight
+        return if (s != 0 && s in index && pageInView(index.firstPageOf(s))) Place(index.firstPageOf(s), s) else Place(currentPage)
+    }
+    /** Turns to [place], its verse tinted so the eye finds it. */
+    fun goToPlace(place: Place) {
+        spotlight = place.ayahId
+        activePage = place.page
+        jumpTarget = place.page
+    }
+    /** Goes from [from] to [to], keeping [from] on the trail to come back to. */
+    fun jumpTo(from: Place, to: Place) {
+        trail = trail.jump(from, to)
+        trailOpen = true
+        goToPlace(to)
+    }
+    fun moveOnTrail(moved: PlaceTrail) {
+        trail = moved
+        moved.places.getOrNull(moved.at)?.let { goToPlace(it) }
+    }
     val marks = remember(groupAyahs, savedPassages, showGroupAyahs, subjectTints, peekAyahId, coverOn, revealed, partial, quarterStarts, playback.ayahId, spotlight) {
         // The subjects go first: every other mark (groups, saved, the verse sounding, the one chosen) is drawn over them.
         val tints = HashMap<Int, Color>(subjectTints)
@@ -939,6 +969,25 @@ fun MushafViewerScreen(
                 .padding(horizontal = 12.dp, vertical = if (compactBars) 4.dp else 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // After a jump, the way back: a pill (where the reader came from), or tucked away, a small circle.
+            if (!trail.isEmpty) {
+                val trailModifier = Modifier.align(Alignment.Start).padding(bottom = 6.dp)
+                if (trailOpen) {
+                    PlaceTrailPill(
+                        backdrop = backdrop,
+                        colors = colors,
+                        trail = trail,
+                        label = { placeLabel(it, quran, state.pageSurahMap) },
+                        onBack = { moveOnTrail(trail.back(hereNow())) },
+                        onForward = { moveOnTrail(trail.forward(hereNow())) },
+                        onList = { showTrailList = true },
+                        onHide = { trailOpen = false },
+                        modifier = trailModifier
+                    )
+                } else {
+                    PlaceTrailDot(backdrop, colors, trail.places.size, onClick = { trailOpen = true }, modifier = trailModifier)
+                }
+            }
             // The bars are away while the text is covered: one small button brings back the cover bar.
             if (coverOn && !coverBarShown) {
                 MushafGlass(backdrop, colors, CircleShape, Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)) {
@@ -1076,10 +1125,25 @@ fun MushafViewerScreen(
             currentPage = currentPage,
             onGo = { page ->
                 showJump = false
-                activePage = page
-                jumpTarget = page
+                jumpTo(hereNow(), Place(page))
             },
             onDismiss = { showJump = false }
+        )
+    }
+
+    if (showTrailList) {
+        PlaceTrailSheet(
+            trail = trail,
+            label = { placeLabel(it, quran, state.pageSurahMap) },
+            onGo = { i ->
+                showTrailList = false
+                moveOnTrail(trail.goTo(i, hereNow()))
+            },
+            onClear = {
+                showTrailList = false
+                trail = PlaceTrail()
+            },
+            onDismiss = { showTrailList = false }
         )
     }
 
@@ -1129,6 +1193,11 @@ fun MushafViewerScreen(
                     active = peekGroups.isNotEmpty()
                 ),
                 PeekAction(
+                    icon = Icons.Default.Difference,
+                    label = stringResource(R.string.peek_act_alikes),
+                    onClick = { showAlikes = true }
+                ),
+                PeekAction(
                     icon = Icons.Default.AutoStories,
                     label = stringResource(R.string.peek_act_tafsir),
                     onClick = { peekTarget = null; peekAyahId = null; peekGroups = emptyList(); onOpenTafsir(target.verseId) }
@@ -1144,9 +1213,21 @@ fun MushafViewerScreen(
                 Spacer(Modifier.height(12.dp))
                 VerseTheme(target.verseId)
                 if (peekGroups.isNotEmpty()) AyahGroupsSection(peekGroups)
-                SimilarAyahsSection(target.verseId, onOpenMushaf = null)
             }
         )
+
+        if (showAlikes) {
+            LookAlikesSheet(
+                target = target,
+                groups = peekGroups,
+                onGo = { ayahId ->
+                    showAlikes = false
+                    peekTarget = null; peekAyahId = null; peekGroups = emptyList()
+                    jumpTo(Place(target.pageNumber, target.verseId), Place(quran.ayahIndex.firstPageOf(ayahId), ayahId))
+                },
+                onDismiss = { showAlikes = false }
+            )
+        }
 
         if (showGroupSheet) {
             val allGroups by viewModel.groups.collectAsState()
@@ -1251,6 +1332,17 @@ fun MushafViewerScreen(
         }
     }
     }
+}
+
+/** A place on the way back: its verse ("البقرة · 255"), or for a page gone to by number, its surah and page. */
+@Composable
+private fun placeLabel(place: Place, quran: QuranRepository, pageSurah: Map<Int, String>): String {
+    val index = quran.ayahIndex
+    if (place.ayahId > 0 && place.ayahId in index) {
+        return stringResource(R.string.saved_ref, SurahData.nameOf(index.surahOf(place.ayahId)), index.ayahOf(place.ayahId))
+    }
+    val page = stringResource(R.string.page_n, place.page)
+    return pageSurah[place.page]?.takeIf { it.isNotBlank() }?.let { "$it · $page" } ?: page
 }
 
 // ── What a screen reader says for a page ─────────────────────────────────────

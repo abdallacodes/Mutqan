@@ -526,11 +526,7 @@
         <item quantity="other">%d groups added to your vault</item>
     </plurals>
     <string name="ready_folder_all_added">Every group of this surah is in your vault</string>
-    <string name="peek_similar_title">Ayahs that resemble this one</string>
     <string name="peek_similar_score">%d%% match</string>
-    <string name="peek_similar_range">%1$d–%2$d of %3$d</string>
-    <string name="peek_similar_next">Next</string>
-    <string name="peek_similar_prev">Previous</string>
     <string name="recall_btn_reveal">Reveal the text</string>
     <string name="progress_title">Your progress</string>
     <string name="progress_subtitle">From what you recorded</string>
@@ -1622,4 +1618,27 @@
         <item quantity="other">%d juz</item>
     </plurals>
     <string name="game_alike_of">Like %1$s</string>
+    <!-- The Mushaf: a verse's look-alikes, and the way back after jumping to one. -->
+    <string name="peek_act_alikes">Look-alikes</string>
+    <string name="look_alikes_title">Look-alikes of the verse</string>
+    <string name="look_alikes_tab_alike">Similar verses · %1$d</string>
+    <string name="look_alikes_tab_phrases">Shared phrases · %1$d</string>
+    <string name="look_alikes_mine">In your groups</string>
+    <string name="look_alikes_ready">From the list of similar verses</string>
+    <string name="look_alikes_none_alike">No similar verse in your groups or in the list of similar verses.</string>
+    <string name="look_alikes_none_phrases">This verse shares no phrase with another verse.</string>
+    <plurals name="look_alikes_phrase_in">
+        <item quantity="one">in one other verse</item>
+        <item quantity="other">in %d other verses</item>
+    </plurals>
+    <string name="look_alikes_show_all">Show all %1$d verses</string>
+    <string name="look_alikes_go">Go to it in the Mushaf</string>
+    <string name="trail_back">Back to %1$s</string>
+    <string name="trail_forward">Return to %1$s</string>
+    <string name="trail_title">Where you have been</string>
+    <string name="trail_here">You are here</string>
+    <string name="trail_clear">Clear</string>
+    <string name="trail_cd_list">All places (%1$d)</string>
+    <string name="trail_cd_hide">Minimise</string>
+    <string name="trail_cd_show">Where you have been (%1$d)</string>
 </resources>

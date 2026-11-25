@@ -315,7 +315,7 @@ internal fun MushafToolCapsule(
 
 /** The app's accent, lightened on a dark page so it stays readable on it. */
 @Composable
-private fun accentOn(colors: MushafColors): Color {
+internal fun accentOn(colors: MushafColors): Color {
     val accent = MaterialTheme.colorScheme.primary
     return if (colors.dark) lerp(accent, colors.ink, 0.6f) else accent
 }

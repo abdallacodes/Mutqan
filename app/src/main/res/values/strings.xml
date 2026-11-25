@@ -566,11 +566,7 @@
         <item quantity="other">أُضيفت %d مجموعة إلى المخزن</item>
     </plurals>
     <string name="ready_folder_all_added">كل مجموعات هذه السورة في مخزنك</string>
-    <string name="peek_similar_title">آيات تشبه هذه الآية</string>
     <string name="peek_similar_score">تشابه %d٪</string>
-    <string name="peek_similar_range">%1$d–%2$d من %3$d</string>
-    <string name="peek_similar_next">التالية</string>
-    <string name="peek_similar_prev">السابقة</string>
     <string name="recall_btn_reveal">اكشف النص</string>
     <string name="progress_title">تقدّمك</string>
     <string name="progress_subtitle">بحسب ما سجّلته أنت</string>
@@ -1872,4 +1868,31 @@
         <item quantity="other">%d جزء</item>
     </plurals>
     <string name="game_alike_of">تشبه %1$s</string>
+    <!-- The Mushaf: a verse's look-alikes, and the way back after jumping to one. -->
+    <string name="peek_act_alikes">متشابهات</string>
+    <string name="look_alikes_title">متشابهات الآية</string>
+    <string name="look_alikes_tab_alike">آيات تشبهها · %1$d</string>
+    <string name="look_alikes_tab_phrases">عبارات مشتركة · %1$d</string>
+    <string name="look_alikes_mine">من مجموعاتك</string>
+    <string name="look_alikes_ready">من قائمة الآيات المتشابهة</string>
+    <string name="look_alikes_none_alike">لا آيات تشبهها في مجموعاتك ولا في قائمة الآيات المتشابهة.</string>
+    <string name="look_alikes_none_phrases">لا تشترك هذه الآية في عبارة مع آية أخرى.</string>
+    <plurals name="look_alikes_phrase_in">
+        <item quantity="zero">في %d آية أخرى</item>
+        <item quantity="one">في آية أخرى</item>
+        <item quantity="two">في آيتين أخريين</item>
+        <item quantity="few">في %d آيات أخرى</item>
+        <item quantity="many">في %d آية أخرى</item>
+        <item quantity="other">في %d آية أخرى</item>
+    </plurals>
+    <string name="look_alikes_show_all">اعرض الآيات كلها (%1$d)</string>
+    <string name="look_alikes_go">انتقل إليها في المصحف</string>
+    <string name="trail_back">ارجع إلى %1$s</string>
+    <string name="trail_forward">عُد إلى %1$s</string>
+    <string name="trail_title">أين كنت</string>
+    <string name="trail_here">أنت هنا</string>
+    <string name="trail_clear">امسح السجل</string>
+    <string name="trail_cd_list">كل الأماكن (%1$d)</string>
+    <string name="trail_cd_hide">صغّر</string>
+    <string name="trail_cd_show">أين كنت (%1$d)</string>
 </resources>
